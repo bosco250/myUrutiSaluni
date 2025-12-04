@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Loan Application</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#4f91f2",
+              "primary-light": "#3b82f6",
+              "background-light": "#f6f7f8",
+              "background-dark": "#0d1117",
+              "surface-dark": "#161b22",
+              "border-dark": "#30363d",
+              "text-primary-dark": "#c9d1d9",
+              "text-secondary-dark": "#8b949e",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>input[type="range"]::-webkit-slider-runnable-track {
+        background: #e2e8f0;}
+      .dark input[type="range"]::-webkit-slider-runnable-track {
+        background: #30363d;}input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        background: #4f91f2;cursor: pointer;
+        height: 1.25rem;
+        width: 1.25rem;
+        border-radius: 9999px;
+        margin-top: -0.375rem;border: 2px solid white;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      }
+      .dark input[type="range"]::-webkit-slider-thumb {
+        border-color: #161b22;}
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="sticky top-0 z-10 flex flex-col items-center bg-background-dark shadow-sm">
+<div class="flex w-full items-center p-4 pb-2">
+<div class="flex size-12 shrink-0 items-center justify-start text-text-primary-dark">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</div>
+<h2 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-text-primary-dark">Apply for a Loan</h2>
+<div class="size-12 shrink-0"></div> 
+</div>
+<div class="flex w-full flex-row items-center justify-center gap-1.5 px-4 pt-2 pb-4">
+<div class="h-1 flex-1 rounded-full bg-primary"></div>
+<div class="h-1 flex-1 rounded-full bg-border-dark"></div>
+<div class="h-1 flex-1 rounded-full bg-border-dark"></div>
+<div class="h-1 flex-1 rounded-full bg-border-dark"></div>
+</div>
+</div>
+<main class="flex-1 pb-32">
+<h1 class="text-text-primary-dark tracking-tight text-[32px] font-bold leading-tight px-4 text-left pb-1 pt-6">Business Growth Loan</h1>
+<p class="text-text-secondary-dark text-base font-normal leading-normal pb-3 pt-1 px-4">A simple way to get the funds you need to grow your salon business.</p>
+<div class="px-4 pt-6">
+<div class="rounded-xl border border-border-dark bg-surface-dark p-5">
+<h3 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em]">Estimate Your Loan</h3>
+<div class="mt-6">
+<label class="text-sm font-medium text-text-secondary-dark" for="loan-amount">Loan Amount</label>
+<div class="flex items-center justify-between mt-2">
+<p class="text-3xl font-bold text-text-primary-dark">$10,000</p>
+<div class="flex items-center gap-2">
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-border-dark text-text-secondary-dark">-</button>
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-border-dark text-text-secondary-dark">+</button>
+</div>
+</div>
+<input class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-4" id="loan-amount" max="50000" min="1000" name="loan-amount" step="500" type="range" value="10000"/>
+</div>
+<div class="mt-6">
+<label class="text-sm font-medium text-text-secondary-dark" for="repayment-period">Repayment Period</label>
+<select class="mt-2 block w-full rounded-lg border-border-dark bg-surface-dark text-text-primary-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm" id="repayment-period">
+<option>12 Months</option>
+<option>24 Months</option>
+<option>36 Months</option>
+</select>
+</div>
+<div class="mt-8 flex items-center justify-between rounded-lg bg-primary/10 p-4">
+<span class="text-sm font-medium text-text-secondary-dark">Estimated Monthly Payment</span>
+<span class="text-lg font-bold text-primary">$879</span>
+</div>
+</div>
+</div>
+<h3 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-8">Loan Purpose</h3>
+<div class="px-4">
+<div class="flex flex-wrap gap-3">
+<button class="rounded-full border border-primary bg-primary/20 px-4 py-2 text-sm font-semibold text-primary">Equipment Purchase</button>
+<button class="rounded-full border border-border-dark bg-transparent px-4 py-2 text-sm font-semibold text-text-secondary-dark">Inventory</button>
+<button class="rounded-full border border-border-dark bg-transparent px-4 py-2 text-sm font-semibold text-text-secondary-dark">Renovations</button>
+<button class="rounded-full border border-border-dark bg-transparent px-4 py-2 text-sm font-semibold text-text-secondary-dark">Marketing</button>
+</div>
+</div>
+<div class="space-y-4 px-4 pt-8">
+<details class="group rounded-xl border border-border-dark bg-surface-dark p-1">
+<summary class="flex cursor-pointer list-none items-center justify-between p-4 font-medium text-text-primary-dark">
+                        Eligibility Criteria
+                        <span class="transition-transform duration-300 group-open:rotate-180">
+<span class="material-symbols-outlined">expand_more</span>
+</span>
+</summary>
+<div class="px-4 pb-4 text-text-secondary-dark">
+<ul class="space-y-3 pt-2">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-lg text-green-500">check_circle</span>
+<span>Minimum 1 year in business.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-lg text-green-500">check_circle</span>
+<span>Active Salon Association membership.</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-lg text-green-500">check_circle</span>
+<span>Minimum monthly revenue of $5,000.</span>
+</li>
+</ul>
+</div>
+</details>
+<details class="group rounded-xl border border-border-dark bg-surface-dark p-1">
+<summary class="flex cursor-pointer list-none items-center justify-between p-4 font-medium text-text-primary-dark">
+                        Required Documents
+                        <span class="transition-transform duration-300 group-open:rotate-180">
+<span class="material-symbols-outlined">expand_more</span>
+</span>
+</summary>
+<div class="px-4 pb-4 text-text-secondary-dark">
+<ul class="space-y-3 pt-2">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-lg text-text-secondary-dark">description</span>
+<span>Business Registration Certificate</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-lg text-text-secondary-dark">description</span>
+<span>Last 6 months of bank statements</span>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5 text-lg text-text-secondary-dark">description</span>
+<span>Photo ID of the business owner</span>
+</li>
+</ul>
+</div>
+</details>
+</div>
+</main>
+<div class="fixed bottom-0 left-0 right-0 z-10 border-t border-border-dark bg-background-dark/80 p-4 backdrop-blur-sm">
+<div class="flex flex-col gap-4">
+<button class="w-full rounded-full bg-primary-light py-3.5 text-base font-bold text-white transition-colors hover:bg-primary-light/90">
+                    Continue to Next Step
+                </button>
+<button class="w-full text-center text-sm font-semibold text-primary">
+                    Save as Draft
+                </button>
+</div>
+</div>
+</div>
+
+</body></html>

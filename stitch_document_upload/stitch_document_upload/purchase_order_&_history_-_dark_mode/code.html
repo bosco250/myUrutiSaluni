@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Supplier Orders - Mobile UI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark" style='font-family: Inter, "Noto Sans", sans-serif;'>
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex flex-col bg-background-light dark:bg-background-dark pt-4">
+<div class="flex items-center px-4 pb-2">
+<button class="flex h-12 w-12 items-center justify-start text-white/90 dark:text-white/90">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-black dark:text-white">Supplier Orders</h1>
+<button class="flex h-12 w-12 items-center justify-end text-white/90 dark:text-white/90">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Search and Filter Bar -->
+<div class="sticky top-[72px] z-10 flex gap-2 bg-background-light dark:bg-background-dark px-4 pb-3 pt-1">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#9db89d] flex border-none bg-black/10 dark:bg-white/5 items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-2xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-black dark:text-white focus:outline-0 focus:ring-0 border-none bg-black/10 dark:bg-white/5 focus:border-none h-full placeholder:text-gray-500 dark:placeholder:text-[#9db89d] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search by supplier or order #" value=""/>
+</div>
+</label>
+<button class="flex h-12 min-w-[48px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-black/10 dark:bg-white/5 text-gray-500 dark:text-[#9db89d]">
+<span class="material-symbols-outlined text-2xl">filter_list</span>
+</button>
+</div>
+<!-- Tabs -->
+<div class="sticky top-[132px] z-10 bg-background-light dark:bg-background-dark pb-3">
+<div class="flex border-b border-black/20 dark:border-white/10 px-4">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary pb-[13px] pt-4 flex-1" href="#">
+<p class="text-primary text-sm font-bold leading-normal tracking-[0.015em]">Current Orders</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-gray-500 dark:text-[#9db89d] pb-[13px] pt-4 flex-1" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Order History</p>
+</a>
+</div>
+</div>
+<!-- Order List -->
+<div class="flex flex-col gap-1 px-4 py-3">
+<!-- Order Card 1 -->
+<div class="flex gap-4 rounded-xl bg-black/10 dark:bg-white/5 p-4 justify-between items-center">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[60px]" data-alt="Pro Beauty Supplies logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA8N0bO_xnpxIyrKwyycBCXaAYyDchsiuhVJ3RD0tmELjo7c-3fwKzvH06RjlQYIjAIc6WO4r6A6a13xcU3-SMPdaBvzwQ2KYcQzotPCnu8NOebqvK8fuktvU1B42LloScX7E8qIMzW78i9ZGP-KcpEDmirATnSBdZSKnBdrsqZrGQIp8CU-BvN1Gc2CVofSyRlIi3_goUgvU1nY0xhnmy_zCV__q3VQPgGY3u4VSjtAifGN0_-3bgR1asHE6Cw8yyYJ9gzUeyeHnul");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-black dark:text-white text-base font-medium leading-normal">Pro Beauty Supplies</p>
+<p class="text-gray-600 dark:text-[#9db89d] text-sm font-normal leading-normal">#A58B2 - $245.50</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex items-center justify-center rounded-full bg-[#1e61ea]/20 px-3 py-1">
+<p class="text-sm font-medium text-[#71a0ef]">Shipped</p>
+</div>
+</div>
+</div>
+<!-- Order Card 2 -->
+<div class="flex gap-4 rounded-xl bg-black/10 dark:bg-white/5 p-4 justify-between items-center">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[60px]" data-alt="Glamour Hair Co. logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuApei9NGItXxCSPkEOAgiTA0mLUZKsEuzGBDubWpRymxd-bXo1SExuV1LAdfHW6TFTM8GTzbfvT5kldqBX0cBVGredq71r4oazz1YZKNplkNLUjmrawXjGcjYTn-ZqdAJKf7nbVHvQer-WI551ER6IHLfYDXo4j_C2CqGqfmaNayDGW50syBGMAZ9LQeNamrSncbAJZ8zFSgQH_3TfxADzi6MbFUBPFS3CNq6VxXQDeOyWtaSez110Bcri2l607Q6EBEfXm1mQiInB8");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-black dark:text-white text-base font-medium leading-normal">Glamour Hair Co.</p>
+<p class="text-gray-600 dark:text-[#9db89d] text-sm font-normal leading-normal">#A58B1 - $180.00</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex items-center justify-center rounded-full bg-[#e8871a]/20 px-3 py-1">
+<p class="text-sm font-medium text-[#f3a85b]">Pending</p>
+</div>
+</div>
+</div>
+<!-- Order Card 3 -->
+<div class="flex gap-4 rounded-xl bg-black/10 dark:bg-white/5 p-4 justify-between items-center">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[60px]" data-alt="Salon Essentials logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCb3xj0yXit0YGOnjkc8DOjj9PVIf7u5nBg7v_Ng3EtrtL3Xg2uaxzrjtkZnHUehm52pnbb7IzJK2TioWjs_c-xEHS-NOLWh2qsO3hDlLX5EPEZzR5EgGWAMO2UQ4bP5PyZB1oGwTMnjJ6lFQs2XcaEStUUKOkNZS4Ijf5TdSrPvpMOLvlf2ljMtsKIVoYBhQEWKXYThWHZG2WLW8_kpQqfk9SmvTBpcPPADhzqkEDclVnNULOSbCTNtC7vSRWRYf4oaJD2jpr9fzZo");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-black dark:text-white text-base font-medium leading-normal">Salon Essentials</p>
+<p class="text-gray-600 dark:text-[#9db89d] text-sm font-normal leading-normal">#A58B0 - $312.75</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex items-center justify-center rounded-full bg-[#0bda38]/20 px-3 py-1">
+<p class="text-sm font-medium text-[#2dff5b]">Delivered</p>
+</div>
+</div>
+</div>
+<!-- Order Card 4 -->
+<div class="flex gap-4 rounded-xl bg-black/10 dark:bg-white/5 p-4 justify-between items-center">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[60px]" data-alt="Nail Art Pro logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBEbRa6JVJKZ5K111UTSAcqoElpoJBTBF0x0vzyy1JNCRvodHSCxxmdAkqQcEcPJvXbh7VrDatSoEpQldOuaHazCDg_gFBaIBnQKYPmt6mdx0UJFgHvMWNzyw12HqwrTabLSeAap9avwm9hWP1GZZh_8J05RPLZdN88Mib39dzp-ii8ULfoaUonf2VrMuTnnyyqu69otPDIAAtvl4yPJ1UlKrox7DcKzefE7LfHHxIHbPJh5gwEKzoxisHidXufDSU0xyyOuTnoZENi");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-black dark:text-white text-base font-medium leading-normal">Nail Art Pro</p>
+<p class="text-gray-600 dark:text-[#9db89d] text-sm font-normal leading-normal">#A58A9 - $95.20</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex items-center justify-center rounded-full bg-gray-500/20 px-3 py-1">
+<p class="text-sm font-medium text-gray-500/90">Cancelled</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6">
+<button class="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary text-black shadow-lg">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+<div class="h-24"></div> <!-- Spacer for content above bottom bar -->
+</div>
+</body></html>

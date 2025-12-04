@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Supplier Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 300,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between bg-background-light/80 px-4 backdrop-blur-sm dark:bg-background-dark/80">
+<div class="flex size-12 shrink-0 items-center">
+<!-- Placeholder for a menu or back icon -->
+</div>
+<h1 class="flex-1 text-center text-lg font-bold text-slate-900 dark:text-white">Suppliers</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-slate-600 hover:bg-slate-500/10 dark:text-slate-300 dark:hover:bg-slate-500/20">
+<span class="material-symbols-outlined text-2xl">search</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 space-y-3 p-4">
+<!-- Supplier Card 1 -->
+<div class="flex items-center gap-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-900/50">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Glamour Goods Co. company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC2IGgBwwZaJZuSIabiXa4KT16uhHn3SObEhI4DUwvd0eWEtQC0DLsn740Olr8GimVvh7zemRa2kQH-vzVYKBOblA0wGmb4exx6uVkjV8U6KMFK8O65WiHTTzpiWHdcl7MCErHNBFS-0V0aX2PUXdIAQiNhUvWHqJVAdq8-4HhHPPDIUJmoUWFRbgeXndGEbBaXrKwcDYxNpT6OzD6Ej6k3c7abAClgoTVwZxOxPP0mmjGxQ6k9eIgOQUwUbaYR6ZpOHrmohQf2XKbb");'></div>
+<div class="flex-1">
+<p class="text-base font-medium text-slate-900 dark:text-white">Glamour Goods Co.</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Sales Rep: Jane Doe</p>
+<div class="mt-1.5 flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-green-500"></div>
+<p class="text-xs font-medium text-green-600 dark:text-green-400">Active</p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-slate-500/20">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Supplier Card 2 -->
+<div class="flex items-center gap-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-900/50">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Beauty Essentials Inc. company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAa1jvehRvGPKzPrVlnII7GnZj5KHepPuAvnF_bSSQXHgLw-leYZ-m2ydO6KyBEBRwx3nvI5B-aUfK0zgv24z07E8BZa2RTOTmlQ6KHvyREPQDrhTA17xR3KxPOn1PDTjPUAEx2G7fUACuVfWlGuVQ48DnzSdBtywsAkhos4uMSdS_hBFV_Kp1htwOu83JKF6ExOXm7eLi2j2TemETa7do-3C_0tFH-GszRpd9VuXgeR687V4Apz5gMEf8tfzxjlGgZjkyOFIRO0mZm");'></div>
+<div class="flex-1">
+<p class="text-base font-medium text-slate-900 dark:text-white">Beauty Essentials Inc.</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Sales Rep: John Smith</p>
+<div class="mt-1.5 flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-green-500"></div>
+<p class="text-xs font-medium text-green-600 dark:text-green-400">Active</p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-slate-500/20">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Supplier Card 3 -->
+<div class="flex items-center gap-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-900/50">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Salon Stylers Direct company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBCbBTdVfEXj1DGh-mVGsWl74VZPZWVrRWV6-sfnqtIU00wBi737txYhlEFkXy7Fz9ZLbJudUFlzoJj2CQUf43cNWWOgsQ91aqoCl8gY8KJWg7dMrtrLow_WOSwszEvgiO125O-r0hzjJT9iMCeVVVEvsbdGFkCGB6eBD0ScY6Zn6m2T78Mh5XBVIWPbVDr-wq1PShAkzeR9eAMH8Z4QD3jmRWq0dzGX7ikDmpepGONVYf6qkUBdm599zVTIns6j7kF8VceaHjNVR4N");'></div>
+<div class="flex-1">
+<p class="text-base font-medium text-slate-900 dark:text-white">Salon Stylers Direct</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Sales Rep: Emily White</p>
+<div class="mt-1.5 flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-red-500"></div>
+<p class="text-xs font-medium text-red-600 dark:text-red-400">Inactive</p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-500/10 dark:text-slate-400 dark:hover:bg-slate-500/20">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Empty State Card -->
+<div class="flex hidden flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 p-8 text-center dark:border-slate-700">
+<div class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+<span class="material-symbols-outlined text-4xl text-slate-500 dark:text-slate-400">group_off</span>
+</div>
+<h3 class="mt-4 text-lg font-semibold text-slate-900 dark:text-white">No Suppliers Added Yet</h3>
+<p class="mt-1 max-w-xs text-sm text-slate-500 dark:text-slate-400">Tap the '+' button to add your first product supplier and start managing your inventory.</p>
+</div>
+</main>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6 z-20">
+<button class="flex h-14 w-14 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary text-background-dark shadow-lg transition-transform duration-200 ease-in-out hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+</div>
+</body></html>

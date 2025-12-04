@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Automated Reordering</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400,700" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        font-size: 24px;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-white/10">
+<div class="text-white flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white/90">arrow_back</span>
+</div>
+<h1 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Automated Reordering</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-white/90">add_box</span>
+</button>
+</div>
+</header>
+<!-- Onboarding/Helper Text -->
+<div class="px-4 pt-4">
+<div class="bg-primary/10 border border-primary/30 rounded-lg p-3 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-0.5">info</span>
+<p class="text-sm text-white/80 leading-relaxed">Set rules to automatically reorder products when stock is low. Tap on a product to configure its reorder point and supplier.</p>
+</div>
+</div>
+<!-- Search Bar -->
+<div class="px-4 py-3 sticky top-[72px] bg-background-light dark:bg-background-dark z-10">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#9db89d] flex border-none bg-[#293829] items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-white focus:outline-0 focus:ring-0 border-none bg-[#293829] focus:border-none h-full placeholder:text-[#9db89d] px-4 pl-2 text-base font-normal leading-normal" placeholder="Search for a product..."/>
+</div>
+</label>
+</div>
+<!-- Product List -->
+<main class="flex-1 pb-24">
+<!-- List Item 1: Active -->
+<div class="flex gap-4 bg-transparent px-4 py-3 justify-between items-center border-b border-white/10">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px] shrink-0" data-alt="Bottle of Pro-V Shampoo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB6CVWJVHrIPfWbl-MJjblT6Igx9FyFGGptsRq11SKCZaTbFJnGkmfz2D5Lr6XBZpFd9s7g59N2XAFGYatttP2Rg4KAJooI8pHYE_MXGZXndIMRCh0XcsOZsPUOmlY5yB5kiyXUhWKoZQHrIw-LNBeK-ugPa6f-OnHj5AF2TV1WGJzY8nRdJEodsa3S5owXELSGIWCgi6qDIexKnlIjD5g5Of827EGs652u6pqSwQx4kbAILJyS7fpaB9E5dEV6qA-oOLCdkul8ImjP");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-white text-base font-medium leading-normal">Pro-V Shampoo</p>
+<div class="flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-primary"></div>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">Active</p>
+</div>
+<p class="text-white/50 text-sm font-normal leading-normal">SKU: PVS-001</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#293829] p-0.5 has-[:checked]:bg-primary">
+<input checked="" class="invisible absolute" type="checkbox"/>
+<div class="h-full w-[27px] rounded-full bg-white transition-transform transform translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.15) 0px 3px 8px, rgba(0, 0, 0, 0.06) 0px 3px 1px;"></div>
+</label>
+<button class="text-white/70"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<!-- List Item 2: Inactive -->
+<div class="flex gap-4 bg-transparent px-4 py-3 justify-between items-center border-b border-white/10">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px] shrink-0" data-alt="Bottle of Hydrating Conditioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD73cnyJiFakKd8fRN_At4tdRbCkxY4WxJS4W5DRBZZyOQOTAlO3u8jbqloLaLcEVsBszhyf-UOVdVhGvKMP2oQu1MysVTmLS2jNqrTIjgTGvPv0KoCF50t1l6xlD6QV86Ir9_1WvJKDRr09iM9KM0VG39lQXF1vinSHMeU-824Ip9-a3NGgtlSic0HaHYZxPKhpiRIvJ2CWnhIVzTChEdn5AUvI2tUqYkM5Szq3s-xjvNQdqLreCC9SEUVY3dHQuUnCXfXbRG2JzjM");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-white text-base font-medium leading-normal">Hydrating Conditioner</p>
+<div class="flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-white/40"></div>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">Inactive</p>
+</div>
+<p class="text-white/50 text-sm font-normal leading-normal">SKU: HRC-002</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#293829] p-0.5 has-[:checked]:bg-primary">
+<input class="invisible absolute" type="checkbox"/>
+<div class="h-full w-[27px] rounded-full bg-white transition-transform transform translate-x-0" style="box-shadow: rgba(0, 0, 0, 0.15) 0px 3px 8px, rgba(0, 0, 0, 0.06) 0px 3px 1px;"></div>
+</label>
+<button class="text-white/70"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<!-- List Item 3: Active -->
+<div class="flex gap-4 bg-transparent px-4 py-3 justify-between items-center border-b border-white/10">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px] shrink-0" data-alt="Bottle of Argan Oil Hair Serum" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAlflWTU9s0t0yQgsTORSoG1aU1l21O5bdIxHEIb7MT_NcyitbC_njRzLgA6URV1C9zHwcg7vjoCJTqyi-x-NYasfNtvGOuxyI7Y9Jt04RWo-V4Uuj5tS0oCxwba6AGu9apV1ubn1aYQ_mOShFamCQkqinlGcIOM0SAGjHO-pGTwMRJl0gCpaA8GQBJQ8J6GHTQjx88X2FO1eU3PSxczRX23jMXlPzId8rLs-LmtMyiZxF7uNBQlSKDoybbucaz1EOeq0SVqa9GyI1c");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-white text-base font-medium leading-normal">Argan Oil Hair Serum</p>
+<div class="flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-primary"></div>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">Active</p>
+</div>
+<p class="text-white/50 text-sm font-normal leading-normal">SKU: AOS-003</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#293829] p-0.5 has-[:checked]:bg-primary">
+<input checked="" class="invisible absolute" type="checkbox"/>
+<div class="h-full w-[27px] rounded-full bg-white transition-transform transform translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.15) 0px 3px 8px, rgba(0, 0, 0, 0.06) 0px 3px 1px;"></div>
+</label>
+<button class="text-white/70"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<!-- Empty State Example -->
+<div class="text-center px-6 py-16 hidden">
+<div class="flex justify-center mb-4">
+<div class="bg-[#293829] p-4 rounded-full">
+<span class="material-symbols-outlined text-primary text-4xl leading-none" style="font-size: 40px;">inventory_2</span>
+</div>
+</div>
+<h3 class="text-white text-lg font-bold">No Products Found</h3>
+<p class="text-white/60 mt-2 text-sm">Add products to your inventory to set up automated reordering rules.</p>
+<button class="mt-6 bg-primary/20 text-primary font-bold py-3 px-6 rounded-lg">Add Product to Inventory</button>
+</div>
+</main>
+</div>
+<!-- Configuration Bottom Sheet / Modal -->
+<div class="fixed inset-0 bg-black/60 flex items-end z-20">
+<div class="w-full bg-[#1A2C1A] dark:bg-[#1A2C1A] rounded-t-xl max-h-[90vh] overflow-y-auto">
+<div class="p-4 border-b border-white/10 sticky top-0 bg-[#1A2C1A] z-10">
+<div class="w-10 h-1.5 bg-white/20 rounded-full mx-auto mb-3"></div>
+<h2 class="text-white text-xl font-bold text-center">Configure Reorder Rule</h2>
+<p class="text-white/70 text-sm text-center">Pro-V Shampoo</p>
+</div>
+<div class="p-4 space-y-6">
+<!-- Reorder Point -->
+<div>
+<label class="block text-sm font-medium text-white/90" for="reorder-point">Reorder Point (units)</label>
+<p class="text-xs text-white/50 mb-2">We'll reorder when stock drops to this level.</p>
+<input class="form-input w-full rounded-lg bg-[#293829] border-none text-white focus:ring-2 focus:ring-primary" id="reorder-point" type="number" value="10"/>
+</div>
+<!-- Preferred Supplier -->
+<div>
+<label class="block text-sm font-medium text-white/90" for="supplier">Preferred Supplier</label>
+<div class="relative mt-2">
+<select class="form-select w-full appearance-none rounded-lg bg-[#293829] border-none text-white focus:ring-2 focus:ring-primary pr-8" id="supplier">
+<option>Beauty Supplies Co.</option>
+<option>SalonPro Distributors</option>
+<option>Global Hair Inc.</option>
+</select>
+<span class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">expand_more</span>
+</div>
+</div>
+<!-- Order Quantity -->
+<div>
+<label class="block text-sm font-medium text-white/90" for="order-quantity">Standard Order Quantity</label>
+<p class="text-xs text-white/50 mb-2">The amount to order each time.</p>
+<input class="form-input w-full rounded-lg bg-[#293829] border-none text-white focus:ring-2 focus:ring-primary" id="order-quantity" type="number" value="24"/>
+</div>
+<!-- Manual Review Toggle -->
+<div class="flex justify-between items-center bg-[#293829] p-3 rounded-lg">
+<div>
+<p class="text-white font-medium">Require Manual Review</p>
+<p class="text-xs text-white/50">If enabled, you must approve the order before it's placed.</p>
+</div>
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-background-dark p-0.5 has-[:checked]:bg-primary">
+<input class="invisible absolute" type="checkbox"/>
+<div class="h-full w-[27px] rounded-full bg-white transition-transform transform translate-x-0" style="box-shadow: rgba(0, 0, 0, 0.15) 0px 3px 8px, rgba(0, 0, 0, 0.06) 0px 3px 1px;"></div>
+</label>
+</div>
+<!-- Action Button -->
+<div class="pt-2">
+<button class="w-full bg-primary text-background-dark font-bold py-3 px-6 rounded-lg text-lg">Save Changes</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

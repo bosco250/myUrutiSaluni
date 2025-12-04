@@ -1,0 +1,114 @@
+import { Module, Global } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { User } from '../users/entities/user.entity';
+import { Salon } from '../salons/entities/salon.entity';
+import { SalonEmployee } from '../salons/entities/salon-employee.entity';
+import { Customer } from '../customers/entities/customer.entity';
+import { Membership } from '../memberships/entities/membership.entity';
+import { MembershipApplication } from '../memberships/entities/membership-application.entity';
+import { MembershipPayment } from '../memberships/entities/membership-payment.entity';
+import { Service } from '../services/entities/service.entity';
+import { Appointment } from '../appointments/entities/appointment.entity';
+import { Sale } from '../sales/entities/sale.entity';
+import { SaleItem } from '../sales/entities/sale-item.entity';
+import { Product } from '../inventory/entities/product.entity';
+import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
+import { AttendanceLog } from '../attendance/entities/attendance-log.entity';
+import { ChartOfAccount } from '../accounting/entities/chart-of-account.entity';
+import { JournalEntry } from '../accounting/entities/journal-entry.entity';
+import { JournalEntryLine } from '../accounting/entities/journal-entry-line.entity';
+import { Invoice } from '../accounting/entities/invoice.entity';
+import { Loan } from '../loans/entities/loan.entity';
+import { LoanProduct } from '../loans/entities/loan-product.entity';
+import { LoanRepayment } from '../loans/entities/loan-repayment.entity';
+import { CreditScore } from '../loans/entities/credit-score.entity';
+import { Wallet } from '../wallets/entities/wallet.entity';
+import { WalletTransaction } from '../wallets/entities/wallet-transaction.entity';
+import { AirtelAgent } from '../airtel/entities/airtel-agent.entity';
+import { AirtelTransaction } from '../airtel/entities/airtel-transaction.entity';
+import { Commission } from '../commissions/entities/commission.entity';
+import { CustomerStyleReference } from '../customers/entities/customer-style-reference.entity';
+
+@Global()
+@Module({
+  imports: [
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const dbType = configService.get('DB_TYPE', 'sqlite');
+        const nodeEnv = configService.get('NODE_ENV', 'development');
+        const isDevelopment = nodeEnv !== 'production';
+        
+        const entities = [
+          User,
+          Salon,
+          SalonEmployee,
+          Customer,
+          Membership,
+          MembershipApplication,
+          MembershipPayment,
+          Service,
+          Appointment,
+          Sale,
+          SaleItem,
+          Product,
+          InventoryMovement,
+          AttendanceLog,
+          ChartOfAccount,
+          JournalEntry,
+          JournalEntryLine,
+          Invoice,
+          Loan,
+          LoanProduct,
+          LoanRepayment,
+          CreditScore,
+          Wallet,
+          WalletTransaction,
+          AirtelAgent,
+          AirtelTransaction,
+          Commission,
+          CustomerStyleReference,
+        ];
+        
+        // Use SQLite for development, PostgreSQL for production
+        if (dbType === 'sqlite' || (isDevelopment && !configService.get('DB_HOST'))) {
+          const dbPath = configService.get('DB_DATABASE', 'database/salon_association.db');
+          return {
+            type: 'better-sqlite3',
+            database: dbPath,
+            entities,
+            synchronize: isDevelopment, // Only sync in development
+            logging: isDevelopment ? ['error', 'warn', 'schema', 'migration'] : ['error'],
+            migrations: ['dist/migrations/*.js'],
+          };
+        } else {
+          // PostgreSQL configuration
+          return {
+            type: 'postgres',
+            host: configService.get('DB_HOST', 'localhost'),
+            port: configService.get<number>('DB_PORT', 5432),
+            username: configService.get('DB_USERNAME', 'postgres'),
+            password: configService.get('DB_PASSWORD', 'postgres'),
+            database: configService.get('DB_DATABASE', 'salon_association'),
+            entities,
+            synchronize: false, // Never sync in production
+            logging: isDevelopment ? ['error', 'warn', 'migration'] : ['error'],
+            migrations: ['dist/migrations/*.js'],
+            migrationsRun: false,
+            ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+            extra: {
+              max: 20,
+              connectionTimeoutMillis: 5000,
+              idleTimeoutMillis: 30000,
+            },
+          };
+        }
+      },
+      inject: [ConfigService],
+    }),
+  ],
+  exports: [TypeOrmModule],
+})
+export class DatabaseModule {}
+

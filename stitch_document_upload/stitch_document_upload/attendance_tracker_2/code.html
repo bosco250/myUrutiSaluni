@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Salon Staff Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#8B5CF6", // Changed primary to a lighter purple for better contrast on dark BG
+              "background-light": "#f6f8f7",
+              "background-dark": "#111827", // Made background darker
+              "surface-dark": "#1F2937", // A slightly lighter surface color for cards
+              "green-status": "#22C55E", // Brightened green for dark mode
+              "red-status": "#EF4444",
+              "orange-status": "#F97316",
+              "neutral-text": "#6B7280",
+              "neutral-text-dark": "#9CA3AF"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-dark group/design-root overflow-x-hidden">
+<div class="flex items-center bg-background-dark p-4 pb-2 justify-between">
+<div class="flex flex-col">
+<p class="text-neutral-text-dark text-sm font-normal leading-normal">Monday, October 26</p>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Attendance</h2>
+</div>
+<div class="text-white flex size-12 shrink-0 items-center justify-end" data-size="24px" data-weight="regular">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-background-dark px-4 py-4 min-h-14 justify-between">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-10 w-fit" data-alt="User avatar of Maria" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAhjEsrYhYa9DtlQXO2fhzQBzGCQgHkwzqE-A1cl_FLSul0s9LVQBfQ4xwKTxi_LNCWE9wA8sWU7_a4YfVFd_wq9TcriLU2FkUjtSibLJkw6jdgw9tHCaNaXgldy61hplWH9MM69Qf3Bu3UAafV-yCCKoE3BSlimuAmdeeNuNHVy-aGDjfxguMJjGBKADz2cWEEa1nH9F4JEqX3NvL3zxLduzgcB_A1gfil4WkZXd2FQEQZyghx-TlUV-EjyNv10n01jPkRjsEAhgSN");'></div>
+<p class="text-white text-base font-normal leading-normal flex-1 truncate">Welcome, Maria</p>
+</div>
+</div>
+<div class="flex-grow flex flex-col justify-center items-center p-4 gap-6">
+<div class="flex flex-col items-center justify-center gap-2 p-4">
+<div class="flex items-center gap-2 text-neutral-text-dark">
+<div class="shrink-0">
+<div class="flex size-7 items-center justify-center">
+<div class="size-3 rounded-full bg-neutral-500"></div>
+</div>
+</div>
+<p class="text-base font-normal leading-normal">You are Clocked Out</p>
+</div>
+<p class="text-green-status text-sm font-normal leading-normal">Location Verified ✓</p>
+</div>
+<div class="relative flex justify-center items-center my-4">
+<button class="flex size-48 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-green-status text-white text-xl font-bold leading-normal tracking-[0.015em] shadow-lg shadow-green-status/20">
+<span class="truncate">Clock In</span>
+</button>
+</div>
+<div class="flex px-4 py-3 justify-center">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-neutral-text-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Start Break</span>
+</button>
+</div>
+</div>
+<div class="p-4 w-full">
+<div class="flex flex-col items-stretch justify-start rounded-xl shadow-[0_0_12px_rgba(0,0,0,0.1)] bg-surface-dark p-4">
+<div class="flex border-b border-slate-700 mb-4">
+<button class="flex-1 text-center py-2 text-sm font-bold border-b-2 border-primary text-primary">Today</button>
+<button class="flex-1 text-center py-2 text-sm font-bold border-b-2 border-transparent text-neutral-text-dark hover:text-white transition-colors">This Week</button>
+</div>
+<div class="w-full">
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<p class="text-neutral-text-dark text-base">Total Hours</p>
+<p class="text-white text-lg font-bold">0h 0m</p>
+</div>
+<hr class="border-t border-slate-700"/>
+<div class="flex justify-between items-center">
+<p class="text-neutral-text-dark text-base">Clock In</p>
+<p class="text-white text-base">--:-- AM</p>
+</div>
+<div class="flex justify-between items-center">
+<p class="text-neutral-text-dark text-base">Clock Out</p>
+<p class="text-white text-base">--:-- PM</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="h-5 bg-background-dark"></div>
+</div>
+</body></html>

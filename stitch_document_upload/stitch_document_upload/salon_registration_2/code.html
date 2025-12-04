@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Register Your Salon</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#4FD1C5", // A brighter teal for better contrast on dark backgrounds
+            "background-light": "#F0F0F0",
+            "background-dark": "#121212", // A true black for the main background
+            "surface-dark": "#1E1E1E", // A slightly lighter black for cards/inputs
+            "text-light": "#333333",
+            "text-dark": "#E0E0E0", // A light gray for primary text
+            "text-dark-secondary": "#A0A0A0", // A secondary gray for less important text
+            "placeholder-light": "#A0A0A0",
+            "placeholder-dark": "#6B7280", // A muted gray for placeholders
+            "border-light": "#D0D0D0",
+            "border-dark": "#374151", // A subtle border color
+            "error": "#F87171" // A brighter red for error states
+          },
+          fontFamily: {
+            "display": ["Manrope", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-dark">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-dark group/design-root overflow-x-hidden">
+<div class="sticky top-0 z-10 flex items-center bg-background-dark p-4 pb-2 justify-between">
+<div class="flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined text-text-dark text-2xl">arrow_back</span>
+</div>
+<h1 class="text-text-dark text-xl font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Register Your Salon</h1>
+<div class="w-10"></div>
+</div>
+<div class="flex w-full flex-row items-center justify-center gap-3 py-4">
+<div class="h-1.5 flex-1 rounded-full bg-primary mx-4"></div>
+</div>
+<p class="text-center font-semibold text-sm text-primary -mt-2 mb-4">Step 1 of 2</p>
+<main class="flex-grow px-4">
+<h2 class="text-text-dark text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Basic Information</h2>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<p class="text-text-dark-secondary text-base font-medium leading-normal pb-2">Salon Name</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-surface-dark focus:border-primary h-14 placeholder:text-placeholder-dark p-4 text-base font-normal leading-normal" placeholder="Enter your salon's name" type="text" value=""/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-text-dark-secondary text-base font-medium leading-normal pb-2">Business Type</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-surface-dark focus:border-primary h-14 p-4 text-base font-normal leading-normal appearance-none bg-no-repeat bg-right-4" style="background-image: url('data:image/svg+xml;charset=utf-8,&lt;svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' fill=\'%23A0A0A0\'&gt;&lt;path d=\'M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659L8.753 11.14a1 1 0 0 1-1.506 0z\'/&gt;&lt;/svg&gt;');">
+<option class="bg-surface-dark text-text-dark" disabled="" selected="" value="">Select business type</option>
+<option class="bg-surface-dark text-text-dark" value="hair">Hair Salon</option>
+<option class="bg-surface-dark text-text-dark" value="nail">Nail Salon</option>
+<option class="bg-surface-dark text-text-dark" value="spa">Spa</option>
+<option class="bg-surface-dark text-text-dark" value="barber">Barbershop</option>
+</select>
+</label>
+</div>
+<h2 class="text-text-dark text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-8">Contact Details</h2>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<p class="text-text-dark-secondary text-base font-medium leading-normal pb-2">Contact Phone Number</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-surface-dark focus:border-primary h-14 placeholder:text-placeholder-dark p-4 text-base font-normal leading-normal" placeholder="+1 (555) 123-4567" type="tel" value=""/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-text-dark-secondary text-base font-medium leading-normal pb-2">Business Email</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-surface-dark focus:border-primary h-14 placeholder:text-placeholder-dark p-4 text-base font-normal leading-normal" placeholder="you@example.com" type="email" value=""/>
+<p class="text-error text-sm mt-1.5 hidden">Please enter a valid email address.</p>
+</label>
+</div>
+<h2 class="text-text-dark text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-8">Location</h2>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<p class="text-text-dark-secondary text-base font-medium leading-normal pb-2">Salon Address</p>
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-placeholder-dark">location_on</span>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-dark bg-surface-dark focus:border-primary h-14 placeholder:text-placeholder-dark pl-12 pr-4 py-4 text-base font-normal leading-normal" placeholder="Start typing your address..." type="text" value=""/>
+</div>
+</label>
+</div>
+<div class="flex items-start gap-3 py-8">
+<input class="form-checkbox mt-1 h-5 w-5 rounded border-border-dark bg-surface-dark text-primary focus:ring-primary" id="terms" type="checkbox"/>
+<label class="text-text-dark-secondary text-sm" for="terms">
+          I agree to the <a class="font-semibold text-primary underline" href="#">Terms of Service</a> and <a class="font-semibold text-primary underline" href="#">Privacy Policy</a>.
+        </label>
+</div>
+</main>
+<footer class="sticky bottom-0 bg-background-dark p-4 pt-2">
+<button class="flex w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-base font-bold text-background-dark shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background-dark disabled:cursor-not-allowed disabled:opacity-60">Register Salon</button>
+</footer>
+</div>
+
+</body></html>

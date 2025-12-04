@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Airtel AgentLite Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#E60000",
+              "background-light": "#f6f6f8",
+              "background-dark": "#121212",
+              "success": "#00C853",
+              "warning": "#FFAB00",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuASdAFMgJ147Sxu-5dB5WOcT3Y0cdmaVsW1MCrly0G5XLd-iZlh5kVeZYFoqqpbCsK_ydyWewrT0xsQSOCXoLBxs-gLwOwT8mZnIdtt1vk4jHAy1CYNDU31XBS5bswvBc4ef4Fq-SUWMyuVHqfDm2n_Dkq91-g1YZI_zMg5PPBEpBbX25XP2E3oALdDG3e3bGly-U7rIvHY3rv8Cng7XwuG-RSiayrJTKQlRSb25S4VIHpaRcNPRG9lawbXvBndiIGaRsG1IBtsb0Ss");'></div>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Salon Association</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 w-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-white" style="font-size: 24px;">notifications</span>
+</button>
+</div>
+</div>
+<!-- Alert Banner -->
+<div class="px-4 py-2">
+<div class="flex items-center justify-between gap-4 rounded-lg bg-warning/10 p-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-warning" style="font-size: 20px;">info</span>
+<p class="text-warning text-sm font-medium leading-normal">Reminder: Never share your PIN with anyone.</p>
+</div>
+<button class="text-warning/80">
+<span class="material-symbols-outlined" style="font-size: 20px;">close</span>
+</button>
+</div>
+</div>
+<!-- Balance Card -->
+<div class="p-4 @container">
+<div class="flex flex-col items-stretch justify-start rounded-lg bg-[#1C1C1C] p-4">
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2">
+<p class="text-[#E0E0E0] text-base font-medium leading-tight">Float Balance</p>
+<div class="flex items-end gap-3 justify-between">
+<div class="flex flex-col gap-1">
+<p class="text-white text-3xl font-bold leading-normal">KES 15,450.00</p>
+<p class="text-white/60 text-sm font-normal leading-normal">Tap to hide</p>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal">
+<span class="truncate">Add Float</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Transaction Grid -->
+<div class="grid grid-cols-2 gap-4 p-4">
+<div class="flex flex-1 gap-3 rounded-lg bg-[#1C1C1C] p-4 flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">send</span>
+<div class="flex flex-col gap-1 mt-2">
+<h2 class="text-white text-base font-bold leading-tight">Send Money</h2>
+<p class="text-white/60 text-sm font-normal leading-normal">Transfer funds</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-lg bg-[#1C1C1C] p-4 flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">download</span>
+<div class="flex flex-col gap-1 mt-2">
+<h2 class="text-white text-base font-bold leading-tight">Withdraw Cash</h2>
+<p class="text-white/60 text-sm font-normal leading-normal">Agent cash out</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-lg bg-[#1C1C1C] p-4 flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">receipt_long</span>
+<div class="flex flex-col gap-1 mt-2">
+<h2 class="text-white text-base font-bold leading-tight">Pay Bill</h2>
+<p class="text-white/60 text-sm font-normal leading-normal">Utilities &amp; more</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-lg bg-[#1C1C1C] p-4 flex-col items-center text-center">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">phone_iphone</span>
+<div class="flex flex-col gap-1 mt-2">
+<h2 class="text-white text-base font-bold leading-tight">Buy Airtime</h2>
+<p class="text-white/60 text-sm font-normal leading-normal">Top up mobile credit</p>
+</div>
+</div>
+</div>
+<!-- Section Header -->
+<h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Recent Transactions</h2>
+<!-- List Items -->
+<div class="flex flex-col pb-4">
+<div class="flex items-center gap-4 bg-transparent px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-success flex items-center justify-center rounded-full bg-[#1C1C1C] shrink-0 size-12">
+<span class="material-symbols-outlined">arrow_downward</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Deposit</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">Today, 10:45 AM</p>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<p class="text-success text-base font-medium leading-normal">+ KES 5,000</p>
+<p class="text-white/60 text-sm font-normal leading-normal">Completed</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-transparent px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-white flex items-center justify-center rounded-full bg-[#1C1C1C] shrink-0 size-12">
+<span class="material-symbols-outlined">arrow_upward</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Withdrawal</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">Yesterday, 3:20 PM</p>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<p class="text-white text-base font-medium leading-normal">- KES 1,200</p>
+<p class="text-white/60 text-sm font-normal leading-normal">Completed</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-transparent px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-warning flex items-center justify-center rounded-full bg-[#1C1C1C] shrink-0 size-12">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Bill Payment</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">Mon, 09:12 AM</p>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<p class="text-white text-base font-medium leading-normal">- KES 850</p>
+<p class="text-warning text-sm font-normal leading-normal">Failed</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

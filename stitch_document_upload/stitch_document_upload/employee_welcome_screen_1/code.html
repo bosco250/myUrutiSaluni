@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Welcome to the Team</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#19f073",
+            "background-light": "#f6f8f7",
+            "background-dark": "#102218",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+          },
+          borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111814] dark:text-white">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<main class="flex-1 flex flex-col pt-12">
+<!-- Carousel -->
+<div class="flex-1 flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden">
+<div class="flex items-stretch px-4 gap-4 w-full">
+<!-- Slide 1 -->
+<div class="flex h-full flex-1 flex-col gap-6 rounded-lg min-w-full text-center">
+<div class="w-full bg-center bg-no-repeat aspect-square bg-contain" data-alt="Illustration of diverse team members collaborating happily" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBQL1SpaiizbIFK-jwXJi5ovcWsES2mvVHyOO8cIS8GWjCR6-sh58JdzKxYP7mDSmbpElYgFTx9Obqm5TE0O40E8qoiKVZ2taVlGfPYeStkGHgpdAvjW1kuFgEJibE6pLCocf0e1gr04OoeVt2Y-1Bd7PZixWnos2oLYrZbU9GXjpp_QznWWraXSJe-G3F6Kzm2OpKytNdtnduzYEec1NhczxLiI1VLzY8ro4CenMB8hmbY3B1WuobaLsXjDUncstWAuOdu4wcD-GsC");'></div>
+<div>
+<h1 class="text-2xl font-bold leading-tight text-[#111814] dark:text-white">Welcome to the Team!</h1>
+<p class="text-base font-normal leading-relaxed text-[#608a72] dark:text-gray-400 mt-2">This app is here to make your work life easier. Let's get you started.</p>
+</div>
+</div>
+<!-- The following slides are conceptually present for a real swipeable carousel -->
+<!-- Slide 2 (Conceptual) -->
+<!--
+          <div class="flex h-full flex-1 flex-col gap-6 rounded-lg min-w-full text-center">
+            <div class="w-full bg-center bg-no-repeat aspect-square bg-contain" data-alt="Illustration of a person clocking in on a large mobile phone with a calendar in the background" style='background-image: url("https://res.cloudinary.com/submagic/image/upload/v1718828943/generator/u3066aav7axzih41g08m.png");'></div>
+            <div>
+              <h1 class="text-2xl font-bold leading-tight text-[#111814] dark:text-white">Clock In With Ease</h1>
+              <p class="text-base font-normal leading-relaxed text-[#608a72] dark:text-gray-400 mt-2">Manage your attendance and view your schedule directly from your phone.</p>
+            </div>
+          </div>
+          -->
+<!-- Slide 3 (Conceptual) -->
+<!--
+          <div class="flex h-full flex-1 flex-col gap-6 rounded-lg min-w-full text-center">
+            <div class="w-full bg-center bg-no-repeat aspect-square bg-contain" data-alt="Illustration of salon service icons like scissors, hair dryer, and nail polish bottle floating around a checklist" style='background-image: url("https://res.cloudinary.com/submagic/image/upload/v1718828943/generator/c5p4l950882e3l5c35g1.png");'></div>
+            <div>
+              <h1 class="text-2xl font-bold leading-tight text-[#111814] dark:text-white">Log Your Services</h1>
+              <p class="text-base font-normal leading-relaxed text-[#608a72] dark:text-gray-400 mt-2">Keep a record of all your services for easy and accurate commission tracking.</p>
+            </div>
+          </div>
+          -->
+<!-- Slide 4 (Conceptual) -->
+<!--
+          <div class="flex h-full flex-1 flex-col gap-6 rounded-lg min-w-full text-center">
+            <div class="w-full bg-center bg-no-repeat aspect-square bg-contain" data-alt="Illustration of a person looking at a growing bar chart on a large screen, representing earnings" style='background-image: url("https://res.cloudinary.com/submagic/image/upload/v1718828942/generator/t9o0zaxq58hry1z9o290.png");'></div>
+            <div>
+              <h1 class="text-2xl font-bold leading-tight text-[#111814] dark:text-white">Track Your Earnings</h1>
+              <p class="text-base font-normal leading-relaxed text-[#608a72] dark:text-gray-400 mt-2">See your commissions and performance in real-time. Know exactly what you've earned.</p>
+            </div>
+          </div>
+          -->
+</div>
+</div>
+</main>
+<!-- Footer with Controls -->
+<footer class="flex flex-col items-center gap-6 px-4 pb-8 pt-4">
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-2 py-3">
+<div class="h-2 w-6 rounded-full bg-[#111814] dark:bg-primary"></div>
+<div class="h-2 w-2 rounded-full bg-[#dbe6df] dark:bg-gray-700"></div>
+<div class="h-2 w-2 rounded-full bg-[#dbe6df] dark:bg-gray-700"></div>
+<div class="h-2 w-2 rounded-full bg-[#dbe6df] dark:bg-gray-700"></div>
+</div>
+<!-- Action Buttons -->
+<div class="flex w-full flex-col gap-2">
+<button class="flex min-w-[84px] w-full max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-5 bg-primary text-[#111814] text-base font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Get Started</span>
+</button>
+<button class="flex min-w-[84px] w-full max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-transparent text-[#111814] dark:text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Skip for now</span>
+</button>
+</div>
+</footer>
+</div>
+</body></html>

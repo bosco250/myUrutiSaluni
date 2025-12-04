@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Campaign</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#E01A6A",
+              "background-light": "#f6f8f6",
+              "background-dark": "#121212",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-[#EAEAEA]">arrow_back</span>
+</div>
+<h2 class="text-[#EAEAEA] text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">New Campaign</h2>
+<div class="flex w-12 items-center justify-end">
+<p class="text-primary text-base font-bold leading-normal tracking-[0.015em] shrink-0">Cancel</p>
+</div>
+</div>
+<!-- Progress Indicator -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-5 px-4">
+<div class="h-1 flex-1 rounded-full bg-primary"></div>
+<div class="h-1 flex-1 rounded-full bg-[#2A2A2A]"></div>
+<div class="h-1 flex-1 rounded-full bg-[#2A2A2A]"></div>
+<div class="h-1 flex-1 rounded-full bg-[#2A2A2A]"></div>
+</div>
+<main class="flex-grow pb-28">
+<!-- Section 1: Campaign Type -->
+<h3 class="text-[#EAEAEA] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Choose your channel</h3>
+<div class="flex px-4 py-3">
+<div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-[#2A2A2A] p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-background-dark has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#EAEAEA] text-[#A0A0A0] text-sm font-medium leading-normal">
+<span class="truncate">SMS</span>
+<input class="invisible w-0" name="campaign-type" type="radio" value="SMS"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-background-dark has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#EAEAEA] text-[#A0A0A0] text-sm font-medium leading-normal">
+<span class="truncate">Push Notification</span>
+<input checked="" class="invisible w-0" name="campaign-type" type="radio" value="Push Notification"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-background-dark has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] has-[:checked]:text-[#EAEAEA] text-[#A0A0A0] text-sm font-medium leading-normal">
+<span class="truncate">Email</span>
+<input class="invisible w-0" name="campaign-type" type="radio" value="Email"/>
+</label>
+</div>
+</div>
+<!-- Accordions for campaign steps -->
+<div class="flex flex-col p-4 gap-3">
+<details class="flex flex-col rounded-lg bg-[#2A2A2A] px-4 group" open="">
+<summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-3">
+<p class="text-[#EAEAEA] text-base font-medium leading-normal">Target Audience</p>
+<span class="material-symbols-outlined text-[#EAEAEA] group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="pb-4">
+<p class="text-[#A0A0A0] text-sm font-normal leading-normal pb-4">Who are you sending this to?</p>
+<div class="flex flex-wrap gap-2">
+<label class="cursor-pointer rounded-full px-4 py-2 text-sm font-medium has-[:checked]:bg-primary/30 has-[:checked]:text-primary has-[:checked]:border-primary border border-transparent bg-background-dark text-[#A0A0A0]">
+<input class="hidden" name="audience" type="checkbox" value="all"/> All Customers
+                             </label>
+<label class="cursor-pointer rounded-full px-4 py-2 text-sm font-medium has-[:checked]:bg-primary/30 has-[:checked]:text-primary has-[:checked]:border-primary border border-transparent bg-background-dark text-[#EAEAEA]">
+<input checked="" class="hidden" name="audience" type="checkbox" value="loyalty"/> Loyalty Members
+                             </label>
+<label class="cursor-pointer rounded-full px-4 py-2 text-sm font-medium has-[:checked]:bg-primary/30 has-[:checked]:text-primary has-[:checked]:border-primary border border-transparent bg-background-dark text-[#A0A0A0]">
+<input class="hidden" name="audience" type="checkbox" value="new"/> New (Last 30 Days)
+                             </label>
+<label class="cursor-pointer rounded-full px-4 py-2 text-sm font-medium has-[:checked]:bg-primary/30 has-[:checked]:text-primary has-[:checked]:border-primary border border-transparent bg-background-dark text-[#A0A0A0]">
+<input class="hidden" name="audience" type="checkbox" value="at-risk"/> At-Risk (90+ Days)
+                             </label>
+<label class="cursor-pointer rounded-full px-4 py-2 text-sm font-medium has-[:checked]:bg-primary/30 has-[:checked]:text-primary has-[:checked]:border-primary border border-transparent bg-background-dark text-[#A0A0A0]">
+<input class="hidden" name="audience" type="checkbox" value="custom"/> Custom Segment
+                             </label>
+</div>
+</div>
+</details>
+<details class="flex flex-col rounded-lg bg-[#2A2A2A] px-4 group">
+<summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-3">
+<p class="text-[#EAEAEA] text-base font-medium leading-normal">Compose Message</p>
+<span class="material-symbols-outlined text-[#EAEAEA] group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="pb-4 space-y-4">
+<div>
+<label class="text-[#A0A0A0] text-sm font-normal leading-normal pb-2 block" for="campaign-name">Campaign Name</label>
+<input class="w-full bg-background-dark border border-gray-700 text-[#EAEAEA] rounded-md p-2 focus:ring-primary focus:border-primary" id="campaign-name" placeholder="e.g., Spring Promo" type="text"/>
+</div>
+<div>
+<label class="text-[#A0A0A0] text-sm font-normal leading-normal pb-2 block" for="message-body">Message</label>
+<textarea class="w-full bg-background-dark border border-gray-700 text-[#EAEAEA] rounded-md p-2 focus:ring-primary focus:border-primary" id="message-body" placeholder="Hi {customer_name}, we miss you!..." rows="4"></textarea>
+<div class="flex justify-between items-center mt-1">
+<a class="text-primary text-sm font-medium" href="#">Preview</a>
+<p class="text-[#A0A0A0] text-xs">0 / 160 characters</p>
+</div>
+</div>
+</div>
+</details>
+<details class="flex flex-col rounded-lg bg-[#2A2A2A] px-4 group">
+<summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-3">
+<p class="text-[#EAEAEA] text-base font-medium leading-normal">Schedule</p>
+<span class="material-symbols-outlined text-[#EAEAEA] group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="pb-4 space-y-4">
+<p class="text-[#A0A0A0] text-sm font-normal leading-normal">When should this campaign go out?</p>
+<div class="flex flex-col gap-3">
+<label class="flex items-center justify-between p-3 rounded-lg bg-background-dark has-[:checked]:ring-2 has-[:checked]:ring-primary cursor-pointer">
+<span class="text-[#EAEAEA] text-sm">Send Now</span>
+<input checked="" class="form-radio bg-gray-700 border-gray-600 text-primary focus:ring-primary" name="schedule" type="radio" value="now"/>
+</label>
+<label class="flex items-center justify-between p-3 rounded-lg bg-background-dark has-[:checked]:ring-2 has-[:checked]:ring-primary cursor-pointer">
+<span class="text-[#EAEAEA] text-sm">Schedule for Later</span>
+<input class="form-radio bg-gray-700 border-gray-600 text-primary focus:ring-primary" name="schedule" type="radio" value="later"/>
+</label>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="text-[#A0A0A0] text-xs font-normal pb-1 block" for="schedule-date">Date</label>
+<input class="w-full bg-background-dark border border-gray-700 text-[#EAEAEA] rounded-md p-2 focus:ring-primary focus:border-primary" id="schedule-date" type="date"/>
+</div>
+<div>
+<label class="text-[#A0A0A0] text-xs font-normal pb-1 block" for="schedule-time">Time</label>
+<input class="w-full bg-background-dark border border-gray-700 text-[#EAEAEA] rounded-md p-2 focus:ring-primary focus:border-primary" id="schedule-time" type="time"/>
+</div>
+</div>
+</div>
+</details>
+</div>
+</main>
+<!-- Sticky Footer Button -->
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-background-dark/80 backdrop-blur-sm border-t border-white/10">
+<button class="w-full h-12 flex items-center justify-center rounded-lg bg-primary text-background-dark text-base font-bold">
+                Review &amp; Launch
+            </button>
+</div>
+</div>
+</body></html>

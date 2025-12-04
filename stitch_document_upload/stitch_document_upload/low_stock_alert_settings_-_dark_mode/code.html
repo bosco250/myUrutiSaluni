@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Low Stock Alerts</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-[#111811] group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-[#111811] p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center">
+<span class="material-symbols-outlined text-white text-[28px]">arrow_back</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Low Stock Alerts</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-white text-[28px]">notifications</span>
+</button>
+</div>
+</div>
+<!-- Search Bar -->
+<div class="px-4 py-3 sticky top-[72px] bg-[#111811] z-10">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#9db89d] flex border-none bg-[#293829] items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-white focus:outline-0 focus:ring-0 border-none bg-[#293829] focus:border-none h-full placeholder:text-[#9db89d] px-4 pl-2 text-base font-normal leading-normal" placeholder="Search for a product..." value=""/>
+</div>
+</label>
+</div>
+<!-- List Items -->
+<div class="flex flex-col gap-1 px-4 py-3">
+<!-- List Item 1 -->
+<div class="flex items-center gap-4 bg-[#1b2b1b] p-4 rounded-lg min-h-[72px] justify-between">
+<div class="flex items-center gap-4 overflow-hidden">
+<img class="aspect-square rounded-lg size-14 object-cover" data-alt="Bottle of radiant glow serum with a dropper." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzXtXgZiDYqC-gFfGH8kemz3vOVUH8up3OVrzv5sYOv5U5mpNvTfvhNmwr8FW5RfemxjiquFYEOuvvSdFcSXKZcGYqVTY7nr9MM3KtZSHNyuESiO_iICNjrQYJ9YBxz4iHvwmKLTiZfkjLop57DK1yeiDlE4Oz9DwcoaVTcfLsEUnfWCkdfkuWpiWdzwtUuqYFk3BI6VA9CnKbVqpRmAA_oQ-9WxHQGANQJgBCZhHUJ-hKVUbx1jbJLEXX46OudSyeMX0m2ogsDYG_"/>
+<div class="flex flex-col justify-center overflow-hidden">
+<p class="text-white text-base font-medium leading-normal truncate">Radiant Glow Serum</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">
+<span class="text-primary font-semibold">5</span> / 10 items left
+                    </p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="text-white flex size-8 items-center justify-center rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center gap-4 bg-[#1b2b1b] p-4 rounded-lg min-h-[72px] justify-between">
+<div class="flex items-center gap-4 overflow-hidden">
+<img class="aspect-square rounded-lg size-14 object-cover" data-alt="A bottle of hydrating shampoo against a clean background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtqf2skDejUCUHczZFADvahejN6YYPwnLIDUhPYCzZZzO4Ozz7vWkfz004NhNpeZ4FeWhKEAjRNQBYdTbW28wcJhkELLdZtAEw7dd9lKSBXIMz-AOpHIAJf68jkAZZWzsiu2BCkfetYbHuWIzeeNdW85cdy_2PMKEldTYnrpD22rQJ5eHgPm9CRFzZnTBcyIm2Td9gCusYJH364-JLdrUY5gBWcreS2el9h0sybQ5uLDgZpLoJT5HKftXTOXwL1l-S59I5JNTL-jj7"/>
+<div class="flex flex-col justify-center overflow-hidden">
+<p class="text-white text-base font-medium leading-normal truncate">Hydrating Shampoo</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">
+<span class="text-white">8</span> / 15 items left
+                    </p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="text-white flex size-8 items-center justify-center rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center gap-4 bg-[#1b2b1b] p-4 rounded-lg min-h-[72px] justify-between">
+<div class="flex items-center gap-4 overflow-hidden">
+<img class="aspect-square rounded-lg size-14 object-cover" data-alt="A small tub of matte finishing clay for hair styling." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHGR0ey0cupkvY1IXBrKl0fj4_kzkYO930UunIL5FabNOzHxgrkyAkjPuE3XUVZ6k_BlgN6RlW9K5AF4mgvZsUQkAn8sveR1YTBfZjsNvTx3KRiN7NnOCmPYE6bqlV47HmU-l8eEZUHms9PTeTacRpVxhEH7KekxA4qWjcsK41bXsdghuUSm6vBiQAtLp0MqZqni0UChGYTyvhrk0vycWokJlKigkWy_t9JGlms2xKUNRogZ1K_uQVipyYbzgeIZu_Ws3NjCZm5-CU"/>
+<div class="flex flex-col justify-center overflow-hidden">
+<p class="text-white text-base font-medium leading-normal truncate">Matte Finishing Clay</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">
+<span class="text-primary font-semibold">3</span> / 5 items left
+                    </p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="text-white flex size-8 items-center justify-center rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- List Item 4 -->
+<div class="flex items-center gap-4 bg-[#1b2b1b] p-4 rounded-lg min-h-[72px] justify-between">
+<div class="flex items-center gap-4 overflow-hidden">
+<img class="aspect-square rounded-lg size-14 object-cover" data-alt="Professional hair conditioner bottle." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsTGumAsl9YKEhdUU5Q6KIWyFVHxVgSUKQzdtvo-LQWfywI-bUquqNyTDBfhTfNkdR1GKWHU9C4rV6GnzJA727RqKnApLXKUM8LxTSw0Ksfs3gye--Z58we1cHofV1tUlHCsXOpXAZ0n4x7z-5FNGof0GfUubW2w3UlNXgezfOH7yCo2AIb47ZkSQ1GYHPQP--TuCgchF2a47VlOWNSj1WLs6yduMXNhpO14jU_JilUqFKDMsejlvjyT0fX6MmEAUCB_ze5Kr9jB5H"/>
+<div class="flex flex-col justify-center overflow-hidden">
+<p class="text-white text-base font-medium leading-normal truncate">Volumizing Conditioner</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal">
+<span class="text-white">12</span> / 20 items left
+                    </p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="text-white flex size-8 items-center justify-center rounded-full hover:bg-white/10">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6 z-20">
+<button class="flex items-center justify-center size-14 bg-primary text-black rounded-full shadow-lg hover:bg-primary/90">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+</div>
+</body></html>

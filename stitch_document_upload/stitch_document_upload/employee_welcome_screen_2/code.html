@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Welcome to the Team</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#19f073",
+            "background-light": "#f6f8f7",
+            "background-dark": "#101814",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+          },
+          borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-white">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<main class="flex-1 flex flex-col pt-12">
+<div class="flex-1 flex overflow-y-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden">
+<div class="flex items-stretch px-4 gap-4 w-full">
+<div class="flex h-full flex-1 flex-col gap-6 rounded-lg min-w-full text-center">
+<div class="w-full bg-center bg-no-repeat aspect-square bg-contain" data-alt="Illustration of diverse team members collaborating happily" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBQL1SpaiizbIFK-jwXJi5ovcWsES2mvVHyOO8cIS8GWjCR6-sh58JdzKxYP7mDSmbpElYgFTx9Obqm5TE0O40E8qoiKVZ2taVlGfPYeStkGHgpdAvjW1kuFgEJibE6pLCocf0e1gr04OoeVt2Y-1Bd7PZixWnos2oLYrZbU9GXjpp_QznWWraXSJe-G3F6Kzm2OpKytNdtnduzYEec1NhczxLiI1VLzY8ro4CenMB8hmbY3B1WuobaLsXjDUncstWAuOdu4wcD-GsC");'></div>
+<div>
+<h1 class="text-2xl font-bold leading-tight text-white">Welcome to the Team!</h1>
+<p class="text-base font-normal leading-relaxed text-gray-400 mt-2">This app is here to make your work life easier. Let's get you started.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="flex flex-col items-center gap-6 px-4 pb-8 pt-4">
+<div class="flex w-full flex-row items-center justify-center gap-2 py-3">
+<div class="h-2 w-6 rounded-full bg-primary"></div>
+<div class="h-2 w-2 rounded-full bg-gray-700"></div>
+<div class="h-2 w-2 rounded-full bg-gray-700"></div>
+<div class="h-2 w-2 rounded-full bg-gray-700"></div>
+</div>
+<div class="flex w-full flex-col gap-2">
+<button class="flex min-w-[84px] w-full max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-5 bg-primary text-[#101814] text-base font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Get Started</span>
+</button>
+<button class="flex min-w-[84px] w-full max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-transparent text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Skip for now</span>
+</button>
+</div>
+</footer>
+</div>
+
+</body></html>

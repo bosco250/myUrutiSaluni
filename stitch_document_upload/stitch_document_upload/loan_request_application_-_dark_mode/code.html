@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Micro-Loan Application</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex shrink-0 items-center justify-between bg-background-light dark:bg-background-dark p-4 pb-2 sticky top-0 z-10">
+<div class="text-white flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white/90">arrow_back</span>
+</div>
+<h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-white">New Loan Request</h1>
+<div class="size-12 shrink-0"></div>
+</header>
+<main class="flex-1 px-4">
+<!-- Loan Details Section -->
+<section class="mt-2">
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] text-white pb-2 pt-4">Loan Details</h2>
+<!-- Loan Amount Input -->
+<div class="py-3">
+<label class="flex flex-col">
+<p class="text-base font-medium leading-normal text-white/90 pb-2">Loan Amount</p>
+<div class="relative">
+<span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-white/70">$</span>
+<input class="form-input flex h-14 w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-[#3c533c] bg-[#1c261c] p-[15px] pl-8 text-base font-normal leading-normal text-white placeholder:text-[#9db89d] focus:border-primary/70 focus:outline-0 focus:ring-0" placeholder="5,000" type="number" value=""/>
+</div>
+</label>
+</div>
+<!-- Loan Purpose Dropdown -->
+<div class="py-3">
+<label class="flex flex-col">
+<p class="text-base font-medium leading-normal text-white/90 pb-2">Purpose of Loan</p>
+<select class="form-select flex h-14 w-full min-w-0 flex-1 appearance-none resize-none overflow-hidden rounded-lg border border-[#3c533c] bg-[#1c261c] p-[15px] text-base font-normal leading-normal text-white/70 placeholder:text-[#9db89d] focus:border-primary/70 focus:outline-0 focus:ring-0" style="--select-button-svg: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='24px' height='24px' fill='rgb(157,184,157)' viewBox='0 0 256 256'%3e%3cpath d='M215.39,92.94a8,8,0,0,0-11.31,0L128,169.05,51.94,92.92a8,8,0,0,0-11.32,11.32l82.05,82.06a8,8,0,0,0,11.32,0L215.39,104.26A8,8,0,0,0,215.39,92.94Z'%3e%3c/path%3e%3c/svg%3e&quot;); background-image: var(--select-button-svg); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em;">
+<option value="">Select a purpose</option>
+<option value="equipment">Buy Equipment</option>
+<option value="inventory">Stock Inventory</option>
+<option value="training">Training Course</option>
+<option value="other">Other</option>
+</select>
+</label>
+</div>
+<!-- Preferred Repayment Term -->
+<div class="py-3">
+<p class="text-base font-medium leading-normal text-white/90 pb-2">Preferred Repayment Term</p>
+<div class="grid grid-cols-3 gap-3">
+<label class="flex cursor-pointer items-center justify-center rounded-lg border border-[#3c533c] bg-[#1c261c] p-3 text-center has-[:checked]:border-primary has-[:checked]:bg-primary/20 has-[:checked]:text-primary">
+<input class="sr-only" name="repayment-term" type="radio" value="3"/>
+<span class="text-sm font-medium">3 Months</span>
+</label>
+<label class="flex cursor-pointer items-center justify-center rounded-lg border border-[#3c533c] bg-[#1c261c] p-3 text-center has-[:checked]:border-primary has-[:checked]:bg-primary/20 has-[:checked]:text-primary">
+<input checked="" class="sr-only" name="repayment-term" type="radio" value="6"/>
+<span class="text-sm font-medium">6 Months</span>
+</label>
+<label class="flex cursor-pointer items-center justify-center rounded-lg border border-[#3c533c] bg-[#1c261c] p-3 text-center has-[:checked]:border-primary has-[:checked]:bg-primary/20 has-[:checked]:text-primary">
+<input class="sr-only" name="repayment-term" type="radio" value="12"/>
+<span class="text-sm font-medium">12 Months</span>
+</label>
+</div>
+</div>
+</section>
+<!-- Repayment Projection Section -->
+<section class="mt-4">
+<h2 class="text-[28px] font-bold leading-tight tracking-light text-white pb-3 pt-5">Repayment Projection</h2>
+<div class="rounded-xl border border-[#3c533c] bg-[#1c261c] p-5">
+<!-- Loan Amount Slider -->
+<div>
+<label class="flex justify-between text-sm font-medium text-white/90" for="loan-amount-slider">
+<span>Loan Amount</span>
+<span>$5,000</span>
+</label>
+<input class="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#3c533c] accent-primary" id="loan-amount-slider" max="10000" min="500" type="range" value="5000"/>
+</div>
+<!-- Simulator Readouts -->
+<div class="mt-6 grid grid-cols-2 gap-4 border-t border-[#3c533c] pt-5">
+<div class="flex flex-col gap-1">
+<p class="text-sm font-medium text-white/60">Monthly Payment</p>
+<p class="text-xl font-bold text-white">$875.45</p>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-sm font-medium text-white/60">Total Interest</p>
+<p class="text-xl font-bold text-white">$252.70</p>
+</div>
+</div>
+<p class="mt-4 text-xs text-white/50">Estimates are based on standard interest rates and your selected term. Final terms may vary.</p>
+</div>
+</section>
+<!-- Additional Details -->
+<section class="mt-6 py-3">
+<label class="flex flex-col">
+<p class="text-base font-medium leading-normal text-white/90 pb-2">Additional Details (Optional)</p>
+<textarea class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-[#3c533c] bg-[#1c261c] p-[15px] text-base font-normal leading-normal text-white placeholder:text-[#9db89d] focus:border-primary/70 focus:outline-0 focus:ring-0" placeholder="Provide any extra information here..." rows="4"></textarea>
+</label>
+</section>
+</main>
+<!-- Sticky Footer -->
+<footer class="sticky bottom-0 bg-background-light/80 dark:bg-background-dark/80 px-4 pb-6 pt-4 backdrop-blur-sm">
+<!-- Terms and Conditions -->
+<div class="flex items-center space-x-3 pb-4">
+<input class="h-5 w-5 rounded border-[#3c533c] bg-[#1c261c] text-primary focus:ring-primary/50" id="terms" name="terms" type="checkbox"/>
+<label class="text-sm font-medium text-white/70" for="terms">
+                    I agree to the <a class="font-semibold text-primary/90 underline" href="#">Terms &amp; Conditions</a>.
+                </label>
+</div>
+<!-- Submit Button -->
+<button class="flex h-14 w-full items-center justify-center rounded-xl bg-primary px-6 text-base font-bold text-black shadow-lg transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">Submit Application</button>
+</footer>
+</div>
+</body></html>

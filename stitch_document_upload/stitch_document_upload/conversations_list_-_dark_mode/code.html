@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messages - Salon Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1,200..400&amp;display=swap" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 300,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex items-center justify-between bg-background-light dark:bg-background-dark p-4 pb-3">
+<h1 class="text-zinc-900 dark:text-zinc-50 text-2xl font-bold leading-tight tracking-[-0.015em] flex-1">Messages</h1>
+<div class="flex items-center justify-end">
+<button class="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent text-zinc-900 dark:text-zinc-50">
+<span class="material-symbols-outlined text-2xl">search</span>
+</button>
+</div>
+</div>
+<!-- Conversation List -->
+<div class="flex flex-col px-2">
+<!-- List Item: Unread -->
+<div class="flex cursor-pointer items-center gap-4 rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-white/5 min-h-[72px]">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Profile picture of Jenna" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAKt-B8QYQYqbqdQh-SflCAZ10ESdQ23WW5zgmiFwYV5HJAFBtUi_aIwmWGcqu5np0YDnmlKlhfO1vP2RJ36KIvkxm3D9oU2Arb0wcjdZSjKFFhslgFLOe5sUwCwuPAdsajQ537ado9UALyKiFbYdDbx_-rl2gMhLYyhqFVwo-Xfz7AtjGHP6qkX73XdSF8Cly0dVkkP2rd3QJ_xVpY99T7ZXSM97_gdrCBuC3mluaArlKRLY7remyPMM9ZFv9WG5t0ebOtx2fNbQGC");'></div>
+</div>
+<div class="flex-grow">
+<div class="flex flex-col justify-center">
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-semibold leading-normal line-clamp-1">Jenna Stylist</p>
+<p class="text-primary text-sm font-medium leading-normal line-clamp-1">Can you cover my shift?...</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end gap-1.5 h-full pt-1 self-start">
+<p class="text-zinc-600 dark:text-zinc-400 text-xs font-normal leading-normal">10:45 AM</p>
+<div class="flex size-6 items-center justify-center rounded-full bg-primary text-zinc-900 text-xs font-bold"><div>2</div></div>
+</div>
+</div>
+<!-- List Item: Read -->
+<div class="flex cursor-pointer items-center gap-4 rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-white/5 min-h-[72px]">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 flex items-center justify-center bg-primary/20">
+<span class="material-symbols-outlined text-primary text-3xl">store</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex flex-col justify-center">
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-semibold leading-normal line-clamp-1">Front Desk</p>
+<p class="text-zinc-600 dark:text-zinc-400 text-sm font-normal leading-normal line-clamp-1">Reminder: Team meeting at 3 PM</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end gap-1.5 h-full pt-1 self-start">
+<p class="text-zinc-600 dark:text-zinc-400 text-xs font-normal leading-normal">Yesterday</p>
+</div>
+</div>
+<!-- List Item: Group, Unread -->
+<div class="flex cursor-pointer items-center gap-4 rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-white/5 min-h-[72px]">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 flex items-center justify-center bg-primary/20">
+<span class="material-symbols-outlined text-primary text-3xl">groups</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="flex flex-col justify-center">
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-semibold leading-normal line-clamp-1">All Staff</p>
+<p class="text-primary text-sm font-medium leading-normal line-clamp-1">Alex: Check out this new product!</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end gap-1.5 h-full pt-1 self-start">
+<p class="text-zinc-600 dark:text-zinc-400 text-xs font-normal leading-normal">9:15 AM</p>
+<div class="flex size-6 items-center justify-center rounded-full bg-primary text-zinc-900 text-xs font-bold"><div>1</div></div>
+</div>
+</div>
+<!-- List Item: Read, old -->
+<div class="flex cursor-pointer items-center gap-4 rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-white/5 min-h-[72px]">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Profile picture of Alex" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDLZlSaDWWm4iZveVmZWpP7IKhvqFlAv59ilaSO6V3mdDvDhdjNQX493Ja8fIqZJADJ1tFrEgmyWVZ0F-3tgyoM1vR67rzKoReEK6pBaFRRYcCZhbisEiM3uRzdHVdDOKMSuC5CVEb25VqTRGtq1hKA8kmAW_buqYXMACQabR4aKyC9bcKHRCjp2LnJWeqdkZJVHzxYOpyW2KP3ukPBQnxQK5Yr2Gb1IvQjtQBMeeJVNKs62XVZgkCYNdTDEEERWa7p0DUddwUqePBw");'></div>
+</div>
+<div class="flex-grow">
+<div class="flex flex-col justify-center">
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-semibold leading-normal line-clamp-1">Alex</p>
+<p class="text-zinc-600 dark:text-zinc-400 text-sm font-normal leading-normal line-clamp-1">You: Okay, sounds good!</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end gap-1.5 h-full pt-1 self-start">
+<p class="text-zinc-600 dark:text-zinc-400 text-xs font-normal leading-normal">11/23/24</p>
+</div>
+</div>
+<!-- List Item: Read, with image -->
+<div class="flex cursor-pointer items-center gap-4 rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-white/5 min-h-[72px]">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Profile picture of Sarah" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCEMuesmGWq1nktfRYYMwPv9cv9diyveuYRMpTWto0JpAlqTdrgvyDYTpi79qwkXtZbvXvOImIb_X0CfbJwMKIYzqViy8JjD7YUUqoDfTaZ2TF9prWjDvkCd7ehwrUnq5vRPpCnV_8WY5cIWteN4-k6UXOLt6suseBfzVFD1_6JYYkDSRaOMRvaTULrp3aFxxMBjaoUMHXRsYjKXWilivUVbCX7sR3rEC_F_Bv1dRQDq9ddTO0eEpRU6FEeu4M6tTEJdw073hwkAStI");'></div>
+</div>
+<div class="flex-grow">
+<div class="flex flex-col justify-center">
+<p class="text-zinc-900 dark:text-zinc-50 text-base font-semibold leading-normal line-clamp-1">Sarah</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-zinc-600 dark:text-zinc-400 text-base leading-none">image</span>
+<p class="text-zinc-600 dark:text-zinc-400 text-sm font-normal leading-normal line-clamp-1">Image</p>
+</div>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end gap-1.5 h-full pt-1 self-start">
+<p class="text-zinc-600 dark:text-zinc-400 text-xs font-normal leading-normal">Mon</p>
+</div>
+</div>
+<!-- Empty State Example (commented out) -->
+<!-- 
+            <div class="flex flex-col items-center justify-center text-center mt-24 px-8">
+                <span class="material-symbols-outlined text-6xl text-zinc-600 dark:text-zinc-500">chat</span>
+                <h3 class="mt-4 text-lg font-semibold text-zinc-900 dark:text-zinc-50">No messages yet</h3>
+                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Tap the button below to start a new conversation.</p>
+            </div>
+            -->
+</div>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6">
+<button class="flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary text-zinc-900 shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background-dark">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'wght' 400;">edit</span>
+</button>
+</div>
+</div>
+</body></html>

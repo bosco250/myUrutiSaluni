@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Purchase a Gift Card</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#E42256",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#121212",
+                        "component-dark": "#2A2A2A",
+                        "text-primary-dark": "#EAEAEA",
+                        "text-secondary-dark": "#A0A0A0",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col font-display dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-dark/80 backdrop-blur-sm sticky top-0 z-10 p-4 pb-2 justify-between">
+<button class="text-text-primary-dark flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h2 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Purchase a Gift Card</h2>
+<div class="size-10 shrink-0"></div> <!-- Spacer for centering title -->
+</div>
+<main class="flex-grow px-4 pb-28">
+<!-- Gift Card Image Preview -->
+<div class="flex w-full grow py-6">
+<div class="w-full gap-1 overflow-hidden shadow-lg shadow-black/30 rounded-xl flex">
+<div class="w-full bg-center bg-no-repeat bg-cover aspect-[1.58] rounded-xl flex-1" data-alt="A luxurious floral gift card design with gold accents on a dark background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCwTag-KGVCUyn3gKAOBqO8un5DG_o2crXQJsfn9wlSyDSHQbcKoXcQMbv9Jj3n3vC4-S_r1995Mp6QfW6P63u9R3SLqWGqi0ZbILukwMOtCcoVYtHx2inYVdMj0LlHl8eEkPFFwIS7ch8UpMNN39G1ab3XUVnwWur6zPtxirYyljBVPqwc3X2XdWHOkeUAWwkhLMZ_XT9G7CgIIzqoR-7PUHumr6Y5bRxW0c8GhwUYxQxV0wiULyc16Id5kl2xHGKNxt9uwdzVZIXI");'></div>
+</div>
+</div>
+<!-- Section Header: Select a Card Design -->
+<h3 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] pt-4 pb-3">Select a Card Design</h3>
+<!-- Tabs / Design Selector -->
+<div class="pb-3">
+<div class="flex space-x-4">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-text-primary-dark gap-2 pb-2.5 pt-1.5 flex-1" href="#">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16" data-alt="Abstract floral pattern" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD3siUca14gWsangG3MB_JWwenRgTDpQ1njHhuD2TZnOuYfvHJSJZdmGCbd-BnJ_PMMqKDH41cbZbrveHvCcO_A1UO1wHxxASllpKbnRfZpl7OuMZyF-sOZLSw6N5JEcgij_RJcnGRS9CjA4XCSU_D3EaopTSDo-cKSNQ62KA-pqkAp741cenuGZHCc9t2XffqvOb6fYGxVBt85hAEQHHSVn_XQI2y96_J450mhvl-RWSYUfJt27GE9s1cHz1MW9jVBmM1U1H3fcob_");'></div>
+<p class="text-text-primary-dark text-sm font-medium leading-normal tracking-[0.015em]">Floral</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary-dark gap-2 pb-2.5 pt-1.5 flex-1" href="#">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16" data-alt="Colorful birthday candles design" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD0HSFC_Ju6MM8wzcI1er8Qa2Ys-ZXj0Le-4VvgHg5Uy5ZNkx7aXgJU-Tw18-xbvly54tuU6AEFeWCPF7kS-tcQtO-sNQLvhdTrc22tFZW5IVnGuArZx8RFmvftanKDggHxqkYmMOmWyDyh_Bc51BR16Mb6EfCuWlpBINj1Ba0C0lh1OML5c32WV5HCv7_RNfkcRPmYCDuQCivtVD0IoRfRvN9shAPs4X28WusCS_AbjchELXou1bXc02ltqjCQwR2Zhln7_ORpcqCz");'></div>
+<p class="text-sm font-medium leading-normal tracking-[0.015em]">Birthday</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary-dark gap-2 pb-2.5 pt-1.5 flex-1" href="#">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16" data-alt="Elegant thank you card with cursive writing" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCodwH2ZPytHANOADnl9sYzPaZAh0Zz4MFIvZk-VlnDrq-g1Wn7t99-bIzmZFzxtZfz_-y2Ytr8v52hvPBid0hay9OYIiQPBLbE1_gs59JiWeFWA7eMWv4i5Ivi0pS0rR582wAJpxgNpt6duYOlHWuaSRBQpYNTJYFSIHSAmoygb3nel1mbgCOqRfgRKFB47_ps3S8F96oVoBi1WVrt-d29o-YuhU_ACulnPN7fpt4jS0_hccPNNkP8C3oAY3Hcdy--Xsuuiy7K5-WX");'></div>
+<p class="text-sm font-medium leading-normal tracking-[0.015em]">Thank You</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary-dark gap-2 pb-2.5 pt-1.5 flex-1" href="#">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16" data-alt="Snowflake and winter holiday pattern" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAYB1GKIP0uEvUTdmva7CXJEtGecyVYOrXZehf3EVIX8jI9u1JG7P4rpfmXQPt1U3hmYitEDIFXh-ct_xOFmlapr0ZUVx73-j3CnshVOw6kZ-AzSyVdzykj_7_SpetqAKislhsPsDf6qjW0dBqnxZgR_SYhxvZ7d3h4OQwJQN7qJ2WZjGyKeklUmsHifHU4wPfeFOmnSV_CH0pbrYKvOJEnvXa_98OU2Z-NzEcbTqqwkX1Hft1NFEIU5WstCWtj3GALkeW4m8OZ2MDd");'></div>
+<p class="text-sm font-medium leading-normal tracking-[0.015em]">Holiday</p>
+</a>
+</div>
+</div>
+<!-- Section Header: Choose an Amount -->
+<h3 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] pt-8 pb-3">Choose an Amount</h3>
+<!-- Amount Selection Module -->
+<div class="space-y-4">
+<div class="grid grid-cols-3 gap-3">
+<button class="bg-component-dark text-text-primary-dark py-3 px-2 rounded-lg text-center font-semibold border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-primary/80">
+                        $25
+                    </button>
+<button class="bg-primary/20 text-primary py-3 px-2 rounded-lg text-center font-semibold border-2 border-primary focus:outline-none focus:ring-2 focus:ring-primary/80">
+                        $50
+                    </button>
+<button class="bg-component-dark text-text-primary-dark py-3 px-2 rounded-lg text-center font-semibold border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-primary/80">
+                        $100
+                    </button>
+</div>
+<!-- Custom Amount Input -->
+<div>
+<input class="w-full bg-component-dark text-text-primary-dark placeholder:text-text-secondary-dark border-2 border-component-dark rounded-lg px-4 py-3 focus:border-primary focus:ring-primary/50 focus:ring-2" placeholder="Enter Custom Amount" type="text"/>
+</div>
+</div>
+</main>
+<!-- Fixed Bottom CTA Button -->
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-background-dark/80 backdrop-blur-sm border-t border-t-component-dark/50">
+<button class="w-full bg-primary text-white font-bold py-4 px-6 rounded-xl text-base tracking-wide">
+                Proceed to Recipient Details
+            </button>
+</div>
+</div>
+</body></html>

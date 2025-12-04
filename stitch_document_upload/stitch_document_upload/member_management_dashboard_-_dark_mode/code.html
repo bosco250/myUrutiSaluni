@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Member Management Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#4A90E2",
+              "background-light": "#f6f8f6",
+              "background-dark": "#121212",
+              "surface-dark": "#242424",
+              "text-primary-dark": "#E0E0E0",
+              "text-secondary-dark": "#A0A0A0",
+              "border-dark": "#3C3C3C",
+              "success": "#28A745",
+              "warning": "#FFC107",
+              "error": "#DC3545",
+              "info": "#17A2B8"
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-dark text-text-primary-dark">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-text-primary-dark text-3xl">menu</span>
+</div>
+<h1 class="text-text-primary-dark text-lg font-bold leading-tight tracking-tight flex-1 text-center">Member Management</h1>
+<div class="flex w-auto items-center justify-end">
+<button class="text-primary text-sm font-bold leading-normal tracking-wide whitespace-nowrap">Add Member</button>
+</div>
+</div>
+<div class="flex flex-col gap-4 p-4">
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+<div class="flex flex-col gap-2 rounded-lg p-4 bg-surface-dark border border-border-dark">
+<p class="text-text-secondary-dark text-sm font-medium leading-normal">Total Members</p>
+<p class="text-text-primary-dark tracking-light text-2xl font-bold leading-tight">1,204</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-4 bg-surface-dark border border-border-dark">
+<p class="text-text-secondary-dark text-sm font-medium leading-normal">Active Salons</p>
+<p class="text-text-primary-dark tracking-light text-2xl font-bold leading-tight">350</p>
+</div>
+<div class="flex flex-col col-span-2 sm:col-span-1 gap-2 rounded-lg p-4 bg-surface-dark border border-border-dark">
+<p class="text-text-secondary-dark text-sm font-medium leading-normal">Pending Approvals</p>
+<p class="text-text-primary-dark tracking-light text-2xl font-bold leading-tight">3</p>
+</div>
+</div>
+<!-- Action Panel / Smart Alert -->
+<div class="flex flex-col items-start justify-between gap-4 rounded-lg border border-border-dark bg-surface-dark p-5 sm:flex-row sm:items-center">
+<div class="flex flex-col gap-1">
+<p class="text-text-primary-dark text-base font-bold leading-tight">Memberships Expiring Soon</p>
+<p class="text-text-secondary-dark text-sm font-normal leading-normal">5 memberships are set to expire this week.</p>
+</div>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-5 bg-primary text-white text-sm font-medium leading-normal w-full sm:w-auto">
+<span class="truncate">View</span>
+</button>
+</div>
+<!-- Search Bar -->
+<div class="py-2">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-text-secondary-dark flex border-none bg-surface-dark items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-primary-dark focus:outline-0 focus:ring-0 border-none bg-surface-dark focus:border-none h-full placeholder:text-text-secondary-dark px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search by name, salon, or ID..." value=""/>
+</div>
+</label>
+</div>
+<!-- Chips / Filters -->
+<div class="flex gap-3 -mt-2 overflow-x-auto pb-2">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-surface-dark pl-4 pr-2 border border-border-dark">
+<p class="text-text-primary-dark text-sm font-medium leading-normal">Status: Active</p>
+<span class="material-symbols-outlined text-text-secondary-dark text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-surface-dark pl-4 pr-2 border border-border-dark">
+<p class="text-text-primary-dark text-sm font-medium leading-normal">Role: All</p>
+<span class="material-symbols-outlined text-text-secondary-dark text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-surface-dark pl-4 pr-2 border border-border-dark">
+<p class="text-text-primary-dark text-sm font-medium leading-normal">Sort: Name A-Z</p>
+<span class="material-symbols-outlined text-text-secondary-dark text-base">expand_more</span>
+</button>
+</div>
+<!-- Member List -->
+<div class="flex flex-col gap-3">
+<!-- Member List Item 1 -->
+<div class="flex items-center gap-4 rounded-lg bg-surface-dark p-4 border border-border-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/20">
+<span class="text-xl font-bold text-primary">JD</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-text-primary-dark">Jane Doe</p>
+<p class="text-sm text-text-secondary-dark">Salon Owner at Elegance Salon</p>
+<div class="mt-1 inline-flex items-center justify-center rounded-full bg-success/20 px-2.5 py-0.5">
+<p class="whitespace-nowrap text-xs font-medium text-success">Active</p>
+</div>
+</div>
+<button class="p-2 text-text-secondary-dark hover:text-text-primary-dark">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Member List Item 2 -->
+<div class="flex items-center gap-4 rounded-lg bg-surface-dark p-4 border border-border-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-warning/20">
+<span class="text-xl font-bold text-warning">MS</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-text-primary-dark">Michael Smith</p>
+<p class="text-sm text-text-secondary-dark">Stylist at The Modern Cut</p>
+<div class="mt-1 inline-flex items-center justify-center rounded-full bg-warning/20 px-2.5 py-0.5">
+<p class="whitespace-nowrap text-xs font-medium text-warning">Expiring</p>
+</div>
+</div>
+<button class="p-2 text-text-secondary-dark hover:text-text-primary-dark">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Member List Item 3 -->
+<div class="flex items-center gap-4 rounded-lg bg-surface-dark p-4 border border-border-dark">
+<img class="h-12 w-12 rounded-full object-cover" data-alt="Portrait of Emily Johnson" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-_z5nAv3n5VCxl63zSyifqLcywjJzSJKpfl3wPaqfTYGb5VyIMecmRidlgL-UDG5o0SkjPwpfBJTQ2q5GBQ2FNHbIr1Y_iHgoMrFB0LSrLvbmFudd5ObBLJQ-ihDivIXAQvMWtLK4BGMA6umU2Op-d_AQkOmhx9OhCI-e_dVM06vu2kGH2GYEQ3O8VP4_qrXorTSoc8-rQY8PcYvDmlEvqV4m1bCzXZW8i3AQoE99s2zcQFcytf5gJFP_76_Efr5LrskKo8NyBu3F"/>
+<div class="flex-1">
+<p class="font-bold text-text-primary-dark">Emily Johnson</p>
+<p class="text-sm text-text-secondary-dark">Manager at Glamour Lounge</p>
+<div class="mt-1 inline-flex items-center justify-center rounded-full bg-error/20 px-2.5 py-0.5">
+<p class="whitespace-nowrap text-xs font-medium text-error">Inactive</p>
+</div>
+</div>
+<button class="p-2 text-text-secondary-dark hover:text-text-primary-dark">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Member List Item 4 -->
+<div class="flex items-center gap-4 rounded-lg bg-surface-dark p-4 border border-border-dark">
+<img class="h-12 w-12 rounded-full object-cover" data-alt="Portrait of David Chen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKxCX1TOHul021Psbj-cDmEW0Ucm5LQeLglQBAftEM9IbezxvMHIS7h4Kg9jNcTZZo5nScBhtj3ZlEfZAD9fr2eAkLVmsGHeu2zoKmyzmtVRWcDsx0X-Rtpcn0TGQtqeDyp3fDI0mET_GBEbB43ksD0awHhHVgRTQ9OaXxakPwivBHwO0QJX0zgphROaxdwtPWZadsXHCxqRBoxMgMaJKvBlNpd1_t0levTkOaItH_VG8fatWvOqKIuAPvsBr_nFuhtKvF_Kiu2jD0"/>
+<div class="flex-1">
+<p class="font-bold text-text-primary-dark">David Chen</p>
+<p class="text-sm text-text-secondary-dark">Salon Owner at Urban Shears</p>
+<div class="mt-1 inline-flex items-center justify-center rounded-full bg-info/20 px-2.5 py-0.5">
+<p class="whitespace-nowrap text-xs font-medium text-info">Pending</p>
+</div>
+</div>
+<button class="p-2 text-text-secondary-dark hover:text-text-primary-dark">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Member List Item 5 -->
+<div class="flex items-center gap-4 rounded-lg bg-surface-dark p-4 border border-border-dark">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/20">
+<span class="text-xl font-bold text-primary">SC</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-text-primary-dark">Sarah Connor</p>
+<p class="text-sm text-text-secondary-dark">Receptionist at The Modern Cut</p>
+<div class="mt-1 inline-flex items-center justify-center rounded-full bg-success/20 px-2.5 py-0.5">
+<p class="whitespace-nowrap text-xs font-medium text-success">Active</p>
+</div>
+</div>
+<button class="p-2 text-text-secondary-dark hover:text-text-primary-dark">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

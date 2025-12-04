@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Payment Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#4C8D8B", // Calm Teal
+            "primary-darker": "#3D706E",
+            "background-light": "#f8f8f8",
+            "background-dark": "#0A0D14",
+            "surface-dark": "#161B26",
+            "text-primary-light": "#334155",
+            "text-primary-dark": "#F0F2F5",
+            "text-secondary-light": "#64748b",
+            "text-secondary-dark": "#94A3B8",
+            "border-light": "#e2e8f0",
+            "border-dark": "#2C3442",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col justify-end bg-black/60 group/design-root">
+<div class="flex flex-col rounded-t-xl bg-surface-dark">
+<div class="flex h-5 w-full items-center justify-center pt-3">
+<div class="h-1 w-9 rounded-full bg-border-dark"></div>
+</div>
+<h1 class="text-text-primary-dark tracking-light text-[32px] font-bold leading-tight px-4 text-center pb-1 pt-6">$55.00</h1>
+<p class="text-primary text-sm font-medium leading-normal pb-6 pt-1 px-4 text-center underline">View Details</p>
+<h3 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Saved Cards</h3>
+<div class="flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between border-b border-border-dark">
+<div class="flex items-center gap-4">
+<img class="h-6" data-alt="Visa card logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQ0wkG0jqU89mYoPXyBTDpM0TF-Or1pMRF6DAoOSazo7VpwYWQC8a11dopbtmYxz2ytaTyZC9Zq9mckOyavum_JU6JJ1wfmybfVHO46ovj95hpGTTon_nHLT0vfzHv5LYPxfG5Pu9rjC9GKa1fyVDP2lx_Dnlcm0ITRdz81I5lF21xD_Q7FU_tv8bZROjPY1sI7eit5_M3IJGi_KqgrAEFoArqZH8HnU5IKwbE74nmvyv_h9jUKioWMaCv4fU-c-U5-ys75FYjMRzS"/>
+<div class="flex flex-col justify-center">
+<p class="text-text-primary-dark text-base font-medium leading-normal line-clamp-1">Visa ending in 1234</p>
+<p class="text-text-secondary-dark text-sm font-normal leading-normal line-clamp-2">Expires 06/25</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex size-7 items-center justify-center">
+<input checked="" class="h-5 w-5 rounded-full border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-border-dark dark:focus:border-border-light focus:outline-none" name="payment_method" type="radio"/>
+</div>
+</div>
+</div>
+<h3 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Select a Payment Method</h3>
+<div class="flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between border-b border-border-dark">
+<div class="flex items-center gap-4">
+<img class="h-8" data-alt="Airtel Money logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDu0yJiYdeqGdD05iXX0BbBewf_NQAUgbgcA9JLJjSw8Z3BVjW3npt2-it3wD__iCapdQc3X5qAdwr-ty8bKbvOsjku3q8Z1p8ZUa18CpVOWPwvQlM2PSBBdx59TkkdzC6RNdykgvMKWG4YBYZkZYVNjyIm9yoB6nlfDbju6AwrnpXMi14i2NDf3YeOyu7lflRyMICIidr36GxV36IDznXDl112AREi2IuMr6yLsNRIe4X2zWAd-OXw7vigfqCsSb6iEizwwQ8GuFOH"/>
+<div class="flex flex-col justify-center">
+<p class="text-text-primary-dark text-base font-medium leading-normal line-clamp-1">Airtel Money</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex size-7 items-center justify-center">
+<input class="h-5 w-5 rounded-full border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-border-dark dark:focus:border-border-light focus:outline-none" name="payment_method" type="radio"/>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between border-b border-border-dark">
+<div class="flex items-center gap-4">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-border-dark">
+<span class="material-symbols-outlined text-text-secondary-dark" style="font-size: 20px;">credit_card</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-primary-dark text-base font-medium leading-normal line-clamp-1">Add Credit/Debit Card</p>
+</div>
+</div>
+<div class="shrink-0">
+<span class="material-symbols-outlined text-text-secondary-dark">chevron_right</span>
+</div>
+</div>
+<div class="flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-border-dark">
+<span class="material-symbols-outlined text-text-secondary-dark" style="font-size: 20px;">storefront</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-primary-dark text-base font-medium leading-normal line-clamp-1">Pay in Person</p>
+<p class="text-text-secondary-dark text-sm font-normal leading-normal line-clamp-2">Pay with Cash or POS</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex size-7 items-center justify-center">
+<input class="h-5 w-5 rounded-full border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-border-dark dark:focus:border-border-light focus:outline-none" name="payment_method" type="radio"/>
+</div>
+</div>
+</div>
+<div class="px-4 pt-8 pb-6">
+<button class="w-full bg-primary text-white font-bold py-4 px-4 rounded-xl text-base leading-normal active:bg-primary-darker">Confirm Payment</button>
+<div class="flex items-center justify-center gap-2 pt-4">
+<span class="material-symbols-outlined text-text-secondary-dark" style="font-size: 16px;">lock</span>
+<p class="text-text-secondary-dark text-xs">Your payment is safe and secure.</p>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Promotional Gift Cards</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+              "component-light": "#ffffff",
+              "component-dark": "#1a212f",
+              "text-light-primary": "#101622",
+              "text-dark-primary": "#f6f6f8",
+              "text-light-secondary": "#6b7280",
+              "text-dark-secondary": "#9da6b9",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-component-light/10 bg-background-light/80 px-4 backdrop-blur-sm dark:bg-background-dark/80">
+<button class="flex size-10 items-center justify-center text-text-light-primary dark:text-text-dark-primary">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold text-text-light-primary dark:text-text-dark-primary">Promotional Gift Cards</h1>
+<div class="size-10"></div> <!-- Spacer -->
+</header>
+<main class="flex-1 px-4 py-4">
+<!-- Search Bar -->
+<div class="pb-4">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+<div class="text-text-light-secondary dark:text-text-dark-secondary flex border-r-0 items-center justify-center pl-4 bg-component-light dark:bg-component-dark rounded-l-xl">
+<span class="material-symbols-outlined text-2xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl border-none bg-component-light dark:bg-component-dark px-4 pl-2 text-base font-normal leading-normal text-text-light-primary placeholder:text-text-light-secondary dark:text-text-dark-primary dark:placeholder:text-text-dark-secondary focus:outline-0 focus:ring-2 focus:ring-primary focus:ring-inset" placeholder="Search campaigns by name" value=""/>
+</div>
+</label>
+</div>
+<!-- Active Campaigns Section -->
+<div class="flex flex-col gap-4">
+<h2 class="text-lg font-bold tracking-tight text-text-light-primary dark:text-text-dark-primary">Active Campaigns</h2>
+<!-- Campaign Card 1 -->
+<div class="flex flex-col gap-4 rounded-xl border border-component-light/10 bg-component-light p-4 dark:bg-component-dark">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">Holiday Special 2024</p>
+<div class="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">
+<div class="size-1.5 rounded-full bg-green-400"></div>
+                                Active
+                            </div>
+</div>
+<button class="flex size-8 items-center justify-center text-text-light-secondary dark:text-text-dark-secondary">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-sm">
+<p class="text-text-light-secondary dark:text-text-dark-secondary">Redeemed</p>
+<p class="font-medium text-text-light-primary dark:text-text-dark-primary">$1,560 / $2,000</p>
+</div>
+<div class="h-2 rounded-full bg-background-light dark:bg-background-dark">
+<div class="h-2 rounded-full bg-primary" style="width: 78%;"></div>
+</div>
+<div class="flex justify-between text-xs text-text-light-secondary dark:text-text-dark-secondary">
+<span>78/100 Issued</span>
+<span>Expires: 31 Dec 2024</span>
+</div>
+</div>
+<div class="flex items-center gap-2 border-t border-component-light/10 pt-3 dark:border-white/10">
+<button class="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-primary/20 text-sm font-semibold text-primary">
+<span class="material-symbols-outlined text-base">ios_share</span> Distribute
+                        </button>
+<button class="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-gray-500/20 text-sm font-semibold text-text-light-secondary dark:text-text-dark-secondary">
+<span class="material-symbols-outlined text-base">pause</span> Pause
+                        </button>
+<button class="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-red-500/20 text-sm font-semibold text-red-400">
+<span class="material-symbols-outlined text-base">cancel</span> Cancel
+                        </button>
+</div>
+</div>
+<!-- Campaign Card 2 -->
+<div class="flex flex-col gap-4 rounded-xl border border-component-light/10 bg-component-light p-4 dark:bg-component-dark">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">New Client Welcome</p>
+<div class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">
+<div class="size-1.5 rounded-full bg-amber-400"></div>
+                                Paused
+                            </div>
+</div>
+<button class="flex size-8 items-center justify-center text-text-light-secondary dark:text-text-dark-secondary">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-sm">
+<p class="text-text-light-secondary dark:text-text-dark-secondary">Redeemed</p>
+<p class="font-medium text-text-light-primary dark:text-text-dark-primary">$150 / $1,000</p>
+</div>
+<div class="h-2 rounded-full bg-background-light dark:bg-background-dark">
+<div class="h-2 rounded-full bg-primary" style="width: 15%;"></div>
+</div>
+<div class="flex justify-between text-xs text-text-light-secondary dark:text-text-dark-secondary">
+<span>15/100 Issued</span>
+<span>Expires: 01 Nov 2024</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Expired Campaigns Section -->
+<div class="mt-8 flex flex-col gap-4">
+<h2 class="text-lg font-bold tracking-tight text-text-light-primary dark:text-text-dark-primary">Expired Campaigns</h2>
+<!-- Campaign Card 3 -->
+<div class="flex flex-col gap-4 rounded-xl border border-component-light/10 bg-component-light p-4 dark:bg-component-dark opacity-60">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">Summer Glow-Up</p>
+<div class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-400">
+<div class="size-1.5 rounded-full bg-gray-400"></div>
+                                Expired
+                            </div>
+</div>
+<button class="flex size-8 items-center justify-center text-text-light-secondary dark:text-text-dark-secondary">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-sm">
+<p class="text-text-light-secondary dark:text-text-dark-secondary">Redeemed</p>
+<p class="font-medium text-text-light-primary dark:text-text-dark-primary">$450 / $500</p>
+</div>
+<div class="h-2 rounded-full bg-background-light dark:bg-background-dark">
+<div class="h-2 rounded-full bg-gray-500" style="width: 90%;"></div>
+</div>
+<div class="flex justify-between text-xs text-text-light-secondary dark:text-text-dark-secondary">
+<span>45/50 Issued</span>
+<span>Expired: 31 Aug 2024</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State Example (Commented out for demonstration) -->
+<!-- 
+            <div class="flex flex-1 flex-col items-center justify-center py-20 text-center">
+                <div class="flex size-24 items-center justify-center rounded-full bg-component-light dark:bg-component-dark">
+                    <span class="material-symbols-outlined text-5xl text-primary">redeem</span>
+                </div>
+                <h3 class="mt-6 text-lg font-semibold text-text-light-primary dark:text-text-dark-primary">No Promotions Yet</h3>
+                <p class="mt-2 max-w-xs text-sm text-text-light-secondary dark:text-text-dark-secondary">
+                    Tap the '+' to create your first gift card campaign and attract new clients!
+                </p>
+            </div> 
+            -->
+</main>
+<!-- Floating Action Button -->
+<div class="absolute bottom-6 right-6">
+<button class="flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+</div>
+</body></html>

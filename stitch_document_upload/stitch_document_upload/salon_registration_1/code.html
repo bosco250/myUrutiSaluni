@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Register Your Salon</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#008080",
+                        "background-light": "#F0F0F0",
+                        "background-dark": "#102218",
+                        "text-light": "#333333",
+                        "text-dark": "#E0E0E0",
+                        "placeholder-light": "#A0A0A0",
+                        "placeholder-dark": "#777777",
+                        "border-light": "#D0D0D0",
+                        "border-dark": "#444444",
+                        "error": "#D9534F"
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between">
+<div class="flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">arrow_back</span>
+</div>
+<h1 class="text-text-light dark:text-text-dark text-xl font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Register Your Salon</h1>
+<div class="w-10"></div>
+</div>
+<!-- Progress Indicator -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-4">
+<div class="h-1.5 flex-1 rounded-full bg-primary mx-4"></div>
+</div>
+<p class="text-center font-semibold text-sm text-primary -mt-2 mb-4">Step 1 of 2</p>
+<main class="flex-grow px-4">
+<!-- Section 1: Basic Information -->
+<h2 class="text-text-light dark:text-text-dark text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Basic Information</h2>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<p class="text-text-light dark:text-text-dark text-base font-medium leading-normal pb-2">Salon Name</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-white dark:bg-gray-800 focus:border-primary h-14 placeholder:text-placeholder-light dark:placeholder:text-placeholder-dark p-4 text-base font-normal leading-normal" placeholder="Enter your salon's name" type="text" value=""/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-text-light dark:text-text-dark text-base font-medium leading-normal pb-2">Business Type</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-white dark:bg-gray-800 focus:border-primary h-14 p-4 text-base font-normal leading-normal appearance-none bg-no-repeat bg-right-4" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA6a5hPkh9qJ_NruEW6A_Vht92XMMVq6FsKwvnZ0px2a9oS02DaSy_aIjBGHzs3Gy5LYbSSNACh8HogoqyVDW70B41wrsDxf9peTi2w8dOAMHMSLZxNw16fW62-EmnA7lJNiSeZw16sz9-5IDC7ArmBUaAY13dWQpBCBxhHMQ5SCdmB1F02NjTpIz35aotGiYIfjclkGunXCxmhvzVX8fZSiF0w4u10azao4OIAjZZOnOFr-u_MM9oh0s45FLHLpUS82vlAAbmRf6OH');">
+<option disabled="" selected="" value="">Select business type</option>
+<option value="hair">Hair Salon</option>
+<option value="nail">Nail Salon</option>
+<option value="spa">Spa</option>
+<option value="barber">Barbershop</option>
+</select>
+</label>
+</div>
+<!-- Section 2: Contact Details -->
+<h2 class="text-text-light dark:text-text-dark text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-8">Contact Details</h2>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<p class="text-text-light dark:text-text-dark text-base font-medium leading-normal pb-2">Contact Phone Number</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-white dark:bg-gray-800 focus:border-primary h-14 placeholder:text-placeholder-light dark:placeholder:text-placeholder-dark p-4 text-base font-normal leading-normal" placeholder="+1 (555) 123-4567" type="tel" value=""/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-text-light dark:text-text-dark text-base font-medium leading-normal pb-2">Business Email</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-white dark:bg-gray-800 focus:border-primary h-14 placeholder:text-placeholder-light dark:placeholder:text-placeholder-dark p-4 text-base font-normal leading-normal" placeholder="you@example.com" type="email" value=""/>
+<p class="text-error text-sm mt-1.5 hidden">Please enter a valid email address.</p>
+</label>
+</div>
+<!-- Section 3: Location -->
+<h2 class="text-text-light dark:text-text-dark text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-8">Location</h2>
+<div class="flex flex-col gap-4">
+<label class="flex flex-col w-full">
+<p class="text-text-light dark:text-text-dark text-base font-medium leading-normal pb-2">Salon Address</p>
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-placeholder-light dark:text-placeholder-dark">location_on</span>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-white dark:bg-gray-800 focus:border-primary h-14 placeholder:text-placeholder-light dark:placeholder:text-placeholder-dark pl-12 pr-4 py-4 text-base font-normal leading-normal" placeholder="Start typing your address..." type="text" value=""/>
+</div>
+</label>
+</div>
+<!-- Section 4: Agreement & Action -->
+<div class="flex items-start gap-3 py-8">
+<input class="form-checkbox mt-1 h-5 w-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary" id="terms" type="checkbox"/>
+<label class="text-text-light dark:text-text-dark text-sm" for="terms"> I agree to the <a class="font-semibold text-primary underline" href="#">Terms of Service</a> and <a class="font-semibold text-primary underline" href="#">Privacy Policy</a>. </label>
+</div>
+</main>
+<!-- Footer with CTA Button -->
+<footer class="sticky bottom-0 bg-background-light dark:bg-background-dark p-4 pt-2">
+<button class="flex w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-base font-bold text-white shadow-sm transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">Register Salon</button>
+</footer>
+</div>
+</body></html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>For You - Salon Recommendations</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white text-3xl">menu</span>
+</div>
+<h1 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">For You</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-3xl">settings</span>
+</button>
+</div>
+</header>
+<!-- Category Filters (Chips) -->
+<div class="flex gap-3 px-4 py-3 overflow-x-auto whitespace-nowrap">
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary pl-4 pr-4">
+<p class="text-background-dark text-sm font-bold leading-normal">All</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#293829] pl-4 pr-4">
+<p class="text-white text-sm font-medium leading-normal">Services</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#293829] pl-4 pr-4">
+<p class="text-white text-sm font-medium leading-normal">Products</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#293829] pl-4 pr-4">
+<p class="text-white text-sm font-medium leading-normal">Stylists</p>
+</div>
+</div>
+<!-- Section: New Services -->
+<section>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">New Services For You</h2>
+<div class="p-4 pt-0 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-[#1c261c]">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl" data-alt="A woman with vibrant balayage hair, showcasing a blend of colors from dark roots to light ends." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBDVUexMPxqGZgQNpHJQF3rJ7RpkwKHO5sKQc51RvysVuMKlwLRXQoNnv4MOMx5xUo_3QVvlLdVvUMmbhPiaLbXBDfuFFRrPQi0bO7MNYhlAwbYxww1OFYAXBx9LvxeHtDxUfjS7iytP5TxXizeUbtbsNwtfU2_RH2XPH8Osvx4bh1PM9FiwrN1rqXjTddpFWom1pjBwvHan0OFKs1vj-BsPRf2LXEZPZ_w8-u6EWfCpOz4Ld8XlEin4LfPrLa5GC0ZYwQHszYrysEF");'></div>
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2 p-4">
+<p class="text-[#9db89d] text-sm font-normal leading-normal">Based on your love for balayage</p>
+<p class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Balayage Refresh</p>
+<p class="text-[#9db89d] text-base font-normal leading-normal">A fresh take on your favorite color treatment, perfect for the new season.</p>
+<div class="flex items-center gap-3 justify-between pt-2">
+<span class="inline-flex items-center rounded-md bg-primary/20 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">New Service</span>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold leading-normal">
+<span class="truncate">Book Now</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Recommended Products -->
+<section>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Recommended Products</h2>
+<div class="p-4 pt-0 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-[#1c261c]">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl" data-alt="A stylish bottle of color-safe shampoo on a clean, modern background." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAongvDB-vF4sxmkuQyTn6FcTqEsL3prjwtQ11QS-YMkV4E2uJrRAC6_lfo_PUJVbKsML-uXS00KkUazNY2_BYnUBD2vKa20uEN3d2hncaPRz6Kj9rJkaPKLX2bh-n9D08453X3BHlOs-xPTSrQwWUTe-mu_Ig-lSCEmpsX_kV97phMo6-BlKsvvB4M44lhaEwKH0oWUTifDRp75nMeiAV_ehxM4eM-Q9a6txRiLpu47IDKjJOljeBtX2eIf6896wIg5KEhsC-xfPqJ");'></div>
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2 p-4">
+<p class="text-[#9db89d] text-sm font-normal leading-normal">To protect your new color</p>
+<p class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Color-Safe Shampoo</p>
+<p class="text-[#9db89d] text-base font-normal leading-normal">Keep your color vibrant and lasting with this nourishing, sulfate-free formula.</p>
+<div class="flex items-center gap-3 justify-between pt-2">
+<span class="inline-flex items-center rounded-md bg-primary/20 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">Top Rated</span>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold leading-normal">
+<span class="truncate">View Product</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Recommended Stylists -->
+<section>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Meet Your Stylist Match</h2>
+<div class="p-4 pt-0 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-[#1c261c]">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl" data-alt="Headshot of Sarah, a friendly and professional master colorist, smiling." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCO7Gd0TmH6_sH9F2_ij8AebS2Lc9XTN7XGfttMHXjglUvlAII0ME5IB9whcoqu2CwxFQsk8cUlNp6OmsRvPbzgppcexbACASjqBmnV-sOi6h9uSpPLOy6FxFrfR5tevwVDQdddSxjXentO-4Yc3L-TrGc5lRlju1zFiZt9YdTeKrExkiohAK61pxlrDLL-YgHieUMUMBPlXtZU0tBgJe_Gl7No0cBdrCMHVyK-kHM8C1DM3ID9-8obaIn1djyUMWqgq_T2pp9r6wiU");'></div>
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-2 p-4">
+<p class="text-[#9db89d] text-sm font-normal leading-normal">Specializes in creative coloring</p>
+<p class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Meet Sarah - Master Colorist</p>
+<p class="text-[#9db89d] text-base font-normal leading-normal">With over 10 years of experience, Sarah is an expert in balayage and vivids.</p>
+<div class="flex items-center gap-3 justify-between pt-2">
+<span class="inline-flex items-center rounded-md bg-primary/20 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">Expert Match</span>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold leading-normal">
+<span class="truncate">See Profile</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Spacer at the bottom -->
+<div class="h-5"></div>
+</div>
+</body></html>

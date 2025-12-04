@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recipient &amp; Delivery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#B76E79", // Rose Gold accent
+              "background-light": "#f6f6f8",
+              "background-dark": "#1A1A2E", // Deep Slate background
+              "surface-dark": "#2C2C2E", // Lighter shade for inputs
+              "text-light": "#E0E0E0",
+              "text-heading-light": "#FFFFFF",
+              "text-placeholder": "#8F8F9A",
+            },
+            fontFamily: {
+              "display": ["Lexend", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col">
+<!-- Top App Bar & Progress Indicator -->
+<header class="sticky top-0 z-10 bg-background-light dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center p-4 pb-2 justify-between">
+<button class="text-text-heading-light flex size-12 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined text-3xl">arrow_back</span>
+</button>
+<h1 class="text-text-heading-light text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Recipient &amp; Delivery</h1>
+<div class="flex size-12 shrink-0 items-center"></div>
+</div>
+<div class="flex w-full flex-row items-center justify-center gap-3 py-4">
+<div class="h-2 w-8 rounded-full bg-primary"></div>
+<div class="h-2 w-8 rounded-full bg-surface-dark/50"></div>
+<div class="h-2 w-8 rounded-full bg-surface-dark/50"></div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-4 py-2">
+<!-- Section 1: Recipient Details -->
+<section class="mb-6">
+<h2 class="text-text-heading-light text-xl font-bold leading-tight tracking-[-0.015em] pb-4 pt-4">Who is this for?</h2>
+<div class="space-y-4">
+<label class="flex flex-col">
+<p class="text-text-light text-base font-medium leading-normal pb-2">Recipient's Full Name</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light focus:outline-0 focus:ring-2 focus:ring-primary/80 border-none bg-surface-dark h-14 placeholder:text-text-placeholder p-4 text-base font-normal leading-normal" placeholder="Enter their full name" value=""/>
+</label>
+<label class="flex flex-col">
+<p class="text-text-light text-base font-medium leading-normal pb-2">Recipient's Email or Phone</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light focus:outline-0 focus:ring-2 focus:ring-primary/80 border-none bg-surface-dark h-14 placeholder:text-text-placeholder p-4 text-base font-normal leading-normal" placeholder="Enter their email or phone number" value=""/>
+</label>
+</div>
+</section>
+<!-- Section 2: Personalized Message -->
+<section class="mb-6">
+<h2 class="text-text-heading-light text-xl font-bold leading-tight tracking-[-0.015em] pb-4 pt-4">Add a personal touch</h2>
+<label class="flex flex-col">
+<p class="text-text-light text-base font-medium leading-normal pb-2">Personalized Message</p>
+<textarea class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light focus:outline-0 focus:ring-2 focus:ring-primary/80 border-none bg-surface-dark h-32 placeholder:text-text-placeholder p-4 text-base font-normal leading-normal" placeholder="Happy Birthday! Enjoy your day of pampering."></textarea>
+</label>
+</section>
+<!-- Section 3: Delivery Options -->
+<section class="mb-8">
+<h2 class="text-text-heading-light text-xl font-bold leading-tight tracking-[-0.015em] pb-4 pt-4">When should we send it?</h2>
+<div class="grid grid-cols-2 gap-3 rounded-lg bg-surface-dark p-1">
+<button class="rounded py-3 px-4 text-center font-semibold text-text-heading-light bg-primary">Send Now</button>
+<button class="rounded py-3 px-4 text-center font-semibold text-text-light">Schedule Delivery</button>
+</div>
+<!-- This would be shown conditionally if "Schedule Delivery" is selected -->
+<!-- 
+                <div class="mt-4 flex items-center justify-between rounded-lg bg-surface-dark p-4">
+                    <div class="flex flex-col">
+                        <span class="text-text-placeholder text-sm">Selected Date & Time</span>
+                        <span class="text-text-heading-light font-medium">December 25, 2024 at 9:00 AM</span>
+                    </div>
+                    <button class="text-primary font-semibold">Change</button>
+                </div>
+                -->
+</section>
+</main>
+<!-- Footer CTA -->
+<footer class="sticky bottom-0 bg-background-light dark:bg-background-dark/80 backdrop-blur-sm p-4 pt-2">
+<button class="w-full rounded-lg bg-primary py-4 text-center text-lg font-bold text-white">Continue to Payment</button>
+</footer>
+</div>
+</body></html>

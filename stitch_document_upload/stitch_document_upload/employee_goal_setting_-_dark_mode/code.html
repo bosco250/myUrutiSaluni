@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Employee Goals</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#19e619",
+            "background-light": "#f6f8f6",
+            "background-dark": "#121212",
+            "surface-dark": "#1E1E24",
+            "element-dark": "#2C2C30"
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "0.75rem",
+            "xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-dark text-[#EAEAEA] group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white text-3xl">menu</span>
+</div>
+<h1 class="text-white text-xl font-bold leading-tight tracking-tight">Employee Goals</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-primary/20 text-primary">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</header>
+<main class="flex flex-col flex-1 px-4">
+<!-- Search and Filter Bar -->
+<div class="py-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#A0A0A0] flex border-none bg-element-dark items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-white focus:outline-0 focus:ring-0 border-none bg-element-dark focus:border-none h-full placeholder:text-[#A0A0A0] px-4 pl-2 text-base font-normal leading-normal" placeholder="Search employee name..." value=""/>
+</div>
+</label>
+</div>
+<!-- Chips for filtering -->
+<div class="flex gap-3 pt-1 pb-4 overflow-x-auto">
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary/20 px-4">
+<span class="material-symbols-outlined text-primary text-base">tune</span>
+<p class="text-primary text-sm font-medium leading-normal">All</p>
+</div>
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-full bg-element-dark px-4">
+<p class="text-[#EAEAEA] text-sm font-medium leading-normal">Stylists</p>
+</div>
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-full bg-element-dark px-4">
+<p class="text-[#EAEAEA] text-sm font-medium leading-normal">Assistants</p>
+</div>
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-full bg-element-dark px-4">
+<p class="text-[#EAEAEA] text-sm font-medium leading-normal">Reception</p>
+</div>
+</div>
+<!-- Employee List -->
+<div class="flex flex-col gap-2 pb-4">
+<!-- List Item 1 -->
+<div class="flex items-center gap-4 bg-transparent p-2 min-h-[72px] justify-between rounded-lg border border-element-dark/50">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Profile picture of Alex Johnson" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCVTygtJk2DI67Xhv1sgGxkEJECuzRvM0VkGvQEFH1iZe1BDaq44Bv5jgcfIX4R0HiJo2Beus6GCwrbaRxzwuPS_M5FzcaB0mNSdte_uFK6J6fHMlQBc18vTrTcHDwDT15eHqZ59CT0xoDuILl1EI4wK0LIYM_yq0ICwIU5Jp4a7W3bNOAzlQlLNcz4QaMtN-3nk8nso2IafNneLppfm2cwSCuuWzPrNi4TFUVJ6lG3xkukXMIr0dOKMPCJBX9QDw4UFWhfqpa6KbLa");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Alex Johnson</p>
+<p class="text-[#A0A0A0] text-sm font-normal leading-normal line-clamp-2">Senior Stylist</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium text-primary">3 Goals</p>
+<span class="material-symbols-outlined text-white">chevron_right</span>
+</div>
+</div>
+<!-- List Item 2 - Selected State -->
+<div class="flex flex-col gap-4 bg-surface-dark p-4 rounded-xl border border-primary/50">
+<div class="flex items-center gap-4 justify-between">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Profile picture of Maria Garcia" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBT577p9gofaX4f_CpCvTzl6M_NP517E9NM_6DPjXGBDQ7iva63PFI7IP9ZudEkxXTPNRtVlgvryxySPrSLgqBYQoNIx4yN__QHNQqZCMgOqhFk8mHDsLqbhMM_RxesR982G0rFxToD9KTCIVcy5gDLWyxv3fy_7m_423TF1kAMueqHOV7E5vzEtjxEYQs448gzjCbUf5CgdEOqGkHf3QYjrInIRHEwykJkXmZSwafx-Evmnixe_SPEKKYdkvH6she22ZyBDd4kXv_2");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Maria Garcia</p>
+<p class="text-[#A0A0A0] text-sm font-normal leading-normal line-clamp-2">Junior Stylist</p>
+</div>
+</div>
+<div class="shrink-0">
+<span class="material-symbols-outlined text-white">expand_less</span>
+</div>
+</div>
+<!-- Goal Setting Card -->
+<div class="flex flex-col gap-4">
+<h3 class="text-lg font-semibold text-white">Goals for Maria Garcia</h3>
+<!-- Existing Goal Item -->
+<div class="flex flex-col gap-3 rounded-lg bg-element-dark p-3">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-semibold text-white">Increase Client Retention</p>
+<p class="text-sm text-[#A0A0A0]">Deadline: End of Q3</p>
+</div>
+<div class="flex gap-2 text-white">
+<span class="material-symbols-outlined text-lg">edit</span>
+<span class="material-symbols-outlined text-lg">delete</span>
+</div>
+</div>
+<div class="w-full bg-surface-dark rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+<p class="text-right text-sm text-[#A0A0A0]">Target: 90% / Current: 67%</p>
+</div>
+<!-- Add New Goal Form -->
+<div class="flex flex-col gap-4 border-t border-element-dark pt-4">
+<h4 class="font-semibold text-white">Add New Goal</h4>
+<div>
+<label class="block text-sm font-medium text-[#A0A0A0] mb-1" for="goal-type">Goal Type</label>
+<select class="form-select w-full rounded-lg bg-element-dark border-none text-white focus:ring-primary/50" id="goal-type">
+<option>Revenue Target</option>
+<option>Retail Sales</option>
+<option>Client Retention</option>
+<option>Average Rating</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-[#A0A0A0] mb-1" for="target-value">Target Value ($)</label>
+<input class="form-input w-full rounded-lg bg-element-dark border-none text-white placeholder:text-[#A0A0A0] focus:ring-primary/50" id="target-value" placeholder="e.g., 5000" type="number"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-[#A0A0A0] mb-1" for="deadline">Deadline</label>
+<input class="form-input w-full rounded-lg bg-element-dark border-none text-white focus:ring-primary/50" id="deadline" type="date" value="2024-12-31"/>
+</div>
+<div class="flex gap-3 pt-2">
+<button class="flex-1 rounded-lg h-11 bg-element-dark text-white font-semibold">Cancel</button>
+<button class="flex-1 rounded-lg h-11 bg-primary text-background-dark font-semibold">Save Goal</button>
+</div>
+</div>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center gap-4 bg-transparent p-2 min-h-[72px] justify-between rounded-lg">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Profile picture of James Smith" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAsltF7NjqyW0I2WEo7XbVThmCcxT1Gm0lNG7wHhCHGhaYQnCjuaMVTTSt98R2Qjc4bjzYQ5vN70KsP5XnrK6UywKAmwZdCxjmxiy4BDPzFCO0Jiowq7VoyoYMCQ1gTGPj9Rh1MMYjcx6GRrOrYUPbdy82VwTX3yb45ENWFiWbqqRXsv_GW81RdCbdXD7Zo9QQNyDVpfk0a-Lb1_EUkCkEOPva_GQcUrPHw5Mf9wPWISm1bg97B8eP5Nodhqc_pmrZ041QWi0R3zMh6");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">James Smith</p>
+<p class="text-[#A0A0A0] text-sm font-normal leading-normal line-clamp-2">Assistant</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<p class="text-sm font-medium text-[#A0A0A0]">No Goals</p>
+<span class="material-symbols-outlined text-white">chevron_right</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<footer class="sticky bottom-0 bg-surface-dark border-t border-element-dark">
+<div class="flex justify-around p-2">
+<button class="flex flex-col items-center gap-1 text-[#A0A0A0] p-2 rounded-lg w-1/4">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#A0A0A0] p-2 rounded-lg w-1/4">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-xs">Bookings</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary bg-primary/10 p-2 rounded-lg w-1/4">
+<span class="material-symbols-outlined">groups</span>
+<span class="text-xs">Employees</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#A0A0A0] p-2 rounded-lg w-1/4">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-xs">Reports</span>
+</button>
+</div>
+</footer>
+</div>
+</body></html>

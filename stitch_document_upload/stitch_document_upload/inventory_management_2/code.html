@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventory Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#34d399",
+                        "primary-dark": "#10b981",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#0A0A0A",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<header class="sticky top-0 z-10 flex flex-col bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center p-4 pb-3 justify-between">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-gray-800 dark:text-gray-400">widgets</span>
+</div>
+<h1 class="text-lg font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-50 flex-1 text-center">Inventory</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-gray-800 dark:text-gray-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</div>
+<div class="px-4 pb-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-gray-500 dark:text-gray-400 flex border-none bg-white dark:bg-gray-800/20 items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 dark:text-gray-100 focus:outline-0 focus:ring-0 border-none bg-white dark:bg-gray-800/20 focus:border-none h-full placeholder:text-gray-500 dark:placeholder:text-gray-500 px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search by product or SKU..." value=""/>
+<div class="text-gray-500 dark:text-gray-400 flex border-none bg-white dark:bg-gray-800/20 items-center justify-center pr-4 rounded-r-lg border-l-0">
+<span class="material-symbols-outlined">barcode_scanner</span>
+</div>
+</div>
+</label>
+</div>
+<div class="flex gap-2 p-3 pt-0 overflow-x-auto">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-primary pl-4 pr-4 text-black dark:text-black">
+<p class="text-sm font-semibold leading-normal">All</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-gray-800/20 pl-4 pr-4 text-gray-700 dark:text-gray-300">
+<p class="text-sm font-medium leading-normal">Low Stock</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-gray-800/20 pl-4 pr-4 text-gray-700 dark:text-gray-300">
+<p class="text-sm font-medium leading-normal">Out of Stock</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-gray-800/20 pl-4 pr-2 text-gray-700 dark:text-gray-300">
+<p class="text-sm font-medium leading-normal">Hair Care</p>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-white dark:bg-gray-800/20 pl-4 pr-2 text-gray-700 dark:text-gray-300">
+<p class="text-sm font-medium leading-normal">Skin Care</p>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+</div>
+</header>
+<main class="flex-1 pb-24 px-4 space-y-3">
+<div class="flex gap-4 bg-white dark:bg-gray-800/20 p-3 justify-between rounded-xl shadow-sm shadow-gray-200/20 dark:shadow-none">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px]" data-alt="Bottle of Pro-V Shampoo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDWK_z9jmX_RmsDzX-4d-pDMB4gYHcpaisKoa323GyQUOKtvadng6i7Btzm812tBGGAClcxXL2jFVarmDPxZTocWfLXpxsm8aRfY5HZGdl7a-xREZD4FwUyjugd83msVLaUBATkYJLbBDSEpSESPJEaXWq3jFrRiXXRy95lgnu6wW9Ak7inIeMFkT2jZLs7RGxzA56aam4Vu8GLq5J4K6UOyHRZZVSDtC3md38DyKFqf6Icp7Sz7IaM49OA1KyPhBr6X3W55fBEcsZ0");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-gray-900 dark:text-gray-50 text-base font-semibold leading-normal">Pro-V Shampoo</p>
+<div class="flex items-center gap-1.5">
+<span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+<p class="text-green-600 dark:text-green-400 text-sm font-medium leading-normal">In Stock</p>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Hair Care</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col justify-center items-end">
+<div class="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">-</button>
+<input class="text-base font-semibold leading-normal w-7 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&amp;::-webkit-inner-spin-button]:appearance-none [&amp;::-webkit-outer-spin-button]:appearance-none" type="number" value="25"/>
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">+</button>
+</div>
+</div>
+</div>
+<div class="flex gap-4 bg-white dark:bg-gray-800/20 p-3 justify-between rounded-xl shadow-sm shadow-gray-200/20 dark:shadow-none">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px]" data-alt="Bottle of Hydrating Conditioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAvPalVpjYwNMn1BH6XEnJJEXFSLJBONFq1OkgbR2bGkKN-v6JO6oBn-rdPFglI9heejrxRHEc24LWJPYvmekazc4ks42xEY24P-dYpXf_byhZ2OChB6RRXqnO-gTPe3xLza1yM7kXSLqQqONNSQLecPd7ko0AVvCTOsE2cke3CSCa3VNWbqQrCRcTSKdNcSPpiVwquUnSAyzOol-jijJDabC8q5n3MdIbHiMkPv-poUhY8znK2jOdkxI8i_ztf7rvkIylYzBB0IySi");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-gray-900 dark:text-gray-50 text-base font-semibold leading-normal">Hydrating Conditioner</p>
+<div class="flex items-center gap-1.5">
+<span class="inline-block h-2 w-2 rounded-full bg-orange-500"></span>
+<p class="text-orange-600 dark:text-orange-400 text-sm font-medium leading-normal">Low Stock</p>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Hair Care</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col justify-center items-end">
+<div class="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">-</button>
+<input class="text-base font-semibold leading-normal w-7 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&amp;::-webkit-inner-spin-button]:appearance-none [&amp;::-webkit-outer-spin-button]:appearance-none" type="number" value="8"/>
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">+</button>
+</div>
+</div>
+</div>
+<div class="flex gap-4 bg-white dark:bg-gray-800/20 p-3 justify-between rounded-xl shadow-sm shadow-gray-200/20 dark:shadow-none">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px]" data-alt="Jar of moisturizing face cream" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCQ1AjxPiMu5N9kyYk_BV3FPDloohe3Ku14y8QwyQQEGW2WxOtH8pfnCFuATbFtJPL5zoWCX60dSvjzzTHiy1yR17U8NNPTEW9fbpaR_rAcIB3AEfESJGEkv_-ndjOLbzSn3-_N950Tj0RCzNpPB3SxeXFAxMddxWh1m-aTYd0Ob9Jzr0nTtk6Xm_M3ABspHlEA75KzbqWL60Mj-HBRCthGfAb_2yjcq2k4zt3UkOrs0CB-plGjKiVT6E9Wd0zNJbT9fMWXZ3TISuBQ");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-gray-900 dark:text-gray-50 text-base font-semibold leading-normal">Radiance Face Cream</p>
+<div class="flex items-center gap-1.5">
+<span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+<p class="text-red-600 dark:text-red-400 text-sm font-medium leading-normal">Out of Stock</p>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Skin Care</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col justify-center items-end">
+<div class="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">-</button>
+<input class="text-base font-semibold leading-normal w-7 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&amp;::-webkit-inner-spin-button]:appearance-none [&amp;::-webkit-outer-spin-button]:appearance-none" type="number" value="0"/>
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">+</button>
+</div>
+</div>
+</div>
+<div class="flex gap-4 bg-white dark:bg-gray-800/20 p-3 justify-between rounded-xl shadow-sm shadow-gray-200/20 dark:shadow-none">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-[70px]" data-alt="Set of professional salon scissors" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAVkRDA3euK3MsRUHR-r0dQFMVLuk9osJlCHT-UZCrYSKUEox3_7HttaQSEwfNfPjPz5jBl_xjBJTbWTJwc7n6jEBtnyIGP_hDPT381Erkcg2PpAAxKpWF4m713M03L2TXNUo26H3e_YDGJ8BXegcm7KvZGSGecTERSxZNK8PDMd9lgTQkG1UPxzAl00WFdti2_XbipXpHGPjJU8DcaPDFf0PHv0nQTxSLLNvTGCCdb0Q9D3f5eYZuTvmQnW2lSmJkBs2kYEtyIcC_O");'></div>
+<div class="flex flex-1 flex-col justify-center gap-0.5">
+<p class="text-gray-900 dark:text-gray-50 text-base font-semibold leading-normal">Shears Pro 7"</p>
+<div class="flex items-center gap-1.5">
+<span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+<p class="text-green-600 dark:text-green-400 text-sm font-medium leading-normal">In Stock</p>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal leading-normal">Tools</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col justify-center items-end">
+<div class="flex items-center gap-2 text-gray-900 dark:text-gray-50">
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">-</button>
+<input class="text-base font-semibold leading-normal w-7 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&amp;::-webkit-inner-spin-button]:appearance-none [&amp;::-webkit-outer-spin-button]:appearance-none" type="number" value="12"/>
+<button class="text-lg font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50 cursor-pointer">+</button>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed bottom-6 right-6">
+<button class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-black dark:text-black shadow-lg">
+<span class="material-symbols-outlined !text-3xl">add</span>
+</button>
+</div>
+</div>
+
+</body></html>

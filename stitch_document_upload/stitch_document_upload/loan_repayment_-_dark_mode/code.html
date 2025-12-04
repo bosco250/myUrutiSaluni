@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Loan Repayments</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4FD1C5",
+                        "background-light": "#f0f4f8",
+                        "background-dark": "#121212",
+                        "surface-dark": "#1E1E1E",
+                        "text-light-primary": "#1A202C",
+                        "text-light-secondary": "#718096",
+                        "text-dark-primary": "#E2E8F0",
+                        "text-dark-secondary": "#A0AEC0",
+                        "status-success": "#48BB78",
+                        "status-warning": "#F56565",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<header class="flex shrink-0 items-center justify-between bg-background-light dark:bg-background-dark p-4 pb-2">
+<button class="flex size-12 items-center justify-center text-text-light-primary dark:text-text-dark-primary">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-text-light-primary dark:text-text-dark-primary">Loan Repayments</h1>
+<div class="size-12"></div> <!-- Spacer -->
+</header>
+<!-- Summary Card -->
+<div class="p-4 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-surface-dark p-6 shadow-lg">
+<div class="flex flex-col items-stretch justify-center gap-2">
+<p class="text-sm font-normal leading-normal text-text-dark-secondary">Next Payment Due</p>
+<p class="text-4xl font-bold leading-tight tracking-[-0.015em] text-white">$150.00</p>
+<p class="text-base font-normal leading-normal text-text-dark-secondary">Due on October 25, 2024</p>
+</div>
+<div class="mt-6 flex flex-col gap-2">
+<div class="flex items-center justify-between text-sm">
+<p class="font-medium text-text-dark-secondary">Remaining Balance</p>
+<p class="font-bold text-white">$1,800.00</p>
+</div>
+<div class="h-2 w-full rounded-full bg-gray-700">
+<div class="h-2 w-1/4 rounded-full bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Button Group -->
+<div class="flex justify-center px-4">
+<div class="flex w-full flex-1 max-w-[480px] flex-col items-stretch gap-3 py-3">
+<button class="flex h-14 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-primary px-5 text-base font-bold leading-normal tracking-[0.015em] text-background-dark transition-opacity hover:opacity-90">
+<span class="truncate">Make a Payment</span>
+</button>
+<button class="flex h-14 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-primary/50 bg-transparent px-5 text-base font-bold leading-normal tracking-[0.015em] text-primary transition-colors hover:bg-primary/10">
+<span class="truncate">Set up Auto-Pay</span>
+</button>
+</div>
+</div>
+<div class="px-4 py-4">
+<div class="flex items-center justify-between rounded-xl bg-surface-dark p-4">
+<div class="flex flex-col">
+<p class="text-base font-medium text-white">Payment Reminders</p>
+<p class="text-sm text-text-dark-secondary">Get notified 3 days before payment is due.</p>
+</div>
+<div class="relative inline-flex cursor-pointer items-center">
+<input checked="" class="peer sr-only" id="reminders-toggle" type="checkbox" value=""/>
+<div class="peer h-6 w-11 rounded-full bg-gray-600 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+</div>
+</div>
+</div>
+<!-- Tabs -->
+<div class="px-4 pb-3 pt-2">
+<div class="flex border-b border-gray-700">
+<a class="flex flex-1 flex-col items-center justify-center border-b-[3px] border-b-white pb-[13px] pt-4 text-white" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Payment History</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center border-b-[3px] border-b-transparent pb-[13px] pt-4 text-text-dark-secondary" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Upcoming</p>
+</a>
+</div>
+</div>
+<!-- List Items -->
+<div class="flex flex-col gap-1 pb-4">
+<div class="flex min-h-[72px] items-center justify-between gap-4 px-4 py-2">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-status-success/20 text-status-success">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-dark-primary line-clamp-1">Payment Received</p>
+<p class="text-sm font-normal leading-normal text-text-dark-secondary line-clamp-2">September 25, 2024</p>
+</div>
+</div>
+<div class="shrink-0">
+<p class="text-base font-medium leading-normal text-text-dark-primary">$150.00</p>
+</div>
+</div>
+<div class="flex min-h-[72px] items-center justify-between gap-4 px-4 py-2">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-status-success/20 text-status-success">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-dark-primary line-clamp-1">Payment Received</p>
+<p class="text-sm font-normal leading-normal text-text-dark-secondary line-clamp-2">August 25, 2024</p>
+</div>
+</div>
+<div class="shrink-0">
+<p class="text-base font-medium leading-normal text-text-dark-primary">$150.00</p>
+</div>
+</div>
+<div class="flex min-h-[72px] items-center justify-between gap-4 px-4 py-2">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-status-warning/20 text-status-warning">
+<span class="material-symbols-outlined">cancel</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-status-warning line-clamp-1">Payment Overdue</p>
+<p class="text-sm font-normal leading-normal text-text-dark-secondary line-clamp-2">July 25, 2024</p>
+</div>
+</div>
+<div class="shrink-0">
+<p class="text-base font-medium leading-normal text-status-warning">$150.00</p>
+</div>
+</div>
+<div class="flex min-h-[72px] items-center justify-between gap-4 px-4 py-2">
+<div class="flex items-center gap-4">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-status-success/20 text-status-success">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-dark-primary line-clamp-1">Payment Received</p>
+<p class="text-sm font-normal leading-normal text-text-dark-secondary line-clamp-2">June 25, 2024</p>
+</div>
+</div>
+<div class="shrink-0">
+<p class="text-base font-medium leading-normal text-text-dark-primary">$150.00</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

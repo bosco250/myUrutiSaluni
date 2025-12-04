@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Suggestions - Salon Scheduler</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#111811",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0.5rem",
+              "lg": "0.75rem",
+              "xl": "1rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark pb-28">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center justify-start text-white dark:text-gray-200">
+<span class="material-symbols-outlined text-3xl">arrow_back</span>
+</div>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Smart Suggestions</h2>
+<div class="flex size-12 shrink-0 items-center"></div>
+</div>
+<!-- Spacer -->
+<div class="h-2 bg-background-light dark:bg-background-dark"></div>
+<!-- Stats Section -->
+<div class="flex flex-wrap gap-3 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg bg-gray-100 dark:bg-gray-900/50 p-4 border border-transparent dark:border-white/10">
+<p class="text-gray-600 dark:text-gray-300 text-sm font-medium leading-normal">Staff Utilization</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">trending_up</span>
+<p class="text-gray-900 dark:text-white tracking-light text-2xl font-bold leading-tight">+5%</p>
+</div>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg bg-gray-100 dark:bg-gray-900/50 p-4 border border-transparent dark:border-white/10">
+<p class="text-gray-600 dark:text-gray-300 text-sm font-medium leading-normal">Projected Revenue</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">payments</span>
+<p class="text-gray-900 dark:text-white tracking-light text-2xl font-bold leading-tight">+$150</p>
+</div>
+</div>
+<div class="flex min-w-full flex-1 flex-col gap-2 rounded-lg bg-gray-100 dark:bg-gray-900/50 p-4 border border-transparent dark:border-white/10">
+<p class="text-gray-600 dark:text-gray-300 text-sm font-medium leading-normal">Staff Downtime</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-red-500 text-2xl">trending_down</span>
+<p class="text-gray-900 dark:text-white tracking-light text-2xl font-bold leading-tight">-45 Mins</p>
+</div>
+</div>
+</div>
+<!-- Spacer -->
+<div class="h-4 bg-background-light dark:bg-background-dark"></div>
+<!-- Recommendation List -->
+<div class="flex flex-col gap-4 px-4">
+<!-- Recommendation Card 1 -->
+<div class="flex flex-col gap-4 rounded-xl bg-gray-100 dark:bg-gray-900/50 p-4 border border-transparent dark:border-white/10">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Avatar for John Doe" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAmT_jYxYWlh4tCs3df9AbRnTd5yzhn91JTs75fBxHXrdbkyI5Qr7Rr0qmBvrstJMatx-LPBEdReyROaRzzFEqcVPdPpuG1xTzwukXVdpym6wmb7vKF4eeqyRyd4ZFOypoNzi9N3vFdkAgOdDjVeqeSA0SVqDIi5Vpb7mHmWDHkyL3ufZuD-ZCEEp6hs03iPpErO-4UfWScHJ6bVsZMvzxxhD3qoJ9RWE5kOkz954TnYw4P9jzDBxkCiAprlWUY2hLIHOVsjeku_Da_");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal">Move Shift: John Doe</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">Reason: High demand forecast at 4 PM.</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal"><span class="font-medium text-gray-500 dark:text-gray-300">From:</span> Tue, 2-4 PM → <span class="font-medium text-gray-500 dark:text-gray-300">To:</span> Tue, 4-6 PM</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 flex-wrap justify-end">
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-gray-200 dark:bg-white/10 text-gray-800 dark:text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Reject</span>
+</button>
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary text-background-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Accept</span>
+</button>
+</div>
+</div>
+<!-- Recommendation Card 2 -->
+<div class="flex flex-col gap-4 rounded-xl bg-gray-100 dark:bg-gray-900/50 p-4 border border-transparent dark:border-white/10">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Avatar for Jane Smith" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuACsW5Y2MvSNhEcsLBXog3XPNqwJ9t3M6qV9pku35xsZ-HCuVgLbgT-8ZZn4o5oVQc9WsqzM_41QUF86lgv73DOSHAd3WFgUJQKOe3iunXtgkDqEZf_Jen0CuLNnr_vPWpbOY48P1M6b8O5xHhSMjOChDjv9dAsdqZmEDCEJHAIBaRo90d0guMKCsTKH3RSsZzxpMZR1K0wotxeeP9T90HLghQC2cOuIFQKQrN6XUnz1Vd5uzZVcxN5ATlV2d6eUdH0wfGjemZKKKoS");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal">Extend Hours: Jane Smith</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">Reason: Accommodate more bookings.</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal"><span class="font-medium text-gray-500 dark:text-gray-300">From:</span> Wed, 10-5 PM → <span class="font-medium text-gray-500 dark:text-gray-300">To:</span> Wed, 10-6 PM</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 flex-wrap justify-end">
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-gray-200 dark:bg-white/10 text-gray-800 dark:text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Reject</span>
+</button>
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary text-background-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Accept</span>
+</button>
+</div>
+</div>
+<!-- Recommendation Card 3 -->
+<div class="flex flex-col gap-4 rounded-xl bg-gray-100 dark:bg-gray-900/50 p-4 border border-transparent dark:border-white/10">
+<div class="flex items-start gap-4">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Avatar for Alex Johnson" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCGmQwOYESVHYVXjnmNMygviOAdX5tV177bML-jvwNDP8Y86oAJhVIovwKgTVttN1eSEVxwPVa36tFHw9bdZNE7pVGkzKHjEJaK0I1wFYuPnUEGR2ije9cWezwRzzRcRX4hsisOJuPQ_44wtV5uKxc4LlbZ0FVmTMNZYtGAZ4K8k2nciPMx5yBmAWGhwgn8hyFhWYjU-3aLnd8UeB9J_tRSw_2fRzwWoKDomCQKTscPls8bfe9kOVnOf1p_hg0K2MvkJ-gYLojduGsc");'></div>
+<div class="flex flex-1 flex-col justify-center gap-1">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal">Add Shift: Alex Johnson</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">Reason: Unfilled demand for popular stylist.</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal"><span class="font-medium text-gray-500 dark:text-gray-300">New:</span> Fri, 1-5 PM</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 flex-wrap justify-end">
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-gray-200 dark:bg-white/10 text-gray-800 dark:text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Reject</span>
+</button>
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary text-background-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Accept</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bulk Action Footer (Sticky) -->
+<div class="fixed bottom-0 left-0 right-0 z-10 bg-gray-200/80 p-4 backdrop-blur-sm dark:bg-background-dark/80 border-t border-gray-300 dark:border-white/10">
+<div class="flex w-full gap-3 justify-center">
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-gray-300 dark:bg-white/10 text-gray-800 dark:text-white text-base font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Reject All</span>
+</button>
+<button class="flex flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-primary text-background-dark text-base font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Accept All</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

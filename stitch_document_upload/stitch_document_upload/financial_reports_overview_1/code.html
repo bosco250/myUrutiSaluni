@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Financial Reports - Salon Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#19f073",
+            "background-light": "#f6f8f7",
+            "background-dark": "#0D110F",
+            "card-dark": "#131A17",
+            "border-dark": "#282F2C",
+            "text-light": "#f0fdf4",
+            "text-dark": "#a1a1aa",
+          },
+          fontFamily: {
+            "display": ["Manrope"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 24px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-text-light antialiased">
+<div class="relative mx-auto flex h-screen max-w-sm flex-col bg-white dark:bg-background-dark">
+<header class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/80 p-4 backdrop-blur-sm dark:border-border-dark dark:bg-background-dark/80">
+<button class="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 dark:text-text-dark dark:hover:bg-card-dark">
+<span class="material-symbols-outlined !text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold">Financial Reports</h1>
+<div class="h-8 w-8"></div>
+</header>
+<main class="flex-1 overflow-y-auto p-4 pb-24">
+<div class="space-y-6">
+<div>
+<label class="mb-1 block text-sm font-medium text-slate-600 dark:text-text-dark" for="date-range">Time Period</label>
+<div class="relative">
+<select class="w-full appearance-none rounded-lg border-slate-300 bg-slate-100 py-3 pl-4 pr-10 text-base font-semibold focus:border-primary focus:ring-primary dark:border-border-dark dark:bg-card-dark dark:text-text-light dark:focus:border-primary" id="date-range">
+<option>Last 30 Days</option>
+<option>Last 7 Days</option>
+<option>This Month</option>
+<option>Last 3 Months</option>
+<option>Year to Date</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+<span class="material-symbols-outlined text-slate-500 dark:text-text-dark">expand_more</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-3 text-center">
+<div class="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-border-dark dark:bg-card-dark">
+<p class="text-xs text-slate-500 dark:text-text-dark">Total Revenue</p>
+<p class="text-lg font-bold text-slate-800 dark:text-text-light">$8,450</p>
+<p class="text-xs font-medium text-emerald-500">+5.2%</p>
+</div>
+<div class="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-border-dark dark:bg-card-dark">
+<p class="text-xs text-slate-500 dark:text-text-dark">Total Expenses</p>
+<p class="text-lg font-bold text-slate-800 dark:text-text-light">$2,130</p>
+<p class="text-xs font-medium text-amber-500">+1.8%</p>
+</div>
+<div class="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-border-dark dark:bg-card-dark">
+<p class="text-xs text-slate-500 dark:text-text-dark">Net Profit</p>
+<p class="text-lg font-bold text-slate-800 dark:text-text-light">$6,320</p>
+<p class="text-xs font-medium text-emerald-500">+8.1%</p>
+</div>
+</div>
+<div class="rounded-xl border border-slate-200/80 bg-white p-4 dark:border-border-dark dark:bg-card-dark">
+<h2 class="text-base font-bold">Revenue Trend</h2>
+<p class="text-sm text-slate-500 dark:text-text-dark">Last 30 Days</p>
+<div class="mt-4 h-48">
+<img class="h-full w-full rounded-md object-cover brightness-90 saturate-150 contrast-125" data-alt="A clean line chart showing revenue trends, with a primary green line indicating growth over a 30-day period. The chart has a dark background with subtle grid lines." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiyQMg6Pr8Q9gtKZU132TvebYxUABf1CWAnvlHNeAkcLQBHNAkP2O3lforz533xXp2P9k_kBLqRXarR6go2E4I1vsv5V3QTvKFjiK2NGUTsQ0X6IqVv_tUqtfVGaJF2-RFjddtvmyGtYDWSgjZLDe8hKvpZ2QHX1aD3UWfC5lNWSe7SwSvwL6kzB4kTlZ5PAYys-hGicmpsNNS7efNA_Nzim7tgIs4--FNSRt5lcuIMRSNpfqhblWdbZRCs_NZW2V0AbwvGjkAzLTq"/>
+</div>
+</div>
+<div class="space-y-3">
+<h3 class="text-base font-bold">Detailed Reports</h3>
+<a class="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-4 transition-all hover:border-primary/50 hover:shadow-sm dark:border-border-dark dark:bg-card-dark dark:hover:border-primary/50" href="#">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<div class="flex-1">
+<p class="font-semibold">Profit &amp; Loss Statement</p>
+<p class="text-sm text-slate-500 dark:text-text-dark">View detailed income statement</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-zinc-600">chevron_right</span>
+</a>
+<a class="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-4 transition-all hover:border-primary/50 hover:shadow-sm dark:border-border-dark dark:bg-card-dark dark:hover:border-primary/50" href="#">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined">pie_chart</span>
+</div>
+<div class="flex-1">
+<p class="font-semibold">Expense Breakdown</p>
+<p class="text-sm text-slate-500 dark:text-text-dark">Analyze spending by category</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-zinc-600">chevron_right</span>
+</a>
+<a class="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-4 transition-all hover:border-primary/50 hover:shadow-sm dark:border-border-dark dark:bg-card-dark dark:hover:border-primary/50" href="#">
+<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined">bar_chart</span>
+</div>
+<div class="flex-1">
+<p class="font-semibold">Revenue by Service</p>
+<p class="text-sm text-slate-500 dark:text-text-dark">See top-performing services</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 dark:text-zinc-600">chevron_right</span>
+</a>
+</div>
+</div>
+</main>
+<div class="absolute bottom-6 right-6">
+<button class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-background-dark shadow-lg shadow-primary/30 transition-transform hover:scale-105">
+<span class="material-symbols-outlined !text-3xl">download</span>
+</button>
+</div>
+</div>
+
+</body></html>

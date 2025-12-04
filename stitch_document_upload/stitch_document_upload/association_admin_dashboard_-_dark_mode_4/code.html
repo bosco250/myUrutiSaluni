@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Salon Association Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#4A90E2",
+              "secondary": "#B76E79",
+              "background-light": "#f6f8f6",
+              "background-dark": "#1E1E1E",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-dark dark group/design-root overflow-x-hidden">
+<div class="flex items-center bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/50" data-alt="Salon Association Logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD9Agmp8cr6QQjcFN1psPEczwzEAGCdIjwBiTn2FqNTtKtGe4AlEWPvJQKS5ZxeImdORLoJ7nrX73q2f9_PTJJWasS7DZNdTVSXLR90uhliDDmioeal1rK1u0iPpEA3p8PMNNhU5hDag775YSOTolr5W8s-NXsrl7GNhn2QPLkv4DxdpepfCy-OAkeIRYFJfdF3f5lDurysW9-Gl1zhjwEWgbnmFu4WyEiklfXakSvba-NFLH_DrsBxx7HRV1RiT-9GkxMkm0ZuzvdF");'></div>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Salon Association</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0 relative">
+<span class="material-symbols-outlined text-white text-2xl">notifications</span>
+<div class="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-secondary border-2 border-background-dark"></div>
+</button>
+</div>
+</div>
+<h1 class="text-white tracking-tight text-[32px] font-bold leading-tight px-4 text-left pb-1 pt-6">Welcome, Jane</h1>
+<p class="text-[#E0E0E0]/70 text-sm font-normal leading-normal pb-3 pt-1 px-4">Here's an overview of your association's activity. <br/>Last updated: Just now</p>
+<div class="px-4 py-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-2xl">search</span>
+<input class="w-full rounded-full border-none bg-[#2A2A2A] py-3 pl-11 pr-4 text-base text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Search members, salons, reports..." type="text"/>
+</div>
+</div>
+<div class="flex flex-col gap-4 p-4">
+<div class="flex flex-col gap-2 rounded-lg p-4 bg-[#2A2A2A]">
+<p class="text-white text-base font-medium leading-normal">Salons to Review</p>
+<p class="text-white tracking-tight text-4xl font-bold leading-tight">5</p>
+<p class="text-primary text-sm font-medium leading-normal">View List</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-4 bg-[#2A2A2A]">
+<p class="text-white text-base font-medium leading-normal">Total Members</p>
+<p class="text-white tracking-tight text-4xl font-bold leading-tight">1,204</p>
+<p class="text-primary text-sm font-medium leading-normal">+21 this month</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-4 bg-[#2A2A2A]">
+<p class="text-white text-base font-medium leading-normal">Month's Revenue</p>
+<p class="text-white tracking-tight text-4xl font-bold leading-tight">$15.8k</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-green-400 text-base">arrow_upward</span>
+<p class="text-green-400 text-sm font-medium leading-normal">+5.2%</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-4 bg-secondary/20 border border-secondary">
+<p class="text-white text-base font-medium leading-normal">Compliance Issues</p>
+<p class="text-white tracking-tight text-4xl font-bold leading-tight">12</p>
+<p class="text-secondary text-sm font-medium leading-normal">Needs attention</p>
+</div>
+</div>
+<h3 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-6">Quick Access</h3>
+<div class="grid grid-cols-3 gap-4 px-4 pb-4">
+<a class="flex flex-col items-center justify-center gap-2 rounded-lg p-4 bg-[#2A2A2A] text-white aspect-square" href="#">
+<div class="flex items-center justify-center size-12 bg-primary/20 rounded-full">
+<span class="material-symbols-outlined text-primary text-3xl">group</span>
+</div>
+<p class="text-sm font-medium leading-normal text-center">Members</p>
+</a>
+<a class="flex flex-col items-center justify-center gap-2 rounded-lg p-4 bg-[#2A2A2A] text-white aspect-square" href="#">
+<div class="flex items-center justify-center size-12 bg-primary/20 rounded-full">
+<span class="material-symbols-outlined text-primary text-3xl">store</span>
+</div>
+<p class="text-sm font-medium leading-normal text-center">Salons</p>
+</a>
+<a class="flex flex-col items-center justify-center gap-2 rounded-lg p-4 bg-[#2A2A2A] text-white aspect-square" href="#">
+<div class="flex items-center justify-center size-12 bg-primary/20 rounded-full">
+<span class="material-symbols-outlined text-primary text-3xl">bar_chart</span>
+</div>
+<p class="text-sm font-medium leading-normal text-center">Reports</p>
+</a>
+<a class="flex flex-col items-center justify-center gap-2 rounded-lg p-4 bg-[#2A2A2A] text-white aspect-square" href="#">
+<div class="flex items-center justify-center size-12 bg-primary/20 rounded-full">
+<span class="material-symbols-outlined text-primary text-3xl">school</span>
+</div>
+<p class="text-sm font-medium leading-normal text-center">Training</p>
+</a>
+<a class="flex flex-col items-center justify-center gap-2 rounded-lg p-4 bg-[#2A2A2A] text-white aspect-square" href="#">
+<div class="flex items-center justify-center size-12 bg-secondary/20 rounded-full relative">
+<span class="material-symbols-outlined text-secondary text-3xl">gavel</span>
+<div class="absolute top-0 right-0 size-3 rounded-full bg-secondary border-2 border-[#2A2A2A]"></div>
+</div>
+<p class="text-sm font-medium leading-normal text-center">Compliance</p>
+</a>
+<a class="flex flex-col items-center justify-center gap-2 rounded-lg p-4 bg-[#2A2A2A] text-white aspect-square" href="#">
+<div class="flex items-center justify-center size-12 bg-primary/20 rounded-full">
+<span class="material-symbols-outlined text-primary text-3xl">settings</span>
+</div>
+<p class="text-sm font-medium leading-normal text-center">Settings</p>
+</a>
+</div>
+<div class="h-20 bg-background-dark"></div>
+<div class="fixed bottom-0 left-0 right-0 bg-[#2A2A2A] border-t border-white/10 px-4 py-2">
+<div class="flex justify-around items-center h-16">
+<a class="flex flex-col items-center justify-center gap-1 text-primary w-1/4" href="#">
+<span class="material-symbols-outlined text-2xl">dashboard</span>
+<span class="text-xs font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-white/60 w-1/4" href="#">
+<span class="material-symbols-outlined text-2xl">calendar_month</span>
+<span class="text-xs font-medium">Events</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-white/60 w-1/4" href="#">
+<span class="material-symbols-outlined text-2xl">mail</span>
+<span class="text-xs font-medium">Inbox</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-white/60 w-1/4" href="#">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span class="text-xs font-medium">Profile</span>
+</a>
+</div>
+</div>
+</div>
+
+</body></html>

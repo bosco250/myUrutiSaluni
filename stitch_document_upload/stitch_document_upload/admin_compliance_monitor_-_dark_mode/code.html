@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Compliance Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#112111",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- TopAppBar -->
+<div class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between">
+<div class="text-white flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-gray-300">menu</span>
+</div>
+<h2 class="text-gray-100 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Compliance Center</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<div class="text-gray-100 dark:text-white">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Stats -->
+<div class="flex flex-wrap gap-4 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-4 bg-primary/20">
+<p class="text-gray-300 dark:text-gray-300 text-sm font-medium leading-normal">Expiring Soon</p>
+<p class="text-gray-100 dark:text-white tracking-light text-3xl font-bold leading-tight">14</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-4 bg-primary/20">
+<p class="text-gray-300 dark:text-gray-300 text-sm font-medium leading-normal">Salons Non-Compliant</p>
+<p class="text-gray-100 dark:text-white tracking-light text-3xl font-bold leading-tight">5</p>
+</div>
+<div class="flex min-w-full flex-1 flex-col gap-2 rounded-xl p-4 bg-primary/20">
+<p class="text-gray-300 dark:text-gray-300 text-sm font-medium leading-normal">Members with Issues</p>
+<p class="text-gray-100 dark:text-white tracking-light text-3xl font-bold leading-tight">8</p>
+</div>
+</div>
+<!-- Tabs -->
+<div class="sticky top-[72px] z-10 bg-background-light dark:bg-background-dark pb-3">
+<div class="flex border-b border-primary/30 px-4 justify-between">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-primary pb-[13px] pt-4 flex-1" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Salons</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-gray-400 pb-[13px] pt-4 flex-1" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Members</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-gray-400 pb-[13px] pt-4 flex-1" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Activity</p>
+</a>
+</div>
+</div>
+<!-- Search and Filters -->
+<div class="px-4 py-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-gray-400 flex border-none bg-primary/20 items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-white focus:outline-0 focus:ring-0 border-none bg-primary/20 focus:border-none h-full placeholder:text-gray-400 px-4 pl-2 text-base font-normal leading-normal" placeholder="Search Salons..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex gap-3 px-4 pt-1 pb-4 overflow-x-auto">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/90 px-4"><p class="text-background-dark text-sm font-medium leading-normal">All</p></button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/20 px-4"><p class="text-gray-200 text-sm font-medium leading-normal">Compliant</p></button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/20 px-4"><p class="text-gray-200 text-sm font-medium leading-normal">Expiring Soon</p></button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/20 px-4"><p class="text-gray-200 text-sm font-medium leading-normal">Non-Compliant</p></button>
+</div>
+<!-- Salon List -->
+<div class="flex flex-col gap-4 px-4 pb-24">
+<!-- List Item: Non-Compliant -->
+<div class="flex flex-col gap-4 rounded-xl bg-primary/20 p-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-gray-100 dark:text-white font-semibold">Aura Beauty Lounge</h3>
+<p class="text-sm text-gray-400">ID: #SAL789123</p>
+</div>
+<div class="flex items-center gap-2 rounded-full bg-red-500/20 px-3 py-1">
+<div class="h-2 w-2 rounded-full bg-red-500"></div>
+<p class="text-xs font-medium text-red-400">Non-Compliant</p>
+</div>
+</div>
+<div class="border-t border-primary/30 pt-4 flex items-center justify-between">
+<div>
+<p class="text-sm text-gray-400">License Expired</p>
+<p class="text-sm font-medium text-gray-200">Oct 15, 2023</p>
+</div>
+<button class="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary/90 px-4 text-sm font-bold text-background-dark">
+<span class="material-symbols-outlined text-base">send</span>
+<span>Send Reminder</span>
+</button>
+</div>
+</div>
+<!-- List Item: Expiring Soon -->
+<div class="flex flex-col gap-4 rounded-xl bg-primary/20 p-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-gray-100 dark:text-white font-semibold">Glimmer &amp; Glow Spa</h3>
+<p class="text-sm text-gray-400">ID: #SAL456789</p>
+</div>
+<div class="flex items-center gap-2 rounded-full bg-amber-500/20 px-3 py-1">
+<div class="h-2 w-2 rounded-full bg-amber-500"></div>
+<p class="text-xs font-medium text-amber-400">Expiring Soon</p>
+</div>
+</div>
+<div class="border-t border-primary/30 pt-4 flex items-center justify-between">
+<div>
+<p class="text-sm text-gray-400">Renewal Due</p>
+<p class="text-sm font-medium text-gray-200">Nov 30, 2024</p>
+</div>
+<button class="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary/90 px-4 text-sm font-bold text-background-dark">
+<span class="material-symbols-outlined text-base">send</span>
+<span>Send Reminder</span>
+</button>
+</div>
+</div>
+<!-- List Item: Compliant -->
+<div class="flex flex-col gap-4 rounded-xl bg-primary/20 p-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-gray-100 dark:text-white font-semibold">The Polished Nail</h3>
+<p class="text-sm text-gray-400">ID: #SAL123456</p>
+</div>
+<div class="flex items-center gap-2 rounded-full bg-green-500/20 px-3 py-1">
+<div class="h-2 w-2 rounded-full bg-green-500"></div>
+<p class="text-xs font-medium text-green-400">Compliant</p>
+</div>
+</div>
+<div class="border-t border-primary/30 pt-4 flex items-center justify-between">
+<div>
+<p class="text-sm text-gray-400">Renewal Due</p>
+<p class="text-sm font-medium text-gray-200">Mar 22, 2025</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Automated Reminders Info -->
+<div class="px-4 py-2 text-center">
+<p class="text-xs text-gray-500">
+<span class="material-symbols-outlined text-sm align-middle mr-1">info</span>
+                Automated reminders sent at 60, 30, and 7 days before expiry.
+            </p>
+</div>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6 z-20">
+<button class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-background-dark shadow-lg">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+</div>
+</body></html>

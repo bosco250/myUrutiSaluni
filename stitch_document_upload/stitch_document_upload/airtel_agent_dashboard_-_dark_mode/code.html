@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Airtel Agent Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f20d0d",
+              "background-light": "#f8f5f5",
+              "background-dark": "#221010",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center gap-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User profile picture of Jane" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDXvb26OVrYpqkuXfNJe9arHYj00jNhVgfdqiKuMhB5WOCJmZqrTfatgWhHfOJ9oWS34M8HWTizWnA9AQS1tUXGu9atf0dXDjMMaYTaPUU0UtFKWL4tQcbGQw-VDBh7cKZSozWziGOGLqAdwKxsAqziUZ7dlAk9j8O7xQOj52fz9mgYEm3HbSUSjGe4wNZp-Blxlx8JrC-Z0HSObSSvTUsFhJZFSaaW5IE6h7IdFJhmoo2iHWE1CDeQggolUqcAi4I0ktPu0NeE9PRF");'></div>
+</div>
+<h2 class="text-slate-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1">Hi, Jane</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-slate-800 dark:text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-slate-800 dark:text-white">notifications</span>
+</button>
+</div>
+</div>
+<!-- Float Balance Card -->
+<div class="p-4 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-start bg-zinc-100 dark:bg-zinc-900/50">
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 p-4">
+<p class="text-slate-500 dark:text-[#ba9c9c] text-sm font-normal leading-normal">Float Balance</p>
+<p class="text-slate-800 dark:text-white text-3xl font-bold leading-tight tracking-[-0.015em]">₦150,430.50</p>
+<div class="flex items-end gap-3 justify-end mt-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-medium leading-normal">
+<span class="truncate">Top Up</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stats -->
+<div class="flex flex-wrap gap-4 p-4 pt-0">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-4 border border-slate-200 dark:border-[#543b3b] bg-slate-100 dark:bg-transparent">
+<p class="text-slate-600 dark:text-white text-base font-medium leading-normal">Commissions (Today)</p>
+<p class="text-slate-800 dark:text-white tracking-light text-2xl font-bold leading-tight">₦5,250</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-4 border border-slate-200 dark:border-[#543b3b] bg-slate-100 dark:bg-transparent">
+<p class="text-slate-600 dark:text-white text-base font-medium leading-normal">Transactions (Today)</p>
+<p class="text-slate-800 dark:text-white tracking-light text-2xl font-bold leading-tight">32</p>
+</div>
+</div>
+<!-- Quick Actions Grid -->
+<div class="grid grid-cols-2 gap-4 p-4">
+<div class="flex flex-1 gap-3 rounded-lg border border-slate-200 dark:border-[#543b3b] bg-slate-100 dark:bg-[#271b1b] p-4 flex-col items-start">
+<span class="material-symbols-outlined text-primary text-2xl">arrow_upward</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Send Money</h2>
+<p class="text-slate-500 dark:text-[#ba9c9c] text-sm font-normal leading-normal">Transfer funds</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-lg border border-slate-200 dark:border-[#543b3b] bg-slate-100 dark:bg-[#271b1b] p-4 flex-col items-start">
+<span class="material-symbols-outlined text-primary text-2xl">arrow_downward</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Cash Out</h2>
+<p class="text-slate-500 dark:text-[#ba9c9c] text-sm font-normal leading-normal">Withdraw cash</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-lg border border-slate-200 dark:border-[#543b3b] bg-slate-100 dark:bg-[#271b1b] p-4 flex-col items-start">
+<span class="material-symbols-outlined text-primary text-2xl">phone_iphone</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Buy Airtime</h2>
+<p class="text-slate-500 dark:text-[#ba9c9c] text-sm font-normal leading-normal">Mobile top-up</p>
+</div>
+</div>
+<div class="flex flex-1 gap-3 rounded-lg border border-slate-200 dark:border-[#543b3b] bg-slate-100 dark:bg-[#271b1b] p-4 flex-col items-start">
+<span class="material-symbols-outlined text-primary text-2xl">account_balance_wallet</span>
+<div class="flex flex-col gap-1">
+<h2 class="text-slate-800 dark:text-white text-base font-bold leading-tight">Float Mgt</h2>
+<p class="text-slate-500 dark:text-[#ba9c9c] text-sm font-normal leading-normal">Manage balance</p>
+</div>
+</div>
+</div>
+<!-- Recent Transactions Section -->
+<div class="flex items-center justify-between px-4 pb-2 pt-4">
+<h3 class="text-slate-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Recent Transactions</h3>
+<a class="text-primary text-sm font-medium" href="#">View All</a>
+</div>
+<div class="flex flex-col gap-2 px-4">
+<div class="flex w-full items-center gap-4 rounded-lg p-3">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-primary">
+<span class="material-symbols-outlined">arrow_downward</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="font-medium text-slate-800 dark:text-white">Cash Out</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Today, 02:30 PM</p>
+</div>
+<p class="font-bold text-slate-800 dark:text-white">-₦5,000.00</p>
+</div>
+<div class="flex w-full items-center gap-4 rounded-lg p-3">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-500/10 text-green-500">
+<span class="material-symbols-outlined">phone_iphone</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="font-medium text-slate-800 dark:text-white">Airtime Purchase</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Today, 11:15 AM</p>
+</div>
+<p class="font-bold text-slate-800 dark:text-white">-₦1,000.00</p>
+</div>
+<div class="flex w-full items-center gap-4 rounded-lg p-3">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+<span class="material-symbols-outlined">arrow_upward</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="font-medium text-slate-800 dark:text-white">Money Sent</p>
+<p class="text-sm text-slate-500 dark:text-slate-400">Yesterday, 08:00 PM</p>
+</div>
+<p class="font-bold text-slate-800 dark:text-white">-₦2,500.00</p>
+</div>
+</div>
+<!-- Spacer for Bottom Nav -->
+<div class="h-24"></div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 mx-auto w-full max-w-md border-t border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex h-20 items-center justify-around px-4">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-xs font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-xs font-medium">History</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">shield</span>
+<span class="text-xs font-medium">Compliance</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs font-medium">Profile</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>

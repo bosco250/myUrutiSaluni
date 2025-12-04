@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Scheduling Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#19e619",
+              "background-light": "#f6f8f6",
+              "background-dark": "#111811",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-dark dark group/design-root overflow-x-hidden">
+<!-- TopAppBar -->
+<div class="flex items-center bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white text-2xl">arrow_back</span>
+</div>
+<h1 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Scheduling Assistant</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-white text-2xl">settings</span>
+</button>
+</div>
+</div>
+<!-- Chips -->
+<div class="flex gap-3 p-4 overflow-x-auto whitespace-nowrap">
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-lg bg-primary pl-4 pr-4">
+<p class="text-background-dark text-sm font-bold leading-normal">Today</p>
+</div>
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-lg bg-[#293829] pl-4 pr-4">
+<p class="text-white text-sm font-medium leading-normal">This Week</p>
+</div>
+<div class="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-lg bg-[#293829] pl-4 pr-4">
+<p class="text-white text-sm font-medium leading-normal">This Month</p>
+</div>
+</div>
+<!-- Stats -->
+<div class="flex flex-wrap gap-4 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl bg-[#1A2C1A] p-4">
+<p class="text-[#9db89d] text-sm font-medium leading-normal">Forecasted Demand</p>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">+15%</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl bg-[#1A2C1A] p-4">
+<p class="text-[#9db89d] text-sm font-medium leading-normal">Staff Utilization</p>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">85%</p>
+</div>
+</div>
+<!-- ActionPanel -->
+<div class="px-4">
+<div class="flex flex-1 flex-col items-start justify-between gap-4 rounded-xl border border-[#3c533c] bg-[#1A2C1A] p-5 @[480px]:flex-row @[480px]:items-center">
+<div class="flex flex-col gap-1">
+<p class="text-white text-base font-bold leading-tight">3 New Optimizations Ready</p>
+<p class="text-[#9db89d] text-base font-normal leading-normal">We found ways to improve your schedule.</p>
+</div>
+<button class="flex min-w-[84px] w-full @[480px]:w-auto max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-background-dark text-sm font-bold leading-normal">
+<span class="truncate">View Suggestions</span>
+</button>
+</div>
+</div>
+<!-- Charts -->
+<div class="flex flex-wrap gap-4 px-4 py-6">
+<div class="flex min-w-72 w-full flex-1 flex-col gap-2 rounded-xl border border-[#3c533c] bg-[#1A2C1A] p-6">
+<p class="text-white text-base font-medium leading-normal">Forecasted Customer Demand</p>
+<div class="flex items-baseline gap-2">
+<p class="text-white tracking-light text-[32px] font-bold leading-tight truncate">High</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-base">arrow_upward</span>
+<p class="text-primary text-base font-medium leading-normal">+15%</p>
+</div>
+</div>
+<div class="flex min-h-[180px] flex-1 flex-col gap-8 py-4">
+<svg fill="none" height="148" preserveaspectratio="none" viewbox="-3 0 478 150" width="100%" xmlns="http://www.w3.org/2000/svg">
+<path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25V149H326.769H0V109Z" fill="url(#paint0_linear_1131_5935)"></path>
+<path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25" stroke="#19e619" stroke-linecap="round" stroke-width="3"></path>
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="paint0_linear_1131_5935" x1="236" x2="236" y1="1" y2="149">
+<stop stop-color="#19e619" stop-opacity="0.4"></stop>
+<stop offset="1" stop-color="#19e619" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="flex justify-around">
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Mon</p>
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Tue</p>
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Wed</p>
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Thu</p>
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Fri</p>
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Sat</p>
+<p class="text-[#9db89d] text-[13px] font-bold leading-normal tracking-[0.015em]">Sun</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Staff Overview -->
+<div class="flex flex-col gap-4 p-4">
+<h3 class="text-white text-lg font-bold">Staff Utilization</h3>
+<div class="flex flex-col gap-4">
+<!-- Staff Member 1 -->
+<div class="flex flex-col gap-3 rounded-xl bg-[#1A2C1A] p-4">
+<div class="flex justify-between items-center">
+<p class="text-white font-semibold">Jessica Miller</p>
+<p class="text-white font-bold">95%</p>
+</div>
+<div class="w-full bg-[#3c533c] rounded-full h-2.5">
+<div class="bg-primary h-2.5 rounded-full" style="width: 95%"></div>
+</div>
+<p class="text-[#9db89d] text-sm">38 of 40 hours scheduled</p>
+</div>
+<!-- Staff Member 2 -->
+<div class="flex flex-col gap-3 rounded-xl bg-[#1A2C1A] p-4">
+<div class="flex justify-between items-center">
+<p class="text-white font-semibold">Alex Chen</p>
+<p class="text-white font-bold">80%</p>
+</div>
+<div class="w-full bg-[#3c533c] rounded-full h-2.5">
+<div class="bg-primary h-2.5 rounded-full" style="width: 80%"></div>
+</div>
+<p class="text-[#9db89d] text-sm">32 of 40 hours scheduled</p>
+</div>
+<!-- Staff Member 3 -->
+<div class="flex flex-col gap-3 rounded-xl bg-[#1A2C1A] p-4">
+<div class="flex justify-between items-center">
+<p class="text-white font-semibold">Emily Rodriguez</p>
+<p class="text-white font-bold">75%</p>
+</div>
+<div class="w-full bg-[#3c533c] rounded-full h-2.5">
+<div class="bg-primary h-2.5 rounded-full" style="width: 75%"></div>
+</div>
+<p class="text-[#9db89d] text-sm">24 of 32 hours scheduled</p>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-4 p-4 mt-4">
+<button class="flex w-full cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-primary text-background-dark text-base font-bold">
+<span class="material-symbols-outlined mr-2">groups</span>
+                 Optimize Staff Shifts
+            </button>
+<button class="flex w-full cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-[#293829] text-white text-base font-bold">
+<span class="material-symbols-outlined mr-2">calendar_month</span>
+                Manage Appointments
+            </button>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Salon Growth Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0D9488", // Teal
+            "secondary": "#F59E0B", // Soft Gold/Amber for accents
+            "background-light": "#f6f8f7",
+            "background-dark": "#111827", // Darker background
+            "card-light": "#ffffff",
+            "card-dark": "#1F2937", // Darker card background
+            "text-light-primary": "#111814",
+            "text-dark-primary": "#F9FAFB", // Brighter primary text
+            "text-light-secondary": "#6b7280",
+            "text-dark-secondary": "#9CA3AF",
+            "border-light": "#dbe6df",
+            "border-dark": "#374151" // A slightly lighter border for better contrast
+          },
+          fontFamily: {
+            "display": ["Manrope", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "0.75rem",
+            "xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display text-text-dark-primary">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<header class="sticky top-0 z-10 flex items-center bg-card-dark p-4 pb-2 justify-between border-b border-border-dark">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Glamour Salon's logo, an abstract letter G in a circle" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBnqQpdjfmScAjHWWV411jJKCPpqrJ09gMt_AfIuWs1oLsc0kPhkFuVKx-ZIHQC9OPKLoM68POWh2qQE9-sLlm1MUXJjydQ_tzWmLhxvzXsZUch_NHtraR1OA1Y6nD_DU8WOJiQO4yoBUwePFXYbCkmop9SkVGy_eIV-facRk67P86h2VS3zq9HMU0Jm3_ANJLIy0zMjHYTf44cxKlERj2i0gfgBL9lmtltln4OMrFD1CaIhcdVMbO0N3Rrltn_K29aZeDvmeWJXlPT");'></div>
+</div>
+<h1 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Glamour Salon</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 text-text-dark-primary gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0 hover:bg-white/5">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="flex-1 pb-24">
+<div class="flex gap-2 p-4 overflow-x-auto whitespace-nowrap">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary pl-4 pr-4 text-white">
+<p class="text-sm font-semibold leading-normal">This Week</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-card-dark border border-border-dark pl-4 pr-4 text-text-dark-secondary hover:bg-white/5">
+<p class="text-sm font-medium leading-normal">This Month</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-card-dark border border-border-dark pl-4 pr-4 text-text-dark-secondary hover:bg-white/5">
+<p class="text-sm font-medium leading-normal">This Quarter</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-card-dark border border-border-dark pl-4 pr-2 text-text-dark-secondary hover:bg-white/5">
+<p class="text-sm font-medium leading-normal">Custom</p>
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-4 p-4">
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-card-dark border border-border-dark">
+<p class="text-sm font-medium leading-normal text-text-dark-secondary">Total Revenue</p>
+<p class="tracking-tight text-2xl font-bold leading-tight">$12,500</p>
+<p class="text-green-500 text-sm font-medium leading-normal">+5.2%</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-card-dark border border-border-dark">
+<p class="text-sm font-medium leading-normal text-text-dark-secondary">New Clients</p>
+<p class="tracking-tight text-2xl font-bold leading-tight">32</p>
+<p class="text-green-500 text-sm font-medium leading-normal">+12%</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-card-dark border border-border-dark">
+<p class="text-sm font-medium leading-normal text-text-dark-secondary">Avg. Service Value</p>
+<p class="tracking-tight text-2xl font-bold leading-tight">$85</p>
+<p class="text-red-500 text-sm font-medium leading-normal">-1.5%</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-card-dark border border-border-dark">
+<p class="text-sm font-medium leading-normal text-text-dark-secondary">Appointments</p>
+<p class="tracking-tight text-2xl font-bold leading-tight">147</p>
+<p class="text-green-500 text-sm font-medium leading-normal">+8.0%</p>
+</div>
+</div>
+<div class="flex flex-col gap-4 px-4 py-2">
+<div class="flex flex-col gap-2 rounded-xl border border-border-dark p-4 bg-card-dark">
+<p class="text-base font-bold leading-normal">Revenue Growth</p>
+<div class="flex items-baseline gap-2">
+<p class="tracking-tight text-3xl font-bold leading-tight truncate">$12,500</p>
+<div class="flex gap-1">
+<p class="text-text-dark-secondary text-sm font-normal leading-normal">This Week</p>
+<p class="text-green-500 text-sm font-medium leading-normal">+5.2%</p>
+</div>
+</div>
+<div class="flex min-h-[180px] flex-1 flex-col gap-8 py-4">
+<svg fill="none" height="148" preserveAspectRatio="none" viewBox="-3 0 478 150" width="100%" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_chart" x1="236" x2="236" y1="1" y2="149">
+<stop stop-color="#0D9488" stop-opacity="0.2"></stop>
+<stop offset="1" stop-color="#0D9488" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+<path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25V149H0V109Z" fill="url(#paint0_linear_chart)"></path>
+<path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25" stroke="#0D9488" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="flex justify-between -mt-4 text-xs font-bold text-text-dark-secondary">
+<p>Mon</p>
+<p>Tue</p>
+<p>Wed</p>
+<p>Thu</p>
+<p>Fri</p>
+<p>Sat</p>
+<p>Sun</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl border border-border-dark p-4 bg-card-dark">
+<p class="text-base font-bold leading-normal">Client Retention</p>
+<div class="flex items-center justify-center min-h-[180px] p-4">
+<div class="relative w-40 h-40">
+<svg class="w-full h-full" viewBox="0 0 36 36">
+<path class="text-gray-700" d="M18 2.0845
+                                     a 15.9155 15.9155 0 0 1 0 31.831
+                                     a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="100, 100" stroke-width="3"></path>
+<path class="text-primary" d="M18 2.0845
+                                     a 15.9155 15.9155 0 0 1 0 31.831
+                                     a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-bold text-text-dark-primary">75%</span>
+<span class="text-sm text-text-dark-secondary">Goal: 80%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4 rounded-xl border border-border-dark p-4 bg-card-dark">
+<p class="text-base font-bold leading-normal">Top Performers</p>
+<div class="grid gap-y-4">
+<div class="grid gap-2 items-center grid-cols-[auto_1fr_auto]">
+<p class="text-sm font-medium text-text-dark-secondary">Jessica</p>
+<div class="h-2.5 bg-gray-700 rounded-full w-full">
+<div class="bg-primary h-2.5 rounded-full" style="width: 90%;"></div>
+</div>
+<p class="text-sm font-bold text-right">$4,500</p>
+</div>
+<div class="grid gap-2 items-center grid-cols-[auto_1fr_auto]">
+<p class="text-sm font-medium text-text-dark-secondary">Maria</p>
+<div class="h-2.5 bg-gray-700 rounded-full w-full">
+<div class="bg-primary h-2.5 rounded-full" style="width: 75%;"></div>
+</div>
+<p class="text-sm font-bold text-right">$3,800</p>
+</div>
+<div class="grid gap-2 items-center grid-cols-[auto_1fr_auto]">
+<p class="text-sm font-medium text-text-dark-secondary">Chloe</p>
+<div class="h-2.5 bg-gray-700 rounded-full w-full">
+<div class="bg-primary h-2.5 rounded-full" style="width: 50%;"></div>
+</div>
+<p class="text-sm font-bold text-right">$2,100</p>
+</div>
+<div class="grid gap-2 items-center grid-cols-[auto_1fr_auto]">
+<p class="text-sm font-medium text-text-dark-secondary">Anna</p>
+<div class="h-2.5 bg-gray-700 rounded-full w-full">
+<div class="bg-primary h-2.5 rounded-full" style="width: 40%;"></div>
+</div>
+<p class="text-sm font-bold text-right">$1,650</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl border border-border-dark p-4 bg-card-dark">
+<p class="text-base font-bold leading-normal">Top Services</p>
+<div class="flex items-center justify-center p-4">
+<div class="flex-1 max-w-[200px] aspect-square relative">
+<svg class="w-full h-full" viewBox="0 0 36 36">
+<circle class="text-primary" cx="18" cy="18" fill="transparent" r="15.9155" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary" cx="18" cy="18" fill="transparent" r="15.9155" stroke="currentColor" stroke-dasharray="60, 100" stroke-dashoffset="25" stroke-width="4"></circle>
+<circle class="text-teal-700" cx="18" cy="18" fill="transparent" r="15.9155" stroke="currentColor" stroke-dasharray="25, 100" stroke-dashoffset="85" stroke-width="4"></circle>
+</svg>
+</div>
+<div class="flex flex-col gap-3 ml-6">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-sm font-medium">Coloring</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span class="text-sm font-medium">Haircut</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-teal-700"></div>
+<span class="text-sm font-medium">Spa</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-10 bg-card-dark border-t border-border-dark">
+<div class="flex justify-around h-16">
+<a class="flex flex-col items-center justify-center text-primary w-full" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-xs font-bold">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-dark-secondary hover:text-primary w-full" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-xs font-medium">Appointments</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-dark-secondary hover:text-primary w-full" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-xs font-medium">Staff</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-dark-secondary hover:text-primary w-full" href="#">
+<span class="material-symbols-outlined">contacts</span>
+<span class="text-xs font-medium">Clients</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-dark-secondary hover:text-primary w-full" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-xs font-medium">Settings</span>
+</a>
+</div>
+</nav>
+</div>
+
+</body></html>

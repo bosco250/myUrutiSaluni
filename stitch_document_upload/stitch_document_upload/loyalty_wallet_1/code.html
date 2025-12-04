@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Loyalty Rewards</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#4f46e5", // using a sophisticated purple-blue as primary
+            "background-light": "#f6f6f8",
+            "background-dark": "#0d1117",
+            "surface-dark": "#161b22",
+            "border-dark": "#30363d",
+            "text-primary-dark": "#e6edf3",
+            "text-secondary-dark": "#7d8590",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "0.75rem",
+            "xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<div class="flex items-center bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-border-dark">
+<button class="text-text-primary-dark flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">My Loyalty Rewards</h1>
+<div class="size-10 shrink-0"></div>
+</div>
+<div class="flex-grow">
+<div class="p-4 @container">
+<div class="flex flex-col items-stretch justify-start rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] bg-gradient-to-br from-gray-900 to-black overflow-hidden border border-border-dark">
+<div class="flex flex-col @md:flex-row @md:items-center p-6 gap-6">
+<div class="flex-grow">
+<p class="text-text-secondary-dark text-sm font-medium leading-normal">LOYALTY STATUS</p>
+<p class="text-text-primary-dark text-2xl font-bold leading-tight tracking-[-0.015em] mt-1">Olivia Chen</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="material-symbols-outlined text-amber-400" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<p class="text-amber-400 text-base font-semibold leading-normal">Gold Member</p>
+</div>
+</div>
+<div class="flex items-center justify-center bg-white p-2 rounded-lg size-24 shrink-0">
+<div class="w-full bg-center bg-no-repeat aspect-square bg-contain" data-alt="QR Code for in-salon scanning" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCfdaWI-AI5v_1MzOiEz8MsdssLHaL6IH83W9RbUaoeHc1HSLLicKCRuah81R38LXgdpSTlZ_Cmk7uALkftMGWvhGn8F9oqAtfbIHZASuA-VIY8JhtRK3y7iIh9SN7NXLltHSP_93Ilwb_bZzyXuZi-Z4ZwMlhGqkWjlAu96uOzz_SKbmCmQYXLLNgAnUJGx2O92uqnC2yLe6BGBQ-ZsPOfKbHoePIAxaQw3JpG5erR_hBvmPyJypmsE_tBa2P03R4BAgRcnZUj1F5p");'></div>
+</div>
+</div>
+<div class="flex flex-col gap-3 px-6 pb-6">
+<div class="flex justify-between items-center text-sm font-medium">
+<p class="text-text-primary-dark">1,250 Reward Points</p>
+<p class="text-text-secondary-dark">250 points to Platinum</p>
+</div>
+<div class="w-full rounded-full bg-gray-700 h-2">
+<div class="h-2 rounded-full bg-primary" style="width: 83.33%;"></div>
+</div>
+</div>
+</div>
+</div>
+<h2 class="text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-4">Your Available Rewards</h2>
+<div class="flex overflow-x-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden">
+<div class="flex items-stretch px-4 gap-4">
+<div class="flex h-full flex-1 flex-col rounded-xl bg-surface-dark border border-border-dark shadow-sm min-w-64">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl flex flex-col" data-alt="Abstract gradient in shades of blue" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCNkwChX18OFdfl-Qqw_rDDuPUAd-DkzacELK8bfCTSWL_TPl0PhB1JJgVCLGXnjhOl6SB6SG8cKSpsf86efnVVkn41uBFej7Sa-8WKrJ7qsQwLy92dTl9qrW9z9HVYHHnICdiSwCdG3bh3c-pLtn2y1BJsDxmEW7qfeeFWRgLyvT6Bay7MuIbzGUJpFC5BIDjGKcgp9Q-dV8eQtVM02vPSN5nVqDXR6wcCY4D4vcdWa6xoLMTSBRUNLs3hH4CLdgTR6vwaeXawTHMi");'></div>
+<div class="flex flex-col flex-1 justify-between p-4 pt-3 gap-4">
+<div>
+<p class="text-text-primary-dark text-base font-semibold leading-normal">10% Off Next Booking</p>
+<p class="text-text-secondary-dark text-sm font-normal leading-normal mt-1">Enjoy a discount on your next hair service.</p>
+</div>
+<button class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+<span class="truncate">Redeem Now</span>
+</button>
+</div>
+</div>
+<div class="flex h-full flex-1 flex-col rounded-xl bg-surface-dark border border-border-dark shadow-sm min-w-64">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl flex flex-col" data-alt="Abstract gradient in shades of pink and purple" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB6TfvJHw6XqaOpDBackYXNO1R8-WfXT5442sWlUuo4ckIbR5qykZpEL3lghvSgDLaa36jTZeCiHlxGjxM9pYOaA4yZzHFZYhpg9KU6XrYP1D30Tax1TExexFuTktyKvcdpxgXzN54-Ef3ScAb3ptkDiJJGJ6uWMo8Ol9wwvUnXmT4q5YFpYy_3H2DaW58R2lXtGyOQOqFu-751zk_NdNURmdudz4injHWwYMmkTyIHghF47uvcipjSPNCUTe2ykQpU5gWftfHPMpAZ");'></div>
+<div class="flex flex-col flex-1 justify-between p-4 pt-3 gap-4">
+<div>
+<p class="text-text-primary-dark text-base font-semibold leading-normal">Free Deep Conditioning</p>
+<p class="text-text-secondary-dark text-sm font-normal leading-normal mt-1">Nourish your hair with this complimentary add-on.</p>
+</div>
+<button class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-surface-dark border border-border-dark text-text-primary-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-white/10 transition-colors">
+<span class="truncate">View Details</span>
+</button>
+</div>
+</div>
+<div class="flex h-full flex-1 flex-col rounded-xl bg-surface-dark border border-border-dark shadow-sm min-w-64">
+<div class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-t-xl flex flex-col" data-alt="Abstract gradient with soft gold tones" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCEMNAZEmlmsefJGi-wUPcSeZYh1pNstsuFkZHgZU9wEnyppCClRSUCGXN5a3pg_RenWkqzXJqGZykg9fq45xU-PIpkgo5ya8sAfIe-sroiAbGxd9iifL3dedplKoySxfmoEGT6vi2H9-hAqtcbmip8-yfJs-aVHknjbqfCSrogu5sgP9xp3kFmmP6wJTUnZtw2UQHblafaloFGoCL6Haa46xgcl9gdV7Nw0czMl3bv9v0Nkyg46oZKtMU8xlRoC7b6snuA5ZJkV3wu");'></div>
+<div class="flex flex-col flex-1 justify-between p-4 pt-3 gap-4">
+<div>
+<p class="text-text-primary-dark text-base font-semibold leading-normal">$15 Off Product Purchase</p>
+<p class="text-text-secondary-dark text-sm font-normal leading-normal mt-1">Save on your favorite salon-quality products.</p>
+</div>
+<button class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+<span class="truncate">Redeem Now</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="px-4 pt-6">
+<h2 class="text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em] pb-3">Loyalty Tier Benefits</h2>
+<div class="flex flex-col gap-3">
+<div class="rounded-xl border border-border-dark bg-surface-dark p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-amber-700">workspace_premium</span>
+<p class="text-text-primary-dark font-bold">Bronze Member</p>
+</div>
+<ul class="list-disc list-inside text-text-secondary-dark text-sm mt-2 pl-1 space-y-1">
+<li>Earn 1 point per $1 spent</li>
+<li>Birthday month rewards</li>
+</ul>
+</div>
+<div class="rounded-xl border border-border-dark bg-surface-dark p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">workspace_premium</span>
+<p class="text-text-primary-dark font-bold">Silver Member</p>
+</div>
+<ul class="list-disc list-inside text-text-secondary-dark text-sm mt-2 pl-1 space-y-1">
+<li>All Bronze benefits</li>
+<li>Earn 1.25 points per $1 spent</li>
+<li>Exclusive member-only discounts</li>
+</ul>
+</div>
+<div class="rounded-xl border-2 border-primary bg-primary/20 p-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-amber-400" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<p class="text-text-primary-dark font-bold">Gold Member</p>
+</div>
+<div class="px-2 py-0.5 rounded-full bg-primary/30">
+<p class="text-indigo-300 text-xs font-bold">CURRENT TIER</p>
+</div>
+</div>
+<ul class="list-disc list-inside text-indigo-200 text-sm mt-2 pl-1 space-y-1">
+<li>All Silver benefits</li>
+<li>Earn 1.5 points per $1 spent</li>
+<li>Priority booking access</li>
+<li>Complimentary service upgrades</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="p-4 pt-6 pb-8 text-center">
+<a class="text-primary hover:text-indigo-400 font-semibold text-sm hover:underline transition-colors" href="#">
+          View Points History
+        </a>
+</div>
+</div>
+</div>
+
+</body></html>

@@ -1,0 +1,32 @@
+{
+  "name": "salon-association-platform",
+  "version": "1.0.0",
+  "description": "Salon Association Platform - Integrated digital system for salon operations, membership, accounting, micro-lending, and Airtel integration",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "web",
+    "mobile"
+  ],
+  "scripts": {
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:web": "cd web && npm run dev",
+    "dev:mobile": "cd mobile && npm start",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:web\"",
+    "build:backend": "cd backend && npm run build",
+    "build:web": "cd web && npm run build",
+    "build:mobile:android": "cd mobile && npm run android",
+    "build:mobile:ios": "cd mobile && npm run ios",
+    "install:all": "npm install && cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install"
+  },
+  "keywords": [
+    "salon",
+    "association",
+    "management",
+    "accounting",
+    "micro-lending"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Salon Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#3d52a0", /* Muted Plum / Navy Blue */
+              "accent": "#f78c6b", /* Coral/Peach Accent */
+              "positive": "#078829", /* Positive Green */
+              "background-light": "#f6f8f7",
+              "background-dark": "#102218",
+              "card-light": "#ffffff",
+              "card-dark": "#1a2c22",
+              "text-light-primary": "#111814",
+              "text-dark-primary": "#e1e3e2",
+              "text-light-secondary": "#608a72",
+              "text-dark-secondary": "#a0b8ac",
+              "border-light": "#dbe6df",
+              "border-dark": "#2a3f33"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Header Bar -->
+<div class="flex items-center bg-card-light dark:bg-card-dark p-4 pb-3 justify-between sticky top-0 z-10 border-b border-border-light dark:border-border-dark">
+<div class="flex items-center gap-3">
+<img class="h-10 w-10 shrink-0 rounded-full object-cover" data-alt="Salon owner's profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh6O4WDenbiHDlWnVKPsuI1HdLbTvfVkbsVyufQdi32I2ROIBJzOvWqd9n_Kv17ZsC9TNV3_SmQBxj9lMdboAjRL595Hb_KFdolHfX9lpHXI22GDVVjrVeyWviBnjlsBIv4MGuVNuYiGKF8Lz_QSsKs2fj8yLsLMJ2goex3-M4lWffP39LY587Qa2i3e5hIXZ9w75FtrdaXYMU82BbNQgvVoRHvwP-SmT1ObjRdinNPdA5TE6r4OMCm7w_HNVBlUUl23jFF6iPLUiS"/>
+<h2 class="text-text-light-primary dark:text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em]">Elegance Hair Studio</h2>
+</div>
+<div class="relative">
+<button class="text-text-light-primary dark:text-dark-primary flex size-10 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="absolute top-1 right-1 h-3 w-3 rounded-full bg-accent border-2 border-card-light dark:border-card-dark"></div>
+</div>
+</div>
+<div class="flex-1 pb-24">
+<!-- HeadlineText -->
+<h2 class="text-text-light-primary dark:text-dark-primary tracking-light text-[28px] font-bold leading-tight px-4 text-left pb-3 pt-5">Good Morning, Jessica</h2>
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-5 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark">
+<p class="text-text-light-secondary dark:text-dark-secondary text-base font-medium leading-normal">Today's Revenue</p>
+<p class="text-text-light-primary dark:text-dark-primary tracking-light text-3xl font-bold leading-tight">$1,250</p>
+<p class="text-positive text-base font-medium leading-normal">+5%</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-5 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark">
+<p class="text-text-light-secondary dark:text-dark-secondary text-base font-medium leading-normal">Appointments Today</p>
+<p class="text-text-light-primary dark:text-dark-primary tracking-light text-3xl font-bold leading-tight">15</p>
+<p class="text-positive text-base font-medium leading-normal">+2 Today</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-5 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark sm:col-span-2 lg:col-span-1">
+<p class="text-text-light-secondary dark:text-dark-secondary text-base font-medium leading-normal">Staff Clocked-In</p>
+<p class="text-text-light-primary dark:text-dark-primary tracking-light text-3xl font-bold leading-tight">4 / 6</p>
+<div class="flex -space-x-2 pt-1">
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-card-light dark:ring-card-dark" data-alt="Staff member Alex" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKM8HqOCe3LGXzAJtmmeZAx05l_LxZNLi-lGbbx4gsz-GEx3z2vrIHqDTxcyh5N2IqclofyRrKe96UP_aGY7TRRJ7TaAftNTiZbOZxwW1hOryzBqtsCbJo0i1yBeCI1wjtab5KEIy-71Y1ebTPz-AFp8dAtpor5B3qAeF_V5NOvh_LkR6QmqeatPVqlgLCc5l3sr81AuSwgCuCmiXt-_eD-9mYetjH5GdbvT525ngnfVGsVgo1ZSAZSptukojleFCUjpkaBwFTaRf5"/>
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-card-light dark:ring-card-dark" data-alt="Staff member Chloe" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYqs9qF63Jr4bRGlgoqf_sgUKcCsJs5BMHkmlCo2CYUCRB1Ic8-dNQf3UBp5TP82-e82F5WpOJlzjEgpVToR2Cw__vCbTdS36z7pbXlrHU515qYqy-WYLGbkFuH9O5ZOd9qUJfeUl0KyZoB4fMWuHcqMIfT_RHvpg5gMtZ_mJoXJRBnNzsoExDCegZ7k_9oMwZZxaubtr-sQekQuzsZzfXq6rmPZFD3bWhGYfqYmK-Il3rfJpmLFn3ysdUw_4YBD1vQhaByAWLf9yR"/>
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-card-light dark:ring-card-dark" data-alt="Staff member Ben" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtSFrSBsf7ELA6A4KoI4-0tomQXDG3hsWiqfa6XCU6fPEfAQuXTKbQ2F_qln12QnKwHrN3JaSL2yDnsp3Kd1ElO-HyrVlyqT35Fa4KGBItUdVGSn8_hiToZv-CQar1eb13nbsKmBx8p_y3twZU2-rEgFkg2ImItPNjzwbpEUvdfC6SniJU1axHuhkY4l4SS_G4PHjB83qb5OfxHk73bVJ4BlsHLVBpkzebrBTjlJV13xS790DtXr13aLu4czdDSXhX25Ui8zvdPQUz"/>
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-card-light dark:ring-card-dark" data-alt="Staff member Sam" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV9qKB0gpztalLtrJvq4S0WQ6agPC6H3aiNKtfOEHj8yVheakIq-Hk-wWHFJQZCsi2HJKuShfBbHuQZtAQVDMNofPigJG7UaBDn4Ki5TQqNTFR2AlFI3JBhNI-mb5zd-SQghpKZcmddrlB8V0F1LmQ0EdBoNRt7mFncKRUCQLKwfFKqIAIhRBK7Sclx4q7hmKXqmZ983EgJbEeiem42StqTJxf1N__ZzBjyFTHUeIJy0VUmlXIDdaw_VIkDxlifyQS39dUz74G8w-W"/>
+</div>
+</div>
+</div>
+<!-- Quick Action Grid -->
+<div class="px-4 pt-6">
+<div class="grid grid-cols-3 gap-4 text-center">
+<button class="flex flex-col items-center gap-2 rounded-lg bg-card-light dark:bg-card-dark p-4 border border-border-light dark:border-border-dark">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl">add_circle</span>
+</div>
+<p class="text-sm font-medium text-text-light-primary dark:text-dark-primary">New Booking</p>
+</button>
+<button class="flex flex-col items-center gap-2 rounded-lg bg-card-light dark:bg-card-dark p-4 border border-border-light dark:border-border-dark">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl">person_add</span>
+</div>
+<p class="text-sm font-medium text-text-light-primary dark:text-dark-primary">Add Client</p>
+</button>
+<button class="flex flex-col items-center gap-2 rounded-lg bg-card-light dark:bg-card-dark p-4 border border-border-light dark:border-border-dark">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl">point_of_sale</span>
+</div>
+<p class="text-sm font-medium text-text-light-primary dark:text-dark-primary">Check-out</p>
+</button>
+</div>
+</div>
+<!-- Upcoming Appointments -->
+<div class="flex justify-between items-center px-4 pb-3 pt-8">
+<h2 class="text-text-light-primary dark:text-dark-primary text-[22px] font-bold leading-tight tracking-[-0.015em]">Upcoming Appointments</h2>
+<a class="text-primary text-base font-medium leading-normal" href="#">View All</a>
+</div>
+<div class="flex flex-col gap-2 px-4">
+<!-- ListItem 1 -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark p-3 rounded-lg border border-border-light dark:border-border-dark">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Avatar of Maria Rodriguez" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD0RuR17pLo7vWUrIB1nvjet-ho7cjsogWo4RvA7GzuKZVwU8T3nPCWCuCR4WBmBhR6xdm1FwepwgGJ9ENlFBgP7vpuNvM70nhlA9SRTPL-t3QjDVJmal5q1O-GN0k9_GRhi3rNofvmFH0npFob4wYvuAw2ik-UmZ-09IEX6AkLUymcx5UJlKUWWuNr87ADivyAngXj87_bV5U2T3euS1HeVp3WTBejK-sUEhcJ4Ozi_mKagYqng0B7pE8waMaVvPpGoN0dnTzFMHqF");'></div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-light-primary dark:text-dark-primary text-base font-bold leading-normal line-clamp-1">10:00 AM - Haircut &amp; Color</p>
+<p class="text-text-light-secondary dark:text-dark-secondary text-sm font-normal leading-normal line-clamp-2">Maria Rodriguez with Alex</p>
+</div>
+<button class="shrink-0 text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+<!-- ListItem 2 -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark p-3 rounded-lg border border-border-light dark:border-border-dark">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Avatar of David Chen" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAJvLSZQJlpvd8ptm2mKnKNtRG7NkbYZiBN4-Lbk2XEfc8LpNDfe7XueeLvH3YzrynecRgMI9-DCPxvGXF9Pnk2A2q7CF5FBzG5u3btWocMJA7nwzDlE9JPAWcsbeBCrJzu57qz-_-qTm8lIczqCRvOlobw4sFlHawrAXDT-OjUxpyu8Q6dk3SEOzTVNefv8bO4H9XLq2IZXhrvy2xTrw8TCJJIFaTtCG9uHbsO4SvFBHMhAsZqYeWhGy00BZrs4wmRFR3T7ENXjqP-");'></div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-light-primary dark:text-dark-primary text-base font-bold leading-normal line-clamp-1">11:30 AM - Men's Fade</p>
+<p class="text-text-light-secondary dark:text-dark-secondary text-sm font-normal leading-normal line-clamp-2">David Chen with Chloe</p>
+</div>
+<button class="shrink-0 text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+<!-- ListItem 3 -->
+<div class="flex items-center gap-4 bg-card-light dark:bg-card-dark p-3 rounded-lg border border-border-light dark:border-border-dark">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Avatar of Sophia Miller" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCodrgQGzXV7ln08Yb2SEgvd2ht4zeb6tYk8U2111cmX5QyS8PtPr1Kg4rTz3Z5RtrDV5eBKvDG9uLLXmpzo7_gP6YyqmGy5mytJcRo4cmnXdcOnBfChsoppIADsJQmqyn5CIPg-ywwwD2g4pGe_XIAiLBgIEkXa7AzQANYH_MCJRMVMNzPclM0XBH-kRRTWw479NUD_SahF5S5l9vK7EOrQZQxUb0aWUNYBQSrULAWcg7BvlxG4bX34oQS12yWBZYufYG-JBWmDJgY");'></div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-light-primary dark:text-dark-primary text-base font-bold leading-normal line-clamp-1">1:00 PM - Balayage</p>
+<p class="text-text-light-secondary dark:text-dark-secondary text-sm font-normal leading-normal line-clamp-2">Sophia Miller with Alex</p>
+</div>
+<button class="shrink-0 text-primary"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 bg-card-light dark:bg-card-dark border-t border-border-light dark:border-border-dark">
+<div class="flex justify-around p-2">
+<a class="flex flex-col items-center justify-center gap-1 text-primary w-16" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-xs font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-text-light-secondary dark:text-dark-secondary w-16" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-xs font-medium">Calendar</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-text-light-secondary dark:text-dark-secondary w-16" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-xs font-medium">Clients</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-text-light-secondary dark:text-dark-secondary w-16" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span class="text-xs font-medium">Staff</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-text-light-secondary dark:text-dark-secondary w-16" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-xs font-medium">Inventory</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>

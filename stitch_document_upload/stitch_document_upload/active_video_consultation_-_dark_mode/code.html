@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Virtual Salon Consultation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+    .material-symbols-outlined.fill {
+        font-variation-settings: 'FILL' 1;
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#E6C18F",
+            "background-light": "#f6f8f6",
+            "background-dark": "#1C1C1E",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-[100dvh] w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-hidden">
+<!-- Main Video Feed (Stylist) -->
+<div class="absolute inset-0 h-full w-full bg-center bg-no-repeat bg-cover" data-alt="Stylist's video feed during the consultation" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCBpzCEeLybEa-k5nvTZjWtcWTFyJKH65nEBCMMVw0QmwiWVfbDdpPD3JzWsViDynP8qXsSTZjXP_2biqMxYfDWiivKJySbi4okiPcdlkt-hBHaLeKcsIHSEKAa16xEsDcolhNf276YqwxE-PMPU9b_2kRF8dEZ904Go8ujzHscfGHTDGoAKmIba99mkgDoOommPTAcDBv4gBSVuOmHYCvsp7kKev_X2JrQ-0ra9mnuVNmiJwhyUCdqnpqjECFwhMMkCx7SMChub2MA");'></div>
+<div class="absolute inset-0 bg-black/30"></div> <!-- Video Overlay -->
+<!-- Top Info Bar -->
+<div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 pt-6 bg-gradient-to-b from-black/50 to-transparent">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-white text-base"></span>
+<p class="text-white text-sm font-medium leading-normal">Consultation with Alex</p>
+</div>
+<div class="flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1.5">
+<div class="size-2 rounded-full bg-red-500"></div>
+<p class="text-white text-sm font-bold leading-none tracking-wider">05:32</p>
+</div>
+</div>
+<!-- Picture-in-Picture (Client) -->
+<div class="absolute top-24 right-4 z-10 h-48 w-32 overflow-hidden rounded-xl border-2 border-white/20 shadow-lg">
+<div class="h-full w-full bg-center bg-no-repeat bg-cover" data-alt="Client's self-view video feed" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCiGxTKF_G4z-RwENbYBfgVOLtAM61Ta1gEXASE9w7r_8-u4pYjmdg-N4IpLKZgch-JUntKL-44cWD5Yjqh1d4csDTiYid1BRaUPLQdqExx1WyqYUfO-Ef-1KdvNiONkTFozMiUDejHqTCCkxKs2x7dr0OkSo0tFX94yuOiUc53t40yN1BfmmzjcVU8aLEZUuCYRbfHoOR53kPtElg1pAiZjml56Oh_9WWbhiGMS_PNaWM5Lfp8iWv3qMUVA7HGM6sGY14GAr-G72gS");'></div>
+</div>
+<!-- Bottom Control Bar -->
+<div class="absolute bottom-0 left-0 right-0 z-10 flex w-full flex-col items-center gap-6 p-4 pb-8 bg-gradient-to-t from-black/60 to-transparent">
+<div class="flex items-center justify-center gap-4 p-3 rounded-full bg-black/40 backdrop-blur-sm">
+<button class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+<span class="material-symbols-outlined text-inherit">mic_off</span>
+</button>
+<button class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+<span class="material-symbols-outlined text-inherit">videocam_off</span>
+</button>
+<button class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/30 text-primary">
+<span class="material-symbols-outlined text-inherit">chat_bubble</span>
+</button>
+<button class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#FF3B30] text-white">
+<span class="material-symbols-outlined text-inherit text-4xl">call_end</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

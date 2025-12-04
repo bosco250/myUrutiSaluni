@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Gift Cards</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400,FILL@0" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<button class="text-white flex size-12 shrink-0 items-center justify-center">
+<span class="material-symbols-outlined">close</span>
+</button>
+<h1 class="text-black dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Create Gift Cards</h1>
+<div class="size-12 shrink-0"></div> <!-- Spacer for centering -->
+</div>
+<main class="flex-1 px-4 py-2">
+<!-- Gift Card Details Section -->
+<div class="space-y-4">
+<div class="flex flex-wrap items-end gap-4">
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-black dark:text-white text-base font-medium leading-normal pb-2">Value</p>
+<div class="relative">
+<span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 dark:text-[#9da6b9]">$</span>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-black dark:text-white focus:outline-0 focus:ring-0 border-none bg-gray-100 dark:bg-[#1C2330] focus:border-none h-14 placeholder:text-[#9da6b9] p-4 pl-8 text-base font-normal leading-normal" placeholder="50.00" value=""/>
+</div>
+</label>
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-black dark:text-white text-base font-medium leading-normal pb-2">Expiration Date</p>
+<div class="relative">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-black dark:text-white focus:outline-0 focus:ring-0 border-none bg-gray-100 dark:bg-[#1C2330] focus:border-none h-14 placeholder:text-[#9da6b9] p-4 text-base font-normal leading-normal appearance-none" type="date"/>
+<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 dark:text-[#9da6b9] material-symbols-outlined">calendar_today</span>
+</div>
+</label>
+</div>
+<div class="flex items-center gap-4 bg-background-light dark:bg-background-dark py-2 justify-between">
+<div class="flex items-center gap-4">
+<div class="text-black dark:text-white flex items-center justify-center rounded-lg bg-gray-100 dark:bg-[#1C2330] shrink-0 size-10">
+<span class="material-symbols-outlined">confirmation_number</span>
+</div>
+<div>
+<p class="text-black dark:text-white text-base font-normal leading-normal flex-1 truncate">Quantity</p>
+<p class="text-gray-500 dark:text-gray-400 text-sm">Unique code per card</p>
+</div>
+</div>
+<div class="shrink-0">
+<div class="flex items-center gap-2 text-black dark:text-white">
+<button class="text-base font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-[#282e39] cursor-pointer">-</button>
+<input class="text-base font-medium leading-normal w-8 p-0 text-center text-black dark:text-white bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&amp;::-webkit-inner-spin-button]:appearance-none [&amp;::-webkit-outer-spin-button]:appearance-none" type="number" value="10"/>
+<button class="text-base font-medium leading-normal flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-[#282e39] cursor-pointer">+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Customization Section -->
+<div class="mt-6">
+<h3 class="text-black dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] pb-3 pt-4">Choose a Design</h3>
+<div class="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
+<div class="snap-start shrink-0">
+<img class="h-36 w-60 object-cover rounded-xl border-2 border-primary ring-2 ring-primary/50" data-alt="Abstract gold and black fluid art gift card design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbpBcmP4Au4MPQcjW7t5ObXmVj2g3E-0VDSXk94lUGSbhJCZz9Narbe1SL6lSNrjy4PxxlRV4a3aVl8_Z1m72lJvfW4RDsWLmEBOE0T889-QB2hd_tRq9cwiP9_zc_DEo4alHbFzB-Yo745RFxvSENer72gAgfYZLEz-4TDidI2f8ThyIWL5Q3dXdpfiQ2kzOPizTG1H3uDXBKu-z7SmkL476la2lUTI9fGLKsMbfUwxKgZ6NlwqSlDmQ4PaqrE76mSgT7s2WvMdTH"/>
+</div>
+<div class="snap-start shrink-0">
+<img class="h-36 w-60 object-cover rounded-xl border-2 border-transparent" data-alt="Minimalist pink and white geometric pattern gift card design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3zZWSCU80waWJzkhLvJg3YUpz5bcKisHhougJhWGVJpYDy78tty2sPN7AL6SgYxOtvDIKNYP8TEm8emscxnWszvec5p9qJmLTbP2Tn0EudFUiNNgO9JCqWQ-KPDigl8RT_RbKfeeo3LnW-Gey8zo6_qutBkK3rpYe22oQ-IB0Z1nH2gRPzFAb07cKa7KW_Ns1UQTRF-AliSPW25qGH3sAsjGLT3GbKwZyuAsZYGg_eKEIdgXMW8T9BmCgnQFzCyorbdVozaFgQbc5"/>
+</div>
+<div class="snap-start shrink-0">
+<img class="h-36 w-60 object-cover rounded-xl border-2 border-transparent" data-alt="Dark teal and marble textured gift card design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAohhih8HqhTJZFEi_JpG5zdvTTPPCGTK5Mpm2-9DnxzsMrSMxqHHHMINOfxnY4-yNqvCT6h-xeghHC7hNlJudkL4p1bya5vxh8VVS0uss41Sbiq1GTUGlwvrCMlv7hx6c4X8vdRUTkCNaJp5qZgGY6Yj-CEEyk9eDEHrkp7Qc1wz66gAEjv4mGCRXxP-VFiaL0ZVJUIfUCZqe6tuNxFzxekqJUANp0v3wCTzPBEo36AXijppumQ42Zk3NS4Xd6A-kqmUVL1wUZiZHt"/>
+</div>
+<div class="snap-start shrink-0">
+<img class="h-36 w-60 object-cover rounded-xl border-2 border-transparent" data-alt="Vibrant floral pattern on a dark background gift card design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBZKIKrd97xIdmhnqpTk-cC2A0VG7FptDsoZVCu2OOE8yEBPYgdMzXQEUUy_HRexkvaOkfMZke3gS5_Ni3D6b5XK-GrYHWWzVV7VlU2lR38fgHCLDzIc7EDGa6Px4xucKPDNXpMhoIzzwBnql6EvNtNPqJW02rVDtXsJD8dTiIZwk0WJJ36oNaPWh8lr2vje0Wa4a0HSaj4h86kspuVTnuJJHMBOKCjJWiXRMcScocFnhS1GOA3AF5BjG1R9Yhe3aNn4Hz8WAKgMwy"/>
+</div>
+</div>
+</div>
+<!-- Rules & Conditions Section -->
+<div class="mt-4 space-y-4">
+<label class="flex flex-col w-full">
+<p class="text-black dark:text-white text-base font-medium leading-normal pb-2">Custom Message (Optional)</p>
+<textarea class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-black dark:text-white focus:outline-0 focus:ring-0 border-none bg-gray-100 dark:bg-[#1C2330] focus:border-none min-h-[80px] placeholder:text-[#9da6b9] p-4 text-base font-normal leading-normal" placeholder="e.g., A special treat for our valued clients!"></textarea>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-black dark:text-white text-base font-medium leading-normal pb-2">Terms &amp; Conditions</p>
+<textarea class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-black dark:text-white focus:outline-0 focus:ring-0 border-none bg-gray-100 dark:bg-[#1C2330] focus:border-none min-h-[100px] placeholder:text-[#9da6b9] p-4 text-base font-normal leading-normal" placeholder="e.g., Not redeemable for cash. Valid for services only."></textarea>
+</label>
+</div>
+</main>
+<!-- Action Section -->
+<div class="sticky bottom-0 bg-background-light dark:bg-background-dark p-4 pt-2">
+<button class="w-full h-14 rounded-xl bg-primary text-white font-bold text-base">Generate Gift Cards</button>
+</div>
+</div>
+</body></html>

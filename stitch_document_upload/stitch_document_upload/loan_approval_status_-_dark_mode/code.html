@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Loan Application Status</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 48
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#FFC107",
+              "background-light": "#f6f6f8",
+              "background-dark": "#121212",
+              "success": "#28A745",
+              "danger": "#DC3545",
+              "text-primary-dark": "#EAEAEA",
+              "text-secondary-dark": "#A0A0A0",
+              "card-dark": "#1F1F1F"
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-dark p-4 pb-2 justify-between">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-text-primary-dark text-3xl">arrow_back</span>
+</div>
+<h2 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Application Status</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-text-primary-dark gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-3xl">more_vert</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col flex-grow p-4 space-y-6">
+<!-- Status Icon -->
+<div class="flex justify-center pt-8 pb-4">
+<div class="flex items-center justify-center h-24 w-24 rounded-full bg-success/20">
+<span class="material-symbols-outlined text-success text-6xl">check_circle</span>
+</div>
+</div>
+<!-- Headline Text -->
+<h1 class="text-text-primary-dark tracking-tight text-[32px] font-bold leading-tight px-4 text-center">Congratulations! Your Loan is Approved.</h1>
+<!-- Body Text -->
+<p class="text-text-secondary-dark text-base font-normal leading-normal px-4 text-center">Your funds are ready pending final review and signature of the loan agreement.</p>
+<!-- Loan Details Card -->
+<div class="w-full bg-card-dark rounded-xl p-6">
+<div class="flex flex-col space-y-5">
+<div class="flex justify-between items-center">
+<p class="text-text-secondary-dark text-base">Approved Amount</p>
+<p class="text-text-primary-dark text-lg font-bold">$5,000.00</p>
+</div>
+<div class="border-t border-white/10"></div>
+<div class="flex justify-between items-center">
+<p class="text-text-secondary-dark text-base">Interest Rate</p>
+<p class="text-text-primary-dark text-lg font-bold">5.2% APR</p>
+</div>
+<div class="border-t border-white/10"></div>
+<div class="flex justify-between items-center">
+<p class="text-text-secondary-dark text-base">Repayment Term</p>
+<p class="text-text-primary-dark text-lg font-bold">12 Months</p>
+</div>
+</div>
+</div>
+<!-- Spacer to push content to top and buttons to bottom -->
+<div class="flex-grow"></div>
+<!-- CTA and Secondary Action -->
+<div class="flex flex-col space-y-4 pt-4 pb-2">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 bg-primary text-background-dark text-lg font-bold leading-normal tracking-[0.015em]">
+                    Review &amp; Sign Agreement
+                </button>
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 bg-transparent text-primary text-base font-semibold leading-normal">
+                    Contact Support
+                </button>
+</div>
+<!-- Footer -->
+<div class="flex items-center justify-center gap-2 pt-4 pb-2">
+<span class="material-symbols-outlined text-text-secondary-dark text-base">lock</span>
+<p class="text-text-secondary-dark text-xs">Your information is secure and private.</p>
+</div>
+</div>
+</div>
+</body></html>

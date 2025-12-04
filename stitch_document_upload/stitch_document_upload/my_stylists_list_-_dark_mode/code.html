@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Stylists</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#19e619",
+            "background-light": "#f6f8f6",
+            "background-dark": "#112111",
+          },
+          fontFamily: {
+            "display": ["Manrope", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white/90">arrow_back</span>
+</div>
+<h1 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">My Stylists</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-white/90 gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</header>
+<!-- Search Bar -->
+<div class="px-4 py-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+<div class="text-[#9db89d] flex border-none bg-[#1a2c1a] items-center justify-center pl-4 rounded-l-xl border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-xl text-white/90 focus:outline-0 focus:ring-0 border-none bg-[#1a2c1a] focus:border-none h-full placeholder:text-[#9db89d] px-4 pl-2 text-base font-normal leading-normal" placeholder="Search stylists by name or specialty" value=""/>
+</div>
+</label>
+</div>
+<!-- Stylist List -->
+<main class="flex flex-col gap-2 px-4 py-2">
+<!-- List Item 1 -->
+<div class="flex items-center gap-4 bg-background-light dark:bg-background-dark min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-grow">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Profile picture of Jane Doe" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDXyblzXEzLBlANW8LKQ6meiTiPjt9yU3dm7TuGham9fmRD56Rub-fMFZ_S6VA3PdMsROEKMXVz_Cv7odLy0ihhOHWL3-X2CgAnXE5plRoqSr69LFdRv2CKsagoL_xcphHDdfDITqVgrvGRrQIiclX5w_0EqQibbFcmBGUn41ivydT6xolAbWKTDqXn4r9BZ99W-3AYhcdqfIvz-1qrhvAd5uCyVKFJhTmbI2HlEsIGulSc2aDKgvsqjN7ZmKMJeJ3HM1q64Zmy3ReV");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Jane Doe</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal line-clamp-2">Color Specialist</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary text-background-dark text-sm font-bold leading-normal w-fit">
+<span class="truncate">Rebook</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-9 w-9 bg-transparent text-white/70">
+<span class="material-symbols-outlined text-xl">more_vert</span>
+</button>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center gap-4 bg-background-light dark:bg-background-dark min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-grow">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Profile picture of John Smith" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCTHdyGXRK_0E6ufaryPze0FyO-hzj3IliFob2bocMiJmsf8dfGRt0Ws2_jA-0__e0gFZLZIzTVqSdgwMR7GPUFwLEM2BkWGW9npHDHwC5DMhrw1WKS7zTm8liyjvBEXb2MP1V6a6p36tXlqqG69x9s7Q8M-Or1x-0EYDFHopILfD5qqhG3_b9T3EARArK34kh8WBDSRBrCww06-Wx8I2QuZVIbldUVGSDVJOxSejpcqk5i4Rd7IVw3ukQNY_IfOu2htII38Fux2mtJ");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">John Smith</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal line-clamp-2">Master Barber</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary/20 text-primary text-sm font-bold leading-normal w-fit">
+<span class="truncate">Rebook</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-9 w-9 bg-transparent text-white/70">
+<span class="material-symbols-outlined text-xl">more_vert</span>
+</button>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center gap-4 bg-background-light dark:bg-background-dark min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4 flex-grow">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14 shrink-0" data-alt="Profile picture of Emily White" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBHDOylcXDDqqg9sdmqkMDPyKar797Om7VYie_i9HtlD33WN8PbV88wxb95D5uH75nO0yzFKyBb4XEY0O0TGPuYfdO8ook3Vl9WFKvKcItqeWIj_5_6rXXdaI2kk9pmHK85iJUp_XTHyuJ-Z_2akR_nIz-_uhP109TIsXDd4zU4UEqSeqiByJH2UYYW7cV2lr5xOrFA0f9ksLKRrwYh4fapZmMD5_fVOsp46MAjnqH88BZ2LQ1MPdeE86IjPXfpQeipJqLf_WHHtgrZ");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Emily White</p>
+<p class="text-[#9db89d] text-sm font-normal leading-normal line-clamp-2">Haircuts &amp; Styling</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary/20 text-primary text-sm font-bold leading-normal w-fit">
+<span class="truncate">Rebook</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-9 w-9 bg-transparent text-white/70">
+<span class="material-symbols-outlined text-xl">more_vert</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Empty State Example (to be shown when the list is empty) -->
+<div class="flex flex-col items-center justify-center text-center p-8 mt-10">
+<div class="flex items-center justify-center size-24 bg-primary/10 rounded-full mb-6">
+<span class="material-symbols-outlined text-primary text-5xl">cut</span>
+</div>
+<h2 class="text-xl font-bold text-white mb-2">Find Your Favorite Stylists</h2>
+<p class="text-[#9db89d] max-w-xs mb-8">Add stylists you love for faster future bookings and a more personalized experience.</p>
+<button class="flex w-full max-w-sm cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-6 bg-primary text-background-dark text-base font-bold leading-normal">
+<span class="truncate">Browse Stylists</span>
+</button>
+</div>
+</div>
+</body></html>

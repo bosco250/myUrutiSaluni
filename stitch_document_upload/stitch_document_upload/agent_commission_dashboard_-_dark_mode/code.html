@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Commission Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#f20d0d",
+            "background-light": "#f8f5f5",
+            "background-dark": "#221010",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center">
+<span class="material-symbols-outlined text-gray-800 dark:text-white text-3xl">menu</span>
+</div>
+<h2 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Commission Dashboard</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-gray-800 dark:text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-3xl">notifications</span>
+</button>
+</div>
+</div>
+<!-- Chips Filter -->
+<div class="flex gap-3 p-4 overflow-x-auto">
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary pl-4 pr-4">
+<p class="text-white text-sm font-medium leading-normal">This Week</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-gray-200 dark:bg-gray-700/50 pl-4 pr-4">
+<p class="text-gray-700 dark:text-gray-300 text-sm font-medium leading-normal">This Month</p>
+</div>
+<div class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-gray-200 dark:bg-gray-700/50 pl-4 pr-4">
+<p class="text-gray-700 dark:text-gray-300 text-sm font-medium leading-normal">All Time</p>
+</div>
+</div>
+<!-- Summary Card -->
+<div class="p-4">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-gray-100 dark:bg-zinc-800 p-6">
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1">
+<p class="text-gray-600 dark:text-gray-400 text-base font-normal leading-normal">Total Commission Earned</p>
+<p class="text-gray-900 dark:text-white text-4xl font-bold leading-tight tracking-[-0.015em]">₦ 15,450.00</p>
+<p class="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal pt-1">This Week</p>
+</div>
+</div>
+</div>
+<!-- Earnings Breakdown Section -->
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Earnings Breakdown</h3>
+<div class="flex flex-col gap-2 px-4">
+<div class="flex items-center gap-4 bg-gray-100 dark:bg-zinc-800 px-4 min-h-16 rounded-lg justify-between">
+<div class="flex items-center gap-4">
+<div class="text-gray-900 dark:text-white flex items-center justify-center rounded-lg bg-gray-200 dark:bg-zinc-700 shrink-0 size-10">
+<span class="material-symbols-outlined">phone_iphone</span>
+</div>
+<p class="text-gray-800 dark:text-white text-base font-normal leading-normal flex-1 truncate">Airtime Sales</p>
+</div>
+<div class="shrink-0"><p class="text-gray-900 dark:text-white text-base font-medium leading-normal">₦ 5,200.00</p></div>
+</div>
+<div class="flex items-center gap-4 bg-gray-100 dark:bg-zinc-800 px-4 min-h-16 rounded-lg justify-between">
+<div class="flex items-center gap-4">
+<div class="text-gray-900 dark:text-white flex items-center justify-center rounded-lg bg-gray-200 dark:bg-zinc-700 shrink-0 size-10">
+<span class="material-symbols-outlined">wifi</span>
+</div>
+<p class="text-gray-800 dark:text-white text-base font-normal leading-normal flex-1 truncate">Data Bundles</p>
+</div>
+<div class="shrink-0"><p class="text-gray-900 dark:text-white text-base font-medium leading-normal">₦ 7,150.00</p></div>
+</div>
+<div class="flex items-center gap-4 bg-gray-100 dark:bg-zinc-800 px-4 min-h-16 rounded-lg justify-between">
+<div class="flex items-center gap-4">
+<div class="text-gray-900 dark:text-white flex items-center justify-center rounded-lg bg-gray-200 dark:bg-zinc-700 shrink-0 size-10">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<p class="text-gray-800 dark:text-white text-base font-normal leading-normal flex-1 truncate">Utility Payments</p>
+</div>
+<div class="shrink-0"><p class="text-gray-900 dark:text-white text-base font-medium leading-normal">₦ 3,100.00</p></div>
+</div>
+</div>
+<!-- Leaderboard Section -->
+<h3 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Top Agents This Week</h3>
+<div class="flex flex-col gap-2 px-4 pb-24">
+<div class="flex items-center gap-4 bg-gray-100 dark:bg-zinc-800 p-3 rounded-lg justify-between">
+<div class="flex items-center gap-4">
+<p class="text-gray-500 dark:text-gray-400 w-6 text-center text-lg font-bold">1</p>
+<div class="size-10 rounded-full bg-cover bg-center" data-alt="Profile picture of an agent" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB9NX8RhUskwyw5T-9D-lccR4QNQce2v9IubYU9io-pbve6s9h16OByBlWh6LsNJf2IDX-g-ZfQpeqxZhCBD7BgeTW0tEpOPeV0gfz7s23X1OelGKzJ-7MmywoA3X-zawalrOzJr6R94pEZI5JwhwKO0SY25QRvSUEOVD7fMd0YjL9m8qzEAIGiFHcHl4XIy_HLDsc0Pz0nEKE1V_FcraxkgFhbr-vnjCR06EELKnxGVPyd4NBRUqHOGdKEe1pJtxqNs_jXjOwuKgc1")'></div>
+<p class="text-gray-800 dark:text-white text-base font-medium leading-normal flex-1 truncate">Salon XYZ</p>
+</div>
+<div class="shrink-0"><p class="text-gray-900 dark:text-white text-base font-medium leading-normal">₦ 25,100</p></div>
+</div>
+<div class="flex items-center gap-4 bg-primary/20 p-3 rounded-lg justify-between border border-primary">
+<div class="flex items-center gap-4">
+<p class="text-primary w-6 text-center text-lg font-bold">2</p>
+<div class="size-10 rounded-full bg-cover bg-center" data-alt="Profile picture of the current user" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCw2kqDxVeoLDl4P21sm2lrtAiHQ4acW-9X6YYzSLopKG1d4lDgmjGTwZjUlY3afySJhyrQ5TdoFoD1mzjlQ8KDXCQI3eGNoLmkJWgZG9Fh7-xiWy3FYEKw6KVDzphpu60It-YZlO8_NfzMNJ7GvA0GMdkvMjqPHKcHq0BGo_mcAj4Mkv5xq8SdiQyQyeyBSkewhosZAv1gIJ4G5Rr5pclsSWd-2MFo-q78wzLm0_Ers5IMSIGR70VipS0Wmw3k18psfDvgz5hgLCGH")'></div>
+<p class="text-primary text-base font-bold leading-normal flex-1 truncate">Your Salon</p>
+</div>
+<div class="shrink-0"><p class="text-primary text-base font-bold leading-normal">₦ 15,450</p></div>
+</div>
+<div class="flex items-center gap-4 bg-gray-100 dark:bg-zinc-800 p-3 rounded-lg justify-between">
+<div class="flex items-center gap-4">
+<p class="text-gray-500 dark:text-gray-400 w-6 text-center text-lg font-bold">3</p>
+<div class="size-10 rounded-full bg-cover bg-center" data-alt="Profile picture of another agent" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCalMupBcQIKRTxNEQ925KfxjmycUWanINVW8TUWpN7w1NmAfvSHzz01GxSNE08kWVcY--1JAJtdKGMuax_uuqjPAiSEiXVZ_LOnmYrbhgNru53w6o2cW3slYLwtULtC2z2dx7P5I-aGIiGaEAoHCEFOq8dWV8HDpk0NAPb10A-j2MZE0xj6pgvt_l1vksXr6ntIU-A82JKTx84JdqBFR724NCPs9SXOMtq5Hg7X79pQJ-z3z7JR5nk-CuXIBSr832xTNs5LwQNAZSQ")'></div>
+<p class="text-gray-800 dark:text-white text-base font-medium leading-normal flex-1 truncate">Beauty Spot</p>
+</div>
+<div class="shrink-0"><p class="text-gray-900 dark:text-white text-base font-medium leading-normal">₦ 14,900</p></div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 h-20 bg-gray-100/90 dark:bg-zinc-800/90 backdrop-blur-sm border-t border-gray-200 dark:border-zinc-700">
+<div class="flex justify-around items-center h-full max-w-lg mx-auto">
+<div class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-3xl">home</span>
+<p class="text-xs">Home</p>
+</div>
+<div class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-3xl">bar_chart</span>
+<p class="text-xs font-bold">Earnings</p>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-3xl">receipt</span>
+<p class="text-xs">Transactions</p>
+</div>
+<div class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-3xl">person</span>
+<p class="text-xs">Profile</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

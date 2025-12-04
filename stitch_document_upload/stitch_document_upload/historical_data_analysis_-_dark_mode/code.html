@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Historical Data</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#E40000",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#121212",
+                        "income": "#00C853",
+                        "expense": "#FFAB00"
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark/80 p-4 pb-2 backdrop-blur-sm">
+<button class="flex size-10 shrink-0 items-center justify-center text-white/90">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold leading-tight tracking-tight text-white flex-1 text-center">Historical Data</h1>
+<div class="flex size-10 shrink-0 items-center"></div>
+</div>
+<div class="flex-1 overflow-y-auto px-4 pb-24">
+<!-- Info Banner -->
+<div class="flex items-start gap-3 rounded-lg bg-white/5 p-3 my-3">
+<span class="material-symbols-outlined text-white/70 mt-0.5" style="font-size: 20px;">info</span>
+<p class="text-sm text-white/70">This is the data used to generate your cash flow prediction.</p>
+</div>
+<!-- Segmented Buttons -->
+<div class="flex py-3">
+<div class="flex h-11 flex-1 items-center justify-center rounded-lg bg-[#1E1E1E] p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 text-white/60 has-[:checked]:bg-primary has-[:checked]:font-bold has-[:checked]:text-white text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Last 3 Months</span>
+<input checked="" class="invisible w-0" name="time-period" type="radio" value="3m"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 text-white/60 has-[:checked]:bg-primary has-[:checked]:font-bold has-[:checked]:text-white text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Last 6 Months</span>
+<input class="invisible w-0" name="time-period" type="radio" value="6m"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 text-white/60 has-[:checked]:bg-primary has-[:checked]:font-bold has-[:checked]:text-white text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Year-to-Date</span>
+<input class="invisible w-0" name="time-period" type="radio" value="ytd"/>
+</label>
+</div>
+</div>
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 py-3">
+<div class="flex flex-col gap-1.5 rounded-lg p-4 bg-[#1E1E1E]">
+<p class="text-white/70 text-sm font-medium leading-normal">Total Income</p>
+<p class="text-income tracking-tight text-2xl font-bold leading-tight">₹1,50,000</p>
+</div>
+<div class="flex flex-col gap-1.5 rounded-lg p-4 bg-[#1E1E1E]">
+<p class="text-white/70 text-sm font-medium leading-normal">Total Expenses</p>
+<p class="text-expense tracking-tight text-2xl font-bold leading-tight">₹85,000</p>
+</div>
+<div class="flex flex-col gap-1.5 rounded-lg p-4 bg-[#1E1E1E] col-span-1 sm:col-span-3">
+<p class="text-white/70 text-sm font-medium leading-normal">Net Cash Flow</p>
+<p class="text-white tracking-tight text-2xl font-bold leading-tight">₹65,000</p>
+</div>
+</div>
+<!-- Chart -->
+<div class="flex flex-col gap-4 rounded-lg bg-[#1E1E1E] p-4 my-4">
+<p class="text-white text-base font-bold leading-normal">Income vs Expense</p>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="size-2.5 rounded-full bg-income"></div>
+<span class="text-white/70 text-xs">Income</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="size-2.5 rounded-full bg-expense"></div>
+<span class="text-white/70 text-xs">Expense</span>
+</div>
+</div>
+<div class="grid h-40 grid-flow-col gap-4 items-end justify-items-center">
+<div class="flex flex-col items-center gap-2 w-full h-full justify-end">
+<div class="flex items-end gap-1 w-full h-full">
+<div class="bg-income w-full rounded-t-sm" style="height: 90%;"></div>
+<div class="bg-expense w-full rounded-t-sm" style="height: 60%;"></div>
+</div>
+<p class="text-white/60 text-xs font-bold leading-normal">Jan</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full h-full justify-end">
+<div class="flex items-end gap-1 w-full h-full">
+<div class="bg-income w-full rounded-t-sm" style="height: 70%;"></div>
+<div class="bg-expense w-full rounded-t-sm" style="height: 40%;"></div>
+</div>
+<p class="text-white/60 text-xs font-bold leading-normal">Feb</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full h-full justify-end">
+<div class="flex items-end gap-1 w-full h-full">
+<div class="bg-income w-full rounded-t-sm" style="height: 80%;"></div>
+<div class="bg-expense w-full rounded-t-sm" style="height: 50%;"></div>
+</div>
+<p class="text-white/60 text-xs font-bold leading-normal">Mar</p>
+</div>
+</div>
+</div>
+<!-- Accordions with Transactions -->
+<div class="flex flex-col gap-4 my-4">
+<details class="flex flex-col rounded-lg bg-[#1E1E1E] group" open="">
+<summary class="flex cursor-pointer items-center justify-between gap-6 p-4">
+<div class="flex flex-col">
+<p class="text-white text-base font-bold leading-normal">Income Categories</p>
+<p class="text-income text-sm font-medium">₹1,50,000</p>
+</div>
+<span class="material-symbols-outlined text-white group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="border-t border-white/10 px-4 pb-2">
+<!-- Transaction List -->
+<div class="flex flex-col divide-y divide-white/10">
+<div class="flex items-center justify-between py-3">
+<div>
+<p class="text-white text-sm font-medium">Client Payment</p>
+<p class="text-white/60 text-xs">Mar 15, 2024</p>
+</div>
+<p class="text-income text-sm font-semibold">+ ₹5,000</p>
+</div>
+<div class="flex items-center justify-between py-3">
+<div>
+<p class="text-white text-sm font-medium">Product Sale</p>
+<p class="text-white/60 text-xs">Mar 12, 2024</p>
+</div>
+<p class="text-income text-sm font-semibold">+ ₹1,200</p>
+</div>
+<div class="flex items-center justify-between py-3">
+<div>
+<p class="text-white text-sm font-medium">Loan Disbursement</p>
+<p class="text-white/60 text-xs">Mar 05, 2024</p>
+</div>
+<p class="text-income text-sm font-semibold">+ ₹50,000</p>
+</div>
+</div>
+<button class="w-full text-center py-3 text-primary text-sm font-bold">View All</button>
+</div>
+</details>
+<details class="flex flex-col rounded-lg bg-[#1E1E1E] group">
+<summary class="flex cursor-pointer items-center justify-between gap-6 p-4">
+<div class="flex flex-col">
+<p class="text-white text-base font-bold leading-normal">Expense Categories</p>
+<p class="text-expense text-sm font-medium">₹85,000</p>
+</div>
+<span class="material-symbols-outlined text-white group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="border-t border-white/10 px-4 pb-2">
+<!-- Transaction List -->
+<div class="flex flex-col divide-y divide-white/10">
+<div class="flex items-center justify-between py-3">
+<div>
+<p class="text-white text-sm font-medium">Salon Rent</p>
+<p class="text-white/60 text-xs">Mar 01, 2024</p>
+</div>
+<p class="text-expense text-sm font-semibold">- ₹30,000</p>
+</div>
+<div class="flex items-center justify-between py-3">
+<div>
+<p class="text-white text-sm font-medium">Product Supplies</p>
+<p class="text-white/60 text-xs">Mar 10, 2024</p>
+</div>
+<p class="text-expense text-sm font-semibold">- ₹15,000</p>
+</div>
+<div class="flex items-center justify-between py-3">
+<div>
+<p class="text-white text-sm font-medium">Utilities</p>
+<p class="text-white/60 text-xs">Mar 20, 2024</p>
+</div>
+<p class="text-expense text-sm font-semibold">- ₹5,000</p>
+</div>
+</div>
+<button class="w-full text-center py-3 text-primary text-sm font-bold">View All</button>
+</div>
+</details>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 bg-background-light dark:bg-[#1E1E1E] border-t border-white/10">
+<div class="flex justify-around items-center h-16">
+<a class="flex flex-col items-center justify-center text-white/60 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-xs">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary hover:text-primary/80 transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">insights</span>
+<span class="text-xs font-bold">Cash Flow</span>
+</a>
+<a class="flex flex-col items-center justify-center text-white/60 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-xs">Loans</span>
+</a>
+<a class="flex flex-col items-center justify-center text-white/60 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-xs">Profile</span>
+</a>
+</div>
+</div>
+</div>
+</body></html>

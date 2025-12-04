@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Salon Discovery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#4f46e5",
+            "background-light": "#f6f6f8",
+            "background-dark": "#000000",
+          },
+          fontFamily: {
+            "display": ["Lexend", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "0.75rem",
+            "xl": "1rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .favorite-btn:active .material-symbols-outlined {
+        font-variation-settings: 'FILL' 1;
+        transform: scale(1.2);
+    }
+    .favorite-btn:active {
+        color: #ef4444;}
+    .favorite-btn .material-symbols-outlined {
+        transition: transform 0.2s ease-in-out, font-variation-settings 0.2s;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative mx-auto flex h-auto min-h-screen w-full max-w-md flex-col bg-background-light dark:bg-background-dark">
+<header class="sticky top-0 z-10 w-full bg-background-light/80 dark:bg-black/70 backdrop-blur-sm">
+<div class="flex items-center p-4">
+<div class="flex size-10 shrink-0 items-center justify-center text-zinc-900 dark:text-zinc-50">
+<span class="material-symbols-outlined text-3xl">spa</span>
+</div>
+<h1 class="flex-1 text-xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50">Discover</h1>
+<div class="flex w-10 items-center justify-end">
+<button class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent text-zinc-600 dark:text-zinc-400">
+<span class="material-symbols-outlined text-2xl">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1">
+<div class="p-4 pt-0">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-zinc-500 dark:text-zinc-400 flex border-none bg-zinc-200 dark:bg-zinc-900 items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-zinc-900 dark:text-zinc-50 focus:outline-0 focus:ring-0 border-none bg-zinc-200 dark:bg-zinc-900 focus:border-none h-full placeholder:text-zinc-500 dark:placeholder:text-zinc-500 px-4 pl-2 text-base font-normal leading-normal" placeholder="Salon, service, or location..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex px-4 pb-3">
+<div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-900 p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-zinc-800 has-[:checked]:dark:bg-zinc-800 has-[:checked]:shadow-sm has-[:checked]:text-zinc-900 has-[:checked]:dark:text-zinc-50 text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-normal">
+<span class="truncate">List View</span>
+<input checked="" class="invisible w-0" name="view-toggle" type="radio" value="List View"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-zinc-800 has-[:checked]:dark:bg-zinc-800 has-[:checked]:shadow-sm has-[:checked]:text-zinc-900 has-[:checked]:dark:text-zinc-50 text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-normal">
+<span class="truncate">Map View</span>
+<input class="invisible w-0" name="view-toggle" type="radio" value="Map View"/>
+</label>
+</div>
+</div>
+<div class="flex gap-3 px-4 py-2 overflow-x-auto">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-zinc-200 dark:bg-zinc-900 px-4">
+<span class="material-symbols-outlined text-zinc-600 dark:text-zinc-400 text-lg">tune</span>
+<p class="text-zinc-900 dark:text-zinc-50 text-sm font-medium leading-normal">Filters</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-zinc-200 dark:bg-zinc-900 px-4">
+<span class="material-symbols-outlined text-zinc-600 dark:text-zinc-400 text-lg">cut</span>
+<p class="text-zinc-900 dark:text-zinc-50 text-sm font-medium leading-normal">Hair</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-zinc-200 dark:bg-zinc-900 px-4">
+<span class="material-symbols-outlined text-zinc-600 dark:text-zinc-400 text-lg">brush</span>
+<p class="text-zinc-900 dark:text-zinc-50 text-sm font-medium leading-normal">Nails</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-zinc-200 dark:bg-zinc-900 px-4">
+<span class="material-symbols-outlined text-zinc-600 dark:text-zinc-400 text-lg">spa</span>
+<p class="text-zinc-900 dark:text-zinc-50 text-sm font-medium leading-normal">Skin</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-zinc-200 dark:bg-zinc-900 px-4">
+<span class="material-symbols-outlined text-zinc-600 dark:text-zinc-400 text-lg">self_care</span>
+<p class="text-zinc-900 dark:text-zinc-50 text-sm font-medium leading-normal">Spa</p>
+</button>
+</div>
+<div class="px-4 pt-6 pb-2">
+<h2 class="text-lg font-bold text-zinc-900 dark:text-zinc-50">Top Rated Near You</h2>
+</div>
+<div class="flex flex-col gap-4 p-4 pt-2">
+<div class="@container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-zinc-100 dark:bg-zinc-900 shadow-sm overflow-hidden">
+<div class="w-full bg-center bg-no-repeat aspect-[16/9] bg-cover" data-alt="Interior of a modern, bright salon with styling chairs" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAUc60M7SqoQOIGWL6rcJdm3bEPL_A7qu6RLMf4gSvtp1ul9XRE12YIVsXmCvXB1n5chLWO0gOIwj5KtHp7wPrzg8rzNYex5l7z9XFlqtfH3bncmG3NAf21WIQakxN0I4llLK4WiXa-_sCRD7Ki4xrOtvRvjoUZK7nDITn66-36_BoQ9_UwTUuPU5qx1ouVarUEdVp7svTOl-r5VkFjMlDtxXGLpUsZUk4IRxi4cgRFrHy1tFzJ6BlK-yypOPjEW2Do_ZbIELfNx4Eu");'></div>
+<div class="flex w-full flex-col items-stretch justify-center gap-1 p-4">
+<div class="flex items-center gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+<span class="material-symbols-outlined text-yellow-500 text-base" style="font-variation-settings: 'FILL' 1;">star</span>
+<p>4.8 <span class="text-zinc-500 dark:text-zinc-500">(120 reviews)</span></p>
+</div>
+<div class="flex justify-between items-start gap-4">
+<p class="flex-1 text-lg font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50">The Glamour Room</p>
+<button class="favorite-btn flex h-8 w-8 items-center justify-center text-zinc-500 dark:text-zinc-400 -mt-1 -mr-1">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<div class="flex items-end gap-3 justify-between pt-2">
+<div class="flex flex-col gap-0.5">
+<p class="text-sm font-normal leading-normal text-zinc-600 dark:text-zinc-400">1.2 miles away</p>
+<p class="text-sm font-normal leading-normal text-zinc-500 dark:text-zinc-500">Hair Color, Nails, Spa</p>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-primary text-white text-sm font-bold leading-normal">
+<span class="truncate">Book Now</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="@container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-zinc-100 dark:bg-zinc-900 shadow-sm overflow-hidden">
+<div class="w-full bg-center bg-no-repeat aspect-[16/9] bg-cover" data-alt="Chic salon reception area with minimalist decor" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA5vy6bdipvlYEnP-aWbo6C4a-rVLHdptJpd0qL6Ij-Ta864giyLREJtmJjyXwrvGoi28MeLYqKdjwhvv5bwv8RD_Vw3qsqulkN5Tv-E69wjKy3QlL-HgCIiVv6hP4E7HOWyGPyn7peJeSh5yFW_wYcO_OWlwCwikGr1ydyrCOSosC2D3K9vsBV1K27Wgq0OCAt0EFF3B0cx9N-gOKEIvfUjDZcOMyib3rWfqLlzJ0CgMKeusJYBEBwwnw8rYG_RVS3TMvV_Unj-GBR");'></div>
+<div class="flex w-full flex-col items-stretch justify-center gap-1 p-4">
+<div class="flex items-center gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+<span class="material-symbols-outlined text-yellow-500 text-base" style="font-variation-settings: 'FILL' 1;">star</span>
+<p>4.9 <span class="text-zinc-500 dark:text-zinc-500">(254 reviews)</span></p>
+</div>
+<div class="flex justify-between items-start gap-4">
+<p class="flex-1 text-lg font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50">Luxe Beauty Bar</p>
+<button class="favorite-btn flex h-8 w-8 items-center justify-center text-red-500 dark:text-red-500 -mt-1 -mr-1" style="font-variation-settings: 'FILL' 1;">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<div class="flex items-end gap-3 justify-between pt-2">
+<div class="flex flex-col gap-0.5">
+<p class="text-sm font-normal leading-normal text-zinc-600 dark:text-zinc-400">3.5 miles away</p>
+<p class="text-sm font-normal leading-normal text-zinc-500 dark:text-zinc-500">Nails, Facials, Lashes</p>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-primary text-white text-sm font-bold leading-normal">
+<span class="truncate">Book Now</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="@container">
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-zinc-100 dark:bg-zinc-900 shadow-sm overflow-hidden">
+<div class="w-full bg-center bg-no-repeat aspect-[16/9] bg-cover" data-alt="A calm and serene spa treatment room" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAjfbUR3MXkSCqq7xp96S_rIxbvO9W8u9LyBaVSaetyuq8YnpbiJzV9NCclGvpCTPKR5GMejWK3iP2Ku_-ET7rTOCC7ug5QE5seSzXSIeTh8ldjLEdOuncNy8txUaM8QKD5yi91J-LpDAlV_f3Qro3eNA61909RN24V304yTb7cK13LlzgPfAzcVFDE3jiijK27k9rm2H9A0QIHWXi9BNb76c3p12WetqEK5w3JqigtOF3HPoxSfEcq5-8kS3VXZpwFkhXHRtUWpsL_");'></div>
+<div class="flex w-full flex-col items-stretch justify-center gap-1 p-4">
+<div class="flex items-center gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+<span class="material-symbols-outlined text-yellow-500 text-base" style="font-variation-settings: 'FILL' 1;">star</span>
+<p>4.7 <span class="text-zinc-500 dark:text-zinc-500">(88 reviews)</span></p>
+</div>
+<div class="flex justify-between items-start gap-4">
+<p class="flex-1 text-lg font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50">Serenity Spa &amp; Salon</p>
+<button class="favorite-btn flex h-8 w-8 items-center justify-center text-zinc-500 dark:text-zinc-400 -mt-1 -mr-1">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<div class="flex items-end gap-3 justify-between pt-2">
+<div class="flex flex-col gap-0.5">
+<p class="text-sm font-normal leading-normal text-zinc-600 dark:text-zinc-400">0.8 miles away</p>
+<p class="text-sm font-normal leading-normal text-zinc-500 dark:text-zinc-500">Massage, Skin Care</p>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-primary text-white text-sm font-bold leading-normal">
+<span class="truncate">Book Now</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

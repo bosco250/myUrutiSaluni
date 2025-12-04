@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Broadcast</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#4FD1C5", // Rich Teal as per request
+              "background-light": "#f6f8f6",
+              "background-dark": "#121212",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </body.bg-background-dark {
+        background-color: #121212; /* Fallback for older browsers */
+    }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col font-display group/design-root overflow-x-hidden antialiased">
+<div class="flex flex-col h-full">
+<!-- Top App Bar -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<button class="text-neutral-300 dark:text-neutral-300 flex size-12 shrink-0 items-center justify-center rounded-full">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-neutral-100 dark:text-neutral-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">New Broadcast</h1>
+<div class="size-12 shrink-0"></div> <!-- Spacer -->
+</header>
+<main class="flex-grow px-4">
+<!-- Recipient Selection -->
+<div class="py-3">
+<p class="text-neutral-200 dark:text-neutral-200 text-base font-medium leading-normal pb-3">Recipients</p>
+<div class="flex h-12 flex-1 items-center justify-center rounded-lg bg-neutral-800/50 dark:bg-neutral-800/50 p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-neutral-700 dark:has-[:checked]:bg-neutral-700 has-[:checked]:shadow-sm has-[:checked]:text-white text-neutral-400 dark:text-neutral-400 text-sm font-medium leading-normal transition-colors">
+<span class="truncate">All Employees</span>
+<input checked="" class="invisible w-0" name="recipient-selector" type="radio" value="All Employees"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-neutral-700 dark:has-[:checked]:bg-neutral-700 has-[:checked]:shadow-sm has-[:checked]:text-white text-neutral-400 dark:text-neutral-400 text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Select Specific</span>
+<input class="invisible w-0" name="recipient-selector" type="radio" value="Select Specific"/>
+</label>
+</div>
+</div>
+<!-- Conditional Employee List (shown when 'Select Specific' is active) -->
+<!-- In a real app, this section's visibility would be toggled. Here, it's shown for design purposes. -->
+<div class="flex flex-col gap-4 py-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 dark:text-neutral-500">search</span>
+<input class="form-input w-full rounded-lg border border-neutral-700 dark:border-neutral-700 bg-neutral-800/50 dark:bg-neutral-800/50 p-3 pl-10 text-base text-neutral-200 dark:text-neutral-200 placeholder:text-neutral-500 dark:placeholder:text-neutral-500 focus:border-primary focus:ring-primary/50 transition-colors" placeholder="Search employees..." type="search"/>
+</div>
+<div class="flex h-64 flex-col gap-2 overflow-y-auto pr-2">
+<!-- Employee Item -->
+<label class="flex cursor-pointer items-center gap-4 rounded-lg p-3 hover:bg-neutral-800/60 dark:hover:bg-neutral-800/60 transition-colors">
+<img class="size-10 rounded-full object-cover" data-alt="Profile picture of Olivia Chen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhAYmcoUf6bpKTL1uVWSCVHVYDdwGKYyXNwVhz7EGZCSD9kHOfYIeofy_dUkTmTA8Aavm7tpxZE8s-YZulgLXBhOpTKBuLzzuoOZ-ANo931w_RZpXdXPH5aS76EWvR0eQtCpmJheIvswOKqK3tElSPlQ4RW-UayPlCk-CCPAjvSp4OkWQ56MUa-GGwVAg4hSu5X6FkOmm3IPCQSdlcl71mA_dKT8Y2z6thkl9s2HaV_42CyeLqb8dJqQJ_lwMKkBnX4RV5b4IwLBjc"/>
+<span class="flex-grow text-base text-neutral-200 dark:text-neutral-200">Olivia Chen</span>
+<input class="form-checkbox size-5 rounded border-neutral-600 dark:border-neutral-600 bg-neutral-700 dark:bg-neutral-700 text-primary focus:ring-primary/50" type="checkbox"/>
+</label>
+<!-- Employee Item -->
+<label class="flex cursor-pointer items-center gap-4 rounded-lg p-3 hover:bg-neutral-800/60 dark:hover:bg-neutral-800/60 transition-colors">
+<img class="size-10 rounded-full object-cover" data-alt="Profile picture of Ben Carter" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDT1nhzpw0mgTE7vz9wK045f2FMV6UexQQ6hZZ8I90SlIsLOOAq64izxiTxAcPZoU-Dhx514TEhOOHqv6w48phL7eEbj7yfZXoUb9gs6BGubCdczflUKvoH4mokSUkcg4q0hFHWxj-nPVariEX99stshbD3ZMPZ5XW7jmKU_QYBMwLXeotvNq2EHU1GEF4vBq0jYBt0AE8Qckdnr8aFoAtsjQuPFqw6SqHG0j1cYiseg0ZkgIttNMhR2Cfe9HxnJ8O2iNOnEksSGwWs"/>
+<span class="flex-grow text-base text-neutral-200 dark:text-neutral-200">Ben Carter</span>
+<input checked="" class="form-checkbox size-5 rounded border-neutral-600 dark:border-neutral-600 bg-neutral-700 dark:bg-neutral-700 text-primary focus:ring-primary/50" type="checkbox"/>
+</label>
+<!-- Employee Item -->
+<label class="flex cursor-pointer items-center gap-4 rounded-lg p-3 hover:bg-neutral-800/60 dark:hover:bg-neutral-800/60 transition-colors">
+<img class="size-10 rounded-full object-cover" data-alt="Profile picture of Sophia Rodriguez" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBH1OPEJAkcJF-1FX3LIZEmKwSYbwwJaES3TDnjRvAx_79BcccW0MMSoTF1675kLQEchUkug7wqhEbMcsijIA8Ahc3QI7hf40LgHgLtz9xl6mLNFH92Bb-xr2-8oZi7cpaSpcSGyMKgYLyFfB8xfSqzjblsdGVxGQTPc2_YsFJA0w3Yb40SdGY75UhQWViL83GBjTDoyTlZ97RzW0ZrrHYbVzChPEU0SZQii38FkEuv79EelQnevTl4Mh5pIPOou5d1E57VU13HrYak"/>
+<span class="flex-grow text-base text-neutral-200 dark:text-neutral-200">Sophia Rodriguez</span>
+<input class="form-checkbox size-5 rounded border-neutral-600 dark:border-neutral-600 bg-neutral-700 dark:bg-neutral-700 text-primary focus:ring-primary/50" type="checkbox"/>
+</label>
+<!-- Employee Item -->
+<label class="flex cursor-pointer items-center gap-4 rounded-lg p-3 hover:bg-neutral-800/60 dark:hover:bg-neutral-800/60 transition-colors">
+<div class="flex size-10 items-center justify-center rounded-full bg-indigo-500 text-white font-medium">LW</div>
+<span class="flex-grow text-base text-neutral-200 dark:text-neutral-200">Liam Williams</span>
+<input checked="" class="form-checkbox size-5 rounded border-neutral-600 dark:border-neutral-600 bg-neutral-700 dark:bg-neutral-700 text-primary focus:ring-primary/50" type="checkbox"/>
+</label>
+</div>
+</div>
+<!-- Text Field -->
+<div class="flex max-w-full flex-wrap items-end gap-4 py-3">
+<label class="flex w-full flex-col">
+<p class="text-neutral-200 dark:text-neutral-200 text-base font-medium leading-normal pb-2">Message</p>
+<textarea class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-neutral-200 dark:text-neutral-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-neutral-700 dark:border-neutral-700 bg-neutral-800/50 dark:bg-neutral-800/50 focus:border-primary min-h-36 placeholder:text-neutral-500 dark:placeholder:text-neutral-500 p-[15px] text-base font-normal leading-normal transition-colors" placeholder="Announce a team meeting, share daily specials..."></textarea>
+</label>
+</div>
+<!-- Meta Text / Character Counter -->
+<p class="text-neutral-500 dark:text-neutral-500 text-sm font-normal leading-normal pb-3 pt-1 text-right">0/500</p>
+</main>
+<!-- Send Button -->
+<footer class="sticky bottom-0 bg-gradient-to-t from-background-dark via-background-dark to-transparent pt-4 pb-6 px-4">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-5 flex-1 bg-primary text-background-dark text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-500 disabled:shadow-none">
+<span class="truncate">Send Broadcast</span>
+</button>
+</footer>
+</div>
+</div>
+</body></html>

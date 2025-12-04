@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Staff Attendance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0D9488", // Muted Teal
+              "accent": "#F97316", // Soft Coral/Orange
+              "background-light": "#f6f8f7",
+              "background-dark": "#102218",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1A2C23",
+              "text-light-primary": "#111814",
+              "text-dark-primary": "#E8F5EE",
+              "text-light-secondary": "#608a72",
+              "text-dark-secondary": "#9DBFAF",
+              "border-light": "#dbe6df",
+              "border-dark": "#344F3F",
+              "status-green": "#10B981",
+              "status-yellow": "#F59E0B",
+              "status-red": "#EF4444",
+              "status-gray": "#6B7280"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex items-center justify-between border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4 pb-3">
+<div class="flex size-10 shrink-0 items-center justify-center text-text-light-primary dark:text-text-dark-primary">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</div>
+<div class="flex flex-col items-center">
+<h2 class="text-lg font-bold tracking-tight text-text-light-primary dark:text-text-dark-primary">Staff Attendance</h2>
+<p class="text-sm font-medium text-text-light-secondary dark:text-text-dark-secondary">Today, October 26</p>
+</div>
+<div class="flex w-10 items-center justify-end">
+<button class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent text-text-light-primary dark:text-text-dark-primary">
+<span class="material-symbols-outlined text-2xl">calendar_month</span>
+</button>
+</div>
+</div>
+<main class="flex-1 pb-24">
+<!-- Stats Cards -->
+<div class="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3">
+<div class="flex flex-col gap-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4">
+<p class="text-base font-medium text-text-light-secondary dark:text-text-dark-secondary">Clocked In</p>
+<p class="text-3xl font-bold tracking-tight text-text-light-primary dark:text-text-dark-primary">12</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4">
+<p class="text-base font-medium text-text-light-secondary dark:text-text-dark-secondary">On Break</p>
+<p class="text-3xl font-bold tracking-tight text-text-light-primary dark:text-text-dark-primary">3</p>
+</div>
+<div class="col-span-2 flex flex-col gap-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4 sm:col-span-1">
+<p class="text-base font-medium text-text-light-secondary dark:text-text-dark-secondary">Late / Absent</p>
+<p class="text-3xl font-bold tracking-tight text-text-light-primary dark:text-text-dark-primary">1</p>
+</div>
+</div>
+<!-- Segmented Buttons -->
+<div class="flex px-4 py-2">
+<div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-background-light dark:bg-background-dark p-1 ring-1 ring-border-light dark:ring-border-dark">
+<label class="flex h-full grow cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary has-[:checked]:bg-card-light has-[:checked]:text-primary has-[:checked]:shadow-sm has-[:checked]:dark:bg-card-dark">
+<span class="truncate">Daily View</span>
+<input checked="" class="invisible w-0" name="view-toggle" type="radio" value="Daily View"/>
+</label>
+<label class="flex h-full grow cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm font-medium leading-normal text-text-light-secondary dark:text-text-dark-secondary has-[:checked]:bg-card-light has-[:checked]:text-primary has-[:checked]:shadow-sm has-[:checked]:dark:bg-card-dark">
+<span class="truncate">Weekly View</span>
+<input class="invisible w-0" name="view-toggle" type="radio" value="Weekly View"/>
+</label>
+</div>
+</div>
+<!-- Employee List -->
+<div class="mt-4 flex flex-col gap-2 px-4">
+<!-- List Item 1 -->
+<div class="flex items-center gap-4 rounded-lg bg-card-light dark:bg-card-dark p-3">
+<div class="flex flex-1 items-center gap-4">
+<img class="h-12 w-12 shrink-0 rounded-full object-cover" data-alt="Portrait of Anna Garcia" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMiJYVzDdF8DiJEsX-9ZViZc109z9ZKh5T5bWyllJUXSxzh5EnguPKMvWlAgCO1mPDopXpnbRjf0kGtp4u9KPVbgB9LXB-ZDOCqpAjg5dzU7Y0fuuSOrOmx4m9ukbRix2PZr-FryglG2I5bGAl5MtI6jmbL_-pYW7rz6X1cSp17TkFItKPrP0XfjTJR98CGxZKGSuwP_oZHIUuu0bCxcPQJXDRaGYUQ30Grg7s7tbKRiLO5BY2J9dP_2RBd6D5csE7NGuDZAurFsgM"/>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary line-clamp-1">Anna Garcia</p>
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-2 w-2">
+<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-green opacity-75"></span>
+<span class="relative inline-flex h-2 w-2 rounded-full bg-status-green"></span>
+</span>
+<p class="text-sm font-normal text-status-green line-clamp-1">Clocked In @ 9:02 AM</p>
+</div>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">8.1h</p>
+<span class="material-symbols-outlined text-text-light-secondary dark:text-text-dark-secondary">chevron_right</span>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center gap-4 rounded-lg bg-card-light dark:bg-card-dark p-3">
+<div class="flex flex-1 items-center gap-4">
+<img class="h-12 w-12 shrink-0 rounded-full object-cover" data-alt="Portrait of Ben Carter" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiK-ux4zLuwKwzWtKcJ38w92r5h2dAnCVU7j8lbGyadm0_AligOwAyKs1hi-NFQjTwzoQ1bB0sOUyA14jykk61N5P-Rqb5jEn89VlrkKgRBnf94RA259OsR302ilce2jVv2Si7xDOztDxO09VUfHL3EpbgmljZTYpzhs4_pCwt_9EMOOe89IFwAXQpqVF3Yvi6Fw7hvttmgb5b5AJN6Po6w4AStA2lvdU6Zq4LhEv_GH2tS1FxWQwyN1zpL8WKMZBwArtpTg0cuc2u"/>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary line-clamp-1">Ben Carter</p>
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-2 w-2 rounded-full bg-status-yellow"></span>
+<p class="text-sm font-normal text-status-yellow line-clamp-1">On Break</p>
+</div>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">4.5h</p>
+<span class="material-symbols-outlined text-text-light-secondary dark:text-text-dark-secondary">chevron_right</span>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center gap-4 rounded-lg bg-card-light dark:bg-card-dark p-3">
+<div class="flex flex-1 items-center gap-4">
+<img class="h-12 w-12 shrink-0 rounded-full object-cover" data-alt="Portrait of Chloe Davis" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAP9kXJEJNQmeJU4_8SGCq7rcQ0DwlSWJLnMZQdH3YIrcfh-ge_JodbrRo3yNp77HwOWy96BUQy38_i3Blf82ZG0WRfiePwI2webbcuGrLythRZdxoQ5O-7nVxEqh9VPmPpB5oh8lKGbfe_6-Z1YhRPuL4AtBbQesI6TGisuImZEiCAMqjRUy5OXcerlVWDPY77Ct8BqBNokrz4SXRkFV4MXh-_QOPoB2V4JZwDGGP8WVNRYRKB0VzXzFc-rSTBfWGv2jYYpFxj6KkE"/>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary line-clamp-1">Chloe Davis</p>
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-2 w-2 rounded-full bg-status-gray"></span>
+<p class="text-sm font-normal text-status-gray line-clamp-1">Clocked Out</p>
+</div>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">7.9h</p>
+<span class="material-symbols-outlined text-text-light-secondary dark:text-text-dark-secondary">chevron_right</span>
+</div>
+</div>
+<!-- List Item 4 -->
+<div class="flex items-center gap-4 rounded-lg bg-card-light dark:bg-card-dark p-3">
+<div class="flex flex-1 items-center gap-4">
+<img class="h-12 w-12 shrink-0 rounded-full object-cover" data-alt="Portrait of David Evans" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB42FnI3Ih_DuuD_XkcFixyDJySfUETFeBlUMYn7dOsZ6La1MlvGuXb9ii5wBVuG5chUJv-TcJTlyLeyy-zgfxbB3Lv6wfcJX5Vgo0FqseYcL5fG626CT0GgczqizepkscERGhp2-Zi0Z4b4grXorRtFcCrq20j3E_bmq7MbR5B8YrBC6Fb7R8igFW80enbkSVtnnk517gL4A9FHsLH-pv-28Jl7kSRBKmMO6G-OR0TJCpSeZRty9HCGIQIayJ5UJ682qmNNWySFYs3"/>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary line-clamp-1">David Evans</p>
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-2 w-2 rounded-full bg-status-red"></span>
+<p class="text-sm font-normal text-status-red line-clamp-1">Late (9:15 AM)</p>
+</div>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<p class="text-base font-semibold text-text-light-primary dark:text-text-dark-primary">6.8h</p>
+<span class="material-symbols-outlined text-text-light-secondary dark:text-text-dark-secondary">chevron_right</span>
+</div>
+</div>
+<!-- Empty State Example -->
+<div class="mt-8 flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark p-8 text-center">
+<div class="flex h-16 w-16 items-center justify-center rounded-full bg-background-light dark:bg-background-dark text-primary">
+<span class="material-symbols-outlined !text-4xl">calendar_month</span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="text-lg font-semibold text-text-light-primary dark:text-text-dark-primary">No Attendance Data</p>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary">There is no attendance data for this day. Have you scheduled any shifts?</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<div class="fixed bottom-6 right-6 z-20">
+<button class="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-transform duration-200 ease-in-out hover:scale-105">
+<span class="material-symbols-outlined !text-3xl">add</span>
+</button>
+</div>
+</div>
+</body></html>

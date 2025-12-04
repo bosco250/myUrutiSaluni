@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Performance Leaderboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#19e619",
+            "background-light": "#f6f8f6",
+            "background-dark": "#112111",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-white">arrow_back</span>
+</div>
+<h1 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Performance Leaderboard</h1>
+<div class="flex size-12 shrink-0 items-center"></div>
+</header>
+<!-- Metric Summary Cards -->
+<section class="flex flex-wrap gap-4 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+<p class="text-white/70 text-sm font-medium leading-normal">Total Revenue</p>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">$12,850</p>
+<p class="text-primary text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>+5.2%</span>
+</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+<p class="text-white/70 text-sm font-medium leading-normal">Total Services</p>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">142</p>
+<p class="text-primary text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>+8.1%</span>
+</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+<p class="text-white/70 text-sm font-medium leading-normal">Avg. Client Rating</p>
+<p class="text-white tracking-light text-2xl font-bold leading-tight">4.8</p>
+<p class="text-[#fa4f38] text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_downward</span>
+<span>-0.5%</span>
+</p>
+</div>
+</section>
+<!-- Filter/Selector Controls -->
+<section class="flex flex-col gap-3 px-4 py-3">
+<!-- Time Period Selector -->
+<div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-white/5 p-1">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary/20 has-[:checked]:text-primary text-white/60 text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Today</span>
+<input class="invisible w-0" name="time-period" type="radio" value="Today"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary/20 has-[:checked]:text-primary text-white/60 text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Week</span>
+<input class="invisible w-0" name="time-period" type="radio" value="Week"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary/20 has-[:checked]:text-primary text-white/60 text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Month</span>
+<input checked="" class="invisible w-0" name="time-period" type="radio" value="Month"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-primary/20 has-[:checked]:text-primary text-white/60 text-sm font-medium leading-normal transition-colors">
+<span class="truncate">Quarter</span>
+<input class="invisible w-0" name="time-period" type="radio" value="Quarter"/>
+</label>
+</div>
+<!-- Metric/Service Type Chips -->
+<div class="flex gap-3 overflow-x-auto pb-2 -mb-2">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary/20 pl-4 pr-2">
+<p class="text-primary text-sm font-medium leading-normal">Total Sales</p>
+<span class="material-symbols-outlined text-primary text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white/5 pl-4 pr-2">
+<p class="text-white/80 text-sm font-medium leading-normal">Color Services</p>
+<span class="material-symbols-outlined text-white/80 text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white/5 pl-4 pr-2">
+<p class="text-white/80 text-sm font-medium leading-normal">Retail Sales</p>
+<span class="material-symbols-outlined text-white/80 text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white/5 pl-4 pr-2">
+<p class="text-white/80 text-sm font-medium leading-normal">Rebooking Rate</p>
+<span class="material-symbols-outlined text-white/80 text-base">expand_more</span>
+</button>
+</div>
+</section>
+<!-- Ranked List -->
+<main class="flex flex-col px-4 pt-2 pb-4 space-y-2">
+<!-- Top 3 Performers -->
+<div class="flex items-center gap-4 rounded-xl bg-gradient-to-tr from-yellow-500/20 via-yellow-400/10 to-transparent p-4 min-h-[72px] justify-between border border-yellow-400/30">
+<div class="flex items-center gap-4">
+<p class="text-xl font-bold text-yellow-400 w-6 text-center">1</p>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Photo of Olivia Chen" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDC92RWroMJHak5b3C3FsqVYGkUmHrfj6SarrEAmKDT-y5cgj543hd8P8w9Rp-c_CxE95sldOp1oK7CEaQQH4xm_iwEdSBl5U1oWbZqemq1xr8uY7_1I4MnLHHA9JIqJE0kI3Ry1HO8o-hM_th_Bf1Q5vTeslYm9OE46Ta4QqdlLHwTHvuZehTK__UIMej8RHm-kHID7746JuZoaEx_7wajBb8k3VGLXSwsgHEY_iMWZ00WDe7Nt-25MayKpHf5X5yQGCz5l8M_chDh");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Olivia Chen</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">+3.5% vs last month</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end">
+<p class="text-lg font-bold text-white">$5,250</p>
+<span class="material-symbols-outlined text-yellow-400">workspace_premium</span>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-xl bg-gradient-to-tr from-slate-400/20 via-slate-300/10 to-transparent p-4 min-h-[72px] justify-between border border-slate-400/30">
+<div class="flex items-center gap-4">
+<p class="text-xl font-bold text-slate-400 w-6 text-center">2</p>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Photo of Liam Gallagher" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC1sSud4ZN3iDLiLCqUzKGgxGxrpM-dxr_GAnbZqhmI8oDihCPymIEfX3CWsTwyrSXVg5-GNii6VMig9Ca4goxOMXItib9aQScS_N4Jy8Y7betQVHpi9Ssek_213CMKp3wqSJXky_jTyM6Uz1-AkdsUPEdO3aT1uAecVqlHSmdXkqVAN38ByfkAHeER4P5tg7qyTPwwCTY92kJuyjrliq1SR7qUI1pKFS6uSWqQh4F9ITCyjiS-OqmVjTQtBRBE4W7qXFF88Oo7fmPl");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Liam Gallagher</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">+2.1% vs last month</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end">
+<p class="text-lg font-bold text-white">$4,980</p>
+<span class="material-symbols-outlined text-slate-400">workspace_premium</span>
+</div>
+</div>
+<div class="flex items-center gap-4 rounded-xl bg-gradient-to-tr from-orange-600/20 via-orange-500/10 to-transparent p-4 min-h-[72px] justify-between border border-orange-500/30">
+<div class="flex items-center gap-4">
+<p class="text-xl font-bold text-orange-500 w-6 text-center">3</p>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Photo of Maya Patel" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAc1MkbWtj8dqU3yT0tPeqUMHXhZvMwjVkyaGvSd7OaFmmLapqgvtasefgWyi_ZlFT3Vt_h32eBncLMjfDWHvMd7SNKvpN9vmAz7R4ZDwTyfhN7eOZgQiLpYE_5mk2CF8q02BbnjRm9rMI2omj76o7Q2k52_p3bi3CaFgdhljFbepAVTodkPaeflzdKKPTieW8t_N9LX5ZAo-R6ZnHHrtX11kDhkWcw-wLEX69DV71TQZjaaDFA1Vpek7gapu0QfXnlIGNBY47iHeKE");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Maya Patel</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">-0.8% vs last month</p>
+</div>
+</div>
+<div class="shrink-0 flex flex-col items-end">
+<p class="text-lg font-bold text-white">$4,710</p>
+<span class="material-symbols-outlined text-orange-500">workspace_premium</span>
+</div>
+</div>
+<!-- Other Performers -->
+<div class="flex items-center gap-4 bg-background-light dark:bg-background-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<p class="text-xl font-medium text-white/60 w-6 text-center">4</p>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Photo of Ben Carter" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDj5oPKHDTxSptLqqAhP4VBVKQcSjsM8GmBaGyCsf7Tb0C8gj4LgSo5mkysc9euffnFVhzqhss5O1Z9Na6v9ym0APAZk0MQi-t-pqLjAEFb1EkySvvz5h8-2rjlHGkKK7Qy7ysiuFriiyySys5JASIA-3Ib5-1yihprN2yQX9g9lf19AzUg8fSVxh-LFw0TdBUJpF-RojOC-rwL5x2U70HicdEr8KV2m2tpJsIPcMhelqRMj_Dzms5o1CXuR9PeSW8T6Ah9s4tySZ7t");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Ben Carter</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">+1.5% vs last month</p>
+</div>
+</div>
+<div class="shrink-0">
+<p class="text-lg font-medium text-white">$4,550</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-background-light dark:bg-background-dark px-4 min-h-[72px] py-2 justify-between">
+<div class="flex items-center gap-4">
+<p class="text-xl font-medium text-white/60 w-6 text-center">5</p>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-12 w-12" data-alt="Photo of Chloe Kim" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC_zVcLYJlNmGvoZ_iG3MyQoSy0auYgi4FAxXcq1hntTcyXqf72GvhAbv4iKo1u6h7ngnH2uL6ynMrstDt6soIk-kBFfwuQ6TTkBJ7bZwvMYndX5hkkpGMK4rR0_7l9kkQOBrrVHd-t__Z_R69jXiKmBjUjW5BkOmGNa-3qmwPD8LY5JXmYTOl_c80jE6OvvTQdcLV8kz_RCSI93VpK27kPT3qCfZfHRgoEXUkiuLKULKUrzKsf5I-57suyNReSfANuQEp72LgqS3tB");'></div>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Chloe Kim</p>
+<p class="text-white/60 text-sm font-normal leading-normal line-clamp-2">+4.2% vs last month</p>
+</div>
+</div>
+<div class="shrink-0">
+<p class="text-lg font-medium text-white">$4,320</p>
+</div>
+</div>
+</main>
+<!-- Key Insights Section -->
+<footer class="p-4 mt-auto">
+<div class="relative flex flex-col gap-3 rounded-xl bg-primary/10 p-4 border border-primary/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">lightbulb</span>
+<h3 class="text-primary font-bold text-base">Key Insight</h3>
+</div>
+<p class="text-white/90 text-sm">Olivia is the top performer in Retail Sales this month, contributing 25% of total retail revenue.</p>
+<button class="absolute top-2 right-2 p-2">
+<span class="material-symbols-outlined text-white/50 text-xl">close</span>
+</button>
+</div>
+</footer>
+</div>
+</body></html>

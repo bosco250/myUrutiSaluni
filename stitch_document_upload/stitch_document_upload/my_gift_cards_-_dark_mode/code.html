@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Gift Cards</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+              "card-background-light": "#ffffff",
+              "card-background-dark": "#1a212e",
+              "text-primary-light": "#101622",
+              "text-primary-dark": "#ffffff",
+              "text-secondary-light": "#6b7280",
+              "text-secondary-dark": "#9da6b9",
+              "icon-background-light": "#e5e7eb",
+              "icon-background-dark": "#282e39"
+            },
+            fontFamily: {
+              "display": ["Lexend", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
+<!-- Top App Bar -->
+<header class="flex items-center p-4 pb-2 justify-between sticky top-0 bg-background-light dark:bg-background-dark z-10 border-b border-white/10">
+<div class="flex size-10 items-center justify-center text-text-primary-light dark:text-text-primary-dark">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</div>
+<h1 class="text-text-primary-light dark:text-text-primary-dark text-lg font-bold leading-tight flex-1 text-center">My Gift Cards</h1>
+<div class="flex size-10 items-center justify-center text-text-primary-light dark:text-text-primary-dark">
+<span class="material-symbols-outlined text-2xl">add</span>
+</div>
+</header>
+<main class="flex flex-col gap-6 p-4">
+<!-- Gift Card 1 -->
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-card-background-light dark:bg-card-background-dark overflow-hidden shadow-sm">
+<div class="w-full bg-center bg-no-repeat aspect-[2/1] bg-cover" data-alt="Abstract gradient background in shades of blue and purple" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDteiTfKwj6V5V_M7rvPREyH8pRHOoan6ooenY36-ZoEXtw9BgviLqE2ssjQnGKOwM_eDrJt3wyaIR315TvmpdoRNzTZGkordXEVFCAX7js0Cdv2u3ngsprzl_O9pBaOrwLbAipDBUyRKIhwuPspShMXDkK3jGu0nxToDdzSL0d8lhMX2TB0w0X1kjZWL0EBrDHLixtg42KYTJ-X3wQQQEDwdmcgk-udBMw00uTX7sSS_tkUw9X3ohGNKUat24WxollcZs9LJgrUPZW");'>
+<div class="p-4 flex justify-between items-start h-full backdrop-brightness-75">
+<p class="text-white text-sm font-medium">Luxe Salon Collective</p>
+<p class="text-white text-2xl font-bold leading-tight tracking-[-0.015em]">$75.50</p>
+</div>
+</div>
+<div class="flex w-full grow flex-col items-stretch justify-center gap-4 p-4">
+<div class="flex items-center gap-3 justify-between">
+<div class="flex flex-col gap-1.5">
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm font-normal leading-normal">Code: •••• •••• 1234</p>
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm font-normal leading-normal">Expires: 12/31/2025</p>
+</div>
+<button class="flex min-w-[36px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 w-9 p-0 bg-transparent text-text-secondary-light dark:text-text-secondary-dark hover:bg-primary/10">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+</button>
+</div>
+<div class="h-px w-full bg-icon-background-light dark:bg-icon-background-dark"></div>
+<div class="grid grid-cols-3 gap-2">
+<div class="flex flex-col items-center gap-1.5 py-1 text-center">
+<div class="flex items-center justify-center size-10 rounded-full bg-icon-background-light dark:bg-icon-background-dark">
+<span class="material-symbols-outlined text-xl text-text-primary-light dark:text-text-primary-dark">history</span>
+</div>
+<p class="text-text-primary-light dark:text-text-primary-dark text-xs font-medium leading-normal">History</p>
+</div>
+<div class="flex flex-col items-center gap-1.5 py-1 text-center">
+<div class="flex items-center justify-center size-10 rounded-full bg-icon-background-light dark:bg-icon-background-dark">
+<span class="material-symbols-outlined text-xl text-text-primary-light dark:text-text-primary-dark">send</span>
+</div>
+<p class="text-text-primary-light dark:text-text-primary-dark text-xs font-medium leading-normal">Reminder</p>
+</div>
+<div class="flex flex-col items-center gap-1.5 py-1 text-center">
+<div class="flex items-center justify-center size-10 rounded-full bg-icon-background-light dark:bg-icon-background-dark">
+<span class="material-symbols-outlined text-xl text-text-primary-light dark:text-text-primary-dark">account_balance_wallet</span>
+</div>
+<p class="text-text-primary-light dark:text-text-primary-dark text-xs font-medium leading-normal">Add to Wallet</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Gift Card 2 -->
+<div class="flex flex-col items-stretch justify-start rounded-xl bg-card-background-light dark:bg-card-background-dark overflow-hidden shadow-sm">
+<div class="w-full bg-center bg-no-repeat aspect-[2/1] bg-cover" data-alt="Abstract gradient background in shades of pink and orange" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuATeko2LNYW090ARMFV76_MHW8l9d7LMzHtTZCnqgHG3TyAwwsn7G2ZVkLiXLKhEI2YvMUi0H4OieECkxvilz_Z5WVedk58neFwCpSwYfD0PhlmQGoCY0jRnqDuYR0YkHihJ0JxjbNCSrWzOy1r6lwcxqAXpLyyYwF_PS2Jh6XewieclOOFnlLCUz_Lr-4Z3Tp3VaH_qrBVCmP_Dl99hI0q4zWWe4XB0K_aTHzSPZjLpi5IdxSMg1H7XH0uGfESt2jguH5zo0tp_ske");'>
+<div class="p-4 flex justify-between items-start h-full backdrop-brightness-75">
+<p class="text-white text-sm font-medium">Radiant Spa &amp; Beauty</p>
+<p class="text-white text-2xl font-bold leading-tight tracking-[-0.015em]">$25.00</p>
+</div>
+</div>
+<div class="flex w-full grow flex-col items-stretch justify-center gap-4 p-4">
+<div class="flex items-center gap-3 justify-between">
+<div class="flex flex-col gap-1.5">
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm font-normal leading-normal">Code: •••• •••• 5678</p>
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm font-normal leading-normal">Expires: 06/30/2026</p>
+</div>
+<button class="flex min-w-[36px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 w-9 p-0 bg-transparent text-text-secondary-light dark:text-text-secondary-dark hover:bg-primary/10">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+</button>
+</div>
+<div class="h-px w-full bg-icon-background-light dark:bg-icon-background-dark"></div>
+<div class="grid grid-cols-3 gap-2">
+<div class="flex flex-col items-center gap-1.5 py-1 text-center">
+<div class="flex items-center justify-center size-10 rounded-full bg-icon-background-light dark:bg-icon-background-dark">
+<span class="material-symbols-outlined text-xl text-text-primary-light dark:text-text-primary-dark">history</span>
+</div>
+<p class="text-text-primary-light dark:text-text-primary-dark text-xs font-medium leading-normal">History</p>
+</div>
+<div class="flex flex-col items-center gap-1.5 py-1 text-center">
+<div class="flex items-center justify-center size-10 rounded-full bg-icon-background-light dark:bg-icon-background-dark">
+<span class="material-symbols-outlined text-xl text-text-primary-light dark:text-text-primary-dark">send</span>
+</div>
+<p class="text-text-primary-light dark:text-text-primary-dark text-xs font-medium leading-normal">Reminder</p>
+</div>
+<div class="flex flex-col items-center gap-1.5 py-1 text-center">
+<div class="flex items-center justify-center size-10 rounded-full bg-icon-background-light dark:bg-icon-background-dark">
+<span class="material-symbols-outlined text-xl text-text-primary-light dark:text-text-primary-dark">account_balance_wallet</span>
+</div>
+<p class="text-text-primary-light dark:text-text-primary-dark text-xs font-medium leading-normal">Add to Wallet</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State Example (can be conditionally shown) -->
+<!-- 
+        <div class="flex flex-col items-center justify-center text-center p-8 mt-8 rounded-lg bg-card-background-light dark:bg-card-background-dark">
+            <span class="material-symbols-outlined text-5xl text-text-secondary-light dark:text-text-secondary-dark mb-4">card_giftcard</span>
+            <p class="text-text-primary-light dark:text-text-primary-dark font-bold text-lg mb-1">Your gift cards will appear here.</p>
+            <p class="text-text-secondary-light dark:text-text-secondary-dark text-sm">Purchase one today or add an existing card.</p>
+        </div>
+        -->
+</main>
+</div>
+</body></html>
