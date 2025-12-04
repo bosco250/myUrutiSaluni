@@ -51,7 +51,7 @@ export class AirtelTransaction {
   @Column({ name: 'airtel_response', type: 'simple-json', nullable: true })
   airtelResponse: Record<string, any>;
 
-  @Column({ name: 'processed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'processed_at', type: 'timestamp', nullable: true })
   processedAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })

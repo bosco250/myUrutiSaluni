@@ -5,11 +5,11 @@ import { config } from 'dotenv';
 config();
 
 const configService = new ConfigService();
-const dbType = configService.get('DB_TYPE', 'sqlite');
+const dbType = configService.get('DB_TYPE', 'postgres');
 const isDevelopment = configService.get('NODE_ENV') === 'development';
 
-// Use SQLite for development, PostgreSQL for production
-const isSQLite = dbType === 'sqlite' || (isDevelopment && !configService.get('DB_HOST'));
+// Use PostgreSQL by default, SQLite only if explicitly set
+const isSQLite = dbType === 'sqlite';
 
 const dataSourceConfig = isSQLite
   ? {
@@ -24,7 +24,7 @@ const dataSourceConfig = isSQLite
       host: configService.get('DB_HOST', 'localhost'),
       port: configService.get<number>('DB_PORT', 5432),
       username: configService.get('DB_USERNAME', 'postgres'),
-      password: configService.get('DB_PASSWORD', 'postgres'),
+      password: configService.get('DB_PASSWORD', ''),
       database: configService.get('DB_DATABASE', 'salon_association'),
       entities: ['src/**/*.entity.ts'],
       migrations: ['src/migrations/*.ts'],

@@ -37,14 +37,15 @@ export default function RegisterPage() {
       const response = await authService.register(formData);
       setUser(response.user);
       setToken(response.access_token);
-      
+
       // Check if user came from membership form
       const urlParams = new URLSearchParams(window.location.search);
       const redirect = urlParams.get('redirect');
-      
+
       if (redirect === 'membership') {
         // Check if membership form data exists
-        const hasFormData = typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
+        const hasFormData =
+          typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
         if (hasFormData) {
           // Redirect to complete membership page
           router.push('/membership/complete');
@@ -63,7 +64,8 @@ export default function RegisterPage() {
   };
 
   // Check if coming from membership form
-  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const urlParams =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const isFromMembership = urlParams?.get('redirect') === 'membership';
   const hasFormData = typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
 
@@ -75,7 +77,7 @@ export default function RegisterPage() {
             {isFromMembership ? 'Step 2 of 3: Create Account' : 'Create Account'}
           </h1>
           <p className="text-gray-600">
-            {isFromMembership 
+            {isFromMembership
               ? 'Complete your membership application by creating your account'
               : 'Join the Salon Association Platform'}
           </p>
@@ -99,7 +101,8 @@ export default function RegisterPage() {
                   <p>⏸️ Step 3: Auto-submit application (next)</p>
                 </div>
                 <p className="text-xs text-blue-700 mt-2 font-medium">
-                  Your form data is safely stored and will be automatically submitted after registration.
+                  Your form data is safely stored and will be automatically submitted after
+                  registration.
                 </p>
               </div>
             </div>
@@ -164,7 +167,12 @@ export default function RegisterPage() {
             <select
               id="role"
               value={formData.role || 'customer'}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'customer' | 'salon_owner' | 'salon_employee' })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  role: e.target.value as 'customer' | 'salon_owner' | 'salon_employee',
+                })
+              }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             >
               <option value="customer">Customer (I want to use salon services)</option>
@@ -172,11 +180,11 @@ export default function RegisterPage() {
               <option value="salon_employee">Salon Employee (I work at a salon)</option>
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              {formData.role === 'salon_owner' 
-                ? 'You\'ll need to apply for membership after registration to access salon management features.'
+              {formData.role === 'salon_owner'
+                ? "You'll need to apply for membership after registration to access salon management features."
                 : formData.role === 'salon_employee'
-                ? 'After registration, your salon owner will link your account to the salon. You can then access employee features.'
-                : 'You can view your purchase history, appointments, and loyalty points.'}
+                  ? 'After registration, your salon owner will link your account to the salon. You can then access employee features.'
+                  : 'You can view your purchase history, appointments, and loyalty points.'}
             </p>
           </div>
 
@@ -201,11 +209,7 @@ export default function RegisterPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none transition-colors"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
             <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
@@ -232,4 +236,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

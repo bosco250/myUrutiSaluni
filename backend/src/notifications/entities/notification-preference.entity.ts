@@ -34,14 +34,14 @@ export class NotificationPreference {
   customerId?: string;
 
   @Column({
-    type: 'enum',
-    enum: NotificationType,
+    type: 'varchar',
+    length: 32,
   })
   type: NotificationType;
 
   @Column({
-    type: 'enum',
-    enum: NotificationChannel,
+    type: 'varchar',
+    length: 32,
   })
   channel: NotificationChannel;
 

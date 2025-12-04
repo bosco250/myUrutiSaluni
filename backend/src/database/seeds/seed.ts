@@ -31,6 +31,9 @@ import { WalletTransaction } from '../../wallets/entities/wallet-transaction.ent
 import { AirtelAgent } from '../../airtel/entities/airtel-agent.entity';
 import { AirtelTransaction } from '../../airtel/entities/airtel-transaction.entity';
 import { Commission } from '../../commissions/entities/commission.entity';
+import { CustomerStyleReference } from '../../customers/entities/customer-style-reference.entity';
+import { Notification } from '../../notifications/entities/notification.entity';
+import { NotificationPreference } from '../../notifications/entities/notification-preference.entity';
 
 // Load environment variables
 config();
@@ -40,7 +43,7 @@ const configService = new ConfigService();
 async function runSeeds() {
   console.log('🌱 Starting database seeding...\n');
 
-  const dbType = configService.get('DB_TYPE', 'sqlite');
+  const dbType = configService.get('DB_TYPE', 'postgres');
   const isDevelopment = configService.get('NODE_ENV') !== 'production';
 
   let dataSource: DataSource;
@@ -73,10 +76,13 @@ async function runSeeds() {
     AirtelAgent,
     AirtelTransaction,
     Commission,
+    CustomerStyleReference,
+    Notification,
+    NotificationPreference,
   ];
 
   try {
-    if (dbType === 'sqlite' || (isDevelopment && !configService.get('DB_HOST'))) {
+    if (dbType === 'sqlite') {
       const dbPath = configService.get('DB_DATABASE', 'database/salon_association.db');
       console.log(`📂 Using SQLite database: ${dbPath}\n`);
       
@@ -84,7 +90,7 @@ async function runSeeds() {
         type: 'better-sqlite3',
         database: dbPath,
         entities,
-        synchronize: false,
+        synchronize: true, // Enable to auto-create tables for development
         logging: false,
       });
     } else {
@@ -95,10 +101,10 @@ async function runSeeds() {
         host: configService.get('DB_HOST', 'localhost'),
         port: configService.get<number>('DB_PORT', 5432),
         username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'postgres'),
+        password: configService.get('DB_PASSWORD', ''),
         database: configService.get('DB_DATABASE', 'salon_association'),
         entities,
-        synchronize: false,
+        synchronize: true, // Enable to auto-create tables for development
         logging: false,
         ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
       });

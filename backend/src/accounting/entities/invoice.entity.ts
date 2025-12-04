@@ -62,7 +62,7 @@ export class Invoice {
   @Column({ name: 'paid_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
   paidAmount: number;
 
-  @Column({ name: 'paid_at', type: 'datetime', nullable: true })
+  @Column({ name: 'paid_at', type: 'timestamp', nullable: true })
   paidAt: Date;
 
   @Column({ type: 'simple-json', default: '{}' })

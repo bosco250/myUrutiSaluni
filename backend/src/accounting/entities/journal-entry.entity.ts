@@ -46,7 +46,7 @@ export class JournalEntry {
   @Column({ name: 'created_by', nullable: true })
   createdById: string;
 
-  @Column({ name: 'posted_at', type: 'datetime', nullable: true })
+  @Column({ name: 'posted_at', type: 'timestamp', nullable: true })
   postedAt: Date;
 
   @Column({ type: 'simple-json', default: '{}' })

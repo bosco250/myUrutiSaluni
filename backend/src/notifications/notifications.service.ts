@@ -165,49 +165,65 @@ export class NotificationsService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async processScheduledNotifications() {
-    const now = new Date();
-    const pendingNotifications = await this.notificationsRepository.find({
-      where: {
-        status: NotificationStatus.PENDING,
-        scheduledFor: LessThanOrEqual(now),
-      },
-      take: 50, // Process in batches
-    });
+    try {
+      const now = new Date();
+      const pendingNotifications = await this.notificationsRepository.find({
+        where: {
+          status: NotificationStatus.PENDING,
+          scheduledFor: LessThanOrEqual(now),
+        },
+        take: 50, // Process in batches
+      });
 
-    this.logger.log(`Processing ${pendingNotifications.length} scheduled notifications`);
-
-    for (const notification of pendingNotifications) {
-      await this.processNotification(notification);
+      for (const notification of pendingNotifications) {
+        await this.processNotification(notification);
+      }
+    } catch (error) {
+      // Only log actual errors, not missing table errors
+      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+        // Table doesn't exist yet, skip silently
+        return;
+      }
+      // Log real errors
+      this.logger.error('Error processing scheduled notifications:', error);
     }
   }
 
   @Cron(CronExpression.EVERY_HOUR)
   async scheduleAppointmentReminders() {
-    this.logger.log('Checking for appointments that need reminders...');
+    try {
+      // Get appointments in the next 24-48 hours
+      const now = new Date();
+      const tomorrow = addHours(now, 24);
+      const dayAfter = addHours(now, 48);
 
-    // Get appointments in the next 24-48 hours
-    const now = new Date();
-    const tomorrow = addHours(now, 24);
-    const dayAfter = addHours(now, 48);
-
-    const appointments = await this.appointmentsService.findAll();
-    const upcomingAppointments = appointments.filter((apt) => {
-      const aptDate = new Date(apt.scheduledStart);
-      return aptDate >= tomorrow && aptDate <= dayAfter && apt.status === 'booked';
-    });
-
-    for (const appointment of upcomingAppointments) {
-      // Check if reminder already sent
-      const existingReminder = await this.notificationsRepository.findOne({
-        where: {
-          appointmentId: appointment.id,
-          type: NotificationType.APPOINTMENT_REMINDER,
-        },
+      const appointments = await this.appointmentsService.findAll();
+      const upcomingAppointments = appointments.filter((apt) => {
+        const aptDate = new Date(apt.scheduledStart);
+        return aptDate >= tomorrow && aptDate <= dayAfter && apt.status === 'booked';
       });
 
-      if (!existingReminder) {
-        await this.sendAppointmentReminder(appointment.id, 24);
+      for (const appointment of upcomingAppointments) {
+        // Check if reminder already sent
+        const existingReminder = await this.notificationsRepository.findOne({
+          where: {
+            appointmentId: appointment.id,
+            type: NotificationType.APPOINTMENT_REMINDER,
+          },
+        });
+
+        if (!existingReminder) {
+          await this.sendAppointmentReminder(appointment.id, 24);
+        }
       }
+    } catch (error) {
+      // Only log actual errors, not missing table errors
+      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+        // Table doesn't exist yet, skip silently
+        return;
+      }
+      // Log real errors
+      this.logger.error('Error scheduling appointment reminders:', error);
     }
   }
 

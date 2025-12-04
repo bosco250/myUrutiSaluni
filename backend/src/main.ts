@@ -2,15 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  logger.log('🚀 Starting Nest application...');
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: ['error', 'warn', 'log'],
   });
+
+  const configService = app.get(ConfigService);
 
   // Serve static files from uploads directory
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
@@ -18,8 +23,9 @@ async function bootstrap() {
   });
 
   // Enable CORS
+  const frontendUrl = configService.get<string>('FRONTEND_URL');
   app.enableCors({
-    origin: process.env.FRONTEND_URL?.split(',') || ['http://localhost:3001', 'http://localhost:3000'],
+    origin: frontendUrl ? frontendUrl.split(',') : [],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -52,16 +58,16 @@ async function bootstrap() {
     .setTitle('Salon Association Platform API')
     .setDescription(
       'Comprehensive API for managing salon operations, membership, accounting, micro-lending, and Airtel Money integration.\n\n' +
-      'Features include:\n' +
-      '- Multi-tenant salon management\n' +
-      '- Role-based access control (RBAC)\n' +
-      '- Membership and subscription management\n' +
-      '- Appointment scheduling\n' +
-      '- Sales and inventory tracking\n' +
-      '- Accounting and financial reporting\n' +
-      '- Micro-lending system\n' +
-      '- Airtel Money payment integration\n' +
-      '- Real-time notifications'
+        'Features include:\n' +
+        '- Multi-tenant salon management\n' +
+        '- Role-based access control (RBAC)\n' +
+        '- Membership and subscription management\n' +
+        '- Appointment scheduling\n' +
+        '- Sales and inventory tracking\n' +
+        '- Accounting and financial reporting\n' +
+        '- Micro-lending system\n' +
+        '- Airtel Money payment integration\n' +
+        '- Real-time notifications',
     )
     .setVersion('1.0.0')
     .addBearerAuth(
@@ -104,17 +110,23 @@ async function bootstrap() {
     customSiteTitle: 'Salon Association API Documentation',
   });
 
-  const port = process.env.PORT || 3000;
+  const port = configService.get<number>('PORT');
+  if (!port) {
+    throw new Error('PORT environment variable is required');
+  }
+
+  logger.log('📦 Initializing modules...');
   await app.listen(port);
-  
-  logger.log(`🚀 Application is running on: http://localhost:${port}`);
+
+  logger.log(`✅ Application is running on: http://localhost:${port}`);
   logger.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
   logger.log(`❤️  Health check: http://localhost:${port}/health`);
-  logger.log(`🔐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.log(
+    `🔐 Environment: ${configService.get<string>('NODE_ENV', 'development')}`,
+  );
 }
 
 bootstrap().catch((error) => {
   console.error('Failed to start application:', error);
   process.exit(1);
 });
-

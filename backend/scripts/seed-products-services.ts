@@ -126,13 +126,34 @@ const SERVICES = [
   { name: 'Body Scrub', code: 'SRV-BS', basePrice: 15000, durationMinutes: 60, description: 'Exfoliating body scrub', isActive: true },
 ];
 
+import { ConfigService } from '@nestjs/config';
+import { config } from 'dotenv';
+
+config();
+const configService = new ConfigService();
+const dbType = configService.get('DB_TYPE', 'postgres');
+
 async function seedProductsAndServices() {
-  const dataSource = new DataSource({
+  const dataSource = new DataSource(
+    dbType === 'sqlite'
+      ? {
     type: 'better-sqlite3',
     database: './database/salon_association.db',
     entities: [User, Salon, Product, Service],
     synchronize: false,
-  });
+        }
+      : {
+          type: 'postgres',
+          host: configService.get('DB_HOST', 'localhost'),
+          port: configService.get<number>('DB_PORT', 5432),
+          username: configService.get('DB_USERNAME', 'postgres'),
+          password: configService.get('DB_PASSWORD', ''),
+          database: configService.get('DB_DATABASE', 'salon_association'),
+          entities: [User, Salon, Product, Service],
+          synchronize: false,
+          ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        }
+  );
 
   try {
     await dataSource.initialize();

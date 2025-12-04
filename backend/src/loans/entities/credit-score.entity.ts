@@ -35,7 +35,7 @@ export class CreditScore {
   @CreateDateColumn({ name: 'calculated_at' })
   calculatedAt: Date;
 
-  @Column({ name: 'valid_until', type: 'datetime', nullable: true })
+  @Column({ name: 'valid_until', type: 'timestamp', nullable: true })
   validUntil: Date;
 
   @CreateDateColumn({ name: 'created_at' })

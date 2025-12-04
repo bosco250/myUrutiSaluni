@@ -29,6 +29,8 @@ import { AirtelAgent } from '../airtel/entities/airtel-agent.entity';
 import { AirtelTransaction } from '../airtel/entities/airtel-transaction.entity';
 import { Commission } from '../commissions/entities/commission.entity';
 import { CustomerStyleReference } from '../customers/entities/customer-style-reference.entity';
+import { Notification } from '../notifications/entities/notification.entity';
+import { NotificationPreference } from '../notifications/entities/notification-preference.entity';
 
 @Global()
 @Module({
@@ -36,7 +38,7 @@ import { CustomerStyleReference } from '../customers/entities/customer-style-ref
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const dbType = configService.get('DB_TYPE', 'sqlite');
+        const dbType = configService.get('DB_TYPE', 'postgres');
         const nodeEnv = configService.get('NODE_ENV', 'development');
         const isDevelopment = nodeEnv !== 'production';
         
@@ -69,30 +71,32 @@ import { CustomerStyleReference } from '../customers/entities/customer-style-ref
           AirtelTransaction,
           Commission,
           CustomerStyleReference,
+          Notification,
+          NotificationPreference,
         ];
         
-        // Use SQLite for development, PostgreSQL for production
-        if (dbType === 'sqlite' || (isDevelopment && !configService.get('DB_HOST'))) {
+        // Use PostgreSQL by default, SQLite only if explicitly set
+        if (dbType === 'sqlite') {
           const dbPath = configService.get('DB_DATABASE', 'database/salon_association.db');
           return {
             type: 'better-sqlite3',
             database: dbPath,
             entities,
-            synchronize: isDevelopment, // Only sync in development
+            synchronize: isDevelopment, // Auto-create tables in development
             logging: isDevelopment ? ['error', 'warn', 'schema', 'migration'] : ['error'],
             migrations: ['dist/migrations/*.js'],
           };
         } else {
-          // PostgreSQL configuration
+          // PostgreSQL configuration (default)
           return {
             type: 'postgres',
             host: configService.get('DB_HOST', 'localhost'),
             port: configService.get<number>('DB_PORT', 5432),
             username: configService.get('DB_USERNAME', 'postgres'),
-            password: configService.get('DB_PASSWORD', 'postgres'),
+            password: configService.get('DB_PASSWORD', ''),
             database: configService.get('DB_DATABASE', 'salon_association'),
             entities,
-            synchronize: false, // Never sync in production
+            synchronize: isDevelopment, // Auto-create tables in development
             logging: isDevelopment ? ['error', 'warn', 'migration'] : ['error'],
             migrations: ['dist/migrations/*.js'],
             migrationsRun: false,

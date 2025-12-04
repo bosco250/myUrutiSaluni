@@ -2,8 +2,15 @@ import axios from 'axios';
 import { logger } from './logger';
 import { secureStorage } from './secure-storage';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+// Log API URL in development (only in browser)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('🔗 API Base URL:', apiUrl);
+}
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,12 +30,12 @@ api.interceptors.request.use((config) => {
       logger.warn('No authentication token found', { url: config.url });
     }
   }
-  
+
   // If Content-Type is explicitly set to undefined, remove it to let axios set it for FormData
   if (config.headers['Content-Type'] === undefined) {
     delete config.headers['Content-Type'];
   }
-  
+
   return config;
 });
 
@@ -42,11 +49,11 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       secureStorage.removeToken();
       secureStorage.removeUser();
-      
+
       // Redirect to login
       window.location.href = '/login';
     }
-    
+
     // Log error using logger
     if (error.response) {
       logger.logAPIError(error.config?.url || 'unknown', error);
@@ -55,10 +62,9 @@ api.interceptors.response.use(
     } else {
       logger.error('Error setting up request', { message: error.message });
     }
-    
+
     return Promise.reject(error);
   }
 );
 
 export default api;
-

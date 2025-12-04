@@ -34,7 +34,7 @@ export class Commission {
   @Column({ default: false })
   paid: boolean;
 
-  @Column({ name: 'paid_at', type: 'datetime', nullable: true })
+  @Column({ name: 'paid_at', type: 'timestamp', nullable: true })
   paidAt: Date;
 
   @Column({ type: 'simple-json', default: '{}' })

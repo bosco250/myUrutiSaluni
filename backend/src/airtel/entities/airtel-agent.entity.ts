@@ -52,7 +52,7 @@ export class AirtelAgent {
   @Column({ name: 'total_commissions', type: 'decimal', precision: 14, scale: 2, default: 0 })
   totalCommissions: number;
 
-  @Column({ name: 'registered_at', type: 'datetime', nullable: true })
+  @Column({ name: 'registered_at', type: 'timestamp', nullable: true })
   registeredAt: Date;
 
   @Column({ type: 'simple-json', default: '{}' })

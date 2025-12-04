@@ -65,7 +65,7 @@ export class MembershipApplication {
   @Column({ name: 'reviewed_by_id', nullable: true })
   reviewedById: string;
 
-  @Column({ name: 'reviewed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'reviewed_at', type: 'timestamp', nullable: true })
   reviewedAt: Date;
 
   @Column({ type: 'simple-json', default: '{}' })

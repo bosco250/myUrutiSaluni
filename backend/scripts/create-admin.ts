@@ -6,8 +6,12 @@
 
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
+import { config } from 'dotenv';
 import { User, UserRole } from '../src/users/entities/user.entity';
 import { v4 as uuidv4 } from 'uuid';
+
+config();
 
 // Admin credentials
 const ADMIN_EMAIL = 'admin@salonassociation.com';
@@ -17,13 +21,30 @@ const ADMIN_PHONE = '+250788123456';
 const ADMIN_ROLE = UserRole.SUPER_ADMIN;
 
 async function createAdmin() {
+  const configService = new ConfigService();
+  const dbType = configService.get('DB_TYPE', 'postgres');
+  
   // Create DataSource with the same config as the app
-  const dataSource = new DataSource({
+  const dataSource = new DataSource(
+    dbType === 'sqlite'
+      ? {
     type: 'better-sqlite3',
     database: './database/salon_association.db',
     entities: [User],
     synchronize: false, // Don't sync, just connect
-  });
+        }
+      : {
+          type: 'postgres',
+          host: configService.get('DB_HOST', 'localhost'),
+          port: configService.get<number>('DB_PORT', 5432),
+          username: configService.get('DB_USERNAME', 'postgres'),
+          password: configService.get('DB_PASSWORD', ''),
+          database: configService.get('DB_DATABASE', 'salon_association'),
+          entities: [User],
+          synchronize: false,
+          ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        }
+  );
 
   try {
     await dataSource.initialize();

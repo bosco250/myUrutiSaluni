@@ -41,10 +41,10 @@ export class Appointment {
   serviceId: string;
 
   @Index()
-  @Column({ name: 'scheduled_start', type: 'datetime' })
+  @Column({ name: 'scheduled_start', type: 'timestamp' })
   scheduledStart: Date;
 
-  @Column({ name: 'scheduled_end', type: 'datetime' })
+  @Column({ name: 'scheduled_end', type: 'timestamp' })
   scheduledEnd: Date;
 
   @Column({

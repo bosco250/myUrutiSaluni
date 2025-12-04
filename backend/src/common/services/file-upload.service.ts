@@ -20,7 +20,7 @@ export class FileUploadService {
     }
   }
 
-  async saveFile(file: Express.Multer.File): Promise<{ filename: string; path: string; url: string }> {
+  async saveFile(file: Express.Multer.File, subfolder: string = 'style-references'): Promise<{ filename: string; path: string; url: string }> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -39,17 +39,23 @@ export class FileUploadService {
       throw new BadRequestException('File size exceeds 10MB limit');
     }
 
+    // Create subfolder directory if it doesn't exist
+    const subfolderPath = path.join(process.cwd(), 'uploads', subfolder);
+    if (!fs.existsSync(subfolderPath)) {
+      fs.mkdirSync(subfolderPath, { recursive: true });
+    }
+
     // Generate unique filename
     const fileExtension = path.extname(file.originalname);
     const filename = `${uuidv4()}${fileExtension}`;
-    const filePath = path.join(this.uploadPath, filename);
+    const filePath = path.join(subfolderPath, filename);
 
     // Save file
     fs.writeFileSync(filePath, file.buffer);
 
     // Return relative URL path
     const baseUrl = this.configService.get('BASE_URL', 'http://localhost:3000');
-    const url = `${baseUrl}/uploads/style-references/${filename}`;
+    const url = `${baseUrl}/uploads/${subfolder}/${filename}`;
 
     return {
       filename,
@@ -59,7 +65,7 @@ export class FileUploadService {
   }
 
   async deleteFile(filename: string, subfolder: string = 'style-references'): Promise<void> {
-    const filePath = path.join(this.baseUploadPath, subfolder, filename);
+    const filePath = path.join(this.uploadPath, subfolder, filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

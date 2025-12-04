@@ -63,14 +63,14 @@ export class Notification {
   appointmentId?: string;
 
   @Column({
-    type: 'enum',
-    enum: NotificationChannel,
+    type: 'varchar',
+    length: 32,
   })
   channel: NotificationChannel;
 
   @Column({
-    type: 'enum',
-    enum: NotificationType,
+    type: 'varchar',
+    length: 32,
   })
   type: NotificationType;
 
@@ -81,8 +81,8 @@ export class Notification {
   body: string;
 
   @Column({
-    type: 'enum',
-    enum: NotificationStatus,
+    type: 'varchar',
+    length: 32,
     default: NotificationStatus.PENDING,
   })
   status: NotificationStatus;
@@ -93,13 +93,13 @@ export class Notification {
   @Column({ name: 'recipient_phone', nullable: true })
   recipientPhone?: string;
 
-  @Column({ name: 'scheduled_for', type: 'timestamptz', nullable: true })
+  @Column({ name: 'scheduled_for', type: 'timestamp', nullable: true })
   scheduledFor?: Date;
 
-  @Column({ name: 'sent_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'sent_at', type: 'timestamp', nullable: true })
   sentAt?: Date;
 
-  @Column({ name: 'delivered_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
   deliveredAt?: Date;
 
   @Column({ name: 'error_message', type: 'text', nullable: true })

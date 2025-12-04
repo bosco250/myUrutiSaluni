@@ -16,13 +16,34 @@ const EMPLOYEES = [
   { fullName: 'Chantal Uwase', email: 'chantal.uwase@example.com', phone: '+250788888888', password: 'Employee@123', roleTitle: 'Nail Technician', skills: ['Manicure', 'Pedicure', 'Nail Art'], commissionRate: 10 },
 ];
 
+import { ConfigService } from '@nestjs/config';
+import { config } from 'dotenv';
+
+config();
+const configService = new ConfigService();
+const dbType = configService.get('DB_TYPE', 'postgres');
+
 async function seedEmployees() {
-  const dataSource = new DataSource({
+  const dataSource = new DataSource(
+    dbType === 'sqlite'
+      ? {
     type: 'better-sqlite3',
     database: './database/salon_association.db',
     entities: [User, Salon, SalonEmployee],
     synchronize: false,
-  });
+        }
+      : {
+          type: 'postgres',
+          host: configService.get('DB_HOST', 'localhost'),
+          port: configService.get<number>('DB_PORT', 5432),
+          username: configService.get('DB_USERNAME', 'postgres'),
+          password: configService.get('DB_PASSWORD', ''),
+          database: configService.get('DB_DATABASE', 'salon_association'),
+          entities: [User, Salon, SalonEmployee],
+          synchronize: false,
+          ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        }
+  );
 
   try {
     await dataSource.initialize();

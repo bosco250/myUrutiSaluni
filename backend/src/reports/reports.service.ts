@@ -12,6 +12,7 @@ import { SalonsService } from '../salons/salons.service';
 @Injectable()
 export class ReportsService implements OnModuleInit, OnModuleDestroy {
   private jsreportInstance: any;
+  private jsreportInitializing: Promise<void> | null = null;
 
   constructor(
     private salesService: SalesService,
@@ -21,31 +22,80 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    try {
-      this.jsreportInstance = jsreport({
-        extensions: {
-          express: {
-            enabled: false, // Disable express extension as we're using NestJS
-          },
-          'chrome-pdf': {
-            enabled: true,
-          },
-          handlebars: {
-            enabled: true,
-          },
-        },
-      });
-
-      await this.jsreportInstance.init();
-      
-      // Create receipt template if it doesn't exist
-      await this.ensureReceiptTemplate();
-      // Create membership certificate template if it doesn't exist
-      await this.ensureMembershipCertificateTemplate();
-    } catch (error) {
+    // Initialize jsreport in the background without blocking server startup
+    this.initializeJsReport().catch((error) => {
       console.error('Failed to initialize jsreport:', error);
       // Don't throw - allow the app to start even if jsreport fails
+    });
+  }
+
+  private async initializeJsReport() {
+    if (this.jsreportInitializing) {
+      return this.jsreportInitializing;
     }
+
+    this.jsreportInitializing = (async () => {
+      // Suppress jsreport console logs during initialization
+      const originalLog = console.log;
+      const originalInfo = console.info;
+      const originalDebug = console.debug;
+      const originalError = console.error;
+      
+      console.log = () => {};
+      console.info = () => {};
+      console.debug = () => {};
+      console.error = (message?: any, ...optionalParams: any[]) => {
+        // Only show actual errors, not jsreport info messages
+        if (message && typeof message === 'string' && !message.includes('jsreport') && !message.includes('info:')) {
+          originalError(message, ...optionalParams);
+        }
+      };
+      
+      try {
+        this.jsreportInstance = jsreport({
+          logger: {
+            silent: true, // Suppress jsreport logs
+          },
+          extensions: {
+            express: {
+              enabled: false, // Disable express extension as we're using NestJS
+            },
+            'chrome-pdf': {
+              enabled: true,
+            },
+            handlebars: {
+              enabled: true,
+            },
+          },
+        });
+
+        await this.jsreportInstance.init();
+        
+        // Create receipt template if it doesn't exist
+        await this.ensureReceiptTemplate();
+        // Create membership certificate template if it doesn't exist
+        await this.ensureMembershipCertificateTemplate();
+      } finally {
+        // Restore original console methods
+        console.log = originalLog;
+        console.info = originalInfo;
+        console.debug = originalDebug;
+        console.error = originalError;
+        this.jsreportInitializing = null;
+      }
+    })();
+
+    return this.jsreportInitializing;
+  }
+
+  private async ensureJsReportReady() {
+    if (!this.jsreportInstance && !this.jsreportInitializing) {
+      await this.initializeJsReport();
+    } else if (this.jsreportInitializing) {
+      await this.jsreportInitializing;
+    }
+    
+    await this.ensureJsReportReady();
   }
 
   async onModuleDestroy() {
@@ -295,9 +345,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async generateReceipt(saleId: string): Promise<Buffer> {
-    if (!this.jsreportInstance) {
-      throw new Error('jsreport is not initialized');
-    }
+    await this.ensureJsReportReady();
 
     const sale = await this.salesService.findOne(saleId);
     
@@ -415,9 +463,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     startDate?: Date;
     endDate?: Date;
   }): Promise<Buffer> {
-    if (!this.jsreportInstance) {
-      throw new Error('jsreport is not initialized');
-    }
+    await this.ensureJsReportReady();
 
     // This would generate a sales report
     // For now, return a simple report
@@ -513,7 +559,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       const certificateTemplate = templates.find((t: any) => t.name === 'membership-certificate');
 
       if (!certificateTemplate) {
-        console.log('Creating membership certificate template...');
+        // Template creation in progress (suppressed for cleaner logs)
         // Create certificate template
         await this.jsreportInstance.documentStore.collection('templates').insert({
           name: 'membership-certificate',
@@ -521,10 +567,10 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           recipe: 'chrome-pdf',
           content: this.getMembershipCertificateTemplate(),
         });
-        console.log('Membership certificate template created successfully');
+        // Membership certificate template ready
       } else {
         // Update template if it exists (in case of changes)
-        console.log('Updating membership certificate template...');
+        // Updating membership certificate template (suppressed)
         // Remove old template and insert new one
         await this.jsreportInstance.documentStore.collection('templates').remove({ name: 'membership-certificate' });
         await this.jsreportInstance.documentStore.collection('templates').insert({
@@ -533,7 +579,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           recipe: 'chrome-pdf',
           content: this.getMembershipCertificateTemplate(),
         });
-        console.log('Membership certificate template updated successfully');
+        // Membership certificate template updated
       }
     } catch (error) {
       console.error('Error ensuring membership certificate template:', error);
