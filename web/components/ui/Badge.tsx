@@ -2,7 +2,7 @@
 
 import React, { ReactNode } from 'react';
 
-type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'destructive' | 'info';
 type BadgeSize = 'sm' | 'md' | 'lg';
 
 interface BadgeProps {
@@ -26,6 +26,7 @@ export function Badge({
     success: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300',
     warning: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
     danger: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300',
+    destructive: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300',
     info: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
   };
 
@@ -41,6 +42,7 @@ export function Badge({
     success: 'bg-green-500',
     warning: 'bg-yellow-500',
     danger: 'bg-red-500',
+    destructive: 'bg-red-500',
     info: 'bg-blue-500',
   };
 

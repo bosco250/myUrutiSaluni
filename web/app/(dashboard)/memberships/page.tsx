@@ -2,7 +2,34 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Search, Filter, CheckCircle, XCircle, Clock, AlertCircle, Building2, Calendar, CreditCard, MoreVertical, Eye, Edit, Trash2, Users, TrendingUp, TrendingDown, RefreshCw, Ban, Check, X, Download, ChevronDown, Mail, Phone, MapPin, UserPlus } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Building2,
+  Calendar,
+  CreditCard,
+  MoreVertical,
+  Eye,
+  Edit,
+  Trash2,
+  Users,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  Ban,
+  Check,
+  X,
+  Download,
+  ChevronDown,
+  Mail,
+  Phone,
+  MapPin,
+  UserPlus,
+} from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
@@ -39,16 +66,53 @@ interface Membership {
 }
 
 const statusConfig = {
-  new: { icon: Clock, color: 'text-blue-600', bg: 'bg-blue-500/20', border: 'border-blue-500', label: 'New' },
-  active: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/20', border: 'border-success', label: 'Active' },
-  pending_renewal: { icon: AlertCircle, color: 'text-warning', bg: 'bg-warning/20', border: 'border-warning', label: 'Pending Renewal' },
-  expired: { icon: XCircle, color: 'text-danger', bg: 'bg-danger/20', border: 'border-danger', label: 'Expired' },
-  suspended: { icon: XCircle, color: 'text-gray-600', bg: 'bg-gray-500/20', border: 'border-gray-500', label: 'Suspended' },
+  new: {
+    icon: Clock,
+    color: 'text-blue-600',
+    bg: 'bg-blue-500/20',
+    border: 'border-blue-500',
+    label: 'New',
+  },
+  active: {
+    icon: CheckCircle,
+    color: 'text-success',
+    bg: 'bg-success/20',
+    border: 'border-success',
+    label: 'Active',
+  },
+  pending_renewal: {
+    icon: AlertCircle,
+    color: 'text-warning',
+    bg: 'bg-warning/20',
+    border: 'border-warning',
+    label: 'Pending Renewal',
+  },
+  expired: {
+    icon: XCircle,
+    color: 'text-danger',
+    bg: 'bg-danger/20',
+    border: 'border-danger',
+    label: 'Expired',
+  },
+  suspended: {
+    icon: XCircle,
+    color: 'text-gray-600',
+    bg: 'bg-gray-500/20',
+    border: 'border-gray-500',
+    label: 'Suspended',
+  },
 };
 
 export default function MembershipsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.DISTRICT_LEADER,
+        UserRole.SALON_OWNER,
+      ]}
+    >
       <MembershipsPageContent />
     </ProtectedRoute>
   );
@@ -68,8 +132,27 @@ function MembershipsPageContent() {
     queryKey: ['memberships'],
     queryFn: async () => {
       const response = await api.get('/memberships');
-      return response.data || [];
+      // Handle both wrapped (response.data.data) and unwrapped (response.data) responses
+      const data = response.data?.data || response.data;
+
+      // Debug logging (remove in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Memberships] API Response:', {
+          hasData: !!response.data,
+          hasDataData: !!response.data?.data,
+          isArray: Array.isArray(data),
+          dataType: typeof data,
+          dataLength: Array.isArray(data) ? data.length : 'N/A',
+          sample: Array.isArray(data) && data.length > 0 ? data[0] : null,
+        });
+      }
+
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
     },
+    refetchOnMount: true, // Always refetch when component mounts to get latest data
+    staleTime: 30 * 1000, // 30 seconds - data is considered stale after 30 seconds
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const activateMutation = useMutation({
@@ -99,39 +182,40 @@ function MembershipsPageContent() {
     },
   });
 
-  const filteredMemberships = memberships?.filter((membership) => {
-    const matchesSearch =
-      membership.salon?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      membership.membershipNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      membership.salon?.owner?.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredMemberships =
+    memberships?.filter((membership) => {
+      const matchesSearch =
+        membership.salon?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        membership.membershipNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        membership.salon?.owner?.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'all' || membership.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || membership.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || membership.status === statusFilter;
+      const matchesCategory = categoryFilter === 'all' || membership.category === categoryFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory;
-  }) || [];
+      return matchesSearch && matchesStatus && matchesCategory;
+    }) || [];
 
   // Calculate statistics with trends
   const stats = useMemo(() => {
     if (!memberships) return null;
-    
+
     const total = memberships.length;
-    const active = memberships.filter(m => m.status === 'active').length;
-    const newMemberships = memberships.filter(m => m.status === 'new').length;
-    const expired = memberships.filter(m => m.status === 'expired').length;
-    const suspended = memberships.filter(m => m.status === 'suspended').length;
-    
+    const active = memberships.filter((m) => m.status === 'active').length;
+    const newMemberships = memberships.filter((m) => m.status === 'new').length;
+    const expired = memberships.filter((m) => m.status === 'expired').length;
+    const suspended = memberships.filter((m) => m.status === 'suspended').length;
+
     // Calculate expiring soon (within 30 days)
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const expiringSoon = memberships.filter(m => {
+    const expiringSoon = memberships.filter((m) => {
       if (!m.endDate || m.status === 'expired') return false;
       const endDate = new Date(m.endDate);
       return endDate >= now && endDate <= thirtyDaysFromNow;
     }).length;
 
-    const pendingRenewal = memberships.filter(m => m.status === 'pending_renewal').length;
-    
+    const pendingRenewal = memberships.filter((m) => m.status === 'pending_renewal').length;
+
     return {
       total,
       active,
@@ -147,7 +231,9 @@ function MembershipsPageContent() {
   // Get unique categories for filter
   const categories = useMemo(() => {
     if (!memberships) return [];
-    const uniqueCategories = Array.from(new Set(memberships.map(m => m.category).filter(Boolean)));
+    const uniqueCategories = Array.from(
+      new Set(memberships.map((m) => m.category).filter(Boolean))
+    );
     return uniqueCategories;
   }, [memberships]);
 
@@ -158,11 +244,14 @@ function MembershipsPageContent() {
           <Skeleton variant="text" width={300} height={40} className="mb-2" />
           <Skeleton variant="text" width={400} height={20} />
         </div>
-        
+
         {/* Stats Skeletons */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
+            <div
+              key={i}
+              className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4"
+            >
               <Skeleton variant="text" width={80} height={16} className="mb-2" />
               <Skeleton variant="text" width={60} height={32} />
             </div>
@@ -185,7 +274,9 @@ function MembershipsPageContent() {
       <div className="mb-8">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2">Memberships</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2">
+              Memberships
+            </h1>
             <p className="text-text-light/60 dark:text-text-dark/60">
               Manage salon memberships in the association
             </p>
@@ -202,7 +293,9 @@ function MembershipsPageContent() {
                   <span className="hidden sm:inline">Advanced Management</span>
                 </Button>
                 <Button
-                  onClick={() => {/* Export functionality */}}
+                  onClick={() => {
+                    /* Export functionality */
+                  }}
                   variant="secondary"
                   className="flex items-center gap-2"
                 >
@@ -250,8 +343,10 @@ function MembershipsPageContent() {
                   className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
                 >
                   <option value="all">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -263,16 +358,22 @@ function MembershipsPageContent() {
       {/* Stats Cards - Enhanced */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
         <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Total</p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">{stats?.total || 0}</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Total
+          </p>
+          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+            {stats?.total || 0}
+          </p>
           <div className="flex items-center gap-1 mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
             <TrendingUp className="w-3 h-3" />
             <span>{stats?.activePercentage || 0}% active</span>
           </div>
         </div>
-        
+
         <div className="bg-gradient-to-br from-success/10 to-success/5 border border-success/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Active</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Active
+          </p>
           <p className="text-2xl font-bold text-success">{stats?.active || 0}</p>
           <div className="flex items-center gap-1 mt-1 text-xs text-success/70">
             <CheckCircle className="w-3 h-3" />
@@ -290,7 +391,9 @@ function MembershipsPageContent() {
         </div>
 
         <div className="bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Expiring Soon</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Expiring Soon
+          </p>
           <p className="text-2xl font-bold text-warning">{stats?.expiringSoon || 0}</p>
           <div className="flex items-center gap-1 mt-1 text-xs text-warning/70">
             <AlertCircle className="w-3 h-3" />
@@ -299,7 +402,9 @@ function MembershipsPageContent() {
         </div>
 
         <div className="bg-gradient-to-br from-danger/10 to-danger/5 border border-danger/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Expired</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Expired
+          </p>
           <p className="text-2xl font-bold text-danger">{stats?.expired || 0}</p>
           <div className="flex items-center gap-1 mt-1 text-xs text-danger/70">
             <XCircle className="w-3 h-3" />
@@ -308,7 +413,9 @@ function MembershipsPageContent() {
         </div>
 
         <div className="bg-gradient-to-br from-gray-500/10 to-gray-500/5 border border-gray-500/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Suspended</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Suspended
+          </p>
           <p className="text-2xl font-bold text-gray-600">{stats?.suspended || 0}</p>
           <div className="flex items-center gap-1 mt-1 text-xs text-gray-600/70">
             <Ban className="w-3 h-3" />
@@ -326,10 +433,12 @@ function MembershipsPageContent() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-base sm:text-lg font-bold text-text-light dark:text-text-dark mb-1">
-                {stats?.expiringSoon} Membership{(stats?.expiringSoon || 0) !== 1 ? 's' : ''} Expiring Soon
+                {stats?.expiringSoon} Membership{(stats?.expiringSoon || 0) !== 1 ? 's' : ''}{' '}
+                Expiring Soon
               </h3>
               <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-3">
-                {stats?.expiringSoon} membership{(stats?.expiringSoon || 0) !== 1 ? 's' : ''} will expire in the next 30 days. Consider sending renewal reminders.
+                {stats?.expiringSoon} membership{(stats?.expiringSoon || 0) !== 1 ? 's' : ''} will
+                expire in the next 30 days. Consider sending renewal reminders.
               </p>
               <Button
                 onClick={() => setStatusFilter('pending_renewal')}
@@ -349,14 +458,21 @@ function MembershipsPageContent() {
       {filteredMemberships.length === 0 ? (
         <EmptyState
           icon={<Building2 className="w-full h-full text-text-light/20 dark:text-text-dark/20" />}
-          title={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' 
-            ? 'No memberships match your filters' 
-            : 'No memberships found'}
-          description={searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
-            ? 'Try adjusting your search criteria or filters to find what you\'re looking for.'
-            : 'Get started by creating your first membership or inviting salons to join the association.'}
+          title={
+            searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
+              ? 'No memberships match your filters'
+              : 'No memberships found'
+          }
+          description={
+            searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
+              ? "Try adjusting your search criteria or filters to find what you're looking for."
+              : 'Get started by creating your first membership or inviting salons to join the association.'
+          }
           action={
-            !searchQuery && statusFilter === 'all' && categoryFilter === 'all' && canManageUsers() ? (
+            !searchQuery &&
+            statusFilter === 'all' &&
+            categoryFilter === 'all' &&
+            canManageUsers() ? (
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => router.push('/memberships/manage')}
@@ -401,9 +517,13 @@ function MembershipsPageContent() {
               onSuspend={() => suspendMutation.mutate(membership.id)}
               onExpire={() => expireMutation.mutate(membership.id)}
               canManage={canManageUsers()}
-              isProcessing={activateMutation.isPending || suspendMutation.isPending || expireMutation.isPending}
+              isProcessing={
+                activateMutation.isPending || suspendMutation.isPending || expireMutation.isPending
+              }
               showQuickActions={showQuickActions === membership.id}
-              onToggleQuickActions={() => setShowQuickActions(showQuickActions === membership.id ? null : membership.id)}
+              onToggleQuickActions={() =>
+                setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
+              }
             />
           ))}
         </div>
@@ -445,8 +565,10 @@ function MembershipCard({
   const Icon = config.icon;
 
   // Calculate days until expiry
-  const daysUntilExpiry = membership.endDate 
-    ? Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+  const daysUntilExpiry = membership.endDate
+    ? Math.ceil(
+        (new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
 
   // Calculate progress percentage
@@ -463,10 +585,14 @@ function MembershipCard({
   const progress = getProgressPercentage();
 
   return (
-    <div className={`group bg-surface-light dark:bg-surface-dark border-2 ${config.border} rounded-2xl p-4 sm:p-6 hover:shadow-xl transition-all duration-300 relative overflow-hidden`}>
+    <div
+      className={`group bg-surface-light dark:bg-surface-dark border-2 ${config.border} rounded-2xl p-4 sm:p-6 hover:shadow-xl transition-all duration-300 relative overflow-hidden`}
+    >
       {/* Gradient Background */}
-      <div className={`absolute inset-0 ${config.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-      
+      <div
+        className={`absolute inset-0 ${config.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+      />
+
       <div className="relative">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -479,7 +605,18 @@ function MembershipCard({
                   <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate">
                     {membership.salon?.name || 'Unknown Salon'}
                   </h3>
-                  <Badge variant={config.color === 'text-success' ? 'success' : config.color === 'text-warning' ? 'warning' : config.color === 'text-danger' ? 'danger' : 'default'} size="sm">
+                  <Badge
+                    variant={
+                      config.color === 'text-success'
+                        ? 'success'
+                        : config.color === 'text-warning'
+                          ? 'warning'
+                          : config.color === 'text-danger'
+                            ? 'danger'
+                            : 'default'
+                    }
+                    size="sm"
+                  >
                     {config.label}
                   </Badge>
                   {membership.paymentStatus === 'paid' && (
@@ -527,18 +664,20 @@ function MembershipCard({
                     <p className="text-text-light/60 dark:text-text-dark/60 text-xs">
                       {daysUntilExpiry !== null && daysUntilExpiry > 0 ? 'Expires in' : 'Expired'}
                     </p>
-                    <p className={`font-medium truncate ${
-                      daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
-                        ? 'text-warning'
-                        : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                        ? 'text-danger'
-                        : 'text-text-light dark:text-text-dark'
-                    }`}>
+                    <p
+                      className={`font-medium truncate ${
+                        daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
+                          ? 'text-warning'
+                          : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                            ? 'text-danger'
+                            : 'text-text-light dark:text-text-dark'
+                      }`}
+                    >
                       {daysUntilExpiry !== null && daysUntilExpiry > 0
                         ? `${daysUntilExpiry} days`
                         : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                        ? `${Math.abs(daysUntilExpiry)} days ago`
-                        : new Date(membership.endDate).toLocaleDateString()}
+                          ? `${Math.abs(daysUntilExpiry)} days ago`
+                          : new Date(membership.endDate).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -610,7 +749,7 @@ function MembershipCard({
                     <MoreVertical className="w-4 h-4" />
                     <ChevronDown className="w-3 h-3" />
                   </Button>
-                  
+
                   {showQuickActions && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl z-10 py-2 animate-in fade-in slide-in-from-top-2">
                       {membership.status === 'active' && (
@@ -698,8 +837,10 @@ function MembershipDetailModal({
   const config = statusConfig[membership.status];
   const Icon = config.icon;
 
-  const daysUntilExpiry = membership.endDate 
-    ? Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+  const daysUntilExpiry = membership.endDate
+    ? Math.ceil(
+        (new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      )
     : null;
 
   return (
@@ -716,7 +857,9 @@ function MembershipDetailModal({
           {/* Header */}
           <div className="p-6 border-b border-border-light dark:border-border-dark">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Membership Details</h2>
+              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
+                Membership Details
+              </h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition"
@@ -775,8 +918,12 @@ function MembershipDetailModal({
               <div className="space-y-6">
                 {/* Status with Alert */}
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">Status</h3>
-                  <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 ${config.bg} ${config.border}`}>
+                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
+                    Status
+                  </h3>
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 ${config.bg} ${config.border}`}
+                  >
                     <Icon className={`w-5 h-5 ${config.color}`} />
                     <div className="flex-1">
                       <span className={`font-semibold ${config.color}`}>{config.label}</span>
@@ -792,7 +939,9 @@ function MembershipDetailModal({
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Payment Status</p>
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                      Payment Status
+                    </p>
                     <div className="flex items-center gap-2">
                       {membership.paymentStatus === 'paid' ? (
                         <>
@@ -814,21 +963,25 @@ function MembershipDetailModal({
                   </div>
 
                   <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Time Remaining</p>
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                      Time Remaining
+                    </p>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                      <span className={`font-semibold ${
-                        daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
-                          ? 'text-warning'
-                          : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                          ? 'text-danger'
-                          : 'text-text-light dark:text-text-dark'
-                      }`}>
+                      <span
+                        className={`font-semibold ${
+                          daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
+                            ? 'text-warning'
+                            : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                              ? 'text-danger'
+                              : 'text-text-light dark:text-text-dark'
+                        }`}
+                      >
                         {daysUntilExpiry !== null && daysUntilExpiry > 0
                           ? `${daysUntilExpiry} days`
                           : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                          ? 'Expired'
-                          : 'N/A'}
+                            ? 'Expired'
+                            : 'N/A'}
                       </span>
                     </div>
                   </div>
@@ -836,21 +989,31 @@ function MembershipDetailModal({
 
                 {/* Salon Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">Salon Information</h3>
+                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
+                    Salon Information
+                  </h3>
                   <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4 space-y-3">
                     <div className="flex items-start gap-3">
                       <Building2 className="w-5 h-5 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60">Salon Name</p>
-                        <p className="text-text-light dark:text-text-dark font-medium">{membership.salon?.name || 'N/A'}</p>
+                        <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                          Salon Name
+                        </p>
+                        <p className="text-text-light dark:text-text-dark font-medium">
+                          {membership.salon?.name || 'N/A'}
+                        </p>
                       </div>
                     </div>
                     {membership.salon?.address && (
                       <div className="flex items-start gap-3">
                         <MapPin className="w-5 h-5 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm text-text-light/60 dark:text-text-dark/60">Address</p>
-                          <p className="text-text-light dark:text-text-dark font-medium">{membership.salon.address}</p>
+                          <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                            Address
+                          </p>
+                          <p className="text-text-light dark:text-text-dark font-medium">
+                            {membership.salon.address}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -859,7 +1022,9 @@ function MembershipDetailModal({
                         <Phone className="w-5 h-5 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
                         <div className="flex-1">
                           <p className="text-sm text-text-light/60 dark:text-text-dark/60">Phone</p>
-                          <p className="text-text-light dark:text-text-dark font-medium">{membership.salon.phone}</p>
+                          <p className="text-text-light dark:text-text-dark font-medium">
+                            {membership.salon.phone}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -867,9 +1032,13 @@ function MembershipDetailModal({
                       <Users className="w-5 h-5 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm text-text-light/60 dark:text-text-dark/60">Owner</p>
-                        <p className="text-text-light dark:text-text-dark font-medium">{membership.salon?.owner?.fullName || 'N/A'}</p>
+                        <p className="text-text-light dark:text-text-dark font-medium">
+                          {membership.salon?.owner?.fullName || 'N/A'}
+                        </p>
                         {membership.salon?.owner?.email && (
-                          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-0.5">{membership.salon.owner.email}</p>
+                          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                            {membership.salon.owner.email}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -881,36 +1050,50 @@ function MembershipDetailModal({
             {activeTab === 'details' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">Membership Information</h3>
+                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
+                    Membership Information
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Membership Number</p>
-                      <p className="text-text-light dark:text-text-dark font-medium font-mono">{membership.membershipNumber}</p>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                        Membership Number
+                      </p>
+                      <p className="text-text-light dark:text-text-dark font-medium font-mono">
+                        {membership.membershipNumber}
+                      </p>
                     </div>
                     <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Category</p>
-                      <p className="text-text-light dark:text-text-dark font-medium">{membership.category || 'N/A'}</p>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                        Category
+                      </p>
+                      <p className="text-text-light dark:text-text-dark font-medium">
+                        {membership.category || 'N/A'}
+                      </p>
                     </div>
                     {membership.startDate && (
                       <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Start Date</p>
+                        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                          Start Date
+                        </p>
                         <p className="text-text-light dark:text-text-dark font-medium">
-                          {new Date(membership.startDate).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
+                          {new Date(membership.startDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
                           })}
                         </p>
                       </div>
                     )}
                     {membership.endDate && (
                       <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">End Date</p>
+                        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                          End Date
+                        </p>
                         <p className="text-text-light dark:text-text-dark font-medium">
-                          {new Date(membership.endDate).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
+                          {new Date(membership.endDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
                           })}
                         </p>
                       </div>
@@ -919,16 +1102,22 @@ function MembershipDetailModal({
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">Timestamps</h3>
+                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
+                    Timestamps
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Created</p>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                        Created
+                      </p>
                       <p className="text-text-light dark:text-text-dark font-medium">
                         {new Date(membership.createdAt).toLocaleString()}
                       </p>
                     </div>
                     <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Last Updated</p>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                        Last Updated
+                      </p>
                       <p className="text-text-light dark:text-text-dark font-medium">
                         {new Date(membership.updatedAt).toLocaleString()}
                       </p>
@@ -940,7 +1129,9 @@ function MembershipDetailModal({
 
             {activeTab === 'activity' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">Recent Activity</h3>
+                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
+                  Recent Activity
+                </h3>
                 <EmptyState
                   icon={<Clock className="w-full h-full" />}
                   title="No activity recorded"

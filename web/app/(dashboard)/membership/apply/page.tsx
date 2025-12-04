@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
@@ -37,8 +37,14 @@ export default function MembershipApplyPage() {
   );
 }
 
+interface MembershipStatus {
+  isMember: boolean;
+  application: MembershipApplication | null;
+}
+
 function MembershipApplyContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { isSalonOwner } = usePermissions();
   const [formData, setFormData] = useState({
@@ -53,6 +59,17 @@ function MembershipApplyContent() {
     taxId: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Check membership status (this checks if user is actually an approved member)
+  const { data: membershipStatus, isLoading: checkingMembership } = useQuery<MembershipStatus>({
+    queryKey: ['membership-status', user?.id],
+    queryFn: async () => {
+      const response = await api.get('/memberships/status');
+      return response.data;
+    },
+    enabled: !!user,
+    retry: false,
+  });
 
   // Check existing application
   const { data: existingApplication, isLoading: checkingApplication } = useQuery<MembershipApplication>({
@@ -71,6 +88,15 @@ function MembershipApplyContent() {
       return response.data;
     },
     onSuccess: () => {
+      // Invalidate and refetch all membership-related queries
+      queryClient.invalidateQueries({ queryKey: ['membership-status', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['membership-application', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['membership'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'] }); // Also invalidate salon memberships
+      // Refetch immediately
+      queryClient.refetchQueries({ queryKey: ['membership-status', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['membership-application', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['memberships'] }); // Refetch salon memberships
       router.push('/membership/status');
     },
   });
@@ -121,30 +147,30 @@ function MembershipApplyContent() {
     }
   };
 
-  if (checkingApplication) {
+  if (checkingApplication || checkingMembership) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">Checking application status...</p>
+            <p className="text-text-light/60 dark:text-text-dark/60">Checking membership status...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // If user is already a salon owner, they're already approved
-  if (isSalonOwner()) {
+  // If user is actually an approved member (has approved membership application), show success
+  if (membershipStatus?.isMember) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="bg-success/10 border border-success rounded-2xl p-6 text-center">
           <CheckCircle className="w-16 h-16 mx-auto mb-4 text-success" />
           <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">
-            You're Already a Member!
+            You're Already an Approved Member!
           </h2>
           <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
-            You have been approved as a salon owner and can now add salons and employees.
+            Your membership has been approved. You can now add salons and employees.
           </p>
           <Button onClick={() => router.push('/salons')} variant="primary">
             Go to Salons
@@ -154,7 +180,7 @@ function MembershipApplyContent() {
     );
   }
 
-  // If application exists, show status
+  // If application exists, show status (even if user has SALON_OWNER role but no approved membership)
   if (existingApplication) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">

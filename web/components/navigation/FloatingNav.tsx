@@ -23,6 +23,7 @@ import {
   X,
   Building2,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 
 interface NavItem {
@@ -43,6 +44,7 @@ const allNavItems: NavItem[] = [
   { name: 'Customers', href: '/customers', icon: Users, color: 'from-green-500 to-emerald-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { name: 'Appointments', href: '/appointments', icon: Calendar, color: 'from-orange-500 to-red-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { name: 'My Appointments', href: '/appointments/my', icon: Calendar, color: 'from-orange-500 to-red-500', requiredRoles: [UserRole.CUSTOMER] },
+  { name: 'Services', href: '/services', icon: Sparkles, color: 'from-pink-500 to-rose-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { name: 'Purchase History', href: '/sales/history', icon: ShoppingCart, color: 'from-indigo-500 to-blue-500', requiredRoles: [UserRole.CUSTOMER] },
   { name: 'Sales', href: '/sales', icon: ShoppingCart, color: 'from-indigo-500 to-blue-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { name: 'Commissions', href: '/commissions', icon: TrendingUp, color: 'from-emerald-500 to-green-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },

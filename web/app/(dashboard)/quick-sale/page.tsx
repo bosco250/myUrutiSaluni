@@ -88,10 +88,19 @@ function QuickSaleContent() {
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products'],
-    queryFn: async () => {
-      const response = await api.get('/products');
-      return response.data;
+    queryFn: async (): Promise<Product[]> => {
+      try {
+        const response = await api.get('/products');
+        const data = response.data?.data || response.data;
+        // Ensure we always return an array
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        // Always return an array, never undefined
+        return [];
+      }
     },
+    initialData: [],
   });
 
   // Fetch customers

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, LayoutDashboard, Users, Scissors, Calendar, ShoppingCart, Package, DollarSign, CreditCard, Wallet, Phone, BarChart3, Settings, X, TrendingUp } from 'lucide-react';
+import { Search, LayoutDashboard, Users, Scissors, Calendar, ShoppingCart, Package, DollarSign, CreditCard, Wallet, Phone, BarChart3, Settings, X, TrendingUp, Sparkles } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
@@ -26,6 +26,7 @@ const allCommands: CommandItem[] = [
   { id: 'salons', name: 'Salons', href: '/salons', icon: Scissors, category: 'Management', keywords: ['salon', 'business', 'shop'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { id: 'customers', name: 'Customers', href: '/customers', icon: Users, category: 'Management', keywords: ['client', 'customer', 'people'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { id: 'appointments', name: 'Appointments', href: '/appointments', icon: Calendar, category: 'Operations', keywords: ['booking', 'schedule', 'calendar'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
+  { id: 'services', name: 'Services', href: '/services', icon: Sparkles, category: 'Operations', keywords: ['service', 'offering', 'treatment', 'haircut', 'manicure'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { id: 'sales', name: 'Sales & POS', href: '/sales', icon: ShoppingCart, category: 'Operations', keywords: ['pos', 'transaction', 'sale', 'checkout'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { id: 'commissions', name: 'Commissions', href: '/commissions', icon: TrendingUp, category: 'Finance', keywords: ['commission', 'employee', 'payroll', 'earnings'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
   { id: 'inventory', name: 'Inventory', href: '/inventory', icon: Package, category: 'Operations', keywords: ['stock', 'products', 'items'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },

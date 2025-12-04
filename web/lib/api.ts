@@ -2,7 +2,7 @@ import axios from 'axios';
 import { logger } from './logger';
 import { secureStorage } from './secure-storage';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 // Log API URL in development (only in browser)
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {

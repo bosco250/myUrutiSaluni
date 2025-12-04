@@ -149,10 +149,19 @@ function POSInterface() {
   // Fetch products
   const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ['products', salonId],
-    queryFn: async () => {
-      const response = await api.get(`/inventory/products${salonId ? `?salonId=${salonId}` : ''}`);
-      return response.data?.data || response.data || [];
+    queryFn: async (): Promise<Product[]> => {
+      try {
+        const response = await api.get(`/inventory/products${salonId ? `?salonId=${salonId}` : ''}`);
+        const data = response.data?.data || response.data;
+        // Ensure we always return an array
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        // Always return an array, never undefined
+        return [];
+      }
     },
+    initialData: [],
   });
 
   // Fetch customers

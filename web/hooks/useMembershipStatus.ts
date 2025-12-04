@@ -37,10 +37,10 @@ export function useMembershipStatus() {
     },
     enabled: !!user && (isCustomer() || isSalonOwner()),
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes - membership status doesn't change frequently
+    staleTime: 30 * 1000, // 30 seconds - reduced from 5 minutes to allow faster updates
     gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch if data exists in cache
+    refetchOnWindowFocus: true, // Refetch on window focus to get latest status
+    refetchOnMount: 'always', // Always refetch when component mounts if data is stale
   });
 }
 

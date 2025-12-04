@@ -4,13 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import {
   Plus,
-  Package,
+  Scissors,
   Edit,
   Trash2,
   Search,
   Filter,
+  Clock,
   DollarSign,
-  Percent,
   XCircle,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
@@ -22,15 +22,15 @@ import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { useTheme } from '@/contexts/ThemeContext';
 import { canViewAllSalons } from '@/lib/permissions';
 
-interface Product {
+interface Service {
   id: string;
   salonId: string;
-  sku?: string;
+  code?: string;
   name: string;
   description?: string;
-  unitPrice?: number;
-  taxRate?: number;
-  isInventoryItem: boolean;
+  durationMinutes: number;
+  basePrice: number;
+  isActive: boolean;
   salon?: {
     id: string;
     name: string;
@@ -44,22 +44,22 @@ interface Salon {
   name: string;
 }
 
-export default function InventoryPage() {
+export default function ServicesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <InventoryContent />
+      <ServicesContent />
     </div>
   );
 }
 
-function InventoryContent() {
+function ServicesContent() {
   const { user } = useAuthStore();
   const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'inventory' | 'non-inventory'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
 
   // Fetch salons
@@ -97,127 +97,107 @@ function InventoryContent() {
     // For admins, don't auto-select - let them choose "All Salons"
   }, [salons, selectedSalonId, salonsLoading, canViewAll]);
 
-  // Fetch products - only for selected salon or all owned salons (or all salons for admins)
-  const productsQueryKey = [
-    'inventory-products',
-    selectedSalonId || (canViewAll ? 'all' : 'all-owned'),
-  ];
-  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: productsQueryKey,
-    queryFn: async (): Promise<Product[]> => {
-      // Early return if no user
+  // Fetch services - only for selected salon or all owned salons (or all salons for admins)
+  const servicesQueryKey = ['services', selectedSalonId || (canViewAll ? 'all' : 'all-owned')];
+  const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
+    queryKey: servicesQueryKey,
+    queryFn: async (): Promise<Service[]> => {
       if (!user) {
-        console.log('[Products Query] No user, returning empty array');
+        console.log('[Services Query] No user, returning empty array');
         return [];
       }
-
       try {
         // If salon is selected, filter by that salon
-        // For admins: if no salon selected, get all products
-        // For salon owners: if no salon selected, backend returns all their salons' products
+        // For admins: if no salon selected, get all services
+        // For salon owners: if no salon selected, backend returns all their salons' services
         const params = selectedSalonId ? { salonId: selectedSalonId } : {};
         console.log(
-          '[Products Query] Fetching products with params:',
+          '[Services Query] Fetching services with params:',
           params,
           'User role:',
           user.role,
           'Can view all:',
           canViewAll
         );
-        const response = await api.get('/inventory/products', { params });
-        console.log('[Products Query] Response:', response.data);
-
-        // Handle different response structures
-        let data: Product[] = [];
-
-        if (response?.data) {
-          // Check if response.data is an array directly
-          if (Array.isArray(response.data)) {
-            data = response.data;
-          }
-          // Check if response.data.data exists and is an array
-          else if (response.data.data && Array.isArray(response.data.data)) {
-            data = response.data.data;
-          }
-          // If response.data is an object but not an array, return empty
-          else {
-            console.warn('[Products Query] Unexpected response structure:', response.data);
-            data = [];
-          }
-        }
-
+        const response = await api.get('/services', { params });
+        const data = response.data?.data || response.data;
+        // Ensure we always return an array
+        const servicesArray = Array.isArray(data) ? data : [];
         console.log(
-          '[Products Query] Returning products:',
-          data.length,
+          '[Services Query] Fetched services:',
+          servicesArray.length,
           'for salon:',
-          selectedSalonId || 'all'
+          selectedSalonId || (canViewAll ? 'all salons' : 'all owned'),
+          'Response:',
+          response.data
         );
-        // Always return an array, never undefined or null
-        return Array.isArray(data) ? data : [];
-      } catch (error: any) {
-        console.error('[Products Query] Error fetching products:', error);
+        return servicesArray;
+      } catch (error) {
+        console.error('[Services Query] Error fetching services:', error);
         // Always return an array, never undefined
         return [];
       }
     },
     enabled: !!user && (salons.length > 0 || canViewAll) && !salonsLoading, // Wait for salons to load (or allow admins to view all)
     // Don't use initialData - let it fetch from server
-    // Retry configuration
-    retry: 1,
-    retryDelay: 1000,
+    // Refetch on window focus to catch new services
+    refetchOnWindowFocus: true,
     // Keep data in cache for 5 minutes
     staleTime: 5 * 60 * 1000,
     // Cache data for 10 minutes
     gcTime: 10 * 60 * 1000,
-    // Refetch on window focus
-    refetchOnWindowFocus: true,
   });
 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/inventory/products/${id}`);
+      await api.delete(`/services/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productsQueryKey });
-      // Also invalidate general products query for other pages
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      console.log('[Delete Service] Service deleted, invalidating queries for:', servicesQueryKey);
+      // Invalidate all service queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      // Also invalidate the specific query for the selected salon
+      queryClient.invalidateQueries({ queryKey: servicesQueryKey });
+      // Force refetch
+      queryClient.refetchQueries({ queryKey: servicesQueryKey });
     },
   });
 
-  // Filter products
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+  // Filter services
+  const filteredServices = useMemo(() => {
+    return services.filter((service) => {
       const matchesSearch =
         searchQuery === '' ||
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesType =
-        typeFilter === 'all' ||
-        (typeFilter === 'inventory' && product.isInventoryItem) ||
-        (typeFilter === 'non-inventory' && !product.isInventoryItem);
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && service.isActive) ||
+        (statusFilter === 'inactive' && !service.isActive);
 
-      return matchesSearch && matchesType;
+      return matchesSearch && matchesStatus;
     });
-  }, [products, searchQuery, typeFilter]);
+  }, [services, searchQuery, statusFilter]);
 
   // Stats
   const stats = useMemo(() => {
-    const total = products.length;
-    const inventoryItems = products.filter((p) => p.isInventoryItem).length;
-    const nonInventoryItems = products.filter((p) => !p.isInventoryItem).length;
+    const total = services.length;
+    const active = services.filter((s) => s.isActive).length;
+    const inactive = services.filter((s) => !s.isActive).length;
     const avgPrice =
-      products.length > 0
-        ? products.reduce((sum, p) => sum + (p.unitPrice || 0), 0) / products.length
+      services.length > 0 ? services.reduce((sum, s) => sum + s.basePrice, 0) / services.length : 0;
+    const avgDuration =
+      services.length > 0
+        ? services.reduce((sum, s) => sum + s.durationMinutes, 0) / services.length
         : 0;
 
-    return { total, inventoryItems, nonInventoryItems, avgPrice };
-  }, [products]);
+    return { total, active, inactive, avgPrice, avgDuration };
+  }, [services]);
 
-  if (productsLoading || salonsLoading) {
+  if (servicesLoading || salonsLoading) {
     return (
       <>
         <div className="mb-8">
@@ -250,9 +230,9 @@ function InventoryContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8">
           <EmptyState
-            icon={<Package className="w-16 h-16" />}
+            icon={<Scissors className="w-16 h-16" />}
             title="No Salons Found"
-            description="You need to create a salon before you can add products. Please create a salon first."
+            description="You need to create a salon before you can add services. Please create a salon first."
             action={
               <Button onClick={() => (window.location.href = '/salons')}>Go to Salons</Button>
             }
@@ -269,40 +249,29 @@ function InventoryContent() {
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2">
-              Inventory & Products
+              Services
             </h1>
             <p className="text-text-light/60 dark:text-text-dark/60">
-              Manage products, inventory items, and stock
+              Manage salon services and offerings
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => {
-                window.location.href = '/inventory/stock';
-              }}
-              variant="outline"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              Stock Management
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingProduct(null);
-                setShowModal(true);
-              }}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add Product</span>
-            </Button>
-          </div>
+          <Button
+            onClick={() => {
+              setEditingService(null);
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Service</span>
+          </Button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
             <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Total Products
+              Total Services
             </div>
             <div className="text-2xl font-bold text-text-light dark:text-text-dark">
               {stats.total}
@@ -310,22 +279,22 @@ function InventoryContent() {
           </div>
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
             <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Inventory Items
+              Active Services
             </div>
-            <div className="text-2xl font-bold text-primary">{stats.inventoryItems}</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Non-Inventory
-            </div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {stats.nonInventoryItems}
-            </div>
+            <div className="text-2xl font-bold text-success">{stats.active}</div>
           </div>
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
             <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Avg. Price</div>
             <div className="text-2xl font-bold text-text-light dark:text-text-dark">
               RWF {Math.round(stats.avgPrice).toLocaleString()}
+            </div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+              Avg. Duration
+            </div>
+            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
+              {Math.round(stats.avgDuration)} min
             </div>
           </div>
         </div>
@@ -352,7 +321,7 @@ function InventoryContent() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
             <input
               type="text"
-              placeholder="Search products by name, SKU, or description..."
+              placeholder="Search services by name, code, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
@@ -361,41 +330,39 @@ function InventoryContent() {
           <div className="relative min-w-[140px]">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
             <select
-              value={typeFilter}
-              onChange={(e) =>
-                setTypeFilter(e.target.value as 'all' | 'inventory' | 'non-inventory')
-              }
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
               className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
             >
-              <option value="all">All Types</option>
-              <option value="inventory">Inventory Items</option>
-              <option value="non-inventory">Non-Inventory</option>
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Products List */}
-      {filteredProducts.length === 0 ? (
+      {/* Services List */}
+      {filteredServices.length === 0 ? (
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
           <EmptyState
-            icon={<Package className="w-16 h-16" />}
-            title={products.length === 0 ? 'No products yet' : 'No products found'}
+            icon={<Scissors className="w-16 h-16" />}
+            title={services.length === 0 ? 'No services yet' : 'No services found'}
             description={
-              products.length === 0
-                ? 'Add your first product to get started. Products can be sold and tracked in inventory.'
+              services.length === 0
+                ? 'Add your first service to get started. Services can be booked as appointments and added to sales.'
                 : 'Try adjusting your search or filter criteria.'
             }
             action={
-              products.length === 0 ? (
+              services.length === 0 ? (
                 <Button
                   onClick={() => {
-                    setEditingProduct(null);
+                    setEditingService(null);
                     setShowModal(true);
                   }}
                 >
                   <Plus className="w-5 h-5" />
-                  Add First Product
+                  Add First Service
                 </Button>
               ) : null
             }
@@ -408,19 +375,19 @@ function InventoryContent() {
               <thead className="bg-surface-accent-light dark:bg-surface-accent-dark">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    SKU
+                    Code
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Product Name
+                    Service Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Unit Price
+                    Duration
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Tax Rate
+                    Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Type
+                    Status
                   </th>
                   {(salons.length > 1 || canViewAll) && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
@@ -433,59 +400,55 @@ function InventoryContent() {
                 </tr>
               </thead>
               <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
-                {filteredProducts.map((product) => (
+                {filteredServices.map((service) => (
                   <tr
-                    key={product.id}
+                    key={service.id}
                     className="hover:bg-surface-accent-light dark:hover:bg-surface-accent-dark transition"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-light dark:text-text-dark">
-                      {product.sku || '-'}
+                      {service.code || '-'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-text-light dark:text-text-dark">
-                        {product.name}
+                        {service.name}
                       </div>
-                      {product.description && (
+                      {service.description && (
                         <div className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                          {product.description}
+                          {service.description}
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                        <Clock className="w-4 h-4" />
+                        {service.durationMinutes} min
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2 text-sm font-medium text-text-light dark:text-text-dark">
                         <DollarSign className="w-4 h-4" />
-                        {product.unitPrice ? product.unitPrice.toLocaleString() : '-'} RWF
+                        {service.basePrice.toLocaleString()} RWF
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
-                        <Percent className="w-4 h-4" />
-                        {product.taxRate ? `${product.taxRate}%` : '0%'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        variant={product.isInventoryItem ? 'primary' : 'default'}
-                        size="sm"
-                        dot
-                      >
-                        {product.isInventoryItem ? 'Inventory' : 'Non-Inventory'}
+                      <Badge variant={service.isActive ? 'success' : 'default'} size="sm" dot>
+                        {service.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
                     {(salons.length > 1 || canViewAll) && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light/60 dark:text-text-dark/60">
-                        {product.salon?.name || '-'}
+                        {service.salon?.name || '-'}
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-3">
                         <button
                           onClick={() => {
-                            setEditingProduct(product);
+                            setEditingService(service);
                             setShowModal(true);
                           }}
                           className="text-primary hover:text-primary/80 transition"
-                          title="Edit product"
+                          title="Edit service"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
@@ -493,14 +456,14 @@ function InventoryContent() {
                           onClick={() => {
                             if (
                               confirm(
-                                'Are you sure you want to delete this product? This action cannot be undone.'
+                                'Are you sure you want to delete this service? This action cannot be undone.'
                               )
                             ) {
-                              deleteMutation.mutate(product.id);
+                              deleteMutation.mutate(service.id);
                             }
                           }}
                           className="text-danger hover:text-danger/80 transition"
-                          title="Delete product"
+                          title="Delete service"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -514,22 +477,28 @@ function InventoryContent() {
         </div>
       )}
 
-      {/* Product Modal */}
+      {/* Service Modal */}
       {showModal && (
-        <ProductModal
-          product={editingProduct}
+        <ServiceModal
+          service={editingService}
           salons={salons}
           onClose={() => {
             setShowModal(false);
-            setEditingProduct(null);
+            setEditingService(null);
           }}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: productsQueryKey });
-            // Also invalidate general products query for other pages
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-            queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+            console.log(
+              '[Service Modal] Service saved, invalidating queries for:',
+              servicesQueryKey
+            );
+            // Invalidate all service queries to refresh the list
+            queryClient.invalidateQueries({ queryKey: ['services'] });
+            // Also invalidate the specific query for the selected salon
+            queryClient.invalidateQueries({ queryKey: servicesQueryKey });
+            // Force refetch
+            queryClient.refetchQueries({ queryKey: servicesQueryKey });
             setShowModal(false);
-            setEditingProduct(null);
+            setEditingService(null);
           }}
         />
       )}
@@ -537,42 +506,49 @@ function InventoryContent() {
   );
 }
 
-function ProductModal({
-  product,
+function ServiceModal({
+  service,
   salons,
   onClose,
   onSuccess,
 }: {
-  product?: Product | null;
+  service?: Service | null;
   salons: Salon[];
   onSuccess: () => void;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState({
-    salonId: product?.salonId || salons[0]?.id || '',
-    name: product?.name || '',
-    sku: product?.sku || '',
-    description: product?.description || '',
-    unitPrice: product?.unitPrice || 0,
-    taxRate: product?.taxRate || 0,
-    isInventoryItem: product?.isInventoryItem ?? true,
+    salonId: service?.salonId || salons[0]?.id || '',
+    code: service?.code || '',
+    name: service?.name || '',
+    description: service?.description || '',
+    durationMinutes: service?.durationMinutes || 30,
+    basePrice: service?.basePrice || 0,
+    isActive: service?.isActive ?? true,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      if (product) {
-        return api.patch(`/inventory/products/${product.id}`, data);
+      console.log('[Service Modal] Saving service:', data);
+      if (service) {
+        const response = await api.patch(`/services/${service.id}`, data);
+        console.log('[Service Modal] Service updated:', response.data);
+        return response;
       } else {
-        return api.post('/inventory/products', data);
+        const response = await api.post('/services', data);
+        console.log('[Service Modal] Service created:', response.data);
+        return response;
       }
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('[Service Modal] Service saved successfully:', response?.data);
       onSuccess();
     },
     onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to save product');
+      console.error('[Service Modal] Error saving service:', err);
+      setError(err.response?.data?.message || 'Failed to save service');
       setLoading(false);
     },
   });
@@ -589,17 +565,17 @@ function ProductModal({
       return;
     }
     if (!formData.name.trim()) {
-      setError('Product name is required');
+      setError('Service name is required');
       setLoading(false);
       return;
     }
-    if (formData.unitPrice < 0) {
-      setError('Unit price must be greater than or equal to 0');
+    if (formData.basePrice < 0) {
+      setError('Base price must be greater than or equal to 0');
       setLoading(false);
       return;
     }
-    if (formData.taxRate < 0 || formData.taxRate > 100) {
-      setError('Tax rate must be between 0 and 100');
+    if (formData.durationMinutes < 1) {
+      setError('Duration must be at least 1 minute');
       setLoading(false);
       return;
     }
@@ -615,7 +591,7 @@ function ProductModal({
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {product ? 'Edit Product' : 'Add New Product'}
+              {service ? 'Edit Service' : 'Add New Service'}
             </h2>
             <button
               onClick={onClose}
@@ -662,27 +638,27 @@ function ProductModal({
 
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                Product Name *
+                Service Name *
               </label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Professional Shampoo"
+                placeholder="e.g., Haircut - Men"
                 className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                SKU (Stock Keeping Unit)
+                Service Code
               </label>
               <input
                 type="text"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="e.g., SHP-001 (optional)"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                placeholder="e.g., SRV-HC-M (optional)"
                 className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
               />
             </div>
@@ -695,7 +671,7 @@ function ProductModal({
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                placeholder="Product description (optional)"
+                placeholder="Service description (optional)"
                 className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
               />
             </div>
@@ -703,42 +679,40 @@ function ProductModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Unit Price (RWF)
+                  Duration (minutes) *
                 </label>
                 <input
                   type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.unitPrice}
+                  required
+                  min="1"
+                  value={formData.durationMinutes}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      unitPrice: parseFloat(e.target.value) || 0,
+                      durationMinutes: parseInt(e.target.value) || 30,
                     })
                   }
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Tax Rate (%)
+                  Base Price (RWF) *
                 </label>
                 <input
                   type="number"
+                  required
                   min="0"
-                  max="100"
                   step="0.01"
-                  value={formData.taxRate}
+                  value={formData.basePrice}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      taxRate: parseFloat(e.target.value) || 0,
+                      basePrice: parseFloat(e.target.value) || 0,
                     })
                   }
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                 />
               </div>
             </div>
@@ -747,12 +721,12 @@ function ProductModal({
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.isInventoryItem}
-                  onChange={(e) => setFormData({ ...formData, isInventoryItem: e.target.checked })}
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
                 />
                 <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                  Track inventory for this item (stock levels will be managed)
+                  Service is active (available for booking and sales)
                 </span>
               </label>
             </div>
@@ -762,7 +736,7 @@ function ProductModal({
                 Cancel
               </Button>
               <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Saving...' : product ? 'Update Product' : 'Create Product'}
+                {loading ? 'Saving...' : service ? 'Update Service' : 'Create Service'}
               </Button>
             </div>
           </form>

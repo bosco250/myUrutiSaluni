@@ -1,7 +1,7 @@
 /**
- * Script to create a super admin user
- * Run with: npm run ts-node scripts/create-admin.ts
- * Or: npx ts-node scripts/create-admin.ts
+ * Script to create an association admin user
+ * Run with: npm run ts-node scripts/create-association-admin.ts
+ * Or: npx ts-node scripts/create-association-admin.ts
  */
 
 import { DataSource } from 'typeorm';
@@ -13,25 +13,25 @@ import { v4 as uuidv4 } from 'uuid';
 
 config();
 
-// Admin credentials
-const ADMIN_EMAIL = 'admin@supper.com';
+// Association Admin credentials - EDIT THESE BEFORE RUNNING
+const ADMIN_EMAIL = 'admin@gmail.com';
 const ADMIN_PASSWORD = '123456';
-const ADMIN_NAME = 'Super Admin';
+const ADMIN_NAME = 'Association Admin';
 const ADMIN_PHONE = '+250788123456';
-const ADMIN_ROLE = UserRole.SUPER_ADMIN;
+const ADMIN_ROLE = UserRole.ASSOCIATION_ADMIN;
 
-async function createAdmin() {
+async function createAssociationAdmin() {
   const configService = new ConfigService();
   const dbType = configService.get('DB_TYPE', 'postgres');
-  
+
   // Create DataSource with the same config as the app
   const dataSource = new DataSource(
     dbType === 'sqlite'
       ? {
-    type: 'better-sqlite3',
-    database: './database/salon_association.db',
-    entities: [User],
-    synchronize: false, // Don't sync, just connect
+          type: 'better-sqlite3',
+          database: './database/salon_association.db',
+          entities: [User],
+          synchronize: false, // Don't sync, just connect
         }
       : {
           type: 'postgres',
@@ -42,8 +42,11 @@ async function createAdmin() {
           database: configService.get('DB_DATABASE', 'salon_association'),
           entities: [User],
           synchronize: false,
-          ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
-        }
+          ssl:
+            configService.get('DB_SSL') === 'true'
+              ? { rejectUnauthorized: false }
+              : false,
+        },
   );
 
   try {
@@ -58,10 +61,12 @@ async function createAdmin() {
     });
 
     if (existingAdmin) {
-      console.log('\n⚠️  Admin user already exists!');
+      console.log('\n⚠️  Association Admin user already exists!');
       console.log('Email:', existingAdmin.email);
       console.log('Role:', existingAdmin.role);
-      console.log('\nIf you want to reset the password, delete the user first or update it manually.');
+      console.log(
+        '\nIf you want to reset the password, delete the user first or update it manually.',
+      );
       await dataSource.destroy();
       return;
     }
@@ -69,7 +74,7 @@ async function createAdmin() {
     // Hash password
     const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-    // Create admin user
+    // Create association admin user
     const adminUser = userRepository.create({
       id: uuidv4(),
       email: ADMIN_EMAIL,
@@ -83,7 +88,7 @@ async function createAdmin() {
 
     await userRepository.save(adminUser);
 
-    console.log('\n✅ Super Admin user created successfully!');
+    console.log('\n✅ Association Admin user created successfully!');
     console.log('\n📋 Credentials:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('Email:    ', ADMIN_EMAIL);
@@ -95,19 +100,18 @@ async function createAdmin() {
 
     await dataSource.destroy();
   } catch (error) {
-    console.error('❌ Error creating admin:', error);
+    console.error('❌ Error creating association admin:', error);
     await dataSource.destroy();
     process.exit(1);
   }
 }
 
 // Run the script
-createAdmin()
+createAssociationAdmin()
   .then(() => {
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Failed to create admin:', error);
+    console.error('Failed to create association admin:', error);
     process.exit(1);
   });
-

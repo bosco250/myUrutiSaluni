@@ -9,17 +9,20 @@ import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
 
 // Dynamically import LocationPicker to avoid SSR issues
-const LocationPicker = dynamic(() => import('@/components/maps/LocationPicker'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-[400px] bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl flex items-center justify-center">
-      <div className="flex flex-col items-center gap-2">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading map...</p>
+const LocationPicker = dynamic(
+  () => import('@/components/maps/LocationPicker'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[400px] bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading map...</p>
+        </div>
       </div>
-    </div>
-  ),
-});
+    ),
+  }
+);
 
 interface Salon {
   id?: string;
