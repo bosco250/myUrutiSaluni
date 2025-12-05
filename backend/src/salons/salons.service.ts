@@ -149,5 +149,16 @@ export class SalonsService {
       relations: ['user', 'salon'],
     });
   }
+
+  async findEmployeeByUserId(userId: string, salonId?: string): Promise<SalonEmployee | null> {
+    const where: any = { userId };
+    if (salonId) {
+      where.salonId = salonId;
+    }
+    return this.salonEmployeesRepository.findOne({
+      where,
+      relations: ['user', 'salon'],
+    });
+  }
 }
 

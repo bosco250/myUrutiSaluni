@@ -16,7 +16,8 @@ interface Salon {
   phone?: string;
   email?: string;
   description?: string;
-  isActive: boolean;
+  status?: string; // Backend uses 'status' field (default: 'active')
+  isActive?: boolean; // Frontend compatibility
   latitude?: number;
   longitude?: number;
 }
@@ -40,8 +41,21 @@ function BrowseSalonsContent() {
   } = useQuery<Salon[]>({
     queryKey: ['salons-browse'],
     queryFn: async () => {
-      const response = await api.get('/salons');
-      return response.data || [];
+      try {
+        const response = await api.get('/salons');
+        // Handle different response structures: { data: [...] } or [...]
+        const salonsData = response.data?.data || response.data;
+        const salonsArray = Array.isArray(salonsData) ? salonsData : [];
+
+        // Map status to isActive for compatibility
+        return salonsArray.map((salon: any) => ({
+          ...salon,
+          isActive: salon.status === 'active' || salon.isActive === true,
+        }));
+      } catch (error) {
+        console.error('Error fetching salons:', error);
+        return [];
+      }
     },
     retry: 1,
     staleTime: 5 * 60 * 1000, // 5 minutes - salons don't change frequently
@@ -51,7 +65,11 @@ function BrowseSalonsContent() {
   const filteredSalons = useMemo(() => {
     if (!salons?.length) return [];
 
-    const activeSalons = salons.filter((salon) => salon.isActive);
+    // Filter to show only active salons (status === 'active' or isActive === true)
+    const activeSalons = salons.filter(
+      (salon) => salon.status === 'active' || salon.isActive === true
+    );
+
     if (!searchQuery?.trim()) return activeSalons;
 
     const query = searchQuery.toLowerCase().trim();

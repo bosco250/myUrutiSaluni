@@ -1,4 +1,4 @@
-import { IsUUID, IsDateString, IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsUUID, IsDateString, IsOptional, IsString, IsEnum, IsObject } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { AppointmentStatus } from '../entities/appointment.entity';
 
@@ -34,5 +34,10 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({ required: false, description: 'Additional metadata (e.g., preferredEmployeeId)' })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
 }
 

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useMemo } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
@@ -29,6 +30,8 @@ import {
   XCircle,
   BarChart3,
   Activity,
+  User,
+  Star,
 } from 'lucide-react';
 import { format, isToday, isTomorrow, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import {
@@ -64,6 +67,11 @@ interface Appointment {
   id: string;
   scheduledStart: string;
   status: string;
+  metadata?: {
+    preferredEmployeeId?: string;
+    preferredEmployeeName?: string;
+    [key: string]: any;
+  };
   customer?: {
     id: string;
     fullName?: string;
@@ -73,7 +81,7 @@ interface Appointment {
     id: string;
     name: string;
   };
-  salon: {
+  salon?: {
     id: string;
     name: string;
   };
@@ -139,6 +147,42 @@ export default function SalonOwnerDashboard() {
     },
   });
 
+  // Get employee records for current user (if they are an employee)
+  const { data: employeeRecords = [] } = useQuery({
+    queryKey: ['my-employee-records-dashboard', user?.id],
+    queryFn: async () => {
+      if (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') {
+        return [];
+      }
+      try {
+        // Get all salons user works for
+        const salonsResponse = await api.get('/salons');
+        const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
+        const salonIds = allSalons.map((s: any) => s.id);
+        
+        // Get employee records for each salon
+        const records = [];
+        for (const salonId of salonIds) {
+          try {
+            const empResponse = await api.get(`/salons/${salonId}/employees`);
+            const employees = empResponse.data?.data || empResponse.data || [];
+            const myEmployee = employees.find((emp: any) => emp.userId === user?.id);
+            if (myEmployee) {
+              records.push(myEmployee);
+            }
+          } catch (error) {
+            // Skip if can't access employees for this salon
+            continue;
+          }
+        }
+        return records;
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: !!user && (user.role === 'salon_employee' || user.role === 'SALON_EMPLOYEE'),
+  });
+
   // Fetch appointments
   const { data: appointments = [], isLoading: appointmentsLoading } = useQuery<Appointment[]>({
     queryKey: ['appointments', user?.id],
@@ -151,12 +195,36 @@ export default function SalonOwnerDashboard() {
         return allAppointments.filter((apt: Appointment) => {
           const aptDate = parseISO(apt.scheduledStart);
           return aptDate >= now;
-        }).slice(0, 5); // Get next 5
+        }).slice(0, 10); // Get next 10 to show more appointments
       } catch (error) {
         return [];
       }
     },
   });
+
+  // Separate appointments into "My Appointments" and "Other Appointments" for employees
+  const { myAppointments, otherAppointments } = useMemo(() => {
+    if (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') {
+      return { myAppointments: [], otherAppointments: appointments };
+    }
+    
+    const myAppts: Appointment[] = [];
+    const otherAppts: Appointment[] = [];
+    
+    appointments.forEach((apt) => {
+      const isMyAppointment = employeeRecords.some(
+        (emp: any) => emp.id === apt.metadata?.preferredEmployeeId
+      );
+      
+      if (isMyAppointment) {
+        myAppts.push(apt);
+      } else {
+        otherAppts.push(apt);
+      }
+    });
+    
+    return { myAppointments: myAppts, otherAppointments: otherAppts };
+  }, [appointments, employeeRecords, user?.role]);
 
   // Fetch recent sales
   const { data: recentSales = [], isLoading: salesLoading } = useQuery<Sale[]>({
@@ -638,9 +706,15 @@ export default function SalonOwnerDashboard() {
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Upcoming Appointments</h2>
+                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+                  {user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE' 
+                    ? 'My Appointments' 
+                    : 'Upcoming Appointments'}
+                </h2>
                 <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Next {appointments.length} appointments
+                  {user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE'
+                    ? `${myAppointments.length} assigned to you • ${otherAppointments.length} other appointments`
+                    : `Next ${appointments.length} appointments`}
                 </p>
               </div>
               <Link href="/appointments">
@@ -669,48 +743,165 @@ export default function SalonOwnerDashboard() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {appointments.map((appointment) => (
-                  <Link
-                    key={appointment.id}
-                    href={`/appointments/${appointment.id}`}
-                    className="block p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Calendar className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-text-light dark:text-text-dark truncate">
-                              {appointment.customer?.fullName || appointment.customer?.name || 'Walk-in Customer'}
-                            </p>
-                            <p className="text-sm text-text-light/60 dark:text-text-dark/60 truncate">
-                              {appointment.service?.name || 'Service'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 ml-[52px]">
-                          <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
-                            <Clock className="w-4 h-4" />
-                            <span>{formatAppointmentDate(appointment.scheduledStart)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
-                            <Building2 className="w-4 h-4" />
-                            <span className="truncate">{appointment.salon?.name || 'Salon'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}>
-                          {appointment.status || 'Scheduled'}
-                        </span>
-                        <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
-                      </div>
+              <div className="space-y-4">
+                {/* Show "My Appointments" section for employees */}
+                {(user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') && myAppointments.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-semibold text-primary">Assigned to Me</h3>
+                      <div className="flex-1 h-px bg-primary/20" />
                     </div>
-                  </Link>
-                ))}
+                    <div className="space-y-3">
+                      {myAppointments.slice(0, 5).map((appointment) => {
+                        const isMyAppointment = true;
+                        return (
+                          <Link
+                            key={appointment.id}
+                            href={`/appointments/${appointment.id}`}
+                            className={`block p-4 rounded-xl hover:shadow-md transition-all group ${
+                              isMyAppointment
+                                ? 'bg-primary/10 dark:bg-primary/20 border-2 border-primary/50 dark:border-primary/50'
+                                : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    isMyAppointment
+                                      ? 'bg-gradient-to-br from-primary to-primary/80'
+                                      : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                                  }`}>
+                                    <Calendar className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-semibold text-text-light dark:text-text-dark truncate">
+                                        {appointment.customer?.fullName || appointment.customer?.name || 'Walk-in Customer'}
+                                      </p>
+                                      {isMyAppointment && (
+                                        <span className="px-2 py-0.5 bg-primary text-white text-xs font-medium rounded-full flex items-center gap-1">
+                                          <Star className="w-3 h-3" />
+                                          Assigned to Me
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 truncate">
+                                      {appointment.service?.name || 'Service'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4 ml-[52px] flex-wrap">
+                                  <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
+                                    <Clock className="w-4 h-4" />
+                                    <span>{formatAppointmentDate(appointment.scheduledStart)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
+                                    <Building2 className="w-4 h-4" />
+                                    <span className="truncate">{appointment.salon?.name || 'Salon'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}>
+                                  {appointment.status || 'Scheduled'}
+                                </span>
+                                <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show "Other Appointments" section for employees, or all appointments for owners */}
+                {((user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') && otherAppointments.length > 0) || 
+                 (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') ? (
+                  <div>
+                    {(user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <Calendar className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
+                        <h3 className="text-sm font-semibold text-text-light/60 dark:text-text-dark/60">Other Appointments</h3>
+                        <div className="flex-1 h-px bg-border-light dark:bg-border-dark" />
+                      </div>
+                    )}
+                    <div className="space-y-3">
+                      {((user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') ? otherAppointments : appointments)
+                        .slice(0, user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE' ? 5 : 5)
+                        .map((appointment) => {
+                          const isMyAppointment = employeeRecords.some(
+                            (emp: any) => emp.id === appointment.metadata?.preferredEmployeeId
+                          );
+                          return (
+                            <Link
+                              key={appointment.id}
+                              href={`/appointments/${appointment.id}`}
+                              className={`block p-4 rounded-xl hover:shadow-md transition-all group ${
+                                isMyAppointment
+                                  ? 'bg-primary/10 dark:bg-primary/20 border-2 border-primary/50 dark:border-primary/50'
+                                  : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:border-primary/50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                      isMyAppointment
+                                        ? 'bg-gradient-to-br from-primary to-primary/80'
+                                        : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                                    }`}>
+                                      <Calendar className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-text-light dark:text-text-dark truncate">
+                                          {appointment.customer?.fullName || appointment.customer?.name || 'Walk-in Customer'}
+                                        </p>
+                                        {isMyAppointment && (
+                                          <span className="px-2 py-0.5 bg-primary text-white text-xs font-medium rounded-full flex items-center gap-1">
+                                            <Star className="w-3 h-3" />
+                                            Assigned to Me
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 truncate">
+                                        {appointment.service?.name || 'Service'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4 ml-[52px] flex-wrap">
+                                    <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
+                                      <Clock className="w-4 h-4" />
+                                      <span>{formatAppointmentDate(appointment.scheduledStart)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
+                                      <Building2 className="w-4 h-4" />
+                                      <span className="truncate">{appointment.salon?.name || 'Salon'}</span>
+                                    </div>
+                                    {appointment.metadata?.preferredEmployeeName && !isMyAppointment && (
+                                      <div className="flex items-center gap-1.5 text-sm text-primary">
+                                        <User className="w-4 h-4" />
+                                        <span className="truncate">{appointment.metadata.preferredEmployeeName}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 ml-4">
+                                  <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}>
+                                    {appointment.status || 'Scheduled'}
+                                  </span>
+                                  <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>

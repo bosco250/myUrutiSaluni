@@ -5,9 +5,20 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import { 
-  Building2, MapPin, Phone, Mail, Clock, Scissors, DollarSign, 
-  Calendar, ArrowLeft, CheckCircle, X, Loader2 
+import {
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Scissors,
+  DollarSign,
+  Calendar,
+  ArrowLeft,
+  CheckCircle,
+  X,
+  Loader2,
+  User,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -21,17 +32,32 @@ interface Salon {
   phone?: string;
   email?: string;
   description?: string;
-  isActive: boolean;
+  status?: string; // Backend uses 'status' field (default: 'active')
+  isActive?: boolean; // Frontend compatibility
 }
 
 interface Service {
   id: string;
   name: string;
   description?: string;
-  price: number;
-  duration: number; // in minutes
+  basePrice: number; // Backend uses basePrice
+  durationMinutes: number; // Backend uses durationMinutes
   isActive: boolean;
   salonId: string;
+}
+
+interface SalonEmployee {
+  id: string;
+  userId: string;
+  salonId: string;
+  roleTitle?: string;
+  isActive?: boolean;
+  user?: {
+    id: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 export default function SalonDetailsPage() {
@@ -56,7 +82,9 @@ function SalonDetailsContent() {
     queryKey: ['salon', salonId],
     queryFn: async () => {
       const response = await api.get(`/salons/${salonId}`);
-      return response.data;
+      // Handle different response structures: { data: {...} } or {...}
+      const salonData = response.data?.data || response.data;
+      return salonData;
     },
     enabled: !!salonId,
   });
@@ -65,8 +93,16 @@ function SalonDetailsContent() {
   const { data: services, isLoading: isLoadingServices } = useQuery<Service[]>({
     queryKey: ['salon-services', salonId],
     queryFn: async () => {
-      const response = await api.get(`/services?salonId=${salonId}`);
-      return response.data || [];
+      try {
+        const response = await api.get(`/services?salonId=${salonId}`);
+        // Handle different response structures: { data: [...] } or [...]
+        const servicesData = response.data?.data || response.data;
+        const servicesArray = Array.isArray(servicesData) ? servicesData : [];
+        return servicesArray;
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        return [];
+      }
     },
     enabled: !!salonId,
   });
@@ -81,9 +117,54 @@ function SalonDetailsContent() {
     enabled: !!authUser?.id,
   });
 
+  // Get salon employees (for customer to select preferred employee)
+  const {
+    data: employees = [],
+    isLoading: isLoadingEmployees,
+    error: employeesError,
+  } = useQuery<SalonEmployee[]>({
+    queryKey: ['salon-employees-browse', salonId],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/salons/${salonId}/employees`);
+        // Handle different response structures: { data: [...] } or [...]
+        const employeesData = response.data?.data || response.data;
+        const employeesArray = Array.isArray(employeesData) ? employeesData : [];
+        // Filter to only active employees and ensure they have user data
+        return employeesArray.filter(
+          (emp: SalonEmployee) => emp.isActive !== false && (emp.user || emp.roleTitle) // Must have at least name or role
+        );
+      } catch (error: any) {
+        // Log error but don't fail the page
+        console.error('Error fetching salon employees:', {
+          message: error?.response?.data?.message || error?.message,
+          status: error?.response?.status,
+        });
+        return [];
+      }
+    },
+    enabled: !!salonId,
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   // Booking mutation
   const bookingMutation = useMutation({
-    mutationFn: async (data: { serviceId: string; scheduledStart: string; scheduledEnd: string; notes?: string }) => {
+    mutationFn: async (data: {
+      serviceId: string;
+      scheduledStart: string;
+      scheduledEnd: string;
+      notes?: string;
+      preferredEmployeeId?: string;
+      preferredEmployeeName?: string;
+    }) => {
+      // Build metadata with employee preference
+      const metadata: any = {};
+      if (data.preferredEmployeeId) {
+        metadata.preferredEmployeeId = data.preferredEmployeeId;
+        metadata.preferredEmployeeName = data.preferredEmployeeName;
+      }
+
       return api.post('/appointments', {
         salonId,
         customerId: customer?.id,
@@ -92,6 +173,7 @@ function SalonDetailsContent() {
         scheduledEnd: data.scheduledEnd,
         status: 'booked',
         notes: data.notes,
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       });
     },
     onSuccess: () => {
@@ -121,7 +203,9 @@ function SalonDetailsContent() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="text-center py-12">
           <X className="w-16 h-16 mx-auto mb-4 text-text-light/40 dark:text-text-dark/40" />
-          <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">Salon Not Found</h3>
+          <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
+            Salon Not Found
+          </h3>
           <Button onClick={() => router.push('/salons/browse')} variant="primary" className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Salons
@@ -131,14 +215,14 @@ function SalonDetailsContent() {
     );
   }
 
-  const activeServices = services?.filter(s => s.isActive) || [];
+  const activeServices = services?.filter((s) => s.isActive) || [];
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Back Button */}
       <Button
         onClick={() => router.push('/salons/browse')}
-        variant="ghost"
+        variant="outline"
         className="mb-6 flex items-center gap-2"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -149,7 +233,9 @@ function SalonDetailsContent() {
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-8 mb-8">
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
-            <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-4">{salon.name}</h1>
+            <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-4">
+              {salon.name}
+            </h1>
             {salon.description && (
               <p className="text-text-light/80 dark:text-text-dark/80 mb-6">{salon.description}</p>
             )}
@@ -180,8 +266,10 @@ function SalonDetailsContent() {
 
       {/* Services Section */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">Available Services</h2>
-        
+        <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">
+          Available Services
+        </h2>
+
         {isLoadingServices ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -203,8 +291,12 @@ function SalonDetailsContent() {
         ) : (
           <div className="text-center py-12 bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark">
             <Scissors className="w-16 h-16 mx-auto mb-4 text-text-light/40 dark:text-text-dark/40" />
-            <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">No Services Available</h3>
-            <p className="text-text-light/60 dark:text-text-dark/60">This salon hasn't added any services yet.</p>
+            <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
+              No Services Available
+            </h3>
+            <p className="text-text-light/60 dark:text-text-dark/60">
+              This salon hasn't added any services yet.
+            </p>
           </div>
         )}
       </div>
@@ -215,6 +307,9 @@ function SalonDetailsContent() {
           service={selectedService}
           salon={salon}
           customer={customer}
+          employees={employees}
+          isLoadingEmployees={isLoadingEmployees}
+          employeesError={employeesError}
           onClose={() => {
             setShowBookingModal(false);
             setSelectedService(null);
@@ -232,9 +327,13 @@ function ServiceCard({ service, onBook }: { service: Service; onBook: () => void
     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 hover:shadow-lg transition-all">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">{service.name}</h3>
+          <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
+            {service.name}
+          </h3>
           {service.description && (
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">{service.description}</p>
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+              {service.description}
+            </p>
           )}
         </div>
       </div>
@@ -243,18 +342,24 @@ function ServiceCard({ service, onBook }: { service: Service; onBook: () => void
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
-            <span className="text-sm text-text-light/80 dark:text-text-dark/80">{service.duration} min</span>
+            <span className="text-sm text-text-light/80 dark:text-text-dark/80">
+              {service.durationMinutes || 0} min
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
             <span className="text-sm font-bold text-text-light dark:text-text-dark">
-              RWF {service.price.toLocaleString()}
+              RWF {service.basePrice ? Number(service.basePrice).toLocaleString() : '0'}
             </span>
           </div>
         </div>
       </div>
 
-      <Button onClick={onBook} variant="primary" className="w-full flex items-center justify-center gap-2">
+      <Button
+        onClick={onBook}
+        variant="primary"
+        className="w-full flex items-center justify-center gap-2"
+      >
         <Calendar className="w-4 h-4" />
         Book Appointment
       </Button>
@@ -266,6 +371,9 @@ function BookingModal({
   service,
   salon,
   customer,
+  employees,
+  isLoadingEmployees,
+  employeesError,
   onClose,
   onBook,
   isLoading,
@@ -273,12 +381,23 @@ function BookingModal({
   service: Service;
   salon: Salon;
   customer: any;
+  employees: SalonEmployee[];
+  isLoadingEmployees?: boolean;
+  employeesError?: any;
   onClose: () => void;
-  onBook: (data: { serviceId: string; scheduledStart: string; scheduledEnd: string; notes?: string }) => void;
+  onBook: (data: {
+    serviceId: string;
+    scheduledStart: string;
+    scheduledEnd: string;
+    notes?: string;
+    preferredEmployeeId?: string;
+    preferredEmployeeName?: string;
+  }) => void;
   isLoading: boolean;
 }) {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -289,13 +408,38 @@ function BookingModal({
     }
 
     const scheduledStart = new Date(`${selectedDate}T${selectedTime}`);
-    const scheduledEnd = new Date(scheduledStart.getTime() + service.duration * 60000);
+    const durationMinutes = service.durationMinutes || 30; // Default to 30 minutes if not provided
+    const scheduledEnd = new Date(scheduledStart.getTime() + durationMinutes * 60000);
+
+    // Get selected employee details
+    let preferredEmployeeId: string | undefined;
+    let preferredEmployeeName: string | undefined;
+    let finalNotes = notes;
+
+    if (selectedEmployee) {
+      const selectedEmp = employees.find((emp) => emp.id === selectedEmployee);
+      if (selectedEmp) {
+        preferredEmployeeId = selectedEmp.id;
+        preferredEmployeeName =
+          selectedEmp.user?.fullName || selectedEmp.roleTitle || 'Selected employee';
+
+        // Also add to notes for visibility
+        const employeeNote = `Preferred Employee: ${preferredEmployeeName}`;
+        if (finalNotes) {
+          finalNotes = `${employeeNote}\n\n${finalNotes}`;
+        } else {
+          finalNotes = employeeNote;
+        }
+      }
+    }
 
     onBook({
       serviceId: service.id,
       scheduledStart: scheduledStart.toISOString(),
       scheduledEnd: scheduledEnd.toISOString(),
-      notes: notes || undefined,
+      notes: finalNotes || undefined,
+      preferredEmployeeId,
+      preferredEmployeeName,
     });
   };
 
@@ -315,7 +459,9 @@ function BookingModal({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Book Appointment</h2>
+          <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
+            Book Appointment
+          </h2>
           <button
             onClick={onClose}
             className="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark"
@@ -325,11 +471,15 @@ function BookingModal({
         </div>
 
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{service.name}</h3>
+          <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
+            {service.name}
+          </h3>
           <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">{salon.name}</p>
           <div className="flex items-center gap-4 text-sm text-text-light/80 dark:text-text-dark/80">
-            <span>Duration: {service.duration} min</span>
-            <span>Price: RWF {service.price.toLocaleString()}</span>
+            <span>Duration: {service.durationMinutes || 0} min</span>
+            <span>
+              Price: RWF {service.basePrice ? Number(service.basePrice).toLocaleString() : '0'}
+            </span>
           </div>
         </div>
 
@@ -369,6 +519,53 @@ function BookingModal({
 
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <User className="w-4 h-4 inline mr-1" />
+              Choose Your Preferred Employee (Optional)
+            </label>
+            {isLoadingEmployees ? (
+              <div className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-center">
+                <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                  Loading employees...
+                </span>
+              </div>
+            ) : employees.length > 0 ? (
+              <>
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">No preference - Any available employee</option>
+                  {employees.map((employee) => {
+                    const displayName = employee.user?.fullName || employee.roleTitle || 'Employee';
+                    const roleSuffix =
+                      employee.roleTitle && employee.user?.fullName
+                        ? ` - ${employee.roleTitle}`
+                        : '';
+                    return (
+                      <option key={employee.id} value={employee.id}>
+                        {displayName}
+                        {roleSuffix}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1.5">
+                  💡 Select your favorite stylist or leave blank for any available employee
+                </p>
+              </>
+            ) : (
+              <div className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light/60 dark:text-text-dark/60 text-sm">
+                {employeesError
+                  ? 'Unable to load employees. You can still book - the salon will assign a staff member.'
+                  : 'No employees available for selection. The salon will assign an available staff member.'}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Notes (Optional)
             </label>
             <textarea
@@ -389,7 +586,7 @@ function BookingModal({
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" onClick={onClose} variant="ghost" className="flex-1">
+            <Button type="button" onClick={onClose} variant="outline" className="flex-1">
               Cancel
             </Button>
             <Button type="submit" variant="primary" className="flex-1" disabled={isLoading}>
@@ -411,4 +608,3 @@ function BookingModal({
     </div>
   );
 }
-

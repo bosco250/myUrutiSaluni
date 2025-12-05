@@ -41,6 +41,11 @@ interface Appointment {
   scheduledEnd: string;
   status: string;
   notes?: string;
+  metadata?: {
+    preferredEmployeeId?: string;
+    preferredEmployeeName?: string;
+    [key: string]: any;
+  };
   customer?: {
     id?: string;
     fullName: string;
@@ -77,6 +82,42 @@ function AppointmentsContent() {
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [salonFilter, setSalonFilter] = useState<string>('all');
   const queryClient = useQueryClient();
+
+  // Get employee records for current user (if they are an employee)
+  const { data: employeeRecords = [] } = useQuery({
+    queryKey: ['my-employee-records', user?.id],
+    queryFn: async () => {
+      if (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') {
+        return [];
+      }
+      try {
+        // Get all salons user owns (which includes salons they work for as employee)
+        const salonsResponse = await api.get('/salons');
+        const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
+        const salonIds = allSalons.map((s: any) => s.id);
+        
+        // Get employee records for each salon
+        const records = [];
+        for (const salonId of salonIds) {
+          try {
+            const empResponse = await api.get(`/salons/${salonId}/employees`);
+            const employees = empResponse.data?.data || empResponse.data || [];
+            const myEmployee = employees.find((emp: any) => emp.userId === user?.id);
+            if (myEmployee) {
+              records.push(myEmployee);
+            }
+          } catch (error) {
+            // Skip if can't access employees for this salon
+            continue;
+          }
+        }
+        return records;
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: !!user && (user.role === 'salon_employee' || user.role === 'SALON_EMPLOYEE'),
+  });
 
   const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
     queryKey: ['appointments'],
@@ -396,21 +437,42 @@ function AppointmentsContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {dateAppointments.map((appointment) => {
                     const statusColors = getStatusColor(appointment.status);
+                    // Check if current user (employee) is the preferred employee for this appointment
+                    const isMyAppointment = employeeRecords.some(
+                      (emp: any) => emp.id === appointment.metadata?.preferredEmployeeId
+                    );
+                    const preferredEmployeeName = appointment.metadata?.preferredEmployeeName;
+                    
                     return (
                       <div
                         key={appointment.id}
-                        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 hover:shadow-lg transition-all group"
+                        className={`bg-surface-light dark:bg-surface-dark border rounded-xl p-5 hover:shadow-lg transition-all group ${
+                          isMyAppointment
+                            ? 'border-primary/50 bg-primary/5 dark:bg-primary/10'
+                            : 'border-border-light dark:border-border-dark'
+                        }`}
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                isMyAppointment
+                                  ? 'bg-gradient-to-br from-primary to-primary/80'
+                                  : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                              }`}>
                                 <Calendar className="w-5 h-5 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-text-light dark:text-text-dark truncate">
-                                  {appointment.service?.name || 'Service'}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-text-light dark:text-text-dark truncate">
+                                    {appointment.service?.name || 'Service'}
+                                  </p>
+                                  {isMyAppointment && (
+                                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full border border-primary/30">
+                                      Assigned to You
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-sm text-text-light/60 dark:text-text-dark/60">
                                   {formatAppointmentDate(appointment.scheduledStart)}
                                 </p>
@@ -436,6 +498,14 @@ function AppointmentsContent() {
                               <Building2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
                               <span className="text-text-light/60 dark:text-text-dark/60 truncate">
                                 {appointment.salon.name}
+                              </span>
+                            </div>
+                          )}
+                          {preferredEmployeeName && !isMyAppointment && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="w-4 h-4 text-primary/60" />
+                              <span className="text-text-light/80 dark:text-text-dark/80">
+                                Preferred: {preferredEmployeeName}
                               </span>
                             </div>
                           )}

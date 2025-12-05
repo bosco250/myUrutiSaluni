@@ -79,7 +79,39 @@ export class AppointmentsController {
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
   @ApiOperation({ summary: 'Get all appointments' })
-  async findAll(@Query('salonId') salonId: string | undefined, @CurrentUser() user: any) {
+  async findAll(@Query('salonId') salonId: string | undefined, @Query('myAppointments') myAppointments: string | undefined, @CurrentUser() user: any) {
+    // Salon employees can get their assigned appointments (where they are preferred employee)
+    if (user.role === UserRole.SALON_EMPLOYEE && myAppointments === 'true') {
+      // Find all employee records for this user (they might work for multiple salons)
+      const allSalons = await this.salonsService.findByOwnerId(user.id);
+      const allSalonIds = allSalons.map(s => s.id);
+      
+      // Get all employee records for this user across all salons
+      const employeeRecords = [];
+      for (const salonId of allSalonIds) {
+        const emp = await this.salonsService.findEmployeeByUserId(user.id, salonId);
+        if (emp) employeeRecords.push(emp);
+      }
+      
+      if (employeeRecords.length === 0) {
+        return []; // Return empty if not an employee
+      }
+      
+      // Get appointments where any of these employees is the preferred employee
+      const allPreferredAppointments = [];
+      for (const emp of employeeRecords) {
+        const appointments = await this.appointmentsService.findByPreferredEmployee(emp.id);
+        allPreferredAppointments.push(...appointments);
+      }
+      
+      // Deduplicate by appointment ID
+      const uniqueAppointments = Array.from(
+        new Map(allPreferredAppointments.map(apt => [apt.id, apt])).values()
+      );
+      
+      return uniqueAppointments;
+    }
+    
     // Salon owners and employees can only see appointments for their salon(s)
     if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
       const salons = await this.salonsService.findByOwnerId(user.id);
@@ -88,7 +120,31 @@ export class AppointmentsController {
         throw new ForbiddenException('You can only access appointments for your own salon');
       }
       // Filter by user's salon IDs
-      return this.appointmentsService.findBySalonIds(salonIds);
+      const salonAppointments = await this.appointmentsService.findBySalonIds(salonIds);
+      
+      // If employee, also include appointments where they are preferred
+      if (user.role === UserRole.SALON_EMPLOYEE) {
+        // Get all employee records for this user
+        const employeeRecords = [];
+        for (const sid of salonIds) {
+          const emp = await this.salonsService.findEmployeeByUserId(user.id, sid);
+          if (emp) employeeRecords.push(emp);
+        }
+        
+        // Get appointments where any of these employees is preferred
+        for (const emp of employeeRecords) {
+          const preferredAppointments = await this.appointmentsService.findByPreferredEmployee(emp.id);
+          // Merge and deduplicate
+          const allAppointmentIds = new Set(salonAppointments.map(a => a.id));
+          preferredAppointments.forEach(apt => {
+            if (!allAppointmentIds.has(apt.id)) {
+              salonAppointments.push(apt);
+            }
+          });
+        }
+      }
+      
+      return salonAppointments;
     }
     // Admins can see all or filter by salonId
     return this.appointmentsService.findAll(salonId);
@@ -112,11 +168,75 @@ export class AppointmentsController {
       }
     }
     
-    // Salon owners and employees can only access appointments for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    // Salon owners can only access appointments for their salon
+    if (user.role === UserRole.SALON_OWNER) {
       const salon = await this.salonsService.findOne(appointment.salonId);
       if (salon.ownerId !== user.id) {
         throw new ForbiddenException('You can only access appointments for your own salon');
+      }
+    }
+    
+    // Salon employees can access appointments if:
+    // 1. They are the preferred employee for this appointment, OR
+    // 2. They work at the salon where the appointment is
+    if (user.role === UserRole.SALON_EMPLOYEE || user.role === 'salon_employee') {
+      const salon = await this.salonsService.findOne(appointment.salonId);
+      
+      if (!salon) {
+        throw new NotFoundException('Salon not found');
+      }
+      
+      // Check if user owns the salon (salon owner can also be employee)
+      const ownsSalon = salon.ownerId === user.id;
+      
+      if (ownsSalon) {
+        // Salon owner can access all appointments for their salon
+        return appointment;
+      }
+      
+      // Check if user is an employee of this salon
+      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(user.id, appointment.salonId);
+      
+      if (isEmployeeOfSalon) {
+        // Employee of the salon can access all appointments for that salon
+        return appointment;
+      }
+      
+      // Check if user is the preferred employee
+      // Handle metadata - it might be a string or object (TypeORM simple-json)
+      let metadata = appointment.metadata;
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      }
+      if (!metadata || typeof metadata !== 'object') {
+        metadata = {};
+      }
+      
+      let isPreferredEmployee = false;
+      const preferredEmployeeId = metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
+      
+      if (preferredEmployeeId) {
+        // Direct check: Find the employee record by preferredEmployeeId and verify it belongs to this user
+        try {
+          const preferredEmployee = await this.salonsService.findEmployeeById(preferredEmployeeId);
+          if (preferredEmployee) {
+            // Check if this employee record belongs to the current user
+            if (preferredEmployee.userId === user.id || preferredEmployee.user?.id === user.id) {
+              isPreferredEmployee = true;
+            }
+          }
+        } catch (error) {
+          // Employee record not found or error - continue checking
+        }
+      }
+      
+      // Allow access if user is preferred employee
+      if (!isPreferredEmployee) {
+        throw new ForbiddenException('You can only access appointments for your salon or appointments assigned to you');
       }
     }
     
@@ -133,11 +253,65 @@ export class AppointmentsController {
   ) {
     const appointment = await this.appointmentsService.findOne(id);
     
-    // Salon owners and employees can only update appointments for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+    
+    // Prevent modifications to completed appointments
+    if (appointment.status === 'completed') {
+      throw new ForbiddenException('Cannot modify a completed appointment');
+    }
+    
+    // Salon owners can only update appointments for their salon
+    if (user.role === UserRole.SALON_OWNER) {
       const salon = await this.salonsService.findOne(appointment.salonId);
       if (salon.ownerId !== user.id) {
         throw new ForbiddenException('You can only update appointments for your own salon');
+      }
+    }
+    
+    // Salon employees can update appointments if:
+    // 1. They are the preferred employee for this appointment, OR
+    // 2. They work at the salon where the appointment is
+    if (user.role === UserRole.SALON_EMPLOYEE || user.role === 'salon_employee') {
+      const salon = await this.salonsService.findOne(appointment.salonId);
+      const ownsSalon = salon.ownerId === user.id;
+      
+      if (ownsSalon) {
+        // Salon owner can update all appointments for their salon
+        return this.appointmentsService.update(id, updateAppointmentDto);
+      }
+      
+      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(user.id, appointment.salonId);
+      
+      let isPreferredEmployee = false;
+      // Handle metadata parsing
+      let metadata = appointment.metadata;
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      }
+      if (!metadata || typeof metadata !== 'object') {
+        metadata = {};
+      }
+      
+      const preferredEmployeeId = metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
+      if (preferredEmployeeId) {
+        try {
+          const preferredEmployee = await this.salonsService.findEmployeeById(preferredEmployeeId);
+          if (preferredEmployee && (preferredEmployee.userId === user.id || preferredEmployee.user?.id === user.id)) {
+            isPreferredEmployee = true;
+          }
+        } catch (error) {
+          // Employee record not found, continue
+        }
+      }
+      
+      if (!isEmployeeOfSalon && !isPreferredEmployee) {
+        throw new ForbiddenException('You can only update appointments for your salon or appointments assigned to you');
       }
     }
     
@@ -150,11 +324,65 @@ export class AppointmentsController {
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const appointment = await this.appointmentsService.findOne(id);
     
-    // Salon owners and employees can only delete appointments for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+    
+    // Prevent deletion of completed appointments
+    if (appointment.status === 'completed') {
+      throw new ForbiddenException('Cannot delete a completed appointment');
+    }
+    
+    // Salon owners can only delete appointments for their salon
+    if (user.role === UserRole.SALON_OWNER) {
       const salon = await this.salonsService.findOne(appointment.salonId);
       if (salon.ownerId !== user.id) {
         throw new ForbiddenException('You can only delete appointments for your own salon');
+      }
+    }
+    
+    // Salon employees can delete appointments if:
+    // 1. They are the preferred employee for this appointment, OR
+    // 2. They work at the salon where the appointment is
+    if (user.role === UserRole.SALON_EMPLOYEE || user.role === 'salon_employee') {
+      const salon = await this.salonsService.findOne(appointment.salonId);
+      const ownsSalon = salon.ownerId === user.id;
+      
+      if (ownsSalon) {
+        // Salon owner can delete all appointments for their salon
+        return this.appointmentsService.remove(id);
+      }
+      
+      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(user.id, appointment.salonId);
+      
+      let isPreferredEmployee = false;
+      // Handle metadata parsing
+      let metadata = appointment.metadata;
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      }
+      if (!metadata || typeof metadata !== 'object') {
+        metadata = {};
+      }
+      
+      const preferredEmployeeId = metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
+      if (preferredEmployeeId) {
+        try {
+          const preferredEmployee = await this.salonsService.findEmployeeById(preferredEmployeeId);
+          if (preferredEmployee && (preferredEmployee.userId === user.id || preferredEmployee.user?.id === user.id)) {
+            isPreferredEmployee = true;
+          }
+        } catch (error) {
+          // Employee record not found, continue
+        }
+      }
+      
+      if (!isEmployeeOfSalon && !isPreferredEmployee) {
+        throw new ForbiddenException('You can only delete appointments for your salon or appointments assigned to you');
       }
     }
     

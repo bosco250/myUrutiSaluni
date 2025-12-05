@@ -115,11 +115,18 @@ export class SalonsController {
   }
 
   @Get(':id/employees')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get salon employees' })
   async getEmployees(@Param('id') id: string, @CurrentUser() user: any) {
     try {
       const salon = await this.salonsService.findOne(id);
+      
+      // Customers can view employees for booking purposes (public browsing)
+      if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+        // Return only active employees for customers
+        const allEmployees = await this.salonsService.getSalonEmployees(id);
+        return allEmployees.filter((emp: any) => emp.isActive !== false);
+      }
       
       // Salon owners and employees can only see employees of their own salon
       if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {

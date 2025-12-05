@@ -64,5 +64,21 @@ export class AppointmentsService {
   async remove(id: string): Promise<void> {
     await this.appointmentsRepository.delete(id);
   }
+
+  async findByPreferredEmployee(salonEmployeeId: string): Promise<Appointment[]> {
+    // Query appointments where metadata contains preferredEmployeeId
+    // Since metadata is stored as JSON, we need to use a JSON query
+    return this.appointmentsRepository
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.customer', 'customer')
+      .leftJoinAndSelect('appointment.service', 'service')
+      .leftJoinAndSelect('appointment.salon', 'salon')
+      .leftJoinAndSelect('appointment.createdBy', 'createdBy')
+      .where("appointment.metadata->>'preferredEmployeeId' = :salonEmployeeId", {
+        salonEmployeeId,
+      })
+      .orderBy('appointment.scheduledStart', 'DESC')
+      .getMany();
+  }
 }
 

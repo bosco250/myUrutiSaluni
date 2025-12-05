@@ -233,6 +233,8 @@ function AppointmentDetailContent() {
             <Button
               onClick={() => router.push(`/appointments/${appointmentId}/edit`)}
               variant="secondary"
+              disabled={appointment.status === 'completed'}
+              title={appointment.status === 'completed' ? 'Cannot edit completed appointments' : 'Edit appointment'}
             >
               <Edit className="w-4 h-4 mr-2" />
               Edit
@@ -245,7 +247,8 @@ function AppointmentDetailContent() {
               }}
               variant="secondary"
               className="text-danger hover:bg-danger/10"
-              disabled={deleteMutation.isPending}
+              disabled={deleteMutation.isPending || appointment.status === 'completed'}
+              title={appointment.status === 'completed' ? 'Cannot delete completed appointments' : 'Delete appointment'}
             >
               {deleteMutation.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
