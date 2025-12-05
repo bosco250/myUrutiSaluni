@@ -37,14 +37,30 @@ export class SalonsService {
   }
 
   async findAll(): Promise<Salon[]> {
-    return this.salonsRepository.find({ relations: ['owner'] });
+    const salons = await this.salonsRepository.find({ relations: ['owner'] });
+    // Add employee count to each salon
+    for (const salon of salons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+    return salons;
   }
 
   async findByOwnerId(ownerId: string): Promise<Salon[]> {
-    return this.salonsRepository.find({
+    const salons = await this.salonsRepository.find({
       where: { ownerId },
       relations: ['owner'],
     });
+    // Add employee count to each salon
+    for (const salon of salons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+    return salons;
   }
 
   async findOne(id: string): Promise<Salon> {
@@ -55,6 +71,11 @@ export class SalonsService {
     if (!salon) {
       throw new NotFoundException(`Salon with ID ${id} not found`);
     }
+    // Add employee count
+    const employeeCount = await this.salonEmployeesRepository.count({
+      where: { salonId: salon.id },
+    });
+    (salon as any).employeeCount = employeeCount;
     return salon;
   }
 

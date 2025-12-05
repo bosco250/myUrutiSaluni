@@ -32,6 +32,7 @@ interface Salon {
     numberOfEmployees?: number;
     businessType?: string;
   };
+  employeeCount?: number;
 }
 
 export default function SalonsPage() {
@@ -541,14 +542,12 @@ function SalonCard({
             </div>
           )}
 
-          {salon.settings?.numberOfEmployees && (
-            <div className="flex items-center gap-3 text-sm">
-              <Users className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-              <span className="text-text-light/80 dark:text-text-dark/80">
-                {salon.settings.numberOfEmployees} employees
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-3 text-sm">
+            <Users className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+            <span className="text-text-light/80 dark:text-text-dark/80">
+              {(salon.employeeCount ?? 0)} {(salon.employeeCount ?? 0) === 1 ? 'employee' : 'employees'}
+            </span>
+          </div>
         </div>
 
         {/* Quick Actions */}

@@ -24,6 +24,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 
 interface SaleItem {
@@ -169,57 +170,22 @@ function SalesHistoryContent() {
         }
         
         const response = await api.get(`/sales?${params.toString()}`);
-        console.log('[SALES HISTORY] Raw API Response:', JSON.stringify(response.data, null, 2));
-        console.log('[SALES HISTORY] Response structure:', {
-          hasData: !!response.data,
-          hasDataData: !!response.data?.data,
-          isArray: Array.isArray(response.data),
-          isArrayData: Array.isArray(response.data?.data),
-          hasStatusCode: 'statusCode' in (response.data || {}),
-          keys: response.data ? Object.keys(response.data) : [],
-          type: typeof response.data,
-        });
-        
-        // Check if sales have items
-        const salesWithItems = response.data?.data?.data || response.data?.data || [];
-        if (Array.isArray(salesWithItems) && salesWithItems.length > 0) {
-          console.log('[SALES HISTORY] Sample sale items check:', {
-            firstSaleId: salesWithItems[0]?.id,
-            firstSaleHasItems: !!salesWithItems[0]?.items,
-            firstSaleItemCount: salesWithItems[0]?.items?.length || 0,
-            firstSaleItems: salesWithItems[0]?.items,
-          });
-        }
         
         // Handle response wrapped by TransformInterceptor: { data: {...}, statusCode: 200, timestamp: "..." }
-        // The actual paginated response is in response.data.data
         let responseData = response.data;
         
         // If response is wrapped by interceptor (has statusCode and data property)
         if (response.data && typeof response.data === 'object' && 'statusCode' in response.data && 'data' in response.data) {
           responseData = response.data.data;
-          console.log('[SALES HISTORY] Unwrapped interceptor response, responseData:', {
-            isArray: Array.isArray(responseData),
-            hasData: !!responseData?.data,
-            keys: responseData ? Object.keys(responseData) : [],
-            type: typeof responseData,
-          });
         }
         
         // Ensure responseData has the expected structure
         if (!responseData || typeof responseData !== 'object') {
-          console.error('[SALES HISTORY] Invalid response data:', responseData, 'Type:', typeof responseData);
           return { data: [], total: 0, page: 1, limit: 10, totalPages: 0 };
         }
         
         // If responseData is an array (old format or backend returned array), wrap it
         if (Array.isArray(responseData)) {
-          // This should not happen - backend should always return paginated object
-          // But handle it gracefully to prevent errors
-          console.warn('[SALES HISTORY] ⚠️ Received array instead of paginated object (this is handled gracefully)');
-          console.warn('[SALES HISTORY] Array length:', responseData.length);
-          console.warn('[SALES HISTORY] Request URL:', `/sales?${params.toString()}`);
-          // Wrap it to match expected format
           return {
             data: responseData,
             total: responseData.length,
@@ -231,12 +197,6 @@ function SalesHistoryContent() {
         
         // Check if responseData has the expected paginated structure
         if (!('data' in responseData) || !('total' in responseData)) {
-          console.error('[SALES HISTORY] ResponseData does not have expected paginated structure:', {
-            responseData,
-            keys: Object.keys(responseData),
-            hasData: 'data' in responseData,
-            hasTotal: 'total' in responseData,
-          });
           // If it's an object but not the right structure, try to extract data
           if (Array.isArray(responseData.data)) {
             return {
@@ -251,24 +211,14 @@ function SalesHistoryContent() {
         }
         
         // Ensure all required fields exist
-        const result = {
+        return {
           data: responseData.data || [],
           total: responseData.total || 0,
           page: responseData.page || 1,
           limit: responseData.limit || itemsPerPage,
           totalPages: responseData.totalPages || Math.ceil((responseData.total || 0) / (responseData.limit || itemsPerPage)),
         };
-        
-        console.log('[SALES HISTORY] Processed result:', {
-          dataLength: result.data.length,
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: result.totalPages,
-        });
-        return result;
       } catch (error) {
-        console.error('[SALES HISTORY] Error fetching sales:', error);
         return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
       }
     },
@@ -335,7 +285,10 @@ function SalesHistoryContent() {
 
   // Calculate statistics from filtered sales (client-side filtering)
   const stats = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const totalRevenue = filteredSales.reduce((sum, sale) => {
+      const amount = Number(sale.totalAmount) || 0;
+      return sum + amount;
+    }, 0);
     const filteredCount = filteredSales.length;
     const averageSale = filteredCount > 0 ? totalRevenue / filteredCount : 0;
     const cashSales = filteredSales.filter(s => s.paymentMethod === 'cash').length;
@@ -452,45 +405,64 @@ function SalesHistoryContent() {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Revenue</span>
-            <DollarSign className="w-5 h-5 text-primary" />
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Total Revenue</span>
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-primary" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            {stats.totalRevenue.toLocaleString()} RWF
+          <p className="text-3xl font-bold text-text-light dark:text-text-dark">
+            {stats.totalRevenue.toLocaleString()}
           </p>
+          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">RWF</p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Sales</span>
-            <Receipt className="w-5 h-5 text-primary" />
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Total Sales</span>
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Receipt className="w-5 h-5 text-primary" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">{stats.totalSales}</p>
+          <p className="text-3xl font-bold text-text-light dark:text-text-dark">{stats.totalSales}</p>
+          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">transactions</p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Average Sale</span>
-            <DollarSign className="w-5 h-5 text-primary" />
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Average Sale</span>
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-primary" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            {stats.averageSale.toFixed(0)} RWF
+          <p className="text-3xl font-bold text-text-light dark:text-text-dark">
+            {stats.averageSale.toFixed(0)}
           </p>
+          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">RWF per sale</p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Payment Methods</span>
-            <CreditCard className="w-5 h-5 text-primary" />
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Payment Methods</span>
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-primary" />
+            </div>
           </div>
-          <p className="text-sm text-text-light dark:text-text-dark">
-            Cash: {stats.cashSales} • Card: {stats.cardSales} • Mobile: {stats.mobileMoneySales}
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm text-text-light dark:text-text-dark font-medium">
+              Cash: <span className="text-primary">{stats.cashSales}</span>
+            </p>
+            <p className="text-sm text-text-light dark:text-text-dark font-medium">
+              Card: <span className="text-primary">{stats.cardSales}</span>
+            </p>
+            <p className="text-sm text-text-light dark:text-text-dark font-medium">
+              Mobile: <span className="text-primary">{stats.mobileMoneySales}</span>
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
       {showFilters && (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 mb-6 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-2">
             <div className="relative">
@@ -503,7 +475,7 @@ function SalesHistoryContent() {
                   handleFilterChange();
                 }}
                 placeholder="Search by ID, customer, phone, reference..."
-                className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
               />
             </div>
           </div>
@@ -513,7 +485,7 @@ function SalesHistoryContent() {
               setStatusFilter(e.target.value);
               handleFilterChange();
             }}
-            className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
@@ -526,7 +498,7 @@ function SalesHistoryContent() {
               setPaymentMethodFilter(e.target.value);
               handleFilterChange();
             }}
-            className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
           >
             <option value="all">All Methods</option>
             <option value="cash">Cash</option>
@@ -541,7 +513,7 @@ function SalesHistoryContent() {
                 setSalonFilter(e.target.value);
                 handleFilterChange();
               }}
-              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             >
               <option value="all">All Salons</option>
               {salons.map((salon) => (
@@ -554,7 +526,7 @@ function SalesHistoryContent() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
               Start Date
             </label>
             <input
@@ -564,11 +536,11 @@ function SalesHistoryContent() {
                 setDateRange({ ...dateRange, start: e.target.value });
                 handleFilterChange();
               }}
-              className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
               End Date
             </label>
             <input
@@ -578,7 +550,7 @@ function SalesHistoryContent() {
                 setDateRange({ ...dateRange, end: e.target.value });
                 handleFilterChange();
               }}
-              className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             />
           </div>
         </div>
@@ -586,42 +558,42 @@ function SalesHistoryContent() {
       )}
 
       {/* Sales Table */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
+            <thead className="bg-background-light dark:bg-background-dark border-b-2 border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Sale ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Customer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Salon
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Employee
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Items
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Commission
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Payment Method
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -629,8 +601,16 @@ function SalesHistoryContent() {
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {paginatedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center">
-                    <p className="text-text-light/60 dark:text-text-dark/60">No sales found</p>
+                  <td colSpan={11} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center">
+                      <Receipt className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
+                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium text-lg">No sales found</p>
+                      <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-2">
+                        {searchQuery || statusFilter !== 'all' || paymentMethodFilter !== 'all' || dateRange.start || dateRange.end
+                          ? 'Try adjusting your filters'
+                          : 'No sales have been recorded yet'}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -676,8 +656,8 @@ function SalesHistoryContent() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-primary">
-                        {sale.currency || 'RWF'} {sale.totalAmount.toLocaleString()}
+                      <span className="text-base font-bold text-primary">
+                        {sale.currency || 'RWF'} {Number(sale.totalAmount || 0).toLocaleString()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -705,7 +685,7 @@ function SalesHistoryContent() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-success">
+                      <span className="text-sm font-bold text-success">
                         {sale.currency || 'RWF'} {(sale.totalCommission || 0).toLocaleString()}
                       </span>
                     </td>
@@ -716,22 +696,22 @@ function SalesHistoryContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        className={`inline-flex px-3 py-1.5 text-xs font-bold rounded-full ${
                           sale.status === 'completed'
-                            ? 'bg-success/20 text-success'
+                            ? 'bg-success/20 text-success border border-success/30'
                             : sale.status === 'pending'
-                            ? 'bg-warning/20 text-warning'
-                            : 'bg-danger/20 text-danger'
+                            ? 'bg-warning/20 text-warning border border-warning/30'
+                            : 'bg-danger/20 text-danger border border-danger/30'
                         }`}
                       >
-                        {sale.status}
+                        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => router.push(`/sales/${sale.id}`)}
-                          className="text-primary hover:text-primary/80 flex items-center gap-1"
+                          className="px-3 py-1.5 text-primary hover:bg-primary/10 rounded-lg flex items-center gap-1.5 font-medium transition"
                         >
                           <Eye className="w-4 h-4" />
                           View
@@ -754,7 +734,7 @@ function SalesHistoryContent() {
                               alert(error.response?.data?.message || 'Failed to download receipt');
                             }
                           }}
-                          className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+                          className="px-3 py-1.5 text-success hover:bg-success/10 rounded-lg flex items-center gap-1.5 font-medium transition"
                           title="Download Receipt"
                         >
                           <Download className="w-4 h-4" />
@@ -869,7 +849,6 @@ function SalesHistoryContent() {
                     document.body.removeChild(link);
                     window.URL.revokeObjectURL(url);
                   } catch (error) {
-                    console.error('Failed to export report:', error);
                     alert('Failed to export sales report. Please try again.');
                   }
                 }}

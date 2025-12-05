@@ -34,6 +34,7 @@ interface SaleItem {
     id: string;
     name: string;
     sku?: string;
+    taxRate?: number;
   };
   salonEmployee?: {
     id: string;
@@ -134,7 +135,6 @@ function SaleDetailContent() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to download PDF:', error);
       alert('Failed to download PDF receipt. Please try again.');
     }
   };
@@ -166,10 +166,35 @@ function SaleDetailContent() {
     );
   }
 
-  const subtotal = sale.items?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
-  const totalDiscount = sale.items?.reduce((sum, item) => sum + item.discountAmount, 0) || 0;
-  const tax = 0; // Calculate tax if needed
-  const total = subtotal - totalDiscount + tax;
+  // Calculate subtotal (before discount)
+  const subtotal = sale.items?.reduce((sum, item) => {
+    const unitPrice = Number(item.unitPrice) || 0;
+    const quantity = Number(item.quantity) || 0;
+    return sum + (unitPrice * quantity);
+  }, 0) || 0;
+  
+  // Calculate total discount
+  const totalDiscount = sale.items?.reduce((sum, item) => {
+    return sum + (Number(item.discountAmount) || 0);
+  }, 0) || 0;
+  
+  // Calculate tax for products (tax is applied to amount after discount)
+  const tax = sale.items?.reduce((sum, item) => {
+    if (item.product) {
+      const unitPrice = Number(item.unitPrice) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const discountAmount = Number(item.discountAmount) || 0;
+      const itemSubtotal = unitPrice * quantity;
+      const itemAfterDiscount = Math.max(0, itemSubtotal - discountAmount);
+      const taxRate = Number(item.product.taxRate) || 0;
+      const itemTax = (itemAfterDiscount * taxRate) / 100;
+      return sum + Math.max(0, itemTax);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  // Total = (Subtotal - Discount) + Tax
+  const calculatedTotal = Math.max(0, subtotal - totalDiscount + tax);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -348,7 +373,7 @@ function SaleDetailContent() {
               )}
               <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark pt-2 border-t border-border-light dark:border-border-dark">
                 <span>Total</span>
-                <span className="text-primary">{sale.currency || 'RWF'} {sale.totalAmount.toLocaleString()}</span>
+                <span className="text-primary">{sale.currency || 'RWF'} {Number(sale.totalAmount || calculatedTotal).toLocaleString()}</span>
               </div>
             </div>
           </div>

@@ -47,6 +47,12 @@ export class MembershipApplication {
   @Column({ name: 'tax_id', length: 128, nullable: true })
   taxId: string;
 
+  @Column({ type: 'double precision', nullable: true })
+  latitude: number;
+
+  @Column({ type: 'double precision', nullable: true })
+  longitude: number;
+
   @Column({
     type: 'varchar',
     length: 32,

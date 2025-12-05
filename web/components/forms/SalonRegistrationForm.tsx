@@ -186,11 +186,24 @@ export default function SalonRegistrationForm({
       if (instagramUrl) settings.instagramUrl = instagramUrl;
       if (twitterUrl) settings.twitterUrl = twitterUrl;
 
-      const salonData: any = {
-        ...dtoFields,
-        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
-      };
+      // Prepare salon data - exclude latitude/longitude strings from dtoFields, add as numbers if valid
+      const salonData: any = { ...dtoFields };
+      
+      // Handle latitude - only include if it's a valid number
+      if (data.latitude && data.latitude.trim() !== '') {
+        const latNum = parseFloat(data.latitude);
+        if (!isNaN(latNum)) {
+          salonData.latitude = latNum;
+        }
+      }
+      
+      // Handle longitude - only include if it's a valid number
+      if (data.longitude && data.longitude.trim() !== '') {
+        const lngNum = parseFloat(data.longitude);
+        if (!isNaN(lngNum)) {
+          salonData.longitude = lngNum;
+        }
+      }
 
       if (Object.keys(settings).length > 0) {
         salonData.settings = settings;
@@ -250,13 +263,12 @@ export default function SalonRegistrationForm({
   };
 
   const updateField = (field: string, value: any) => {
-    setFormData({ ...formData, [field]: value });
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors({ ...errors, [field]: '' });
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  // Reverse geocoding function using Next.js API route (avoids CORS issues)
   const reverseGeocode = async (lat: number, lon: number): Promise<{
     address: string;
     city: string;
@@ -264,7 +276,6 @@ export default function SalonRegistrationForm({
     country: string;
   }> => {
     try {
-      // Use Next.js API route to avoid CORS issues
       const response = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`, {
         method: 'GET',
         headers: {
@@ -290,11 +301,6 @@ export default function SalonRegistrationForm({
         country: data.country || 'Rwanda',
       };
     } catch (error: any) {
-      console.error('Reverse geocoding error:', error);
-      
-      // Return a fallback address based on coordinates
-      // This ensures the form can still be submitted even if geocoding fails
-      // User can manually edit the address fields
       return {
         address: `Location at ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
         city: '',
@@ -317,19 +323,27 @@ export default function SalonRegistrationForm({
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
-
-          // Update coordinates
-          updateField('latitude', latitude.toString());
-          updateField('longitude', longitude.toString());
-
-          // Reverse geocode to get address
           const geocoded = await reverseGeocode(latitude, longitude);
 
-          // Update form fields with geocoded data
-          updateField('address', geocoded.address);
-          if (geocoded.city) updateField('city', geocoded.city);
-          if (geocoded.district) updateField('district', geocoded.district);
-          if (geocoded.country) updateField('country', geocoded.country);
+          setFormData(prev => ({
+            ...prev,
+            address: geocoded.address || prev.address || '',
+            city: geocoded.city !== undefined ? geocoded.city : (prev.city || ''),
+            district: geocoded.district !== undefined ? geocoded.district : (prev.district || ''),
+            country: geocoded.country || prev.country || 'Rwanda',
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+          }));
+
+          setErrors(prev => ({
+            ...prev,
+            address: '',
+            city: '',
+            district: '',
+            country: '',
+            latitude: '',
+            longitude: '',
+          }));
 
           // Force map to update with new location
           setMapKey(prev => prev + 1);

@@ -18,6 +18,7 @@ import {
   UserPlus,
   AlertCircle
 } from 'lucide-react';
+import SalonLocationMap from '@/components/maps/SalonLocationMap';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
@@ -48,6 +49,7 @@ interface Salon {
   };
   settings?: {
     numberOfEmployees?: number;
+    employeeCount?: number;
     businessType?: string;
     [key: string]: any;
   };
@@ -298,17 +300,18 @@ function SalonDetailContent() {
               <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
                 Location
               </h2>
+              <div className="mb-4">
+                <SalonLocationMap
+                  latitude={salon.latitude}
+                  longitude={salon.longitude}
+                  salonName={salon.name}
+                  address={salon.address}
+                  height="400px"
+                />
+              </div>
               <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-2">
                 Coordinates: {salon.latitude.toFixed(6)}, {salon.longitude.toFixed(6)}
               </p>
-              <a
-                href={`https://www.google.com/maps?q=${salon.latitude},${salon.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:text-primary/80 text-sm font-medium"
-              >
-                View on Google Maps →
-              </a>
             </div>
           )}
         </div>
@@ -350,13 +353,13 @@ function SalonDetailContent() {
                 Settings
               </h2>
               <div className="space-y-3">
-                {salon.settings.numberOfEmployees !== undefined && (
+                {(salon.employeeCount !== undefined && salon.employeeCount > 0) && (
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
                     <div>
                       <p className="text-sm text-text-light/60 dark:text-text-dark/60">Employees</p>
                       <p className="text-text-light dark:text-text-dark font-medium">
-                        {salon.settings.numberOfEmployees}
+                        {salon.employeeCount}
                       </p>
                     </div>
                   </div>

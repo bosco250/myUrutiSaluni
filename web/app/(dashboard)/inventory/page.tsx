@@ -60,7 +60,21 @@ function InventoryContent() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'inventory' | 'non-inventory'>('all');
-  const [selectedSalonId, setSelectedSalonId] = useState<string>('');
+  
+  // Initialize selectedSalonId from localStorage or empty string
+  const [selectedSalonId, setSelectedSalonId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('inventory-selected-salon-id') || '';
+    }
+    return '';
+  });
+  
+  // Persist selectedSalonId to localStorage
+  useEffect(() => {
+    if (selectedSalonId) {
+      localStorage.setItem('inventory-selected-salon-id', selectedSalonId);
+    }
+  }, [selectedSalonId]);
 
   // Fetch salons
   const { data: salons = [], isLoading: salonsLoading } = useQuery<Salon[]>({
@@ -83,31 +97,47 @@ function InventoryContent() {
   // Auto-select first salon if only one or if none selected (but not for admins)
   useEffect(() => {
     if (!salonsLoading && salons.length > 0 && !canViewAll) {
+      // Validate that the stored salon ID still exists
+      const storedSalonId = localStorage.getItem('inventory-selected-salon-id');
+      const isValidStoredSalon = storedSalonId && salons.some(s => s.id === storedSalonId);
+      
       // If only one salon, always select it
       if (salons.length === 1) {
         if (selectedSalonId !== salons[0].id) {
           setSelectedSalonId(salons[0].id);
         }
       }
+      // If we have a valid stored salon ID, use it
+      else if (isValidStoredSalon && selectedSalonId !== storedSalonId) {
+        setSelectedSalonId(storedSalonId);
+      }
       // If no salon selected but salons exist, select the first one
-      else if (!selectedSalonId) {
+      else if (!selectedSalonId && !isValidStoredSalon) {
         setSelectedSalonId(salons[0].id);
       }
     }
     // For admins, don't auto-select - let them choose "All Salons"
   }, [salons, selectedSalonId, salonsLoading, canViewAll]);
 
+  // Determine the effective salon ID for the query
+  // Wait for salons to load before determining the effective salon ID
+  const effectiveSalonId = useMemo(() => {
+    if (salonsLoading) return null; // Still loading, don't query yet
+    if (canViewAll) return selectedSalonId || 'all';
+    if (salons.length === 0) return null; // No salons, can't query
+    return selectedSalonId || (salons.length === 1 ? salons[0].id : 'all-owned');
+  }, [selectedSalonId, salons, salonsLoading, canViewAll]);
+
   // Fetch products - only for selected salon or all owned salons (or all salons for admins)
   const productsQueryKey = [
     'inventory-products',
-    selectedSalonId || (canViewAll ? 'all' : 'all-owned'),
+    effectiveSalonId || 'pending',
   ];
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: productsQueryKey,
     queryFn: async (): Promise<Product[]> => {
       // Early return if no user
       if (!user) {
-        console.log('[Products Query] No user, returning empty array');
         return [];
       }
 
@@ -115,17 +145,11 @@ function InventoryContent() {
         // If salon is selected, filter by that salon
         // For admins: if no salon selected, get all products
         // For salon owners: if no salon selected, backend returns all their salons' products
-        const params = selectedSalonId ? { salonId: selectedSalonId } : {};
-        console.log(
-          '[Products Query] Fetching products with params:',
-          params,
-          'User role:',
-          user.role,
-          'Can view all:',
-          canViewAll
-        );
+        const params = effectiveSalonId && effectiveSalonId !== 'all' && effectiveSalonId !== 'all-owned' 
+          ? { salonId: effectiveSalonId } 
+          : {};
+        
         const response = await api.get('/inventory/products', { params });
-        console.log('[Products Query] Response:', response.data);
 
         // Handle different response structures
         let data: Product[] = [];
@@ -141,17 +165,10 @@ function InventoryContent() {
           }
           // If response.data is an object but not an array, return empty
           else {
-            console.warn('[Products Query] Unexpected response structure:', response.data);
             data = [];
           }
         }
 
-        console.log(
-          '[Products Query] Returning products:',
-          data.length,
-          'for salon:',
-          selectedSalonId || 'all'
-        );
         // Always return an array, never undefined or null
         return Array.isArray(data) ? data : [];
       } catch (error: any) {
@@ -160,8 +177,7 @@ function InventoryContent() {
         return [];
       }
     },
-    enabled: !!user && (salons.length > 0 || canViewAll) && !salonsLoading, // Wait for salons to load (or allow admins to view all)
-    // Don't use initialData - let it fetch from server
+    enabled: !!user && effectiveSalonId !== null && !salonsLoading, // Wait for salons to load and effectiveSalonId to be determined
     // Retry configuration
     retry: 1,
     retryDelay: 1000,

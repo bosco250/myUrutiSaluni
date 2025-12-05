@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,6 +15,8 @@ import { CustomersService } from '../customers/customers.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('sales')
 export class SalesController {
+  private readonly logger = new Logger(SalesController.name);
+
   constructor(
     private readonly salesService: SalesService,
     private readonly salonsService: SalonsService,
@@ -63,58 +65,9 @@ export class SalesController {
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException('You can only access sales for your own salon');
       }
-      const result = await this.salesService.findBySalonIds(salonIds, pageNum, limitNum);
-      
-      // Ensure result is always a paginated object, not an array
-      if (Array.isArray(result)) {
-        console.error('[SALES CONTROLLER] ERROR: findBySalonIds returned an array instead of paginated object!', result);
-        return {
-          data: result,
-          total: result.length,
-          page: pageNum,
-          limit: limitNum,
-          totalPages: Math.ceil(result.length / limitNum),
-        };
-      }
-      
-      console.log('[SALES CONTROLLER] Returning findBySalonIds result:', {
-        hasData: !!result.data,
-        dataLength: result.data?.length,
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: result.totalPages,
-        isArray: Array.isArray(result),
-        hasDataProperty: 'data' in result,
-      });
-      return result;
+      return this.salesService.findBySalonIds(salonIds, pageNum, limitNum);
     }
-    // Admins can see all or filter by salonId
-    const result = await this.salesService.findAll(salonId, pageNum, limitNum);
-    
-    // Ensure result is always a paginated object, not an array
-    if (Array.isArray(result)) {
-      console.error('[SALES CONTROLLER] ERROR: findAll returned an array instead of paginated object!', result);
-      return {
-        data: result,
-        total: result.length,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(result.length / limitNum),
-      };
-    }
-    
-    console.log('[SALES CONTROLLER] Returning findAll result:', {
-      hasData: !!result.data,
-      dataLength: result.data?.length,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages,
-      isArray: Array.isArray(result),
-      hasDataProperty: 'data' in result,
-    });
-    return result;
+    return this.salesService.findAll(salonId, pageNum, limitNum);
   }
 
   @Get('customer/:customerId')
@@ -148,26 +101,15 @@ export class SalesController {
     const sale = await this.salesService.findOne(id);
     
     if (!sale) {
-      throw new ForbiddenException('Sale not found');
+      throw new NotFoundException('Sale not found');
     }
     
     // Salon owners and employees can only access sales for their salon
     if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
       const salon = await this.salonsService.findOne(sale.salonId);
-      if (salon.ownerId !== user.id) {
+      if (!salon || salon.ownerId !== user.id) {
         throw new ForbiddenException('You can only access sales for your own salon');
       }
-    }
-    
-    console.log('[SALES CONTROLLER] Returning sale with', sale.items?.length || 0, 'items');
-    if (sale.items && sale.items.length > 0) {
-      console.log('[SALES CONTROLLER] First item:', {
-        id: sale.items[0].id,
-        hasService: !!sale.items[0].service,
-        hasProduct: !!sale.items[0].product,
-        serviceName: sale.items[0].service?.name,
-        productName: sale.items[0].product?.name,
-      });
     }
     
     return sale;

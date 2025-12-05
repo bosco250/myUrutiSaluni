@@ -24,7 +24,7 @@
 - [x] Authentication & authorization ready
 - [x] Error handling in place
 
-### ⏳ Frontend
+### ⏳ Web
 - [ ] Dependencies installed
 - [ ] Environment variables configured
 - [ ] API client configured
@@ -43,8 +43,8 @@ npm run install:all
 cd backend
 npm run start:dev
 
-# Start frontend
-cd frontend
+# Start web
+cd web
 npm run dev
 ```
 
@@ -55,8 +55,8 @@ cd backend
 npm run build
 npm run start:prod
 
-# Build frontend
-cd frontend
+# Build web
+cd web
 npm run build
 npm run start
 ```
@@ -82,7 +82,7 @@ DB_DATABASE=salon_association
 NODE_ENV=production
 ```
 
-### Frontend (.env.local)
+### Web (.env.local)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 ```
@@ -112,7 +112,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3000/api
 
 ## Next Steps
 
-1. **Frontend Development**
+1. **Web Development**
    - Build authentication UI
    - Create dashboard
    - Implement module pages
@@ -136,7 +136,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3000/api
    - Set up production database
    - Configure environment variables
    - Deploy backend API
-   - Deploy frontend
+   - Deploy web
 
 ## Support Resources
 

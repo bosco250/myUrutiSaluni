@@ -20,23 +20,32 @@ export class InventoryService {
 
   async findAllProducts(salonId?: string): Promise<Product[]> {
     if (salonId) {
-      return this.productsRepository.find({ where: { salonId }, relations: ['salon'] });
+      return this.productsRepository.find({
+        where: { salonId },
+        relations: ['salon'],
+      });
     }
     return this.productsRepository.find({ relations: ['salon'] });
   }
 
   async findProductsBySalonIds(salonIds: string[]): Promise<Product[]> {
     return this.productsRepository.find({
-      where: salonIds.map(id => ({ salonId: id })),
+      where: salonIds.map((id) => ({ salonId: id })),
       relations: ['salon'],
     });
   }
 
   async findOneProduct(id: string): Promise<Product> {
-    return this.productsRepository.findOne({ where: { id }, relations: ['salon'] });
+    return this.productsRepository.findOne({
+      where: { id },
+      relations: ['salon'],
+    });
   }
 
-  async updateProduct(id: string, updateData: Partial<Product>): Promise<Product> {
+  async updateProduct(
+    id: string,
+    updateData: Partial<Product>,
+  ): Promise<Product> {
     await this.productsRepository.update(id, updateData);
     return this.findOneProduct(id);
   }
@@ -45,12 +54,17 @@ export class InventoryService {
     await this.productsRepository.delete(id);
   }
 
-  async createMovement(movementData: Partial<InventoryMovement>): Promise<InventoryMovement> {
+  async createMovement(
+    movementData: Partial<InventoryMovement>,
+  ): Promise<InventoryMovement> {
     const movement = this.movementsRepository.create(movementData);
     return this.movementsRepository.save(movement);
   }
 
-  async findAllMovements(salonId?: string, productId?: string): Promise<InventoryMovement[]> {
+  async findAllMovements(
+    salonId?: string,
+    productId?: string,
+  ): Promise<InventoryMovement[]> {
     const where: any = {};
     if (salonId) where.salonId = salonId;
     if (productId) where.productId = productId;
@@ -65,27 +79,54 @@ export class InventoryService {
   async getStockLevel(productId: string): Promise<number> {
     const result = await this.movementsRepository
       .createQueryBuilder('movement')
-      .select('COALESCE(SUM(movement.quantity), 0)', 'stock')
-      .where('movement.productId = :productId', { productId })
+      .select(
+        `COALESCE(SUM(
+          CASE 
+            WHEN LOWER(movement.movement_type) IN ('purchase', 'return') THEN movement.quantity
+            WHEN LOWER(movement.movement_type) IN ('consumption', 'transfer') THEN -movement.quantity
+            WHEN LOWER(movement.movement_type) = 'adjustment' THEN movement.quantity
+            ELSE 0
+          END
+        ), 0)`,
+        'stock',
+      )
+      .where('movement.product_id = :productId', { productId })
       .getRawOne();
 
-    return parseFloat(result?.stock || '0');
+    const stock = parseFloat(result?.stock || '0');
+    return Math.max(0, stock); // Ensure stock is never negative
   }
 
-  async getStockLevelsForProducts(productIds: string[]): Promise<Record<string, number>> {
+  async getStockLevelsForProducts(
+    productIds: string[],
+  ): Promise<Record<string, number>> {
     if (productIds.length === 0) return {};
 
+    // Calculate stock: purchase/return adds, consumption/transfer subtracts
+    // Note: adjustment can be positive or negative depending on the quantity sign
+    // For consumption: we store positive quantity, SQL negates it to subtract from stock
     const results = await this.movementsRepository
       .createQueryBuilder('movement')
-      .select('movement.productId', 'productId')
-      .addSelect('COALESCE(SUM(movement.quantity), 0)', 'stock')
-      .where('movement.productId IN (:...productIds)', { productIds })
-      .groupBy('movement.productId')
+      .select('movement.product_id', 'productId')
+      .addSelect(
+        `COALESCE(SUM(
+          CASE 
+            WHEN LOWER(movement.movement_type) IN ('purchase', 'return') THEN movement.quantity
+            WHEN LOWER(movement.movement_type) IN ('consumption', 'transfer') THEN -movement.quantity
+            WHEN LOWER(movement.movement_type) = 'adjustment' THEN movement.quantity
+            ELSE 0
+          END
+        ), 0)`,
+        'stock',
+      )
+      .where('movement.product_id IN (:...productIds)', { productIds })
+      .groupBy('movement.product_id')
       .getRawMany();
 
     const stockLevels: Record<string, number> = {};
     results.forEach((result) => {
-      stockLevels[result.productId] = parseFloat(result.stock || '0');
+      const stock = parseFloat(result.stock || '0');
+      stockLevels[result.productId] = Math.max(0, stock); // Ensure stock is never negative
     });
 
     // Set 0 for products with no movements
@@ -95,21 +136,52 @@ export class InventoryService {
       }
     });
 
+    console.log(`[INVENTORY] Stock levels calculated:`, stockLevels);
     return stockLevels;
   }
 
-  async getProductsWithStock(salonId?: string): Promise<Array<Product & { stockLevel: number }>> {
-    const products = salonId
-      ? await this.productsRepository.find({ where: { salonId, isInventoryItem: true }, relations: ['salon'] })
-      : await this.productsRepository.find({ where: { isInventoryItem: true }, relations: ['salon'] });
+  async getProductsWithStock(
+    salonId?: string,
+  ): Promise<Array<Product & { stockLevel: number }>> {
+    // Get all products (not just inventory items) so they can be used in sales
+    const whereCondition = salonId ? { salonId } : {};
+    const products = await this.productsRepository.find({
+      where: whereCondition,
+      relations: ['salon'],
+      order: { name: 'ASC' }, // Order by name for consistency
+    });
+
+    console.log(
+      `[INVENTORY] getProductsWithStock: Found ${products.length} products for salonId: ${salonId || 'all'}`,
+    );
+
+    if (products.length === 0) {
+      console.log(`[INVENTORY] No products found for salonId: ${salonId}`);
+      return [];
+    }
 
     const productIds = products.map((p) => p.id);
+    console.log(
+      `[INVENTORY] Calculating stock for ${productIds.length} products:`,
+      productIds,
+    );
+
     const stockLevels = await this.getStockLevelsForProducts(productIds);
 
-    return products.map((product) => ({
-      ...product,
-      stockLevel: stockLevels[product.id] || 0,
-    }));
+    const productsWithStock = products.map((product) => {
+      const stockLevel = stockLevels[product.id] || 0;
+      console.log(
+        `[INVENTORY] Product ${product.name} (${product.id}): stockLevel = ${stockLevel}`,
+      );
+      return {
+        ...product,
+        stockLevel,
+      };
+    });
+
+    console.log(
+      `[INVENTORY] Returning ${productsWithStock.length} products with stock levels`,
+    );
+    return productsWithStock;
   }
 }
-
