@@ -35,25 +35,211 @@ interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, color: 'from-blue-500 to-cyan-500' },
-  { name: 'Users', href: '/users', icon: Users, color: 'from-indigo-500 to-purple-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN] },
-  { name: 'Membership', href: '/membership/apply', icon: Building2, color: 'from-amber-500 to-orange-500', requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_OWNER] },
-  { name: 'Memberships', href: '/memberships', icon: Building2, color: 'from-amber-500 to-orange-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { name: 'Salons', href: '/salons', icon: Scissors, color: 'from-purple-500 to-pink-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'Browse Salons', href: '/salons/browse', icon: Scissors, color: 'from-purple-500 to-pink-500', requiredRoles: [UserRole.CUSTOMER] },
-  { name: 'Customers', href: '/customers', icon: Users, color: 'from-green-500 to-emerald-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'Appointments', href: '/appointments', icon: Calendar, color: 'from-orange-500 to-red-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'My Appointments', href: '/appointments/my', icon: Calendar, color: 'from-orange-500 to-red-500', requiredRoles: [UserRole.CUSTOMER] },
-  { name: 'Services', href: '/services', icon: Sparkles, color: 'from-pink-500 to-rose-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'Purchase History', href: '/sales/history', icon: ShoppingCart, color: 'from-indigo-500 to-blue-500', requiredRoles: [UserRole.CUSTOMER] },
-  { name: 'Sales', href: '/sales', icon: ShoppingCart, color: 'from-indigo-500 to-blue-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'Commissions', href: '/commissions', icon: TrendingUp, color: 'from-emerald-500 to-green-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'Inventory', href: '/inventory', icon: Package, color: 'from-yellow-500 to-orange-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { name: 'Accounting', href: '/accounting', icon: DollarSign, color: 'from-green-500 to-teal-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { name: 'Loans', href: '/loans', icon: CreditCard, color: 'from-pink-500 to-rose-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { name: 'Wallets', href: '/wallets', icon: Wallet, color: 'from-cyan-500 to-blue-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { name: 'Airtel', href: '/airtel', icon: Phone, color: 'from-red-500 to-orange-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { name: 'Reports', href: '/reports', icon: BarChart3, color: 'from-violet-500 to-purple-500', requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    color: 'from-blue-500 to-cyan-500',
+  },
+  {
+    name: 'Users',
+    href: '/users',
+    icon: Users,
+    color: 'from-indigo-500 to-purple-500',
+    requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN],
+  },
+  {
+    name: 'Memberships',
+    href: '/memberships',
+    icon: Building2,
+    color: 'from-amber-500 to-orange-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.CUSTOMER,
+    ],
+  },
+  {
+    name: 'Salons',
+    href: '/salons',
+    icon: Scissors,
+    color: 'from-purple-500 to-pink-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'Browse Salons',
+    href: '/salons/browse',
+    icon: Scissors,
+    color: 'from-purple-500 to-pink-500',
+    requiredRoles: [UserRole.CUSTOMER],
+  },
+  {
+    name: 'Customers',
+    href: '/customers',
+    icon: Users,
+    color: 'from-green-500 to-emerald-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'Appointments',
+    href: '/appointments',
+    icon: Calendar,
+    color: 'from-orange-500 to-red-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'My Appointments',
+    href: '/appointments/my',
+    icon: Calendar,
+    color: 'from-orange-500 to-red-500',
+    requiredRoles: [UserRole.CUSTOMER],
+  },
+  {
+    name: 'Services',
+    href: '/services',
+    icon: Sparkles,
+    color: 'from-pink-500 to-rose-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'Purchase History',
+    href: '/sales/history',
+    icon: ShoppingCart,
+    color: 'from-indigo-500 to-blue-500',
+    requiredRoles: [UserRole.CUSTOMER],
+  },
+  {
+    name: 'Sales',
+    href: '/sales',
+    icon: ShoppingCart,
+    color: 'from-indigo-500 to-blue-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'Commissions',
+    href: '/commissions',
+    icon: TrendingUp,
+    color: 'from-emerald-500 to-green-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'Payroll',
+    href: '/payroll',
+    icon: DollarSign,
+    color: 'from-teal-500 to-cyan-500',
+    requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER],
+  },
+  {
+    name: 'Inventory',
+    href: '/inventory',
+    icon: Package,
+    color: 'from-yellow-500 to-orange-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    name: 'Accounting',
+    href: '/accounting',
+    icon: DollarSign,
+    color: 'from-green-500 to-teal-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    name: 'Loans',
+    href: '/loans',
+    icon: CreditCard,
+    color: 'from-pink-500 to-rose-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    name: 'Wallets',
+    href: '/wallets',
+    icon: Wallet,
+    color: 'from-cyan-500 to-blue-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    name: 'Airtel',
+    href: '/airtel',
+    icon: Phone,
+    color: 'from-red-500 to-orange-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    name: 'Reports',
+    href: '/reports',
+    icon: BarChart3,
+    color: 'from-violet-500 to-purple-500',
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
   { name: 'Settings', href: '/settings', icon: Settings, color: 'from-gray-500 to-slate-500' },
 ];
 
@@ -84,7 +270,9 @@ export default function FloatingNav() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const activeItem = navItems.find((item) => pathname === item.href || pathname?.startsWith(item.href + '/'));
+  const activeItem = navItems.find(
+    (item) => pathname === item.href || pathname?.startsWith(item.href + '/')
+  );
 
   return (
     <>
@@ -185,4 +373,3 @@ export default function FloatingNav() {
     </>
   );
 }
-

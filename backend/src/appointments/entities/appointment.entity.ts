@@ -3,8 +3,10 @@ import { Salon } from '../../salons/entities/salon.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { Service } from '../../services/entities/service.entity';
 import { User } from '../../users/entities/user.entity';
+import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
 
 export enum AppointmentStatus {
+  PENDING = 'pending',
   BOOKED = 'booked',
   CONFIRMED = 'confirmed',
   IN_PROGRESS = 'in_progress',
@@ -50,7 +52,7 @@ export class Appointment {
   @Column({
     type: 'varchar',
     length: 32,
-    default: AppointmentStatus.BOOKED,
+    default: AppointmentStatus.PENDING,
   })
   status: AppointmentStatus;
 
@@ -60,6 +62,17 @@ export class Appointment {
 
   @Column({ name: 'created_by', nullable: true })
   createdById: string;
+
+  @ManyToOne(() => SalonEmployee, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'salon_employee_id' })
+  salonEmployee: SalonEmployee;
+
+  @Index()
+  @Column({ name: 'salon_employee_id', nullable: true })
+  salonEmployeeId: string;
+
+  @Column({ name: 'service_amount', type: 'decimal', precision: 14, scale: 2, nullable: true })
+  serviceAmount: number;
 
   @Column({ type: 'text', nullable: true })
   notes: string;

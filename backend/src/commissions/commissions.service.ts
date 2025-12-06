@@ -15,12 +15,14 @@ export class CommissionsService {
 
   async createCommission(
     salonEmployeeId: string,
-    saleItemId: string,
+    saleItemId: string | null,
     saleAmount: number,
+    metadata?: Record<string, any>,
   ): Promise<Commission> {
     // Get employee to get commission rate
     const employee = await this.salonEmployeesRepository.findOne({
       where: { id: salonEmployeeId },
+      relations: ['user'],
     });
 
     if (!employee) {
@@ -37,6 +39,7 @@ export class CommissionsService {
       commissionRate,
       saleAmount,
       paid: false,
+      metadata: metadata || {},
     });
 
     return this.commissionsRepository.save(commission);
@@ -103,7 +106,15 @@ export class CommissionsService {
     });
   }
 
-  async markAsPaid(commissionId: string): Promise<Commission> {
+  async markAsPaid(
+    commissionId: string,
+    paymentDetails?: {
+      paymentMethod?: 'cash' | 'bank_transfer' | 'mobile_money' | 'payroll';
+      paymentReference?: string;
+      paidById?: string;
+      payrollItemId?: string;
+    },
+  ): Promise<Commission> {
     const commission = await this.commissionsRepository.findOne({
       where: { id: commissionId },
     });
@@ -114,16 +125,54 @@ export class CommissionsService {
 
     commission.paid = true;
     commission.paidAt = new Date();
+    
+    if (paymentDetails) {
+      if (paymentDetails.paymentMethod) {
+        commission.paymentMethod = paymentDetails.paymentMethod;
+      }
+      if (paymentDetails.paymentReference) {
+        commission.paymentReference = paymentDetails.paymentReference;
+      }
+      if (paymentDetails.paidById) {
+        commission.paidById = paymentDetails.paidById;
+      }
+      if (paymentDetails.payrollItemId) {
+        commission.payrollItemId = paymentDetails.payrollItemId;
+      }
+    }
 
     return this.commissionsRepository.save(commission);
   }
 
-  async markMultipleAsPaid(commissionIds: string[]): Promise<Commission[]> {
+  async markMultipleAsPaid(
+    commissionIds: string[],
+    paymentDetails?: {
+      paymentMethod?: 'cash' | 'bank_transfer' | 'mobile_money' | 'payroll';
+      paymentReference?: string;
+      paidById?: string;
+      payrollItemId?: string;
+    },
+  ): Promise<Commission[]> {
     const commissions = await this.findByIds(commissionIds);
     
     commissions.forEach((commission) => {
       commission.paid = true;
       commission.paidAt = new Date();
+      
+      if (paymentDetails) {
+        if (paymentDetails.paymentMethod) {
+          commission.paymentMethod = paymentDetails.paymentMethod;
+        }
+        if (paymentDetails.paymentReference) {
+          commission.paymentReference = paymentDetails.paymentReference;
+        }
+        if (paymentDetails.paidById) {
+          commission.paidById = paymentDetails.paidById;
+        }
+        if (paymentDetails.payrollItemId) {
+          commission.payrollItemId = paymentDetails.payrollItemId;
+        }
+      }
     });
 
     return this.commissionsRepository.save(commissions);

@@ -36,7 +36,7 @@ export default function DashboardPage() {
       // Force a page reload to update the dashboard
       window.location.reload();
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      // Error refreshing user
     } finally {
       setIsRefreshing(false);
     }

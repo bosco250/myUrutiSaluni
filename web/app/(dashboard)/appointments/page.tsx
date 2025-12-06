@@ -37,10 +37,12 @@ interface Appointment {
   customerId?: string;
   serviceId?: string;
   salonId?: string;
+  salonEmployeeId?: string;
   scheduledStart: string;
   scheduledEnd: string;
   status: string;
   notes?: string;
+  serviceAmount?: number;
   metadata?: {
     preferredEmployeeId?: string;
     preferredEmployeeName?: string;
@@ -62,11 +64,26 @@ interface Appointment {
     name: string;
     address?: string;
   };
+  salonEmployee?: {
+    id: string;
+    user?: {
+      fullName: string;
+    };
+    roleTitle?: string;
+    commissionRate?: number;
+  };
 }
 
 export default function AppointmentsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+      ]}
+    >
       <AppointmentsContent />
     </ProtectedRoute>
   );
@@ -83,6 +100,24 @@ function AppointmentsContent() {
   const [salonFilter, setSalonFilter] = useState<string>('all');
   const queryClient = useQueryClient();
 
+  // Check if user can edit appointments (salon owners, employees, and admins)
+  const canEdit =
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.ASSOCIATION_ADMIN ||
+    user?.role === UserRole.SALON_OWNER ||
+    user?.role === UserRole.SALON_EMPLOYEE;
+
+  // Status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: string }) => {
+      const response = await api.patch(`/appointments/${appointmentId}`, { status });
+      return response.data?.data || response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+
   // Get employee records for current user (if they are an employee)
   const { data: employeeRecords = [] } = useQuery({
     queryKey: ['my-employee-records', user?.id],
@@ -95,7 +130,7 @@ function AppointmentsContent() {
         const salonsResponse = await api.get('/salons');
         const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
         const salonIds = allSalons.map((s: any) => s.id);
-        
+
         // Get employee records for each salon
         const records = [];
         for (const salonId of salonIds) {
@@ -207,18 +242,48 @@ function AppointmentsContent() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string; border: string }> = {
-      booked: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
-      confirmed: { bg: 'bg-green-500/10', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/20' },
-      in_progress: { bg: 'bg-yellow-500/10', text: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-500/20' },
-      completed: { bg: 'bg-gray-500/10', text: 'text-gray-600 dark:text-gray-400', border: 'border-gray-500/20' },
-      cancelled: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
-      no_show: { bg: 'bg-orange-500/10', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-500/20' },
+      pending: {
+        bg: 'bg-amber-500/10',
+        text: 'text-amber-600 dark:text-amber-400',
+        border: 'border-amber-500/20',
+      },
+      booked: {
+        bg: 'bg-blue-500/10',
+        text: 'text-blue-600 dark:text-blue-400',
+        border: 'border-blue-500/20',
+      },
+      confirmed: {
+        bg: 'bg-green-500/10',
+        text: 'text-green-600 dark:text-green-400',
+        border: 'border-green-500/20',
+      },
+      in_progress: {
+        bg: 'bg-yellow-500/10',
+        text: 'text-yellow-600 dark:text-yellow-400',
+        border: 'border-yellow-500/20',
+      },
+      completed: {
+        bg: 'bg-gray-500/10',
+        text: 'text-gray-600 dark:text-gray-400',
+        border: 'border-gray-500/20',
+      },
+      cancelled: {
+        bg: 'bg-red-500/10',
+        text: 'text-red-600 dark:text-red-400',
+        border: 'border-red-500/20',
+      },
+      no_show: {
+        bg: 'bg-orange-500/10',
+        text: 'text-orange-600 dark:text-orange-400',
+        border: 'border-orange-500/20',
+      },
     };
     return colors[status] || colors.booked;
   };
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
+      pending: 'Pending',
       booked: 'Booked',
       confirmed: 'Confirmed',
       in_progress: 'In Progress',
@@ -311,7 +376,9 @@ function AppointmentsContent() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
             <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Total</div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">{stats.total}</div>
+            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
+              {stats.total}
+            </div>
           </div>
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
             <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">Today</div>
@@ -319,15 +386,21 @@ function AppointmentsContent() {
           </div>
           <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
             <div className="text-sm text-green-600 dark:text-green-400 mb-1">Upcoming</div>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.upcoming}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {stats.upcoming}
+            </div>
           </div>
           <div className="bg-gray-500/10 border border-gray-500/20 rounded-xl p-4">
             <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Completed</div>
-            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{stats.completed}</div>
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+              {stats.completed}
+            </div>
           </div>
           <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
             <div className="text-sm text-yellow-600 dark:text-yellow-400 mb-1">Confirmed</div>
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.confirmed}</div>
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+              {stats.confirmed}
+            </div>
           </div>
         </div>
 
@@ -400,23 +473,29 @@ function AppointmentsContent() {
               No appointments found
             </h3>
             <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
-              {searchQuery || statusFilter !== 'all' || dateFilter !== 'all' || salonFilter !== 'all'
+              {searchQuery ||
+              statusFilter !== 'all' ||
+              dateFilter !== 'all' ||
+              salonFilter !== 'all'
                 ? 'Try adjusting your filters'
                 : 'Get started by creating your first appointment'}
             </p>
-            {(!searchQuery && statusFilter === 'all' && dateFilter === 'all' && salonFilter === 'all') && (
-              <Button
-                onClick={() => {
-                  setEditingAppointment(null);
-                  setShowModal(true);
-                }}
-                variant="primary"
-                className="flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-4 h-4" />
-                Create Appointment
-              </Button>
-            )}
+            {!searchQuery &&
+              statusFilter === 'all' &&
+              dateFilter === 'all' &&
+              salonFilter === 'all' && (
+                <Button
+                  onClick={() => {
+                    setEditingAppointment(null);
+                    setShowModal(true);
+                  }}
+                  variant="primary"
+                  className="flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Appointment
+                </Button>
+              )}
           </div>
         ) : (
           Object.entries(groupedAppointments)
@@ -429,8 +508,8 @@ function AppointmentsContent() {
                     {isToday(parseISO(date))
                       ? 'Today'
                       : isTomorrow(parseISO(date))
-                      ? 'Tomorrow'
-                      : format(parseISO(date), 'EEEE, MMMM d, yyyy')}
+                        ? 'Tomorrow'
+                        : format(parseISO(date), 'EEEE, MMMM d, yyyy')}
                   </h2>
                   <div className="h-px flex-1 bg-border-light dark:bg-border-dark" />
                 </div>
@@ -442,7 +521,7 @@ function AppointmentsContent() {
                       (emp: any) => emp.id === appointment.metadata?.preferredEmployeeId
                     );
                     const preferredEmployeeName = appointment.metadata?.preferredEmployeeName;
-                    
+
                     return (
                       <div
                         key={appointment.id}
@@ -455,11 +534,13 @@ function AppointmentsContent() {
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                isMyAppointment
-                                  ? 'bg-gradient-to-br from-primary to-primary/80'
-                                  : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-                              }`}>
+                              <div
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  isMyAppointment
+                                    ? 'bg-gradient-to-br from-primary to-primary/80'
+                                    : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                                }`}
+                              >
                                 <Calendar className="w-5 h-5 text-white" />
                               </div>
                               <div className="flex-1 min-w-0">
@@ -479,8 +560,12 @@ function AppointmentsContent() {
                               </div>
                             </div>
                           </div>
-                          <div className={`px-2.5 py-1 rounded-lg border text-xs font-medium ${statusColors.border} ${statusColors.bg}`}>
-                            <span className={statusColors.text}>{getStatusLabel(appointment.status)}</span>
+                          <div
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-medium ${statusColors.border} ${statusColors.bg}`}
+                          >
+                            <span className={statusColors.text}>
+                              {getStatusLabel(appointment.status)}
+                            </span>
                           </div>
                         </div>
 
@@ -519,26 +604,68 @@ function AppointmentsContent() {
                         </div>
 
                         <div className="flex items-center gap-2 pt-4 border-t border-border-light dark:border-border-dark">
+                          {canEdit && appointment.status === 'pending' && (
+                            <Button
+                              onClick={() =>
+                                updateStatusMutation.mutate({
+                                  appointmentId: appointment.id,
+                                  status: 'booked',
+                                })
+                              }
+                              variant="primary"
+                              size="sm"
+                              disabled={updateStatusMutation.isPending}
+                              className="flex-1"
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Confirm
+                            </Button>
+                          )}
+                          {canEdit &&
+                            ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
+                              <Button
+                                onClick={() => {
+                                  if (
+                                    confirm('Are you sure you want to cancel this appointment?')
+                                  ) {
+                                    updateStatusMutation.mutate({
+                                      appointmentId: appointment.id,
+                                      status: 'cancelled',
+                                    });
+                                  }
+                                }}
+                                variant="secondary"
+                                size="sm"
+                                className="text-danger hover:bg-danger/10 px-3"
+                                disabled={updateStatusMutation.isPending}
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            )}
                           <Button
                             onClick={() => router.push(`/appointments/${appointment.id}`)}
                             variant="secondary"
                             size="sm"
-                            className="flex-1"
+                            className={
+                              canEdit && appointment.status === 'pending' ? 'px-3' : 'flex-1'
+                            }
                           >
                             <Eye className="w-4 h-4 mr-2" />
                             View
                           </Button>
-                          <Button
-                            onClick={() => {
-                              setEditingAppointment(appointment);
-                              setShowModal(true);
-                            }}
-                            variant="secondary"
-                            size="sm"
-                            className="px-3"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
+                          {canEdit && (
+                            <Button
+                              onClick={() => {
+                                setEditingAppointment(appointment);
+                                setShowModal(true);
+                              }}
+                              variant="secondary"
+                              size="sm"
+                              className="px-3"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
@@ -581,13 +708,15 @@ function AppointmentModal({
     customerId: appointment?.customerId || appointment?.customer?.id || '',
     serviceId: appointment?.serviceId || appointment?.service?.id || '',
     salonId: appointment?.salonId || appointment?.salon?.id || '',
+    salonEmployeeId:
+      appointment?.salonEmployeeId || appointment?.metadata?.preferredEmployeeId || '',
     scheduledStart: appointment
       ? format(new Date(appointment.scheduledStart), "yyyy-MM-dd'T'HH:mm")
       : '',
     scheduledEnd: appointment
       ? format(new Date(appointment.scheduledEnd), "yyyy-MM-dd'T'HH:mm")
       : '',
-    status: appointment?.status || 'booked',
+    status: appointment?.status || 'pending',
     notes: appointment?.notes || '',
   });
   const [error, setError] = useState('');
@@ -615,6 +744,21 @@ function AppointmentModal({
       const response = await api.get('/salons');
       return response.data || [];
     },
+  });
+
+  // Fetch employees for selected salon
+  const { data: employees = [] } = useQuery({
+    queryKey: ['salon-employees', formData.salonId],
+    queryFn: async () => {
+      if (!formData.salonId) return [];
+      try {
+        const response = await api.get(`/salons/${formData.salonId}/employees`);
+        return response.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: !!formData.salonId,
   });
 
   const mutation = useMutation({
@@ -703,7 +847,8 @@ function AppointmentModal({
                   <option value="">Select service (optional)</option>
                   {services?.map((service: any) => (
                     <option key={service.id} value={service.id}>
-                      {service.name} {service.basePrice ? `- RWF ${service.basePrice.toLocaleString()}` : ''}
+                      {service.name}{' '}
+                      {service.basePrice ? `- RWF ${service.basePrice.toLocaleString()}` : ''}
                     </option>
                   ))}
                 </select>
@@ -717,7 +862,9 @@ function AppointmentModal({
               <select
                 required
                 value={formData.salonId}
-                onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, salonId: e.target.value, salonEmployeeId: '' })
+                }
                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="">Select salon</option>
@@ -728,6 +875,37 @@ function AppointmentModal({
                 ))}
               </select>
             </div>
+
+            {formData.salonId && (
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                  Assign Employee (for commission tracking)
+                </label>
+                <select
+                  value={formData.salonEmployeeId}
+                  onChange={(e) => setFormData({ ...formData, salonEmployeeId: e.target.value })}
+                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="">No employee assigned (optional)</option>
+                  {employees
+                    ?.filter((emp: any) => emp.isActive !== false)
+                    ?.map((employee: any) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.user?.fullName || employee.roleTitle || 'Unknown'}
+                        {employee.roleTitle ? ` - ${employee.roleTitle}` : ''}
+                        {employee.commissionRate > 0
+                          ? ` (${employee.commissionRate}% commission)`
+                          : ''}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">
+                  {formData.salonEmployeeId
+                    ? 'Commission will be created automatically when appointment is marked as completed'
+                    : 'Assign an employee to track commissions for this appointment'}
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -789,20 +967,10 @@ function AppointmentModal({
             </div>
 
             <div className="flex gap-3 pt-4 border-t border-border-light dark:border-border-dark">
-              <Button
-                type="button"
-                onClick={onClose}
-                variant="secondary"
-                className="flex-1"
-              >
+              <Button type="button" onClick={onClose} variant="secondary" className="flex-1">
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                className="flex-1"
-                disabled={loading}
-              >
+              <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

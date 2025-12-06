@@ -98,7 +98,6 @@ function StockManagementContent() {
         const response = await api.get('/salons');
         return response.data?.data || response.data || [];
       } catch (error) {
-        console.error('Error fetching salons:', error);
         return [];
       }
     },
@@ -131,7 +130,6 @@ function StockManagementContent() {
         const response = await api.get('/inventory/stock-levels', { params });
         return response.data || [];
       } catch (error) {
-        console.error('Error fetching stock levels:', error);
         return [];
       }
     },
@@ -149,7 +147,6 @@ function StockManagementContent() {
         const response = await api.get('/inventory/movements', { params });
         return response.data || [];
       } catch (error) {
-        console.error('Error fetching movements:', error);
         return [];
       }
     },

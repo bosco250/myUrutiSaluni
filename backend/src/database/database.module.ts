@@ -29,11 +29,15 @@ import { AirtelAgent } from '../airtel/entities/airtel-agent.entity';
 import { AirtelTransaction } from '../airtel/entities/airtel-transaction.entity';
 import { Commission } from '../commissions/entities/commission.entity';
 import { CustomerStyleReference } from '../customers/entities/customer-style-reference.entity';
+import { SalonCustomer } from '../customers/entities/salon-customer.entity';
+import { CustomerCommunication } from '../customers/entities/customer-communication.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { NotificationPreference } from '../notifications/entities/notification-preference.entity';
 import { Communication } from '../communications/entities/communication.entity';
 import { Inspection } from '../inspections/entities/inspection.entity';
 import { Resource } from '../resources/entities/resource.entity';
+import { PayrollRun } from '../payroll/entities/payroll-run.entity';
+import { PayrollItem } from '../payroll/entities/payroll-item.entity';
 
 @Global()
 @Module({
@@ -74,11 +78,15 @@ import { Resource } from '../resources/entities/resource.entity';
           AirtelTransaction,
           Commission,
           CustomerStyleReference,
+          SalonCustomer,
+          CustomerCommunication,
           Notification,
           NotificationPreference,
           Communication,
           Inspection,
           Resource,
+          PayrollRun,
+          PayrollItem,
         ];
         
         // Use PostgreSQL by default, SQLite only if explicitly set

@@ -59,7 +59,6 @@ export default function CustomersPage() {
     queryFn: async () => {
       try {
         const response = await api.get('/customers');
-        console.log('[CUSTOMERS PAGE] API Response:', response.data);
         // Handle both wrapped and unwrapped responses
         if (Array.isArray(response.data)) {
           return response.data;
@@ -71,7 +70,7 @@ export default function CustomersPage() {
         }
         return [];
       } catch (err: any) {
-        console.error('[CUSTOMERS PAGE] Error fetching customers:', err);
+        // Error fetching customers
         throw err;
       }
     },

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, QueryFailedError } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,6 +13,7 @@ import {
 } from '../accounting/entities/chart-of-account.entity';
 import { JournalEntryStatus } from '../accounting/entities/journal-entry.entity';
 import { CommissionsService } from '../commissions/commissions.service';
+import { SalonCustomerService } from '../customers/salon-customer.service';
 
 export interface SaleWithDetails extends Sale {
   employees?: { id: string; name: string }[];
@@ -39,6 +40,8 @@ export class SalesService {
     private inventoryService: InventoryService,
     private accountingService: AccountingService,
     private commissionsService: CommissionsService,
+    @Inject(forwardRef(() => SalonCustomerService))
+    private salonCustomerService: SalonCustomerService,
   ) {}
 
   async create(
@@ -46,8 +49,6 @@ export class SalesService {
     items: Partial<SaleItem>[],
   ): Promise<Sale> {
     try {
-      this.logger.debug(`Creating sale with ${items?.length || 0} items`);
-
       const sale = this.salesRepository.create(saleData);
       const savedSale = await this.salesRepository.save(sale);
 
@@ -58,6 +59,29 @@ export class SalesService {
       }
 
       await this.createSaleJournalEntry(savedSale, items || []);
+
+      // Record customer visit if customer is associated
+      if (savedSale.customerId && savedSale.salonId) {
+        try {
+          const saleAmount = Number(savedSale.totalAmount) || 0;
+          const saleDate = savedSale.createdAt || new Date();
+          await this.salonCustomerService.recordVisit(
+            savedSale.salonId,
+            savedSale.customerId,
+            saleAmount,
+            saleDate,
+          );
+          this.logger.debug(
+            `Recorded sale visit for customer ${savedSale.customerId} at salon ${savedSale.salonId}`,
+          );
+        } catch (error) {
+          // Log but don't fail sale creation if visit tracking fails
+          this.logger.warn(
+            `Failed to record customer visit: ${error.message}`,
+            error.stack,
+          );
+        }
+      }
 
       return this.findOne(savedSale.id);
     } catch (error) {
@@ -80,7 +104,7 @@ export class SalesService {
         throw new Error(`Invalid lineTotal for item ${index}`);
       }
 
-      return {
+      const saleItemData = {
         saleId,
         serviceId: item.serviceId || null,
         productId: item.productId || null,
@@ -90,6 +114,8 @@ export class SalesService {
         discountAmount,
         lineTotal,
       };
+
+      return saleItemData;
     });
 
     const queryRunner =
@@ -132,25 +158,15 @@ export class SalesService {
       if (item.productId && item.quantity) {
         try {
           const quantity = Math.abs(Number(item.quantity));
-          this.logger.debug(
-            `Creating consumption movement: productId=${item.productId}, quantity=${quantity}, saleId=${sale.id}`,
-          );
-
-          // For CONSUMPTION, quantity should be positive
-          // The stock calculation SQL will negate it: -movement.quantity
-          const movement = await this.inventoryService.createMovement({
+          await this.inventoryService.createMovement({
             salonId: saleData.salonId,
             productId: item.productId,
             movementType: InventoryMovementType.CONSUMPTION,
-            quantity: quantity, // Positive quantity for consumption
+            quantity: quantity,
             referenceId: sale.id,
             performedById: saleData.createdById,
             notes: `Product sold in sale ${sale.id}`,
           });
-
-          this.logger.debug(
-            `Inventory movement created: id=${movement.id}, type=${movement.movementType}, quantity=${movement.quantity}`,
-          );
         } catch (error) {
           this.logger.error(
             `Failed to create inventory movement for product ${item.productId}: ${error.message}`,
@@ -163,20 +179,51 @@ export class SalesService {
 
   private async processCommissions(saleId: string): Promise<void> {
     try {
-      const items = await this.saleItemsRepository.find({ where: { saleId } });
+      const items = await this.saleItemsRepository.find({ 
+        where: { saleId },
+        relations: ['salonEmployee', 'service', 'product'],
+      });
+
+      let commissionsCreated = 0;
+      let commissionsSkipped = 0;
 
       for (const item of items) {
         if (item.salonEmployeeId && item.lineTotal) {
-          await this.commissionsService.createCommission(
-            item.salonEmployeeId,
-            item.id,
-            Number(item.lineTotal),
-          );
+          try {
+            const lineTotal = Number(item.lineTotal);
+            if (lineTotal <= 0) {
+              commissionsSkipped++;
+              continue;
+            }
+
+            await this.commissionsService.createCommission(
+              item.salonEmployeeId,
+              item.id,
+              lineTotal,
+              {
+                saleId: saleId,
+                source: 'sale',
+                serviceId: item.serviceId || null,
+                productId: item.productId || null,
+              },
+            );
+
+            commissionsCreated++;
+          } catch (commissionError) {
+            this.logger.error(
+              `Failed to create commission for sale item ${item.id}: ${commissionError.message}`,
+              commissionError.stack,
+            );
+            commissionsSkipped++;
+          }
+        } else {
+          commissionsSkipped++;
         }
       }
     } catch (error) {
-      this.logger.warn(
-        `Failed to create commissions for sale ${saleId}: ${error.message}`,
+      this.logger.error(
+        `Failed to process commissions for sale ${saleId}: ${error.message}`,
+        error.stack,
       );
     }
   }

@@ -33,7 +33,18 @@ import {
   User,
   Star,
 } from 'lucide-react';
-import { format, isToday, isTomorrow, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import {
+  format,
+  isToday,
+  isTomorrow,
+  parseISO,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+} from 'date-fns';
 import {
   LineChart,
   Line,
@@ -159,7 +170,7 @@ export default function SalonOwnerDashboard() {
         const salonsResponse = await api.get('/salons');
         const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
         const salonIds = allSalons.map((s: any) => s.id);
-        
+
         // Get employee records for each salon
         const records = [];
         for (const salonId of salonIds) {
@@ -192,10 +203,12 @@ export default function SalonOwnerDashboard() {
         const allAppointments = response.data || [];
         // Filter today and upcoming
         const now = new Date();
-        return allAppointments.filter((apt: Appointment) => {
-          const aptDate = parseISO(apt.scheduledStart);
-          return aptDate >= now;
-        }).slice(0, 10); // Get next 10 to show more appointments
+        return allAppointments
+          .filter((apt: Appointment) => {
+            const aptDate = parseISO(apt.scheduledStart);
+            return aptDate >= now;
+          })
+          .slice(0, 10); // Get next 10 to show more appointments
       } catch (error) {
         return [];
       }
@@ -207,22 +220,22 @@ export default function SalonOwnerDashboard() {
     if (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') {
       return { myAppointments: [], otherAppointments: appointments };
     }
-    
+
     const myAppts: Appointment[] = [];
     const otherAppts: Appointment[] = [];
-    
+
     appointments.forEach((apt) => {
       const isMyAppointment = employeeRecords.some(
         (emp: any) => emp.id === apt.metadata?.preferredEmployeeId
       );
-      
+
       if (isMyAppointment) {
         myAppts.push(apt);
       } else {
         otherAppts.push(apt);
       }
     });
-    
+
     return { myAppointments: myAppts, otherAppointments: otherAppts };
   }, [appointments, employeeRecords, user?.role]);
 
@@ -235,28 +248,24 @@ export default function SalonOwnerDashboard() {
         // Handle paginated response: { data: [...], total: ..., page: ..., limit: ... }
         const salesData = response.data?.data || response.data || [];
         const sales = Array.isArray(salesData) ? salesData : salesData.data || [];
-        console.log('[SALON OWNER DASHBOARD] Recent sales:', {
-          responseData: response.data,
-          salesData,
-          sales,
-          firstSaleItems: sales[0]?.items,
-        });
         return sales.slice(0, 5); // Get latest 5
       } catch (error) {
-        console.error('[SALON OWNER DASHBOARD] Error fetching sales:', error);
+        // Error fetching sales
         return [];
       }
     },
   });
 
   // Calculate stats with enhanced analytics
-  const { data: stats, isLoading: statsLoading } = useQuery<SalonOwnerStats & {
-    weeklyRevenue: Array<{ date: string; revenue: number }>;
-    dailyRevenue: Array<{ date: string; revenue: number }>;
-    topServices: Array<{ name: string; count: number; revenue: number }>;
-    revenueGrowth: number;
-    salesGrowth: number;
-  }>({
+  const { data: stats, isLoading: statsLoading } = useQuery<
+    SalonOwnerStats & {
+      weeklyRevenue: Array<{ date: string; revenue: number }>;
+      dailyRevenue: Array<{ date: string; revenue: number }>;
+      topServices: Array<{ name: string; count: number; revenue: number }>;
+      revenueGrowth: number;
+      salesGrowth: number;
+    }
+  >({
     queryKey: ['salon-owner-stats', user?.id, salons.length],
     queryFn: async () => {
       try {
@@ -264,7 +273,7 @@ export default function SalonOwnerDashboard() {
         const allAppointments = appointmentsResponse.data || [];
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
+
         const todayAppointments = allAppointments.filter((apt: Appointment) => {
           const aptDate = parseISO(apt.scheduledStart);
           return aptDate >= today && aptDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
@@ -278,7 +287,7 @@ export default function SalonOwnerDashboard() {
         const salesResponse = await api.get('/sales?page=1&limit=10000');
         const salesData = salesResponse.data?.data || salesResponse.data || [];
         const allSales = Array.isArray(salesData) ? salesData : salesData.data || [];
-        
+
         const todaySales = allSales.filter((sale: Sale) => {
           const saleDate = parseISO(sale.createdAt);
           return saleDate >= today;
@@ -297,17 +306,26 @@ export default function SalonOwnerDashboard() {
           return saleDate >= lastMonthStart && saleDate <= lastMonthEnd;
         });
 
-        const todayRevenue = todaySales.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
-        const monthRevenue = monthSales.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
-        const lastMonthRevenue = lastMonthSales.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+        const todayRevenue = todaySales.reduce(
+          (sum: number, sale: Sale) => sum + Number(sale.totalAmount || 0),
+          0
+        );
+        const monthRevenue = monthSales.reduce(
+          (sum: number, sale: Sale) => sum + Number(sale.totalAmount || 0),
+          0
+        );
+        const lastMonthRevenue = lastMonthSales.reduce(
+          (sum: number, sale: Sale) => sum + Number(sale.totalAmount || 0),
+          0
+        );
 
         // Calculate growth percentages
-        const revenueGrowth = lastMonthRevenue > 0 
-          ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
-          : 0;
-        const salesGrowth = lastMonthSales.length > 0
-          ? ((monthSales.length - lastMonthSales.length) / lastMonthSales.length) * 100
-          : 0;
+        const revenueGrowth =
+          lastMonthRevenue > 0 ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
+        const salesGrowth =
+          lastMonthSales.length > 0
+            ? ((monthSales.length - lastMonthSales.length) / lastMonthSales.length) * 100
+            : 0;
 
         // Weekly revenue (last 7 days)
         const weekStart = subDays(now, 7);
@@ -318,7 +336,10 @@ export default function SalonOwnerDashboard() {
           });
           return {
             date: format(date, 'MMM d'),
-            revenue: daySales.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0),
+            revenue: daySales.reduce(
+              (sum: number, sale: Sale) => sum + Number(sale.totalAmount || 0),
+              0
+            ),
           };
         });
 
@@ -331,7 +352,10 @@ export default function SalonOwnerDashboard() {
           });
           return {
             date: format(date, 'MMM d'),
-            revenue: daySales.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0),
+            revenue: daySales.reduce(
+              (sum: number, sale: Sale) => sum + Number(sale.totalAmount || 0),
+              0
+            ),
           };
         });
 
@@ -343,8 +367,8 @@ export default function SalonOwnerDashboard() {
               if (!serviceCounts[item.service.name]) {
                 serviceCounts[item.service.name] = { count: 0, revenue: 0 };
               }
-              serviceCounts[item.service.name].count += item.quantity;
-              serviceCounts[item.service.name].revenue += item.lineTotal;
+              serviceCounts[item.service.name].count += Number(item.quantity || 0);
+              serviceCounts[item.service.name].revenue += Number(item.lineTotal || 0);
             }
           });
         });
@@ -353,8 +377,9 @@ export default function SalonOwnerDashboard() {
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 5);
 
-        const totalEmployees = salons.reduce((sum: number, salon: Salon) => 
-          sum + (salon.settings?.numberOfEmployees || 0), 0
+        const totalEmployees = salons.reduce(
+          (sum: number, salon: Salon) => sum + Number(salon.settings?.numberOfEmployees || 0),
+          0
         );
 
         return {
@@ -476,7 +501,9 @@ export default function SalonOwnerDashboard() {
           </div>
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 text-center">
             <Calendar className="w-8 h-8 text-primary mx-auto mb-3" />
-            <h3 className="font-bold text-text-light dark:text-text-dark mb-2">Schedule Appointments</h3>
+            <h3 className="font-bold text-text-light dark:text-text-dark mb-2">
+              Schedule Appointments
+            </h3>
             <p className="text-sm text-text-light/60 dark:text-text-dark/60">
               Start booking customer appointments
             </p>
@@ -530,9 +557,11 @@ export default function SalonOwnerDashboard() {
               Today
             </span>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Today's Revenue</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Today's Revenue
+          </p>
           <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            RWF {stats?.todayRevenue?.toLocaleString() || '0'}
+            RWF {Number(stats?.todayRevenue || 0).toLocaleString()}
           </p>
           <div className="flex items-center gap-1 mt-2 text-xs text-green-400">
             <TrendingUp className="w-3 h-3" />
@@ -550,24 +579,34 @@ export default function SalonOwnerDashboard() {
               Today
             </span>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Today's Appointments</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Today's Appointments
+          </p>
           <p className="text-2xl font-bold text-text-light dark:text-text-dark">
             {stats?.todayAppointments || 0}
           </p>
-          <Link href="/appointments" className="flex items-center gap-1 mt-2 text-xs text-blue-400 hover:text-blue-300 transition">
+          <Link
+            href="/appointments"
+            className="flex items-center gap-1 mt-2 text-xs text-blue-400 hover:text-blue-300 transition"
+          >
             <span>{stats?.upcomingAppointments || 0} upcoming</span>
             <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
 
         {/* Total Salons */}
-        <Link href="/salons" className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-2xl p-5 hover:shadow-lg transition-all">
+        <Link
+          href="/salons"
+          className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-2xl p-5 hover:shadow-lg transition-all"
+        >
           <div className="flex items-start justify-between mb-3">
             <div className="p-2.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
               <Building2 className="w-5 h-5 text-white" />
             </div>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Total Salons</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Total Salons
+          </p>
           <p className="text-2xl font-bold text-text-light dark:text-text-dark">
             {stats?.totalSalons || 0}
           </p>
@@ -587,15 +626,21 @@ export default function SalonOwnerDashboard() {
               This Month
             </span>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">Monthly Revenue</p>
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+            Monthly Revenue
+          </p>
           <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            RWF {stats?.monthRevenue?.toLocaleString() || '0'}
+            RWF {Number(stats?.monthRevenue || 0).toLocaleString()}
           </p>
           <div className="flex items-center gap-1 mt-2 text-xs">
             {stats?.revenueGrowth !== undefined && (
               <span className={stats.revenueGrowth >= 0 ? 'text-green-400' : 'text-red-400'}>
-                {stats.revenueGrowth >= 0 ? <TrendingUp className="w-3 h-3 inline" /> : <TrendingDown className="w-3 h-3 inline" />}
-                {' '}{Math.abs(stats.revenueGrowth).toFixed(1)}% vs last month
+                {stats.revenueGrowth >= 0 ? (
+                  <TrendingUp className="w-3 h-3 inline" />
+                ) : (
+                  <TrendingDown className="w-3 h-3 inline" />
+                )}{' '}
+                {Math.abs(stats.revenueGrowth).toFixed(1)}% vs last month
               </span>
             )}
           </div>
@@ -610,38 +655,44 @@ export default function SalonOwnerDashboard() {
             <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Revenue Trend</h3>
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
+                    Revenue Trend
+                  </h3>
                   <p className="text-sm text-text-light/60 dark:text-text-dark/60">Last 7 days</p>
                 </div>
                 <BarChart3 className="w-5 h-5 text-primary" />
               </div>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={stats.weeklyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-20" />
-                  <XAxis 
-                    dataKey="date" 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="currentColor"
+                    className="opacity-20"
+                  />
+                  <XAxis
+                    dataKey="date"
                     stroke="currentColor"
                     className="text-xs"
                     tick={{ fill: 'currentColor', fontSize: 12 }}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke="currentColor"
                     className="text-xs"
                     tick={{ fill: 'currentColor', fontSize: 12 }}
                     tickFormatter={(value) => `RWF ${(value / 1000).toFixed(0)}k`}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'var(--surface-dark)', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--surface-dark)',
                       border: '1px solid var(--border-dark)',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
                     }}
                     formatter={(value: number) => [`RWF ${value.toLocaleString()}`, 'Revenue']}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#10b981" 
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#10b981"
                     strokeWidth={2}
                     dot={{ fill: '#10b981', r: 4 }}
                     activeDot={{ r: 6 }}
@@ -656,22 +707,28 @@ export default function SalonOwnerDashboard() {
             <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Top Services</h3>
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
+                    Top Services
+                  </h3>
                   <p className="text-sm text-text-light/60 dark:text-text-dark/60">By revenue</p>
                 </div>
                 <Activity className="w-5 h-5 text-primary" />
               </div>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={stats.topServices} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-20" />
-                  <XAxis 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="currentColor"
+                    className="opacity-20"
+                  />
+                  <XAxis
                     type="number"
                     stroke="currentColor"
                     className="text-xs"
                     tick={{ fill: 'currentColor', fontSize: 12 }}
                     tickFormatter={(value) => `RWF ${(value / 1000).toFixed(0)}k`}
                   />
-                  <YAxis 
+                  <YAxis
                     type="category"
                     dataKey="name"
                     stroke="currentColor"
@@ -679,15 +736,15 @@ export default function SalonOwnerDashboard() {
                     tick={{ fill: 'currentColor', fontSize: 12 }}
                     width={100}
                   />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'var(--surface-dark)', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--surface-dark)',
                       border: '1px solid var(--border-dark)',
-                      borderRadius: '8px'
+                      borderRadius: '8px',
                     }}
                     formatter={(value: number, name: string, props: any) => [
                       `RWF ${value.toLocaleString()} • ${props.payload.count} bookings`,
-                      'Revenue'
+                      'Revenue',
                     ]}
                   />
                   <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 8, 8, 0]} />
@@ -707,8 +764,8 @@ export default function SalonOwnerDashboard() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
-                  {user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE' 
-                    ? 'My Appointments' 
+                  {user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE'
+                    ? 'My Appointments'
                     : 'Upcoming Appointments'}
                 </h2>
                 <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
@@ -732,7 +789,9 @@ export default function SalonOwnerDashboard() {
             ) : appointments.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="w-12 h-12 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-                <p className="text-text-light/60 dark:text-text-dark/60 mb-4">No upcoming appointments</p>
+                <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
+                  No upcoming appointments
+                </p>
                 <Button
                   onClick={() => router.push('/appointments')}
                   variant="primary"
@@ -745,92 +804,112 @@ export default function SalonOwnerDashboard() {
             ) : (
               <div className="space-y-4">
                 {/* Show "My Appointments" section for employees */}
-                {(user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') && myAppointments.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Star className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-semibold text-primary">Assigned to Me</h3>
-                      <div className="flex-1 h-px bg-primary/20" />
-                    </div>
-                    <div className="space-y-3">
-                      {myAppointments.slice(0, 5).map((appointment) => {
-                        const isMyAppointment = true;
-                        return (
-                          <Link
-                            key={appointment.id}
-                            href={`/appointments/${appointment.id}`}
-                            className={`block p-4 rounded-xl hover:shadow-md transition-all group ${
-                              isMyAppointment
-                                ? 'bg-primary/10 dark:bg-primary/20 border-2 border-primary/50 dark:border-primary/50'
-                                : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:border-primary/50'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                    isMyAppointment
-                                      ? 'bg-gradient-to-br from-primary to-primary/80'
-                                      : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-                                  }`}>
-                                    <Calendar className="w-5 h-5 text-white" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-semibold text-text-light dark:text-text-dark truncate">
-                                        {appointment.customer?.fullName || appointment.customer?.name || 'Walk-in Customer'}
-                                      </p>
-                                      {isMyAppointment && (
-                                        <span className="px-2 py-0.5 bg-primary text-white text-xs font-medium rounded-full flex items-center gap-1">
-                                          <Star className="w-3 h-3" />
-                                          Assigned to Me
-                                        </span>
-                                      )}
+                {(user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') &&
+                  myAppointments.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Star className="w-4 h-4 text-primary" />
+                        <h3 className="text-sm font-semibold text-primary">Assigned to Me</h3>
+                        <div className="flex-1 h-px bg-primary/20" />
+                      </div>
+                      <div className="space-y-3">
+                        {myAppointments.slice(0, 5).map((appointment) => {
+                          const isMyAppointment = true;
+                          return (
+                            <Link
+                              key={appointment.id}
+                              href={`/appointments/${appointment.id}`}
+                              className={`block p-4 rounded-xl hover:shadow-md transition-all group ${
+                                isMyAppointment
+                                  ? 'bg-primary/10 dark:bg-primary/20 border-2 border-primary/50 dark:border-primary/50'
+                                  : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:border-primary/50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <div
+                                      className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                        isMyAppointment
+                                          ? 'bg-gradient-to-br from-primary to-primary/80'
+                                          : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                                      }`}
+                                    >
+                                      <Calendar className="w-5 h-5 text-white" />
                                     </div>
-                                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 truncate">
-                                      {appointment.service?.name || 'Service'}
-                                    </p>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-text-light dark:text-text-dark truncate">
+                                          {appointment.customer?.fullName ||
+                                            appointment.customer?.name ||
+                                            'Walk-in Customer'}
+                                        </p>
+                                        {isMyAppointment && (
+                                          <span className="px-2 py-0.5 bg-primary text-white text-xs font-medium rounded-full flex items-center gap-1">
+                                            <Star className="w-3 h-3" />
+                                            Assigned to Me
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 truncate">
+                                        {appointment.service?.name || 'Service'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4 ml-[52px] flex-wrap">
+                                    <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
+                                      <Clock className="w-4 h-4" />
+                                      <span>
+                                        {formatAppointmentDate(appointment.scheduledStart)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
+                                      <Building2 className="w-4 h-4" />
+                                      <span className="truncate">
+                                        {appointment.salon?.name || 'Salon'}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-4 ml-[52px] flex-wrap">
-                                  <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
-                                    <Clock className="w-4 h-4" />
-                                    <span>{formatAppointmentDate(appointment.scheduledStart)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
-                                    <Building2 className="w-4 h-4" />
-                                    <span className="truncate">{appointment.salon?.name || 'Salon'}</span>
-                                  </div>
+                                <div className="flex items-center gap-2 ml-4">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}
+                                  >
+                                    {appointment.status || 'Scheduled'}
+                                  </span>
+                                  <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 ml-4">
-                                <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}>
-                                  {appointment.status || 'Scheduled'}
-                                </span>
-                                <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Show "Other Appointments" section for employees, or all appointments for owners */}
-                {((user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') && otherAppointments.length > 0) || 
-                 (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') ? (
+                {((user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') &&
+                  otherAppointments.length > 0) ||
+                (user?.role !== 'salon_employee' && user?.role !== 'SALON_EMPLOYEE') ? (
                   <div>
                     {(user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') && (
                       <div className="flex items-center gap-2 mb-3">
                         <Calendar className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
-                        <h3 className="text-sm font-semibold text-text-light/60 dark:text-text-dark/60">Other Appointments</h3>
+                        <h3 className="text-sm font-semibold text-text-light/60 dark:text-text-dark/60">
+                          Other Appointments
+                        </h3>
                         <div className="flex-1 h-px bg-border-light dark:bg-border-dark" />
                       </div>
                     )}
                     <div className="space-y-3">
-                      {((user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') ? otherAppointments : appointments)
-                        .slice(0, user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE' ? 5 : 5)
+                      {(user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE'
+                        ? otherAppointments
+                        : appointments
+                      )
+                        .slice(
+                          0,
+                          user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE' ? 5 : 5
+                        )
                         .map((appointment) => {
                           const isMyAppointment = employeeRecords.some(
                             (emp: any) => emp.id === appointment.metadata?.preferredEmployeeId
@@ -848,17 +927,21 @@ export default function SalonOwnerDashboard() {
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-3 mb-2">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                      isMyAppointment
-                                        ? 'bg-gradient-to-br from-primary to-primary/80'
-                                        : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-                                    }`}>
+                                    <div
+                                      className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                        isMyAppointment
+                                          ? 'bg-gradient-to-br from-primary to-primary/80'
+                                          : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                                      }`}
+                                    >
                                       <Calendar className="w-5 h-5 text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2">
                                         <p className="font-semibold text-text-light dark:text-text-dark truncate">
-                                          {appointment.customer?.fullName || appointment.customer?.name || 'Walk-in Customer'}
+                                          {appointment.customer?.fullName ||
+                                            appointment.customer?.name ||
+                                            'Walk-in Customer'}
                                         </p>
                                         {isMyAppointment && (
                                           <span className="px-2 py-0.5 bg-primary text-white text-xs font-medium rounded-full flex items-center gap-1">
@@ -875,22 +958,31 @@ export default function SalonOwnerDashboard() {
                                   <div className="flex items-center gap-4 ml-[52px] flex-wrap">
                                     <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
                                       <Clock className="w-4 h-4" />
-                                      <span>{formatAppointmentDate(appointment.scheduledStart)}</span>
+                                      <span>
+                                        {formatAppointmentDate(appointment.scheduledStart)}
+                                      </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
                                       <Building2 className="w-4 h-4" />
-                                      <span className="truncate">{appointment.salon?.name || 'Salon'}</span>
+                                      <span className="truncate">
+                                        {appointment.salon?.name || 'Salon'}
+                                      </span>
                                     </div>
-                                    {appointment.metadata?.preferredEmployeeName && !isMyAppointment && (
-                                      <div className="flex items-center gap-1.5 text-sm text-primary">
-                                        <User className="w-4 h-4" />
-                                        <span className="truncate">{appointment.metadata.preferredEmployeeName}</span>
-                                      </div>
-                                    )}
+                                    {appointment.metadata?.preferredEmployeeName &&
+                                      !isMyAppointment && (
+                                        <div className="flex items-center gap-1.5 text-sm text-primary">
+                                          <User className="w-4 h-4" />
+                                          <span className="truncate">
+                                            {appointment.metadata.preferredEmployeeName}
+                                          </span>
+                                        </div>
+                                      )}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
-                                  <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}>
+                                  <span
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getAppointmentStatusColor(appointment.status)}`}
+                                  >
                                     {appointment.status || 'Scheduled'}
                                   </span>
                                   <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
@@ -910,7 +1002,9 @@ export default function SalonOwnerDashboard() {
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Recent Sales</h2>
+                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+                  Recent Sales
+                </h2>
                 <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
                   Latest transactions
                 </p>
@@ -958,11 +1052,16 @@ export default function SalonOwnerDashboard() {
                             {sale.customer?.fullName || sale.customer?.name || 'Walk-in Customer'}
                           </p>
                           <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                            {sale.salon?.name || 'Salon'} • {format(parseISO(sale.createdAt), 'MMM d, h:mm a')}
+                            {sale.salon?.name || 'Salon'} •{' '}
+                            {format(parseISO(sale.createdAt), 'MMM d, h:mm a')}
                           </p>
                           {sale.items && sale.items.length > 0 && (
                             <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
-                              {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}: {sale.items.slice(0, 2).map(item => item.service?.name || item.product?.name || 'Item').join(', ')}
+                              {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}:{' '}
+                              {sale.items
+                                .slice(0, 2)
+                                .map((item) => item.service?.name || item.product?.name || 'Item')
+                                .join(', ')}
                               {sale.items.length > 2 && ` +${sale.items.length - 2} more`}
                             </p>
                           )}
@@ -970,7 +1069,7 @@ export default function SalonOwnerDashboard() {
                       </div>
                       <div className="flex items-center gap-3 ml-4">
                         <p className="text-lg font-bold text-text-light dark:text-text-dark">
-                          RWF {sale.totalAmount?.toLocaleString() || '0'}
+                          RWF {Number(sale.totalAmount || 0).toLocaleString()}
                         </p>
                         <ArrowUpRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition" />
                       </div>
@@ -999,7 +1098,9 @@ export default function SalonOwnerDashboard() {
             {salons.length === 0 ? (
               <div className="text-center py-8">
                 <Building2 className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">No salons yet</p>
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+                  No salons yet
+                </p>
                 <Button
                   onClick={() => router.push('/salons')}
                   variant="primary"
@@ -1057,7 +1158,9 @@ export default function SalonOwnerDashboard() {
 
           {/* Quick Actions */}
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-6">Quick Actions</h2>
+            <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-6">
+              Quick Actions
+            </h2>
             <div className="grid grid-cols-2 gap-3">
               <Link
                 href="/appointments"
@@ -1066,7 +1169,9 @@ export default function SalonOwnerDashboard() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
                   <Calendar className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">Appointments</p>
+                <p className="text-xs font-semibold text-text-light dark:text-text-dark">
+                  Appointments
+                </p>
               </Link>
               <Link
                 href="/sales"
@@ -1084,7 +1189,9 @@ export default function SalonOwnerDashboard() {
                 <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
                   <Package className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">Inventory</p>
+                <p className="text-xs font-semibold text-text-light dark:text-text-dark">
+                  Inventory
+                </p>
               </Link>
               <Link
                 href="/users"
@@ -1093,7 +1200,9 @@ export default function SalonOwnerDashboard() {
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
                   <Users className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">Employees</p>
+                <p className="text-xs font-semibold text-text-light dark:text-text-dark">
+                  Employees
+                </p>
               </Link>
             </div>
           </div>
@@ -1108,7 +1217,8 @@ export default function SalonOwnerDashboard() {
                     Low Stock Alert
                   </h3>
                   <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-3">
-                    {stats?.lowStockItems} item{(stats?.lowStockItems || 0) !== 1 ? 's' : ''} need restocking
+                    {stats?.lowStockItems} item{(stats?.lowStockItems || 0) !== 1 ? 's' : ''} need
+                    restocking
                   </p>
                   <Link href="/inventory">
                     <Button variant="secondary" size="sm" className="w-full">

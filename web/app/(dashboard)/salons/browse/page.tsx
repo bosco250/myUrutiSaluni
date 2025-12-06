@@ -53,7 +53,7 @@ function BrowseSalonsContent() {
           isActive: salon.status === 'active' || salon.isActive === true,
         }));
       } catch (error) {
-        console.error('Error fetching salons:', error);
+        // Error fetching salons - return empty array
         return [];
       }
     },

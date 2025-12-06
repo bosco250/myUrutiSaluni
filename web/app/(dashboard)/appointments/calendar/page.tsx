@@ -51,6 +51,7 @@ interface Appointment {
 }
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+  pending: { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800' },
   booked: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-200 dark:border-yellow-800' },
   confirmed: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
   in_progress: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800' },
@@ -84,6 +85,20 @@ function CalendarViewContent() {
     queryFn: async () => {
       const response = await api.get('/appointments');
       return response.data?.data || response.data || [];
+    },
+  });
+
+  // Update appointment mutation
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async (data: { id: string; scheduledStart: string; scheduledEnd: string }) => {
+      const response = await api.patch(`/appointments/${data.id}`, {
+        scheduledStart: data.scheduledStart,
+        scheduledEnd: data.scheduledEnd,
+      });
+      return response.data?.data || response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
   });
 

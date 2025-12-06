@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { Plus, Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, X as XIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock } from 'lucide-react';
 import React, { useState, Fragment } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -21,6 +21,12 @@ interface SalonEmployee {
   hireDate?: string;
   isActive: boolean;
   commissionRate: number;
+  baseSalary?: number;
+  salaryType?: 'COMMISSION_ONLY' | 'SALARY_ONLY' | 'SALARY_PLUS_COMMISSION';
+  payFrequency?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+  hourlyRate?: number;
+  overtimeRate?: number;
+  employmentType?: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
   user?: {
     id: string;
     fullName: string;
@@ -152,57 +158,393 @@ function SalonEmployeesContent() {
     );
   }
 
+  // Calculate statistics
+  const stats = {
+    total: employees?.length || 0,
+    active: employees?.filter((e) => e.isActive).length || 0,
+    withCommission: employees?.filter((e) => e.commissionRate > 0).length || 0,
+    withSalary: employees?.filter((e) => e.baseSalary && e.baseSalary > 0).length || 0,
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <button
-              onClick={() => router.push('/salons')}
-              className="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark mb-4 text-sm flex items-center gap-2"
-            >
-              ← Back to Salons
-            </button>
-            <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-2">
-              Employees - {salon.name}
-            </h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">
-              Manage your salon employees
-            </p>
+      <div className="mb-6">
+        <Button onClick={() => router.push(`/salons/${salonId}`)} variant="secondary" className="mb-4">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Salon
+        </Button>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
+                  Employees - {salon.name}
+                </h1>
+                <p className="text-text-light/60 dark:text-text-dark/60">
+                  Manage your salon employees and payroll
+                </p>
+              </div>
+            </div>
           </div>
-          <Button
-            onClick={() => {
-              setEditingEmployee(null);
-              setShowAddModal(true);
-            }}
-            variant="primary"
-          >
-            <UserPlus className="w-5 h-5" />
-            Add Employee
-          </Button>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={() => router.push(`/payroll?salonId=${salonId}`)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Calculator className="w-4 h-4" />
+              Payroll
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingEmployee(null);
+                setShowAddModal(true);
+              }}
+              variant="primary"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add Employee
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Employees List */}
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                Total Employees
+              </p>
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+                {stats.total}
+              </p>
+            </div>
+            <div className="p-3 bg-primary/10 rounded-xl">
+              <Users className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                Active
+              </p>
+              <p className="text-2xl font-bold text-success">
+                {stats.active}
+              </p>
+            </div>
+            <div className="p-3 bg-success/10 rounded-xl">
+              <Check className="w-6 h-6 text-success" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                With Commission
+              </p>
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+                {stats.withCommission}
+              </p>
+            </div>
+            <div className="p-3 bg-primary/10 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                With Salary
+              </p>
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+                {stats.withSalary}
+              </p>
+            </div>
+            <div className="p-3 bg-success/10 rounded-xl">
+              <DollarSign className="w-6 h-6 text-success" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Access Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <button
+          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
+          className="bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 rounded-2xl p-6 text-left text-white transition-all shadow-lg hover:shadow-xl group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <Calculator className="w-6 h-6" />
+            </div>
+            <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <h3 className="text-xl font-bold mb-1">Calculate Payroll</h3>
+          <p className="text-white/80 text-sm">Process payroll for all employees</p>
+        </button>
+
+        <button
+          onClick={() => router.push('/commissions')}
+          className="bg-gradient-to-br from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 rounded-2xl p-6 text-left text-white transition-all shadow-lg hover:shadow-xl group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <h3 className="text-xl font-bold mb-1">View Commissions</h3>
+          <p className="text-white/80 text-sm">Track employee commissions</p>
+        </button>
+
+        <button
+          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
+          className="bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-2xl p-6 text-left text-white transition-all shadow-lg hover:shadow-xl group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <h3 className="text-xl font-bold mb-1">Payroll History</h3>
+          <p className="text-white/80 text-sm">View past payroll runs</p>
+        </button>
+      </div>
+
+      {/* Employees Table */}
       {employees && employees.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {employees.map((employee) => (
-            <EmployeeCard
-              key={employee.id}
-              employee={employee}
-              salonId={salonId}
-              onEdit={() => {
-                setEditingEmployee(employee);
-                setShowAddModal(true);
-              }}
-              onDelete={() => {
-                if (confirm(`Are you sure you want to remove ${employee.user?.fullName || 'this employee'} from the salon?`)) {
-                  deleteMutation.mutate(employee.id);
-                }
-              }}
-            />
-          ))}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Employee
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Role & Skills
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Payment Type & Compensation
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                {employees.map((employee) => (
+                  <tr
+                    key={employee.id}
+                    className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => router.push(`/salons/${salonId}/employees/${employee.id}`)}
+                            className="text-sm font-semibold text-text-light dark:text-text-dark hover:text-primary transition text-left"
+                          >
+                            {employee.user?.fullName || 'Unknown User'}
+                          </button>
+                          {employee.hireDate && (
+                            <div className="text-xs text-text-light/60 dark:text-text-dark/60">
+                              Hired {new Date(employee.hireDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {employee.roleTitle && (
+                          <div className="text-sm font-medium text-text-light dark:text-text-dark">
+                            {employee.roleTitle}
+                          </div>
+                        )}
+                        {employee.skills && employee.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {employee.skills.slice(0, 3).map((skill, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                            {employee.skills.length > 3 && (
+                              <span className="px-2 py-0.5 text-text-light/60 dark:text-text-dark/60 rounded text-xs">
+                                +{employee.skills.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-1">
+                        {employee.user?.email && (
+                          <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                            <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                            <span className="truncate max-w-[200px]">{employee.user.email}</span>
+                          </div>
+                        )}
+                        {employee.user?.phone && (
+                          <div className="flex items-center gap-2 text-sm text-text-light/80 dark:text-text-dark/80">
+                            <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                            {employee.user.phone}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-2">
+                        {/* Payment Type Badge - Prominent */}
+                        {employee.salaryType ? (
+                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${
+                            employee.salaryType === 'COMMISSION_ONLY' 
+                              ? 'bg-primary/15 text-primary border-2 border-primary/30 shadow-sm'
+                              : employee.salaryType === 'SALARY_ONLY'
+                              ? 'bg-success/15 text-success border-2 border-success/30 shadow-sm'
+                              : 'bg-warning/15 text-warning border-2 border-warning/30 shadow-sm'
+                          }`}>
+                            {employee.salaryType === 'COMMISSION_ONLY' && <TrendingUp className="w-4 h-4" />}
+                            {employee.salaryType === 'SALARY_ONLY' && <DollarSign className="w-4 h-4" />}
+                            {employee.salaryType === 'SALARY_PLUS_COMMISSION' && <Calculator className="w-4 h-4" />}
+                            <span className="uppercase tracking-wide">
+                              {employee.salaryType === 'COMMISSION_ONLY' && 'Commission Based'}
+                              {employee.salaryType === 'SALARY_ONLY' && 'Salary Based'}
+                              {employee.salaryType === 'SALARY_PLUS_COMMISSION' && 'Salary + Commission'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-text-light/5 dark:bg-text-dark/5 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark">
+                            Not Set
+                          </div>
+                        )}
+                        <div className="space-y-1.5 pt-1">
+                          {employee.commissionRate > 0 && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <TrendingUp className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                              <span className="text-text-light dark:text-text-dark">
+                                <span className="font-semibold text-primary">{employee.commissionRate}%</span> commission rate
+                              </span>
+                            </div>
+                          )}
+                          {employee.baseSalary && employee.baseSalary > 0 && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <DollarSign className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                              <span className="text-text-light/80 dark:text-text-dark/80">
+                                <span className="font-semibold text-success">RWF {Number(employee.baseSalary).toLocaleString()}</span>
+                                {employee.payFrequency && (
+                                  <span className="text-xs text-text-light/60 dark:text-text-dark/60 ml-1">
+                                    / {employee.payFrequency.toLowerCase()}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          {employee.hourlyRate && employee.hourlyRate > 0 && (
+                            <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                              <Clock className="w-3 h-3 flex-shrink-0" />
+                              <span>
+                                {employee.payFrequency === 'DAILY' ? 'Daily' : 'Hourly'} rate: RWF {Number(employee.hourlyRate).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border ${
+                          employee.isActive
+                            ? 'bg-success/10 text-success border-success/20'
+                            : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark'
+                        }`}
+                      >
+                        {employee.isActive ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3" />
+                            Inactive
+                          </>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => router.push(`/salons/${salonId}/employees/${employee.id}`)}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
+                          className="p-2 text-success hover:bg-success/10 rounded-lg transition"
+                          title="View Payroll"
+                        >
+                          <Calculator className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingEmployee(employee);
+                            setShowAddModal(true);
+                          }}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to remove ${employee.user?.fullName || 'this employee'} from the salon?`)) {
+                              deleteMutation.mutate(employee.id);
+                            }
+                          }}
+                          className="p-2 text-danger hover:bg-danger/10 rounded-lg transition"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-12 text-center">
@@ -257,6 +599,7 @@ function EmployeeCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const router = useRouter();
   return (
     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 hover:border-primary/50 transition-all duration-300">
       <div className="flex items-start justify-between mb-4">
@@ -325,11 +668,47 @@ function EmployeeCard({
             </span>
           </div>
         )}
+        {/* Payment Type Badge */}
+        {employee.salaryType && (
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold mb-2 ${
+            employee.salaryType === 'COMMISSION_ONLY' 
+              ? 'bg-primary/10 text-primary border border-primary/20'
+              : employee.salaryType === 'SALARY_ONLY'
+              ? 'bg-success/10 text-success border border-success/20'
+              : 'bg-warning/10 text-warning border border-warning/20'
+          }`}>
+            {employee.salaryType === 'COMMISSION_ONLY' && <TrendingUp className="w-3.5 h-3.5" />}
+            {employee.salaryType === 'SALARY_ONLY' && <DollarSign className="w-3.5 h-3.5" />}
+            {employee.salaryType === 'SALARY_PLUS_COMMISSION' && <Calculator className="w-3.5 h-3.5" />}
+            {employee.salaryType.replace(/_/g, ' ')}
+          </div>
+        )}
         {employee.commissionRate > 0 && (
           <div className="flex items-center gap-2 text-sm">
-            <Briefcase className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
             <span className="text-text-light/80 dark:text-text-dark/80">
-              Commission: {employee.commissionRate}%
+              Commission: <span className="font-semibold text-primary">{employee.commissionRate}%</span>
+            </span>
+          </div>
+        )}
+        {employee.baseSalary && employee.baseSalary > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <DollarSign className="w-4 h-4 text-success flex-shrink-0" />
+            <span className="text-text-light/80 dark:text-text-dark/80">
+              {employee.payFrequency === 'DAILY' ? 'Daily Rate' : 'Salary'}: <span className="font-semibold text-success">RWF {Number(employee.baseSalary).toLocaleString()}</span>
+              {employee.payFrequency && employee.payFrequency !== 'DAILY' && (
+                <span className="text-xs text-text-light/60 dark:text-text-dark/60 ml-1">
+                  ({employee.payFrequency.toLowerCase()})
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+        {employee.hourlyRate && employee.hourlyRate > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+            <span className="text-text-light/80 dark:text-text-dark/80">
+              {employee.payFrequency === 'DAILY' ? 'Daily' : 'Hourly'} Rate: RWF {Number(employee.hourlyRate).toLocaleString()}
             </span>
           </div>
         )}
@@ -351,19 +730,28 @@ function EmployeeCard({
         </div>
       )}
 
-      <div className="flex gap-2 pt-4 border-t border-border-light dark:border-border-dark">
+      <div className="flex flex-col gap-2 pt-4 border-t border-border-light dark:border-border-dark">
+        <div className="flex gap-2">
+          <button
+            onClick={onEdit}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+          >
+            <Edit className="w-4 h-4" />
+            Edit
+          </button>
+          <button
+            onClick={onDelete}
+            className="px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-danger/10 text-danger rounded-lg transition"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
         <button
-          onClick={onEdit}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-success/10 to-primary/10 hover:from-success/20 hover:to-primary/20 text-success rounded-lg text-sm font-medium transition border border-success/20"
         >
-          <Edit className="w-4 h-4" />
-          Edit
-        </button>
-        <button
-          onClick={onDelete}
-          className="px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-danger/10 text-danger rounded-lg transition"
-        >
-          <Trash2 className="w-4 h-4" />
+          <Calculator className="w-4 h-4" />
+          View Payroll
         </button>
       </div>
     </div>
@@ -388,6 +776,12 @@ function EmployeeFormModal({
     hireDate: employee?.hireDate ? new Date(employee.hireDate).toISOString().split('T')[0] : '',
     isActive: employee?.isActive ?? true,
     commissionRate: employee?.commissionRate || 0,
+    baseSalary: employee?.baseSalary || '',
+    salaryType: employee?.salaryType || 'COMMISSION_ONLY',
+    payFrequency: employee?.payFrequency || 'MONTHLY',
+    hourlyRate: employee?.hourlyRate || '',
+    overtimeRate: employee?.overtimeRate || 1.5,
+    employmentType: employee?.employmentType || 'FULL_TIME',
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -424,7 +818,7 @@ function EmployeeFormModal({
       });
       setSearchResults(filtered);
     } catch (err) {
-      console.error('Error searching users:', err);
+      // Error searching users - show empty results
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -445,6 +839,12 @@ function EmployeeFormModal({
         hireDate: formData.hireDate || undefined,
         isActive: formData.isActive,
         commissionRate: formData.commissionRate || 0,
+        baseSalary: formData.baseSalary ? parseFloat(String(formData.baseSalary)) : undefined,
+        salaryType: formData.salaryType,
+        payFrequency: formData.payFrequency,
+        hourlyRate: formData.hourlyRate ? parseFloat(String(formData.hourlyRate)) : undefined,
+        overtimeRate: formData.overtimeRate || 1.5,
+        employmentType: formData.employmentType,
       };
 
       if (employee) {
@@ -668,7 +1068,7 @@ function EmployeeFormModal({
                             }}
                             className="hover:bg-primary/20 rounded-full p-0.5 transition"
                           >
-                            <XIcon className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </span>
                       ))
@@ -762,30 +1162,33 @@ function EmployeeFormModal({
                   />
                 </div>
 
-                {/* Commission Rate */}
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Commission Rate (%)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={formData.commissionRate}
-                      onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      placeholder="0.00"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
-                      %
-                    </span>
+                {/* Commission Rate - Show if commission is allowed */}
+                {(formData.salaryType === 'COMMISSION_ONLY' || formData.salaryType === 'SALARY_PLUS_COMMISSION') && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                      Commission Rate (%) <span className="text-danger">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={formData.commissionRate}
+                        onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                        placeholder="0.00"
+                        required={formData.salaryType === 'COMMISSION_ONLY'}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
+                        %
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
+                      Percentage of service sale amount employee earns as commission (e.g., 15% = RWF 1,500 from RWF 10,000 service)
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-                    Enter the commission percentage (0-100) for this employee
-                  </p>
-                </div>
+                )}
 
                 {/* Active Status */}
                 <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
@@ -806,6 +1209,232 @@ function EmployeeFormModal({
                   }`}>
                     {formData.isActive ? 'Active' : 'Inactive'}
                   </span>
+                </div>
+              </div>
+
+              {/* Salary & Payment Configuration */}
+              <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <DollarSign className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Salary & Payment</h3>
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">Configure employee compensation structure</p>
+                  </div>
+                </div>
+
+                {/* Salary Type - Enhanced with visual cards */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-3">
+                    Payment Type <span className="text-danger">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, salaryType: 'COMMISSION_ONLY', baseSalary: '' })}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        formData.salaryType === 'COMMISSION_ONLY'
+                          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                          : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-lg ${
+                          formData.salaryType === 'COMMISSION_ONLY' ? 'bg-primary/20' : 'bg-background-light dark:bg-background-dark'
+                        }`}>
+                          <TrendingUp className={`w-5 h-5 ${formData.salaryType === 'COMMISSION_ONLY' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h4 className="font-semibold text-text-light dark:text-text-dark">Commission Only</h4>
+                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">Earns from services</p>
+                        </div>
+                        {formData.salaryType === 'COMMISSION_ONLY' && (
+                          <Check className="w-5 h-5 text-primary" />
+                        )}
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, salaryType: 'SALARY_ONLY', commissionRate: 0 })}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        formData.salaryType === 'SALARY_ONLY'
+                          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                          : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-lg ${
+                          formData.salaryType === 'SALARY_ONLY' ? 'bg-primary/20' : 'bg-background-light dark:bg-background-dark'
+                        }`}>
+                          <DollarSign className={`w-5 h-5 ${formData.salaryType === 'SALARY_ONLY' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h4 className="font-semibold text-text-light dark:text-text-dark">Salary Only</h4>
+                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">Fixed monthly salary</p>
+                        </div>
+                        {formData.salaryType === 'SALARY_ONLY' && (
+                          <Check className="w-5 h-5 text-primary" />
+                        )}
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, salaryType: 'SALARY_PLUS_COMMISSION' })}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        formData.salaryType === 'SALARY_PLUS_COMMISSION'
+                          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                          : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-lg ${
+                          formData.salaryType === 'SALARY_PLUS_COMMISSION' ? 'bg-primary/20' : 'bg-background-light dark:bg-background-dark'
+                        }`}>
+                          <Calculator className={`w-5 h-5 ${formData.salaryType === 'SALARY_PLUS_COMMISSION' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h4 className="font-semibold text-text-light dark:text-text-dark">Salary + Commission</h4>
+                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">Base pay + earnings</p>
+                        </div>
+                        {formData.salaryType === 'SALARY_PLUS_COMMISSION' && (
+                          <Check className="w-5 h-5 text-primary" />
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-text-light/50 dark:text-text-dark/50">
+                    {formData.salaryType === 'COMMISSION_ONLY' && 'Employee earns only from commissions on services they provide'}
+                    {formData.salaryType === 'SALARY_ONLY' && 'Employee receives fixed salary with no commissions'}
+                    {formData.salaryType === 'SALARY_PLUS_COMMISSION' && 'Employee receives base salary plus commissions from services'}
+                  </p>
+                </div>
+
+                {/* Base Salary - Show if not commission only */}
+                {formData.salaryType !== 'COMMISSION_ONLY' && (
+                  <>
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                        Base Salary {formData.payFrequency === 'DAILY' ? '(Daily Rate)' : '(Annual Amount)'}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step={formData.payFrequency === 'DAILY' ? '100' : '1000'}
+                          value={formData.baseSalary}
+                          onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                          className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
+                          RWF
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
+                        {formData.payFrequency === 'DAILY' 
+                          ? 'Daily wage amount (paid per day worked)'
+                          : 'Annual base salary amount (will be calculated based on pay frequency)'}
+                      </p>
+                    </div>
+
+                    {/* Pay Frequency */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                        Pay Frequency <span className="text-danger">*</span>
+                      </label>
+                      <select
+                        value={formData.payFrequency}
+                        onChange={(e) => {
+                          const newFrequency = e.target.value as any;
+                          setFormData({ ...formData, payFrequency: newFrequency });
+                          // If switching to DAILY, suggest using hourlyRate instead
+                          if (newFrequency === 'DAILY' && !formData.hourlyRate) {
+                            // Keep baseSalary as daily rate
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                      >
+                        <option value="DAILY">Daily (Daily wage employees)</option>
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="BIWEEKLY">Bi-weekly (Every 2 weeks)</option>
+                        <option value="MONTHLY">Monthly (Fixed monthly salary)</option>
+                      </select>
+                      <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
+                        {formData.payFrequency === 'DAILY' && 'For employees paid daily (e.g., daily wage workers)'}
+                        {formData.payFrequency === 'MONTHLY' && 'For employees with fixed monthly salary'}
+                        {formData.payFrequency === 'WEEKLY' && 'For employees paid every week'}
+                        {formData.payFrequency === 'BIWEEKLY' && 'For employees paid every two weeks'}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Employment Type */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                    Employment Type
+                  </label>
+                  <select
+                    value={formData.employmentType}
+                    onChange={(e) => setFormData({ ...formData, employmentType: e.target.value as any })}
+                    className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  >
+                    <option value="FULL_TIME">Full Time</option>
+                    <option value="PART_TIME">Part Time</option>
+                    <option value="CONTRACT">Contract</option>
+                  </select>
+                </div>
+
+                {/* Hourly Rate - Optional */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                    Hourly Rate (Optional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={formData.hourlyRate}
+                      onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                      className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
+                      RWF/hr
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
+                    For hourly employees or overtime calculations
+                  </p>
+                </div>
+
+                {/* Overtime Rate */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                    Overtime Rate Multiplier
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="3"
+                      step="0.1"
+                      value={formData.overtimeRate}
+                      onChange={(e) => setFormData({ ...formData, overtimeRate: parseFloat(e.target.value) || 1.5 })}
+                      className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                      placeholder="1.5"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
+                      x
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
+                    Multiplier for overtime pay (e.g., 1.5 = time and a half)
+                  </p>
                 </div>
               </div>
 

@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 
 export enum AccountType {
@@ -10,11 +10,12 @@ export enum AccountType {
 }
 
 @Entity('chart_of_accounts')
+@Unique(['code', 'salonId'])
 export class ChartOfAccount {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, length: 32 })
+  @Column({ length: 32 })
   code: string;
 
   @Column({ length: 255 })

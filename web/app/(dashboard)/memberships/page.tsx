@@ -135,17 +135,7 @@ function MembershipsPageContent() {
       // Handle both wrapped (response.data.data) and unwrapped (response.data) responses
       const data = response.data?.data || response.data;
 
-      // Debug logging (remove in production)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Memberships] API Response:', {
-          hasData: !!response.data,
-          hasDataData: !!response.data?.data,
-          isArray: Array.isArray(data),
-          dataType: typeof data,
-          dataLength: Array.isArray(data) ? data.length : 'N/A',
-          sample: Array.isArray(data) && data.length > 0 ? data[0] : null,
-        });
-      }
+      // Process response data
 
       // Ensure we always return an array
       return Array.isArray(data) ? data : [];

@@ -6,11 +6,7 @@ import ModernHeader from '@/components/layout/ModernHeader';
 import FloatingNav from '@/components/navigation/FloatingNav';
 import { useAuthStore } from '@/store/auth-store';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
@@ -51,9 +47,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       <ModernHeader />
-      <main className="pb-24">
-        {children}
-      </main>
+      <main className="pb-24 px-6 sm:px-8 lg:px-12">{children}</main>
       <FloatingNav />
     </div>
   );

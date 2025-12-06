@@ -529,7 +529,6 @@ function ResourceUploadModal({
 
       await uploadMutation.mutateAsync(formDataToSend);
     } catch (error) {
-      console.error('Upload error:', error);
       alert('Failed to upload resource. Please try again.');
     } finally {
       setIsUploading(false);

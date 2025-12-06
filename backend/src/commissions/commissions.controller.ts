@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CommissionsService } from './commissions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,7 +28,13 @@ export class CommissionsController {
   ) {}
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get all commissions' })
   async findAll(
     @Query('salonEmployeeId') salonEmployeeId: string | undefined,
@@ -29,21 +44,45 @@ export class CommissionsController {
     @Query('endDate') endDate: string | undefined,
     @CurrentUser() user: any,
   ) {
-    // Salon owners and employees can only see commissions for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map(s => s.id);
-      
-      if (salonId && !salonIds.includes(salonId)) {
-        throw new ForbiddenException('You can only access commissions for your own salon');
+    // If salon employee, automatically filter to their own commissions only
+    if (user.role === UserRole.SALON_EMPLOYEE) {
+      // Find the employee record for this user
+      const employee = await this.salonsService.findEmployeeByUserId(user.id);
+      if (!employee) {
+        // Return empty array instead of throwing error - employee might not have record yet
+        return [];
       }
-      
-      // If salon employee, only show their own commissions
-      if (user.role === UserRole.SALON_EMPLOYEE && salonEmployeeId) {
-        // Verify the employee belongs to user's salon
-        const employee = await this.salonsService.findEmployeeById(salonEmployeeId);
+
+      // Override salonEmployeeId to only show this employee's commissions
+      salonEmployeeId = employee.id;
+
+      // Set salonId to employee's salon to ensure proper filtering
+      if (!salonId) {
+        salonId = employee.salonId;
+      } else if (salonId !== employee.salonId) {
+        throw new ForbiddenException(
+          'You can only access commissions for your own salon',
+        );
+      }
+    } else if (user.role === UserRole.SALON_OWNER) {
+      // Salon owners can see commissions for their salons
+      const salons = await this.salonsService.findByOwnerId(user.id);
+      const salonIds = salons.map((s) => s.id);
+
+      if (salonId && !salonIds.includes(salonId)) {
+        throw new ForbiddenException(
+          'You can only access commissions for your own salon',
+        );
+      }
+
+      // For salon owners, verify the employee belongs to their salon if filtering by employee
+      if (salonEmployeeId) {
+        const employee =
+          await this.salonsService.findEmployeeById(salonEmployeeId);
         if (employee && !salonIds.includes(employee.salonId)) {
-          throw new ForbiddenException('You can only access your own commissions');
+          throw new ForbiddenException(
+            'You can only access commissions for employees in your salon',
+          );
         }
       }
     }
@@ -58,7 +97,13 @@ export class CommissionsController {
   }
 
   @Get('employee/:employeeId/summary')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get commission summary for an employee' })
   async getEmployeeSummary(
     @Param('employeeId') employeeId: string,
@@ -71,7 +116,9 @@ export class CommissionsController {
       // Employees can only see their own summary
       const employee = await this.salonsService.findEmployeeById(employeeId);
       if (!employee || employee.userId !== user.id) {
-        throw new ForbiddenException('You can only access your own commission summary');
+        throw new ForbiddenException(
+          'You can only access your own commission summary',
+        );
       }
     }
 
@@ -85,15 +132,38 @@ export class CommissionsController {
   @Post(':id/mark-paid')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Mark a commission as paid' })
-  async markAsPaid(@Param('id') id: string) {
-    return this.commissionsService.markAsPaid(id);
+  async markAsPaid(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      paymentMethod?: 'cash' | 'bank_transfer' | 'mobile_money' | 'payroll';
+      paymentReference?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.commissionsService.markAsPaid(id, {
+      paymentMethod: body.paymentMethod,
+      paymentReference: body.paymentReference,
+      paidById: user.id,
+    });
   }
 
   @Post('mark-paid-batch')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Mark multiple commissions as paid' })
-  async markMultipleAsPaid(@Body() body: { commissionIds: string[] }) {
-    return this.commissionsService.markMultipleAsPaid(body.commissionIds);
+  async markMultipleAsPaid(
+    @Body()
+    body: {
+      commissionIds: string[];
+      paymentMethod?: 'cash' | 'bank_transfer' | 'mobile_money' | 'payroll';
+      paymentReference?: string;
+    },
+    @CurrentUser() user: any,
+  ) {
+    return this.commissionsService.markMultipleAsPaid(body.commissionIds, {
+      paymentMethod: body.paymentMethod,
+      paymentReference: body.paymentReference,
+      paidById: user.id,
+    });
   }
 }
-

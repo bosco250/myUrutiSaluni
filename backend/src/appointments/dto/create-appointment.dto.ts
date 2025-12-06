@@ -25,7 +25,7 @@ export class CreateAppointmentDto {
   @IsDateString()
   scheduledEnd: string;
 
-  @ApiProperty({ enum: AppointmentStatus, required: false, default: AppointmentStatus.BOOKED })
+  @ApiProperty({ enum: AppointmentStatus, required: false, default: AppointmentStatus.PENDING })
   @IsOptional()
   @IsEnum(AppointmentStatus)
   status?: AppointmentStatus;

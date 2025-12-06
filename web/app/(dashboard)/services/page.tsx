@@ -70,7 +70,6 @@ function ServicesContent() {
         const response = await api.get('/salons');
         return response.data?.data || response.data || [];
       } catch (error) {
-        console.error('Error fetching salons:', error);
         return [];
       }
     },
@@ -103,7 +102,6 @@ function ServicesContent() {
     queryKey: servicesQueryKey,
     queryFn: async (): Promise<Service[]> => {
       if (!user) {
-        console.log('[Services Query] No user, returning empty array');
         return [];
       }
       try {
@@ -111,29 +109,12 @@ function ServicesContent() {
         // For admins: if no salon selected, get all services
         // For salon owners: if no salon selected, backend returns all their salons' services
         const params = selectedSalonId ? { salonId: selectedSalonId } : {};
-        console.log(
-          '[Services Query] Fetching services with params:',
-          params,
-          'User role:',
-          user.role,
-          'Can view all:',
-          canViewAll
-        );
         const response = await api.get('/services', { params });
         const data = response.data?.data || response.data;
         // Ensure we always return an array
         const servicesArray = Array.isArray(data) ? data : [];
-        console.log(
-          '[Services Query] Fetched services:',
-          servicesArray.length,
-          'for salon:',
-          selectedSalonId || (canViewAll ? 'all salons' : 'all owned'),
-          'Response:',
-          response.data
-        );
         return servicesArray;
       } catch (error) {
-        console.error('[Services Query] Error fetching services:', error);
         // Always return an array, never undefined
         return [];
       }
@@ -154,7 +135,6 @@ function ServicesContent() {
       await api.delete(`/services/${id}`);
     },
     onSuccess: () => {
-      console.log('[Delete Service] Service deleted, invalidating queries for:', servicesQueryKey);
       // Invalidate all service queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['services'] });
       // Also invalidate the specific query for the selected salon
@@ -531,23 +511,18 @@ function ServiceModal({
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      console.log('[Service Modal] Saving service:', data);
       if (service) {
         const response = await api.patch(`/services/${service.id}`, data);
-        console.log('[Service Modal] Service updated:', response.data);
         return response;
       } else {
         const response = await api.post('/services', data);
-        console.log('[Service Modal] Service created:', response.data);
         return response;
       }
     },
-    onSuccess: (response) => {
-      console.log('[Service Modal] Service saved successfully:', response?.data);
+    onSuccess: () => {
       onSuccess();
     },
     onError: (err: any) => {
-      console.error('[Service Modal] Error saving service:', err);
       setError(err.response?.data?.message || 'Failed to save service');
       setLoading(false);
     },

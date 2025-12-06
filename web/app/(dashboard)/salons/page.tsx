@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { Plus, Edit, Trash2, MapPin, Search, Filter, MoreVertical, Building2, Phone, Mail, Globe, Users, Calendar, LayoutGrid, Table, AlertCircle, UserPlus } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Search, Filter, MoreVertical, Building2, Phone, Mail, Globe, Users, Calendar, LayoutGrid, Table, AlertCircle, UserPlus, Eye } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -54,7 +54,7 @@ export default function SalonsPage() {
     if (!token && typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('token');
       if (!storedToken) {
-        console.warn('No authentication token found. Please log in.');
+        // No token found - user will be redirected by auth guard
       }
     }
   }, [token]);
@@ -82,11 +82,6 @@ export default function SalonsPage() {
         const errorMsg = Array.isArray(errorData?.message) 
           ? errorData.message.join(', ')
           : errorData?.message || errorData?.error || err.message;
-        
-        console.error('Error fetching salons:', {
-          status: err.response?.status,
-          message: errorMsg,
-        });
         
         if (err.response?.status === 401 || err.message?.includes('token')) {
           if (typeof window !== 'undefined') {
@@ -433,9 +428,9 @@ function SalonCard({
               <div className="flex-1 min-w-0">
                 <Link
                   href={`/salons/${salon.id}`}
-                  className="block hover:text-primary transition"
+                  className="block hover:text-primary transition group"
                 >
-                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate">
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate group-hover:text-primary">
                     {salon.name}
                   </h3>
                 </Link>
@@ -463,6 +458,14 @@ function SalonCard({
                     onClick={() => setShowMenu(false)}
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl z-20 overflow-hidden">
+                    <Link
+                      href={`/salons/${salon.id}`}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                      onClick={() => setShowMenu(false)}
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </Link>
                     {canEdit && (
                       <button
                         onClick={() => {
@@ -552,14 +555,30 @@ function SalonCard({
 
         {/* Quick Actions */}
         <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark flex gap-2">
+          <Link
+            href={`/salons/${salon.id}`}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+          >
+            <Eye className="w-4 h-4" />
+            View Details
+          </Link>
           {canManageSalons() && (
-            <Link
-              href={`/salons/${salon.id}/employees`}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
-            >
-              <UserPlus className="w-4 h-4" />
-              Employees
-            </Link>
+            <>
+              <Link
+                href={`/salons/${salon.id}/customers`}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+              >
+                <Users className="w-4 h-4" />
+                Customers
+              </Link>
+              <Link
+                href={`/salons/${salon.id}/employees`}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+              >
+                <UserPlus className="w-4 h-4" />
+                Employees
+              </Link>
+            </>
           )}
           {canEdit && (
             <button
@@ -650,9 +669,12 @@ function SalonsTable({
                       <Building2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-text-light dark:text-text-dark">
+                      <Link
+                        href={`/salons/${salon.id}`}
+                        className="text-sm font-semibold text-text-light dark:text-text-dark hover:text-primary transition"
+                      >
                         {salon.name}
-                      </div>
+                      </Link>
                       {salon.settings?.businessType && (
                         <div className="text-xs text-text-light/60 dark:text-text-dark/60 capitalize">
                           {salon.settings.businessType.replace('_', ' ')}
@@ -702,6 +724,22 @@ function SalonsTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <Link
+                      href={`/salons/${salon.id}`}
+                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    {canManageSalons() && (
+                      <Link
+                        href={`/salons/${salon.id}/customers`}
+                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                        title="View Customers"
+                      >
+                        <Users className="w-4 h-4" />
+                      </Link>
+                    )}
                     {canEditSalon(salon) && (
                       <button
                         onClick={() => onEdit(salon)}

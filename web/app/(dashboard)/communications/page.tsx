@@ -61,7 +61,14 @@ interface Communication {
 
 export default function CommunicationsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+      ]}
+    >
       <CommunicationsContent />
     </ProtectedRoute>
   );
@@ -148,15 +155,18 @@ function CommunicationsContent() {
     return colors[type] || colors.note;
   };
 
-  const filteredCommunications = filterType === 'all'
-    ? communications
-    : communications.filter((comm) => comm.type === filterType);
+  const filteredCommunications =
+    filterType === 'all'
+      ? communications
+      : communications.filter((comm) => comm.type === filterType);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Communication History</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Communication History
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Track all customer interactions and communications
           </p>
@@ -293,7 +303,9 @@ function CommunicationsContent() {
       ) : filteredCommunications.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Communications</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            No Communications
+          </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Start logging customer interactions to build a complete communication history.
           </p>
@@ -319,7 +331,9 @@ function CommunicationsContent() {
                       {getTypeIcon(comm.type)}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{comm.subject}</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                        {comm.subject}
+                      </h3>
                       <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
                         <span>{comm.customer.fullName}</span>
                         {comm.user && (
@@ -338,11 +352,13 @@ function CommunicationsContent() {
                           Follow-up Required
                         </span>
                       )}
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${
-                        comm.direction === 'inbound'
-                          ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
-                          : 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded ${
+                          comm.direction === 'inbound'
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400'
+                            : 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400'
+                        }`}
+                      >
                         {comm.direction === 'inbound' ? 'Inbound' : 'Outbound'}
                       </span>
                     </div>
@@ -372,7 +388,11 @@ function CommunicationsContent() {
                       <>
                         <span>•</span>
                         <button
-                          onClick={() => router.push(`/appointments/${comm.appointment.id}`)}
+                          onClick={() => {
+                            if (comm.appointment?.id) {
+                              router.push(`/appointments/${comm.appointment.id}`);
+                            }
+                          }}
                           className="text-blue-600 dark:text-blue-400 hover:underline"
                         >
                           View Appointment
@@ -465,7 +485,6 @@ function CommunicationModal({
         outcome: formData.outcome || undefined,
       });
     } catch (error) {
-      console.error('Error saving:', error);
       alert('Failed to save. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -477,10 +496,17 @@ function CommunicationModal({
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Log Communication</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Record a customer interaction</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Log Communication
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Record a customer interaction
+            </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -617,7 +643,9 @@ function CommunicationModal({
                 className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Follow-up Required</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  Follow-up Required
+                </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Mark if this communication requires a follow-up
                 </p>
@@ -660,4 +688,3 @@ function CommunicationModal({
     </div>
   );
 }
-

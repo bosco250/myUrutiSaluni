@@ -30,7 +30,7 @@ export class SalonsService {
       });
     } catch (error) {
       // Log error but don't fail salon creation if membership creation fails
-      console.error('Failed to create membership for salon:', error);
+      // Error is silently handled to allow salon creation to proceed
     }
     
     return savedSalon;

@@ -64,6 +64,8 @@ interface SalonEmployee {
   id: string;
   userId: string;
   roleTitle?: string;
+  isActive?: boolean;
+  commissionRate?: number;
   user?: {
     fullName: string;
   };
@@ -328,6 +330,30 @@ function POSInterface() {
   const removeFromCart = (itemId: string) => {
     setCart(cart.filter((item) => item.id !== itemId));
   };
+  
+  // Auto-assign global employee to service items when employee is selected
+  useEffect(() => {
+    if (selectedEmployee) {
+      const serviceItemsWithoutEmployee = cart.filter(
+        item => item.type === 'service' && !item.employeeId
+      );
+      
+      if (serviceItemsWithoutEmployee.length > 0) {
+        setCart(prevCart =>
+          prevCart.map(item => {
+            if (item.type === 'service' && !item.employeeId) {
+              return {
+                ...item,
+                employeeId: selectedEmployee.id,
+                employeeName: selectedEmployee.user?.fullName || selectedEmployee.roleTitle,
+              };
+            }
+            return item;
+          })
+        );
+      }
+    }
+  }, [selectedEmployee?.id, cart.length]);
 
   // Create sale mutation
   const createSaleMutation = useMutation({
@@ -344,7 +370,7 @@ function POSInterface() {
         throw new Error('Please select a payment method');
       }
 
-      const saleItems = cart.map((item) => {
+      const saleItems = cart.map((item, index) => {
         if (!item.item?.id) {
           throw new Error(`Invalid item in cart: ${item.item?.name || 'Unknown'}`);
         }
@@ -487,7 +513,6 @@ function POSInterface() {
         error?.message ||
         'Failed to create sale. Please try again.';
 
-      console.error('Sale creation error:', errorMessage);
       alert(`Failed to create sale: ${errorMessage}`);
     },
   });
@@ -869,6 +894,22 @@ function POSInterface() {
                     onChange={(e) => {
                       const emp = employees.find((emp) => emp.id === e.target.value);
                       setSelectedEmployee(emp || null);
+                      
+                      // Auto-assign this employee to all service items in cart that don't have an employee
+                      if (emp) {
+                        setCart(prevCart => 
+                          prevCart.map(item => {
+                            if (item.type === 'service' && !item.employeeId) {
+                              return {
+                                ...item,
+                                employeeId: emp.id,
+                                employeeName: emp.user?.fullName || emp.roleTitle,
+                              };
+                            }
+                            return item;
+                          })
+                        );
+                      }
                     }}
                     className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition text-sm"
                   >
@@ -1127,16 +1168,82 @@ function CartItemCard({
         </div>
       ) : (
         <div className="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark">
-          <button
-            onClick={() => setShowDiscount(true)}
-            className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition"
-          >
-            <Percent className="w-3 h-3" />
-            {item.discount > 0 ? `Discount: RWF ${item.discount.toLocaleString()}` : 'Add discount'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDiscount(true)}
+              className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition"
+            >
+              <Percent className="w-3 h-3" />
+              {item.discount > 0 ? `Discount: RWF ${item.discount.toLocaleString()}` : 'Add discount'}
+            </button>
+            {item.type === 'service' && employees.length > 0 && (
+              <select
+                value={item.employeeId || ''}
+                onChange={(e) => {
+                  const emp = employees.find((emp) => emp.id === e.target.value);
+                  onUpdate({
+                    employeeId: e.target.value || undefined,
+                    employeeName: emp?.user?.fullName || emp?.roleTitle || undefined,
+                  });
+                }}
+                className="text-xs px-2 py-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                title="Assign employee for commission tracking"
+              >
+                <option value="">No employee</option>
+                {employees
+                  .filter((emp) => emp.isActive !== false)
+                  .map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.user?.fullName || emp.roleTitle || 'Employee'}
+                      {(emp.commissionRate ?? 0) > 0 ? ` (${emp.commissionRate ?? 0}% commission)` : ' (0% commission)'}
+                    </option>
+                  ))}
+              </select>
+            )}
+          </div>
           <span className="text-xs text-text-light/60 dark:text-text-dark/60">
             RWF {item.unitPrice.toLocaleString()} each
           </span>
+        </div>
+      )}
+
+      {/* Employee Assignment for Services */}
+      {item.type === 'service' && employees.length > 0 && (
+        <div className="pt-2 border-t border-border-light dark:border-border-dark mt-2">
+          <div className="flex items-center gap-2">
+            <Users className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+            <label className="text-xs text-text-light/60 dark:text-text-dark/60">
+              Assign Employee:
+            </label>
+            <select
+              value={item.employeeId || ''}
+              onChange={(e) => {
+                const emp = employees.find((emp) => emp.id === e.target.value);
+                onUpdate({
+                  employeeId: e.target.value || undefined,
+                  employeeName: emp?.user?.fullName || emp?.roleTitle || undefined,
+                });
+              }}
+              className="flex-1 text-xs px-2 py-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              title="Assign employee for commission tracking"
+            >
+              <option value="">No employee (no commission)</option>
+              {employees
+                .filter((emp) => emp.isActive !== false)
+                .map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.user?.fullName || emp.roleTitle || 'Employee'} 
+                    {(emp.commissionRate ?? 0) > 0 ? ` (${emp.commissionRate ?? 0}% commission)` : ' (0% commission)'}
+                  </option>
+                ))}
+            </select>
+          </div>
+          {item.employeeId && (
+            <p className="text-xs text-success mt-1 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              Commission will be recorded automatically
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
@@ -24,6 +24,7 @@ import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import { format } from 'date-fns';
+import SalonLocationMap from '@/components/maps/SalonLocationMap';
 
 interface Salon {
   id: string;
@@ -34,6 +35,8 @@ interface Salon {
   description?: string;
   status?: string; // Backend uses 'status' field (default: 'active')
   isActive?: boolean; // Frontend compatibility
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Service {
@@ -100,7 +103,6 @@ function SalonDetailsContent() {
         const servicesArray = Array.isArray(servicesData) ? servicesData : [];
         return servicesArray;
       } catch (error) {
-        console.error('Error fetching services:', error);
         return [];
       }
     },
@@ -135,11 +137,7 @@ function SalonDetailsContent() {
           (emp: SalonEmployee) => emp.isActive !== false && (emp.user || emp.roleTitle) // Must have at least name or role
         );
       } catch (error: any) {
-        // Log error but don't fail the page
-        console.error('Error fetching salon employees:', {
-          message: error?.response?.data?.message || error?.message,
-          status: error?.response?.status,
-        });
+        // Silently fail - employees are optional for booking
         return [];
       }
     },
@@ -171,19 +169,22 @@ function SalonDetailsContent() {
         serviceId: data.serviceId,
         scheduledStart: data.scheduledStart,
         scheduledEnd: data.scheduledEnd,
-        status: 'booked',
+        status: 'pending',
         notes: data.notes,
         metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['employee-availability'] });
       setShowBookingModal(false);
       setSelectedService(null);
-      alert('Appointment booked successfully!');
+      alert('Appointment request submitted! It will be confirmed by the salon.');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || 'Failed to book appointment');
+      const errorMessage = error.response?.data?.message || 'Failed to book appointment';
+      // Error message already includes employee name from backend
+      alert(errorMessage);
     },
   });
 
@@ -301,6 +302,30 @@ function SalonDetailsContent() {
         )}
       </div>
 
+      {/* Location Section */}
+      {salon.latitude && salon.longitude && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-6">
+            Location
+          </h2>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+            <SalonLocationMap
+              latitude={salon.latitude}
+              longitude={salon.longitude}
+              salonName={salon.name}
+              address={salon.address}
+              height="400px"
+            />
+            {salon.address && (
+              <div className="mt-4 flex items-center gap-2 text-text-light/60 dark:text-text-dark/60">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm">{salon.address}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Booking Modal */}
       {showBookingModal && selectedService && (
         <BookingModal
@@ -399,6 +424,8 @@ function BookingModal({
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [availabilityError, setAvailabilityError] = useState<string>('');
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,6 +450,14 @@ function BookingModal({
         preferredEmployeeName =
           selectedEmp.user?.fullName || selectedEmp.roleTitle || 'Selected employee';
 
+        // Validate employee availability before booking
+        if (selectedTime && !availableSlots.includes(selectedTime)) {
+          setAvailabilityError(
+            `${preferredEmployeeName} is not available at this time. Please select an available time slot.`
+          );
+          return;
+        }
+
         // Also add to notes for visibility
         const employeeNote = `Preferred Employee: ${preferredEmployeeName}`;
         if (finalNotes) {
@@ -432,6 +467,9 @@ function BookingModal({
         }
       }
     }
+
+    // Clear any previous errors
+    setAvailabilityError('');
 
     onBook({
       serviceId: service.id,
@@ -443,17 +481,82 @@ function BookingModal({
     });
   };
 
-  // Generate time slots (9 AM to 6 PM, 30-minute intervals)
-  const timeSlots = [];
-  for (let hour = 9; hour < 18; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeSlots.push(time);
+  // Handle time selection - check if selected time is available
+  const handleTimeChange = (time: string) => {
+    setSelectedTime(time);
+    if (selectedEmployee && selectedDate && !availableSlots.includes(time)) {
+      const selectedEmp = employees.find((emp) => emp.id === selectedEmployee);
+      const employeeName = selectedEmp?.user?.fullName || selectedEmp?.roleTitle || 'This employee';
+      setAvailabilityError(
+        `${employeeName} is not available at this time. Please select an available time slot.`
+      );
+    } else {
+      setAvailabilityError('');
     }
-  }
+  };
+
+  // Generate all possible time slots (9 AM to 6 PM, 30-minute intervals)
+  const allTimeSlots: string[] = useMemo(() => {
+    const slots: string[] = [];
+    for (let hour = 9; hour < 18; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(time);
+      }
+    }
+    return slots;
+  }, []);
+
+  // Fetch available time slots when date and employee are selected
+  const { data: availabilityData, isLoading: isLoadingAvailability } = useQuery({
+    queryKey: ['employee-availability', selectedEmployee, selectedDate, service.durationMinutes],
+    queryFn: async () => {
+      if (!selectedEmployee || !selectedDate) {
+        return null;
+      }
+      try {
+        const response = await api.get(
+          `/appointments/availability/${selectedEmployee}?date=${selectedDate}&duration=${service.durationMinutes || 30}`
+        );
+        return response.data;
+      } catch (error) {
+        // Silently fail - availability check is optional
+        return null;
+      }
+    },
+    enabled: !!selectedEmployee && !!selectedDate,
+  });
+
+  // Update available slots when availability data changes
+  useEffect(() => {
+    if (availabilityData?.availableSlots) {
+      setAvailableSlots(availabilityData.availableSlots);
+      // Clear selected time if it's no longer available
+      if (selectedTime && !availabilityData.availableSlots.includes(selectedTime)) {
+        setSelectedTime('');
+        const selectedEmp = employees.find((emp) => emp.id === selectedEmployee);
+        const employeeName =
+          selectedEmp?.user?.fullName || selectedEmp?.roleTitle || 'This employee';
+        setAvailabilityError(
+          `${employeeName} is not available at the selected time. Please choose another time slot.`
+        );
+      } else {
+        setAvailabilityError('');
+      }
+    } else if (selectedEmployee && selectedDate) {
+      // If no availability data but employee and date selected, show all slots initially
+      setAvailableSlots(allTimeSlots);
+    } else {
+      // If no employee selected, show all slots
+      setAvailableSlots(allTimeSlots);
+    }
+  }, [availabilityData, selectedEmployee, selectedDate, selectedTime, employees, allTimeSlots]);
 
   // Get minimum date (today)
   const minDate = new Date().toISOString().split('T')[0];
+
+  // Get time slots to display (filtered by availability if employee is selected)
+  const timeSlots = selectedEmployee && selectedDate ? availableSlots : allTimeSlots;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -491,7 +594,12 @@ function BookingModal({
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                // Reset time selection when date changes
+                setSelectedTime('');
+                setAvailabilityError('');
+              }}
               min={minDate}
               required
               className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
@@ -501,20 +609,58 @@ function BookingModal({
           <div>
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Select Time
+              {selectedEmployee && selectedDate && isLoadingAvailability && (
+                <span className="ml-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                  (Loading availability...)
+                </span>
+              )}
             </label>
             <select
               value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
+              onChange={(e) => handleTimeChange(e.target.value)}
               required
-              className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={isLoadingAvailability}
+              className={`w-full px-4 py-2 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary ${
+                availabilityError && selectedTime
+                  ? 'border-danger'
+                  : 'border-border-light dark:border-border-dark'
+              } ${isLoadingAvailability ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <option value="">Select time</option>
-              {timeSlots.map((time) => (
-                <option key={time} value={time}>
-                  {time}
-                </option>
-              ))}
+              {timeSlots.map((time) => {
+                const isAvailable =
+                  !selectedEmployee || !selectedDate || availableSlots.includes(time);
+                return (
+                  <option
+                    key={time}
+                    value={time}
+                    disabled={!isAvailable}
+                    className={isAvailable ? '' : 'text-text-light/40 dark:text-text-dark/40'}
+                  >
+                    {time} {!isAvailable && '(Booked)'}
+                  </option>
+                );
+              })}
             </select>
+            {availabilityError && <p className="mt-2 text-sm text-danger">{availabilityError}</p>}
+            {selectedEmployee &&
+              selectedDate &&
+              availableSlots.length > 0 &&
+              !isLoadingAvailability && (
+                <p className="mt-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                  {availableSlots.length} available time slot
+                  {availableSlots.length !== 1 ? 's' : ''} on this date
+                </p>
+              )}
+            {selectedEmployee &&
+              selectedDate &&
+              availableSlots.length === 0 &&
+              !isLoadingAvailability && (
+                <p className="mt-2 text-sm text-warning">
+                  No available time slots for this employee on this date. Please select another
+                  date.
+                </p>
+              )}
           </div>
 
           <div>
@@ -533,7 +679,12 @@ function BookingModal({
               <>
                 <select
                   value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedEmployee(e.target.value);
+                    // Reset time selection when employee changes
+                    setSelectedTime('');
+                    setAvailabilityError('');
+                  }}
                   className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">No preference - Any available employee</option>

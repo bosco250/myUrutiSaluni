@@ -2,8 +2,24 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Plus, Edit, Trash2, Search, Filter, User as UserIcon, Shield, Building2, Users, Mail, Phone, Check, X } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  Filter,
+  User as UserIcon,
+  Shield,
+  Building2,
+  Users,
+  Mail,
+  Phone,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
@@ -54,6 +70,8 @@ function UsersPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuthStore();
   const { canManageUsers } = usePermissions();
@@ -85,17 +103,33 @@ function UsersPageContent() {
   });
 
   // Filter users
-  const filteredUsers = users?.filter((user) => {
-    const matchesSearch =
-      user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredUsers = useMemo(() => {
+    return (
+      users?.filter((user) => {
+        const matchesSearch =
+          user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.phone?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? user.isActive : !user.isActive);
+        const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+        const matchesStatus =
+          statusFilter === 'all' || (statusFilter === 'active' ? user.isActive : !user.isActive);
 
-    return matchesSearch && matchesRole && matchesStatus;
-  }) || [];
+        return matchesSearch && matchesRole && matchesStatus;
+      }) || []
+    );
+  }, [users, searchQuery, roleFilter, statusFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter]);
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
@@ -104,8 +138,7 @@ function UsersPageContent() {
         data: { role: newRole },
       });
     } catch (error) {
-      console.error('Failed to update user role:', error);
-      alert('Failed to update user role. Please try again.');
+      // Error handled by mutation
     }
   };
 
@@ -116,8 +149,7 @@ function UsersPageContent() {
         data: { isActive: !user.isActive },
       });
     } catch (error) {
-      console.error('Failed to update user status:', error);
-      alert('Failed to update user status. Please try again.');
+      // Error handled by mutation
     }
   };
 
@@ -271,7 +303,7 @@ function UsersPageContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {filteredUsers.map((user) => (
+                {paginatedUsers.map((user) => (
                   <tr
                     key={user.id}
                     className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
@@ -359,6 +391,80 @@ function UsersPageContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredUsers.length > 0 && (
+        <div className="mt-6 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of{' '}
+                {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}
+              </span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="10">10 per page</option>
+                <option value="20">20 per page</option>
+                <option value="50">50 per page</option>
+                <option value="100">100 per page</option>
+              </select>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                          currentPage === pageNum
+                            ? 'bg-primary text-white'
+                            : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="p-2"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

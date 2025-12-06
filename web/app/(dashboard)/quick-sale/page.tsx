@@ -95,7 +95,6 @@ function QuickSaleContent() {
         // Ensure we always return an array
         return Array.isArray(data) ? data : [];
       } catch (error) {
-        console.error('Error fetching products:', error);
         // Always return an array, never undefined
         return [];
       }

@@ -28,6 +28,7 @@ import { WaitlistModule } from './waitlist/waitlist.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { InspectionsModule } from './inspections/inspections.module';
 import { ResourcesModule } from './resources/resources.module';
+import { PayrollModule } from './payroll/payroll.module';
 import { CommonModule } from './common/common.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -64,6 +65,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     CommunicationsModule,
     InspectionsModule,
     ResourcesModule,
+    PayrollModule,
   ],
   controllers: [AppController],
   providers: [

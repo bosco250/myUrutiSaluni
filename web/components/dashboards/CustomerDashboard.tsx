@@ -8,9 +8,23 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuthStore } from '@/store/auth-store';
 import api from '@/lib/api';
 import Button from '@/components/ui/Button';
-import { 
-  Building2, CheckCircle, Clock, FileText, ArrowRight, Sparkles, Users, Calendar,
-  DollarSign, ShoppingBag, TrendingUp, Star, Receipt, MapPin, Phone, Mail
+import {
+  Building2,
+  CheckCircle,
+  Clock,
+  FileText,
+  ArrowRight,
+  Sparkles,
+  Users,
+  Calendar,
+  DollarSign,
+  ShoppingBag,
+  TrendingUp,
+  Star,
+  Receipt,
+  MapPin,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -49,25 +63,22 @@ export default function CustomerDashboard() {
   const { user: authUser } = useAuthStore();
 
   // Get customer ID from user - backend will auto-create if needed for CUSTOMER role
-  const { data: customer, isLoading: isLoadingCustomer, error: customerError, refetch: refetchCustomer } = useQuery({
+  const {
+    data: customer,
+    isLoading: isLoadingCustomer,
+    error: customerError,
+    refetch: refetchCustomer,
+  } = useQuery({
     queryKey: ['customer-by-user', authUser?.id],
     queryFn: async () => {
       try {
-        console.log('[CUSTOMER DASHBOARD] Fetching customer for user:', authUser?.id);
         const response = await api.get(`/customers/by-user/${authUser?.id}`);
-        console.log('[CUSTOMER DASHBOARD] Customer response:', response.data);
         return response.data || null;
       } catch (error: any) {
-        console.log('[CUSTOMER DASHBOARD] Error fetching customer:', {
-          status: error.response?.status,
-          message: error.response?.data?.message || error.message,
-          error,
-        });
         // If 404 or null, customer doesn't exist yet - that's okay
         if (error.response?.status === 404 || error.response?.status === 200 || !error.response) {
           return null;
         }
-        console.error('Error fetching customer:', error);
         return null;
       }
     },
@@ -78,18 +89,8 @@ export default function CustomerDashboard() {
 
   // If no customer but user is CUSTOMER role, refetch after a short delay (backend auto-creates)
   useEffect(() => {
-    console.log('[CUSTOMER DASHBOARD] useEffect check:', {
-      hasCustomer: !!customer,
-      isLoadingCustomer,
-      userRole: authUser?.role,
-      userId: authUser?.id,
-      shouldRefetch: !customer && !isLoadingCustomer && authUser?.role === 'customer' && authUser?.id,
-    });
-    
     if (!customer && !isLoadingCustomer && authUser?.role === 'customer' && authUser?.id) {
-      console.log('[CUSTOMER DASHBOARD] No customer found for CUSTOMER role user, refetching after delay...');
       const timer = setTimeout(() => {
-        console.log('[CUSTOMER DASHBOARD] Refetching customer data...');
         refetchCustomer();
       }, 2000); // Increased delay to 2 seconds
       return () => clearTimeout(timer);
@@ -98,20 +99,11 @@ export default function CustomerDashboard() {
 
   const customerId = customer?.id;
 
-  console.log('[CUSTOMER DASHBOARD] State:', {
-    customerId,
-    hasCustomer: !!customer,
-    isLoadingCustomer,
-    customerError: customerError ? String(customerError) : null,
-  });
-
   // Fetch customer statistics
   const { data: statistics, isLoading: isLoadingStats } = useQuery<CustomerStatistics>({
     queryKey: ['customer-statistics', customerId],
     queryFn: async () => {
-      console.log('[CUSTOMER DASHBOARD] Fetching statistics for customer:', customerId);
       const response = await api.get(`/sales/customer/${customerId}/statistics`);
-      console.log('[CUSTOMER DASHBOARD] Statistics response:', response.data);
       return response.data;
     },
     enabled: !!customerId,
@@ -121,9 +113,7 @@ export default function CustomerDashboard() {
   const { data: salesData, isLoading: isLoadingSales } = useQuery<{ data: Sale[]; total: number }>({
     queryKey: ['customer-sales', customerId],
     queryFn: async () => {
-      console.log('[CUSTOMER DASHBOARD] Fetching sales for customer:', customerId);
       const response = await api.get(`/sales/customer/${customerId}?page=1&limit=5`);
-      console.log('[CUSTOMER DASHBOARD] Sales response:', response.data);
       return response.data;
     },
     enabled: !!customerId,
@@ -133,23 +123,27 @@ export default function CustomerDashboard() {
   const { data: appointments, isLoading: isLoadingAppointments } = useQuery<Appointment[]>({
     queryKey: ['customer-appointments', customerId],
     queryFn: async () => {
-      console.log('[CUSTOMER DASHBOARD] Fetching appointments for customer:', customerId);
       const response = await api.get(`/appointments/customer/${customerId}`);
-      console.log('[CUSTOMER DASHBOARD] Appointments response:', response.data);
       return response.data || [];
     },
     enabled: !!customerId,
   });
 
   const recentSales = salesData?.data || [];
-  const upcomingAppointments = appointments?.filter(apt => {
-    const startDate = new Date(apt.scheduledStart);
-    return startDate >= new Date() && apt.status !== 'cancelled' && apt.status !== 'completed';
-  }).slice(0, 5) || [];
-  const pastAppointments = appointments?.filter(apt => {
-    const startDate = new Date(apt.scheduledStart);
-    return startDate < new Date() || apt.status === 'completed';
-  }).slice(0, 5) || [];
+  const upcomingAppointments =
+    appointments
+      ?.filter((apt) => {
+        const startDate = new Date(apt.scheduledStart);
+        return startDate >= new Date() && apt.status !== 'cancelled' && apt.status !== 'completed';
+      })
+      .slice(0, 5) || [];
+  const pastAppointments =
+    appointments
+      ?.filter((apt) => {
+        const startDate = new Date(apt.scheduledStart);
+        return startDate < new Date() || apt.status === 'completed';
+      })
+      .slice(0, 5) || [];
 
   if (isLoadingCustomer) {
     return (
@@ -170,10 +164,11 @@ export default function CustomerDashboard() {
           Welcome, {user?.fullName || 'Customer'}!
         </h1>
         <p className="text-text-light/60 dark:text-text-dark/60">
-          {customer ? 'View your purchase history, appointments, and statistics' : 'Get started by applying for membership to access salon management features.'}
+          {customer
+            ? 'View your purchase history, appointments, and statistics'
+            : 'Get started by applying for membership to access salon management features.'}
         </p>
       </div>
-
 
       {/* Message when customer doesn't exist */}
       {!customer && !isLoadingCustomer && (
@@ -187,49 +182,27 @@ export default function CustomerDashboard() {
                 Customer Profile Not Found
               </h3>
               <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
-                You don't have a customer profile yet. Customer profiles are typically created when you make your first purchase or appointment at a salon. 
-                Once you have a customer profile, you'll be able to see your purchase history, statistics, and appointments here.
+                You don't have a customer profile yet. Customer profiles are typically created when
+                you make your first purchase or appointment at a salon. Once you have a customer
+                profile, you'll be able to see your purchase history, statistics, and appointments
+                here.
               </p>
               {authUser?.role === 'customer' && (
                 <Button
                   onClick={async () => {
-                    console.log('[CUSTOMER DASHBOARD] Manually triggering customer creation for user:', authUser.id);
                     try {
                       const response = await api.get(`/customers/by-user/${authUser.id}`);
-                      console.log('[CUSTOMER DASHBOARD] Manual fetch response:', response);
-                      console.log('[CUSTOMER DASHBOARD] Response data:', response.data);
                       if (response.data) {
                         // Invalidate query to refetch
                         await refetchCustomer();
                         alert('Customer profile created successfully!');
                       } else {
-                        alert('Customer profile creation failed. Check console for details.');
+                        alert('Customer profile creation failed. Please try again.');
                       }
                     } catch (error: any) {
-                      console.error('[CUSTOMER DASHBOARD] Manual fetch error:', error);
-                      alert(`Error: ${error.response?.data?.message || error.message || 'Unknown error'}`);
-                    }
-                  }}
-                  variant="primary"
-                  className="mt-2"
-                >
-                  Create Customer Profile Now
-                </Button>
-              )}
-              {authUser?.role === 'customer' && (
-                <Button
-                  onClick={async () => {
-                    console.log('[CUSTOMER DASHBOARD] Manually triggering customer creation...');
-                    try {
-                      const response = await api.get(`/customers/by-user/${authUser.id}`);
-                      console.log('[CUSTOMER DASHBOARD] Manual fetch response:', response.data);
-                      if (response.data) {
-                        // Invalidate and refetch
-                        refetchCustomer();
-                      }
-                    } catch (error: any) {
-                      console.error('[CUSTOMER DASHBOARD] Manual fetch error:', error);
-                      alert(`Error: ${error.response?.data?.message || error.message}`);
+                      alert(
+                        `Error: ${error.response?.data?.message || error.message || 'Unknown error'}`
+                      );
                     }
                   }}
                   variant="primary"
@@ -325,7 +298,9 @@ export default function CustomerDashboard() {
               Average Order
             </h3>
             <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {isLoadingStats ? '...' : `${(statistics?.averageOrderValue || 0).toLocaleString()} RWF`}
+              {isLoadingStats
+                ? '...'
+                : `${(statistics?.averageOrderValue || 0).toLocaleString()} RWF`}
             </p>
           </div>
 
@@ -347,21 +322,25 @@ export default function CustomerDashboard() {
 
       {/* Membership Application Status - Only show if customer has an application or explicitly wants to apply */}
       {(membershipStatus?.application || (!customer && !membershipStatus?.isMember)) && (
-        <div className={`mb-8 rounded-2xl p-8 border-2 ${
-          membershipStatus?.application?.status === 'approved'
-            ? 'bg-success/10 border-success'
-            : membershipStatus?.application?.status === 'pending'
-            ? 'bg-warning/10 border-warning'
-            : 'bg-primary/10 border-primary'
-        }`}>
+        <div
+          className={`mb-8 rounded-2xl p-8 border-2 ${
+            membershipStatus?.application?.status === 'approved'
+              ? 'bg-success/10 border-success'
+              : membershipStatus?.application?.status === 'pending'
+                ? 'bg-warning/10 border-warning'
+                : 'bg-primary/10 border-primary'
+          }`}
+        >
           <div className="flex items-start gap-6">
-            <div className={`p-4 rounded-xl ${
-              membershipStatus?.application?.status === 'approved'
-                ? 'bg-success/20'
-                : membershipStatus?.application?.status === 'pending'
-                ? 'bg-warning/20'
-                : 'bg-primary/20'
-            }`}>
+            <div
+              className={`p-4 rounded-xl ${
+                membershipStatus?.application?.status === 'approved'
+                  ? 'bg-success/20'
+                  : membershipStatus?.application?.status === 'pending'
+                    ? 'bg-warning/20'
+                    : 'bg-primary/20'
+              }`}
+            >
               {membershipStatus?.application?.status === 'approved' ? (
                 <CheckCircle className="w-8 h-8 text-success" />
               ) : membershipStatus?.application?.status === 'pending' ? (
@@ -375,15 +354,15 @@ export default function CustomerDashboard() {
                 {membershipStatus?.application?.status === 'approved'
                   ? 'Membership Approved! 🎉'
                   : membershipStatus?.application?.status === 'pending'
-                  ? 'Application Under Review'
-                  : 'Become a Salon Owner'}
+                    ? 'Application Under Review'
+                    : 'Become a Salon Owner'}
               </h2>
               <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
                 {membershipStatus?.application?.status === 'approved'
                   ? 'Congratulations! You can now add salons, manage employees, and access all business management features.'
                   : membershipStatus?.application?.status === 'pending'
-                  ? 'Your membership application is being reviewed by our team. We\'ll notify you once a decision is made. This usually takes 1-3 business days.'
-                  : 'Want to manage your own salon? Apply for membership to access salon management, employee management, appointments, sales, and more.'}
+                    ? "Your membership application is being reviewed by our team. We'll notify you once a decision is made. This usually takes 1-3 business days."
+                    : 'Want to manage your own salon? Apply for membership to access salon management, employee management, appointments, sales, and more.'}
               </p>
               <div className="flex flex-wrap gap-3">
                 {membershipStatus?.application?.status !== 'pending' && (
@@ -392,15 +371,14 @@ export default function CustomerDashboard() {
                     variant="primary"
                     className="flex items-center gap-2"
                   >
-                    {membershipStatus?.application?.status === 'approved' ? 'Go to Salons' : 'Apply for Membership'}
+                    {membershipStatus?.application?.status === 'approved'
+                      ? 'Go to Salons'
+                      : 'Apply for Membership'}
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 )}
                 {membershipStatus?.application?.status === 'pending' && (
-                  <Button
-                    onClick={() => router.push('/membership/apply')}
-                    variant="secondary"
-                  >
+                  <Button onClick={() => router.push('/membership/apply')} variant="secondary">
                     View Application Details
                   </Button>
                 )}
@@ -443,7 +421,10 @@ export default function CustomerDashboard() {
             ) : (
               <div className="space-y-4">
                 {recentSales.map((sale) => (
-                  <div key={sale.id} className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark">
+                  <div
+                    key={sale.id}
+                    className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark"
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="font-medium text-text-light dark:text-text-dark">
@@ -455,7 +436,7 @@ export default function CustomerDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-text-light dark:text-text-dark">
-                          {sale.totalAmount.toLocaleString()} RWF
+                          {Number(sale.totalAmount || 0).toLocaleString()} RWF
                         </p>
                         <p className="text-xs text-text-light/60 dark:text-text-dark/60 capitalize">
                           {sale.paymentMethod}
@@ -465,9 +446,12 @@ export default function CustomerDashboard() {
                     {sale.items && sale.items.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-border-light dark:border-border-dark">
                         <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                          {sale.items.map(item => 
-                            `${item.quantity}x ${item.service?.name || item.product?.name || 'Item'}`
-                          ).join(', ')}
+                          {sale.items
+                            .map(
+                              (item) =>
+                                `${item.quantity}x ${item.service?.name || item.product?.name || 'Item'}`
+                            )
+                            .join(', ')}
                         </p>
                       </div>
                     )}
@@ -502,12 +486,17 @@ export default function CustomerDashboard() {
             ) : upcomingAppointments.length === 0 ? (
               <div className="text-center py-8">
                 <Calendar className="w-12 h-12 mx-auto mb-2 text-text-light/40 dark:text-text-dark/40" />
-                <p className="text-text-light/60 dark:text-text-dark/60">No upcoming appointments</p>
+                <p className="text-text-light/60 dark:text-text-dark/60">
+                  No upcoming appointments
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
                 {upcomingAppointments.map((apt) => (
-                  <div key={apt.id} className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark">
+                  <div
+                    key={apt.id}
+                    className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark"
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="font-medium text-text-light dark:text-text-dark">
@@ -517,16 +506,23 @@ export default function CustomerDashboard() {
                           {apt.salon?.name || 'Unknown Salon'}
                         </p>
                       </div>
-                      <span className={`px-2 py-1 text-xs rounded-full capitalize ${
-                        apt.status === 'confirmed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        apt.status === 'booked' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full capitalize ${
+                          apt.status === 'confirmed'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : apt.status === 'booked'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                              : apt.status === 'pending'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                        }`}
+                      >
                         {apt.status}
                       </span>
                     </div>
                     <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      {format(new Date(apt.scheduledStart), 'MMM dd, yyyy HH:mm')} - {format(new Date(apt.scheduledEnd), 'HH:mm')}
+                      {format(new Date(apt.scheduledStart), 'MMM dd, yyyy HH:mm')} -{' '}
+                      {format(new Date(apt.scheduledEnd), 'HH:mm')}
                     </p>
                     {apt.notes && (
                       <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2 italic">
@@ -554,11 +550,7 @@ export default function CustomerDashboard() {
             <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
               Fill out the membership application form with your business details.
             </p>
-            <Button
-              onClick={() => router.push('/')}
-              variant="primary"
-              className="w-full"
-            >
+            <Button onClick={() => router.push('/')} variant="primary" className="w-full">
               Start Application
             </Button>
           </div>
@@ -597,19 +589,27 @@ export default function CustomerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-xl">
             <Building2 className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-light dark:text-text-dark">Salon Management</span>
+            <span className="text-sm font-medium text-text-light dark:text-text-dark">
+              Salon Management
+            </span>
           </div>
           <div className="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-xl">
             <Users className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-light dark:text-text-dark">Employee Management</span>
+            <span className="text-sm font-medium text-text-light dark:text-text-dark">
+              Employee Management
+            </span>
           </div>
           <div className="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-xl">
             <Calendar className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-light dark:text-text-dark">Appointment Scheduling</span>
+            <span className="text-sm font-medium text-text-light dark:text-text-dark">
+              Appointment Scheduling
+            </span>
           </div>
           <div className="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-xl">
             <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-text-light dark:text-text-dark">And Much More</span>
+            <span className="text-sm font-medium text-text-light dark:text-text-dark">
+              And Much More
+            </span>
           </div>
         </div>
       </div>

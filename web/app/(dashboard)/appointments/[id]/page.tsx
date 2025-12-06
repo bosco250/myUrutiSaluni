@@ -24,6 +24,7 @@ import {
   Mail,
   MapPin,
   Bell,
+  TrendingUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -33,6 +34,8 @@ interface Appointment {
   scheduledEnd: string;
   status: string;
   notes?: string;
+  salonEmployeeId?: string;
+  serviceAmount?: number;
   customer?: {
     id: string;
     fullName: string;
@@ -52,6 +55,14 @@ interface Appointment {
     address?: string;
     phone?: string;
     email?: string;
+  };
+  salonEmployee?: {
+    id: string;
+    user?: {
+      fullName: string;
+    };
+    roleTitle?: string;
+    commissionRate?: number;
   };
   createdBy?: {
     id: string;
@@ -85,6 +96,30 @@ function AppointmentDetailContent() {
       return response.data?.data || response.data;
     },
     enabled: !!appointmentId,
+  });
+
+  // Fetch commission for this appointment if completed
+  const { data: commission } = useQuery({
+    queryKey: ['appointment-commission', appointmentId, appointment?.salonEmployeeId],
+    queryFn: async () => {
+      if (!appointment?.salonEmployeeId || appointment.status !== 'completed') return null;
+      try {
+        const response = await api.get('/commissions', {
+          params: {
+            salonEmployeeId: appointment.salonEmployeeId,
+          },
+        });
+        const commissions = response.data || [];
+        // Find commission linked to this appointment
+        return commissions.find((c: any) => 
+          c.metadata?.appointmentId === appointmentId || 
+          (c.metadata?.source === 'appointment' && !c.saleItemId)
+        ) || null;
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: !!appointment?.salonEmployeeId && appointment?.status === 'completed',
   });
 
   const updateStatusMutation = useMutation({
@@ -133,6 +168,7 @@ function AppointmentDetailContent() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string; border: string }> = {
+      pending: { bg: 'bg-amber-500/10', text: 'text-amber-600', border: 'border-amber-500/20' },
       booked: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20' },
       confirmed: { bg: 'bg-green-500/10', text: 'text-green-600', border: 'border-green-500/20' },
       in_progress: { bg: 'bg-yellow-500/10', text: 'text-yellow-600', border: 'border-yellow-500/20' },
@@ -145,6 +181,7 @@ function AppointmentDetailContent() {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
+      pending: 'Pending',
       booked: 'Booked',
       confirmed: 'Confirmed',
       in_progress: 'In Progress',
@@ -155,8 +192,11 @@ function AppointmentDetailContent() {
     return labels[status] || status;
   };
 
-  const canEdit = user?.role === 'super_admin' || user?.role === 'association_admin' || 
-                  user?.role === 'salon_owner' || user?.role === 'salon_employee';
+  // Check if user can edit appointments (salon owners, employees, and admins)
+  const canEdit = user?.role === UserRole.SUPER_ADMIN || 
+                  user?.role === UserRole.ASSOCIATION_ADMIN || 
+                  user?.role === UserRole.SALON_OWNER || 
+                  user?.role === UserRole.SALON_EMPLOYEE;
 
   if (isLoading) {
     return (
@@ -388,6 +428,54 @@ function AppointmentDetailContent() {
             </div>
           )}
 
+          {/* Employee Assignment & Commission Info */}
+          {appointment.salonEmployee && (
+            <div className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-primary/20">
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-5 h-5 text-primary" />
+                <h3 className="font-semibold text-text-light dark:text-text-dark">Assigned Employee</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-text-light/60 dark:text-text-dark/60">Employee</span>
+                  <span className="text-text-light dark:text-text-dark font-medium">
+                    {appointment.salonEmployee.user?.fullName || 'Unknown'}
+                    {appointment.salonEmployee.roleTitle && ` - ${appointment.salonEmployee.roleTitle}`}
+                  </span>
+                </div>
+                {appointment.salonEmployee.commissionRate !== undefined && appointment.salonEmployee.commissionRate > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-text-light/60 dark:text-text-dark/60">Commission Rate</span>
+                    <span className="text-text-light dark:text-text-dark font-medium text-primary">
+                      {appointment.salonEmployee.commissionRate}%
+                    </span>
+                  </div>
+                )}
+                {appointment.status === 'completed' && appointment.serviceAmount && appointment.salonEmployee.commissionRate && (
+                  <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-light/60 dark:text-text-dark/60">Service Amount</span>
+                      <span className="text-text-light dark:text-text-dark font-semibold">
+                        RWF {appointment.serviceAmount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-text-light/60 dark:text-text-dark/60">Commission Earned</span>
+                      <span className="text-success font-bold text-lg">
+                        RWF {((appointment.serviceAmount * appointment.salonEmployee.commissionRate) / 100).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-2 p-2 bg-success/10 border border-success/20 rounded-lg">
+                      <p className="text-xs text-success font-medium">
+                        ✓ Commission has been automatically created and recorded
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Notes */}
           {appointment.notes && (
             <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
@@ -404,18 +492,18 @@ function AppointmentDetailContent() {
             <div className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark">
               <h3 className="font-semibold text-text-light dark:text-text-dark mb-3">Update Status</h3>
               <div className="flex flex-wrap gap-2">
-                {appointment.status === 'booked' && (
+                {appointment.status === 'pending' && (
                   <Button
-                    onClick={() => updateStatusMutation.mutate('confirmed')}
-                    variant="secondary"
+                    onClick={() => updateStatusMutation.mutate('booked')}
+                    variant="primary"
                     size="sm"
                     disabled={updateStatusMutation.isPending}
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Confirm
+                    Confirm Booking
                   </Button>
                 )}
-                {appointment.status === 'confirmed' && (
+                {(appointment.status === 'booked' || appointment.status === 'confirmed') && (
                   <Button
                     onClick={() => updateStatusMutation.mutate('in_progress')}
                     variant="secondary"
@@ -436,7 +524,7 @@ function AppointmentDetailContent() {
                     Mark Complete
                   </Button>
                 )}
-                {['booked', 'confirmed'].includes(appointment.status) && (
+                {['pending', 'booked', 'confirmed'].includes(appointment.status) && (
                   <Button
                     onClick={() => {
                       if (confirm('Are you sure you want to cancel this appointment?')) {

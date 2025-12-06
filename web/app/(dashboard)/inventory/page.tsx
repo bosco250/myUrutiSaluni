@@ -84,7 +84,6 @@ function InventoryContent() {
         const response = await api.get('/salons');
         return response.data?.data || response.data || [];
       } catch (error) {
-        console.error('Error fetching salons:', error);
         return [];
       }
     },
@@ -172,7 +171,6 @@ function InventoryContent() {
         // Always return an array, never undefined or null
         return Array.isArray(data) ? data : [];
       } catch (error: any) {
-        console.error('[Products Query] Error fetching products:', error);
         // Always return an array, never undefined
         return [];
       }

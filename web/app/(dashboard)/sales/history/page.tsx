@@ -644,10 +644,10 @@ function SalesHistoryContent() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {sale.employees && sale.employees.length > 0 ? (
                         <div className="text-sm text-text-light dark:text-text-dark">
-                          {sale.employees.map((emp, idx) => (
+                          {sale.employees.map((emp, idx, arr) => (
                             <span key={emp.id}>
                               {emp.name}
-                              {idx < sale.employees.length - 1 && ', '}
+                              {idx < arr.length - 1 && ', '}  
                             </span>
                           ))}
                         </div>
