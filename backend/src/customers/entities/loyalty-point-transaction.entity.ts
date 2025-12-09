@@ -63,4 +63,3 @@ export class LoyaltyPointTransaction {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

@@ -29,6 +29,7 @@ import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { SalonCustomerService } from '../customers/salon-customer.service';
 import { CustomerCommunicationService } from '../customers/customer-communication.service';
+import { RewardsConfigService } from '../customers/rewards-config.service';
 import { Response } from 'express';
 
 @ApiTags('Salons')
@@ -43,6 +44,7 @@ export class SalonsController {
     private readonly membershipsService: MembershipsService,
     private readonly salonCustomerService: SalonCustomerService,
     private readonly communicationService: CustomerCommunicationService,
+    private readonly rewardsConfigService: RewardsConfigService,
   ) {}
 
   /**
@@ -439,6 +441,43 @@ export class SalonsController {
   ) {
     await this.checkSalonAccess(salonId, user);
     return this.salonCustomerService.removeTags(salonId, customerId, body.tags);
+  }
+
+  // ==================== Rewards Configuration ====================
+
+  @Get(':id/rewards-config')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({ summary: 'Get rewards configuration for a salon' })
+  async getRewardsConfig(
+    @Param('id', ParseUUIDPipe) salonId: string,
+    @CurrentUser() user: any,
+  ) {
+    await this.checkSalonAccess(salonId, user);
+    return this.rewardsConfigService.getOrCreate(salonId);
+  }
+
+  @Patch(':id/rewards-config')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @ApiOperation({ summary: 'Update rewards configuration for a salon' })
+  async updateRewardsConfig(
+    @Param('id', ParseUUIDPipe) salonId: string,
+    @Body()
+    updateData: {
+      pointsPerCurrencyUnit?: number;
+      redemptionRate?: number;
+      minRedemptionPoints?: number;
+      pointsExpirationDays?: number | null;
+      vipThresholdPoints?: number;
+    },
+    @CurrentUser() user: any,
+  ) {
+    await this.checkSalonAccess(salonId, user);
+    return this.rewardsConfigService.update(salonId, updateData);
   }
 
   @Patch(':id/customers/:customerId')

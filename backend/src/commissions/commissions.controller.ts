@@ -68,8 +68,10 @@ export class CommissionsController {
     // If salon employee, automatically filter to their own commissions only
     if (user.role === UserRole.SALON_EMPLOYEE) {
       // Find ALL employee records for this user (they may work at multiple salons)
-      const employees = await this.salonsService.findAllEmployeesByUserId(user.id);
-      
+      const employees = await this.salonsService.findAllEmployeesByUserId(
+        user.id,
+      );
+
       if (!employees || employees.length === 0) {
         // Log warning for debugging
         this.logger.warn(

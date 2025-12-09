@@ -12,6 +12,7 @@ interface MembershipStatus {
     businessName?: string;
     createdAt: string;
     reviewedAt?: string;
+    rejectionReason?: string;
   } | null;
 }
 

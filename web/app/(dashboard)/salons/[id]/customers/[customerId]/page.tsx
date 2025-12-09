@@ -20,7 +20,10 @@ import {
   Gift,
   Bell,
   ArrowLeft,
+  Coins,
 } from 'lucide-react';
+import PointsAdjustmentModal from '@/components/customers/PointsAdjustmentModal';
+import PointsHistoryTable from '@/components/customers/PointsHistoryTable';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
@@ -71,11 +74,12 @@ function SalonCustomerDetailContent() {
   const router = useRouter();
   const salonId = params.id as string;
   const customerId = params.customerId as string;
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'communications'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'communications' | 'points'>(
     'overview'
   );
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
+  const [showPointsModal, setShowPointsModal] = useState(false);
   const queryClient = useQueryClient();
 
   // Validate customerId is a UUID (not a reserved word like "analytics")
@@ -165,6 +169,112 @@ function SalonCustomerDetailContent() {
     },
   });
 
+  // Fetch points history
+  const { data: pointsHistory, isLoading: isLoadingPointsHistory } = useQuery<{
+    data: Array<{
+      id: string;
+      points: number;
+      balanceAfter: number;
+      sourceType: 'sale' | 'appointment' | 'redemption' | 'manual' | 'bonus' | 'correction';
+      sourceId: string | null;
+      description: string | null;
+      createdBy: {
+        id: string;
+        fullName: string;
+      } | null;
+      createdAt: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    queryKey: ['points-history', salonCustomer?.customer?.id],
+    queryFn: async () => {
+      if (!salonCustomer?.customer?.id) {
+        throw new Error('Customer ID not available');
+      }
+      const response = await api.get(
+        `/customers/${salonCustomer.customer.id}/loyalty-points/transactions`
+      );
+      return response.data;
+    },
+    enabled: !!salonCustomer?.customer?.id && activeTab === 'points',
+  });
+
+  // Points adjustment mutations
+  const addPointsMutation = useMutation({
+    mutationFn: async (data: { points: number; reason: string }) => {
+      if (!salonCustomer?.customer?.id) {
+        throw new Error('Customer ID not available');
+      }
+      const response = await api.post(
+        `/customers/${salonCustomer.customer.id}/loyalty-points/add`,
+        data
+      );
+      // Handle response wrapped by TransformInterceptor: { data: {...}, statusCode: 200, timestamp: "..." }
+      return response.data?.data || response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salon-customer', salonId, customerId] });
+      queryClient.invalidateQueries({ queryKey: ['points-history', salonCustomer?.customer?.id] });
+      queryClient.invalidateQueries({ queryKey: ['points-balance', salonCustomer?.customer?.id] });
+    },
+    onError: (error: any) => {
+      console.error('Failed to add points:', error);
+      // Error will be handled by the modal's try-catch
+      throw error; // Re-throw to let modal handle it
+    },
+  });
+
+  const deductPointsMutation = useMutation({
+    mutationFn: async (data: { points: number; reason: string }) => {
+      if (!salonCustomer?.customer?.id) {
+        throw new Error('Customer ID not available');
+      }
+      const response = await api.post(
+        `/customers/${salonCustomer.customer.id}/loyalty-points/deduct`,
+        data
+      );
+      // Handle response wrapped by TransformInterceptor: { data: {...}, statusCode: 200, timestamp: "..." }
+      return response.data?.data || response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salon-customer', salonId, customerId] });
+      queryClient.invalidateQueries({ queryKey: ['points-history', salonCustomer?.customer?.id] });
+      queryClient.invalidateQueries({ queryKey: ['points-balance', salonCustomer?.customer?.id] });
+    },
+    onError: (error: any) => {
+      console.error('Failed to deduct points:', error);
+      // Error will be handled by the modal's try-catch
+      throw error; // Re-throw to let modal handle it
+    },
+  });
+
+  const adjustPointsMutation = useMutation({
+    mutationFn: async (data: { balance: number; reason: string }) => {
+      if (!salonCustomer?.customer?.id) {
+        throw new Error('Customer ID not available');
+      }
+      const response = await api.patch(
+        `/customers/${salonCustomer.customer.id}/loyalty-points/adjust`,
+        data
+      );
+      // Handle response wrapped by TransformInterceptor: { data: {...}, statusCode: 200, timestamp: "..." }
+      return response.data?.data || response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salon-customer', salonId, customerId] });
+      queryClient.invalidateQueries({ queryKey: ['points-history', salonCustomer?.customer?.id] });
+      queryClient.invalidateQueries({ queryKey: ['points-balance', salonCustomer?.customer?.id] });
+    },
+    onError: (error: any) => {
+      console.error('Failed to adjust points:', error);
+      // Error will be handled by the modal's try-catch
+      throw error; // Re-throw to let modal handle it
+    },
+  });
+
   if (isLoadingCustomer) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -239,6 +349,14 @@ function SalonCustomerDetailContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowPointsModal(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Coins className="w-4 h-4" />
+              Adjust Points
+            </Button>
             <Button onClick={() => setShowEditModal(true)} variant="outline">
               <Edit className="w-4 h-4 mr-2" />
               Edit
@@ -349,6 +467,7 @@ function SalonCustomerDetailContent() {
               { id: 'overview', label: 'Overview', icon: User },
               { id: 'timeline', label: 'Activity Timeline', icon: Clock },
               { id: 'communications', label: 'Communications', icon: MessageSquare },
+              { id: 'points', label: 'Points History', icon: Star },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -484,6 +603,15 @@ function SalonCustomerDetailContent() {
               )}
             </div>
           )}
+
+          {activeTab === 'points' && (
+            <div className="space-y-4">
+              <PointsHistoryTable
+                transactions={pointsHistory?.data || []}
+                isLoading={isLoadingPointsHistory}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -505,6 +633,29 @@ function SalonCustomerDetailContent() {
             addTagMutation.mutate([tag]);
           }}
           isLoading={addTagMutation.isPending}
+        />
+      )}
+
+      {/* Points Adjustment Modal */}
+      {showPointsModal && salonCustomer?.customer && (
+        <PointsAdjustmentModal
+          customerId={salonCustomer.customer.id}
+          currentBalance={salonCustomer.customer.loyaltyPoints || 0}
+          onClose={() => setShowPointsModal(false)}
+          onAdd={async (points, reason) => {
+            await addPointsMutation.mutateAsync({ points, reason });
+          }}
+          onDeduct={async (points, reason) => {
+            await deductPointsMutation.mutateAsync({ points, reason });
+          }}
+          onAdjust={async (newBalance, reason) => {
+            await adjustPointsMutation.mutateAsync({ balance: newBalance, reason });
+          }}
+          isLoading={
+            addPointsMutation.isPending ||
+            deductPointsMutation.isPending ||
+            adjustPointsMutation.isPending
+          }
         />
       )}
     </div>

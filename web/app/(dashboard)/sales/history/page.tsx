@@ -423,13 +423,36 @@ function SalesHistoryContent() {
   }, [filteredSales]);
 
   // Paginate filtered sales
+  // When using server-side pagination (no client-side filters), use sales directly
+  // When using client-side pagination (has client-side filters), slice filteredSales
   const paginatedSales = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredSales.slice(startIndex, endIndex);
-  }, [filteredSales, currentPage, itemsPerPage]);
+    if (hasClientSideFilters) {
+      // Client-side pagination: slice the filtered results
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      return filteredSales.slice(startIndex, endIndex);
+    } else {
+      // Server-side pagination: use sales directly (already paginated by API)
+      return filteredSales;
+    }
+  }, [filteredSales, currentPage, itemsPerPage, hasClientSideFilters]);
 
-  const filteredTotalPages = Math.ceil(filteredSales.length / itemsPerPage);
+  // Calculate total pages based on pagination type
+  const totalPages = useMemo(() => {
+    if (hasClientSideFilters) {
+      // Client-side pagination: calculate from filtered results
+      return Math.ceil(filteredSales.length / itemsPerPage);
+    } else {
+      // Server-side pagination: use totalPages from API response
+      return salesData?.totalPages || Math.ceil((salesData?.total || 0) / itemsPerPage) || 1;
+    }
+  }, [
+    hasClientSideFilters,
+    filteredSales.length,
+    itemsPerPage,
+    salesData?.totalPages,
+    salesData?.total,
+  ]);
 
   // Reset to page 1 when filters change
   const handleFilterChange = () => {
@@ -1032,9 +1055,19 @@ function SalesHistoryContent() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-text-light/60 dark:text-text-dark/60">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-                  {Math.min(currentPage * itemsPerPage, filteredSales.length)} of{' '}
-                  {filteredSales.length} sales
+                  {hasClientSideFilters ? (
+                    <>
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+                      {Math.min(currentPage * itemsPerPage, filteredSales.length)} of{' '}
+                      {filteredSales.length} sales
+                    </>
+                  ) : (
+                    <>
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+                      {Math.min(currentPage * itemsPerPage, salesData?.total || 0)} of{' '}
+                      {salesData?.total || 0} sales
+                    </>
+                  )}
                 </span>
                 <select
                   value={itemsPerPage}
@@ -1060,14 +1093,14 @@ function SalesHistoryContent() {
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, filteredTotalPages) }, (_, i) => {
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
-                    if (filteredTotalPages <= 5) {
+                    if (totalPages <= 5) {
                       pageNum = i + 1;
                     } else if (currentPage <= 3) {
                       pageNum = i + 1;
-                    } else if (currentPage >= filteredTotalPages - 2) {
-                      pageNum = filteredTotalPages - 4 + i;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
@@ -1088,8 +1121,8 @@ function SalesHistoryContent() {
                 </div>
                 <Button
                   variant="secondary"
-                  onClick={() => setCurrentPage((prev) => Math.min(filteredTotalPages, prev + 1))}
-                  disabled={currentPage >= filteredTotalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage >= totalPages}
                   className="p-2"
                 >
                   <ChevronRight className="w-4 h-4" />

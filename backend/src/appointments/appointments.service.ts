@@ -5,6 +5,12 @@ import { Appointment } from './entities/appointment.entity';
 import { SalonCustomerService } from '../customers/salon-customer.service';
 import { ServicesService } from '../services/services.service';
 import { CommissionsService } from '../commissions/commissions.service';
+import { LoyaltyPointsService } from '../customers/loyalty-points.service';
+import { LoyaltyPointSourceType } from '../customers/entities/loyalty-point-transaction.entity';
+import { RewardsConfigService } from '../customers/rewards-config.service';
+import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { format } from 'date-fns';
 
 @Injectable()
 export class AppointmentsService {
@@ -17,6 +23,12 @@ export class AppointmentsService {
     private salonCustomerService: SalonCustomerService,
     private servicesService: ServicesService,
     private commissionsService: CommissionsService,
+    @Inject(forwardRef(() => LoyaltyPointsService))
+    private loyaltyPointsService: LoyaltyPointsService,
+    @Inject(forwardRef(() => RewardsConfigService))
+    private rewardsConfigService: RewardsConfigService,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
   /**
@@ -51,6 +63,16 @@ export class AppointmentsService {
         ? new Date(appointmentData.scheduledEnd)
         : new Date(),
     });
+
+    // Handle preferred employee from metadata
+    if (
+      !(appointment as any).salonEmployeeId &&
+      appointmentData.metadata?.preferredEmployeeId
+    ) {
+      (appointment as any).salonEmployeeId =
+        appointmentData.metadata.preferredEmployeeId;
+    }
+
     const saved = await this.appointmentsRepository.save(appointment);
     const result = Array.isArray(saved) ? saved[0] : saved;
 
@@ -64,6 +86,121 @@ export class AppointmentsService {
       } catch (error) {
         this.logger.warn(
           `Failed to create salon-customer relationship: ${error.message}`,
+        );
+      }
+    }
+
+    // Send notification for new appointment
+    if (result.customerId) {
+      try {
+        this.logger.log(
+          `📧 Starting notification process for appointment ${result.id}`,
+        );
+
+        const appointment = await this.findOne(result.id);
+
+        // Debug log the appointment details
+        this.logger.log(
+          `📋 Appointment loaded - ID: ${appointment?.id}, Salon: ${appointment?.salon?.name}, SalonID: ${appointment?.salon?.id}, OwnerID: ${appointment?.salon?.ownerId}`,
+        );
+
+        if (!appointment) {
+          this.logger.error(
+            `❌ Failed to load appointment ${result.id} for notification`,
+          );
+          return result;
+        }
+
+        // Notify customer
+        this.logger.log(
+          `📬 Sending notification to customer ${result.customerId}`,
+        );
+        await this.notificationOrchestrator.notify(
+          NotificationType.APPOINTMENT_BOOKED,
+          {
+            customerId: result.customerId,
+            appointmentId: result.id,
+            recipientEmail: appointment.customer?.email,
+            customerName: appointment.customer?.fullName,
+            salonName: appointment.salon?.name,
+            serviceName: appointment.service?.name,
+            appointmentDate: format(new Date(result.scheduledStart), 'PPP'),
+            appointmentTime: format(new Date(result.scheduledStart), 'p'),
+            employeeName: appointment.salonEmployee?.user?.fullName,
+          },
+        );
+        this.logger.log(`✅ Customer notification sent successfully`);
+
+        // Notify salon owner
+        if (appointment.salon?.ownerId) {
+          this.logger.log(
+            `📬 Sending appointment booked notification to salon owner ${appointment.salon.ownerId} for salon "${appointment.salon.name}"`,
+          );
+
+          try {
+            await this.notificationOrchestrator.notify(
+              NotificationType.APPOINTMENT_BOOKED,
+              {
+                userId: appointment.salon.ownerId,
+                recipientEmail: appointment.salon?.owner?.email,
+                // customerId: result.customerId, // Removed to prevent customer from seeing this notification
+                appointmentId: result.id,
+                customerName: appointment.customer?.fullName,
+                salonName: appointment.salon?.name,
+                serviceName: appointment.service?.name,
+                appointmentDate: format(new Date(result.scheduledStart), 'PPP'),
+                appointmentTime: format(new Date(result.scheduledStart), 'p'),
+                employeeName: appointment.salonEmployee?.user?.fullName,
+              },
+            );
+            this.logger.log(`✅ Salon owner notification sent successfully`);
+          } catch (ownerError) {
+            this.logger.error(
+              `❌ Failed to send notification to salon owner: ${ownerError.message}`,
+              ownerError.stack,
+            );
+          }
+        } else {
+          this.logger.warn(
+            `⚠️ No salon owner ID found - Salon: ${appointment.salon?.name || 'N/A'}, SalonID: ${appointment.salonId}`,
+          );
+        }
+
+        // Notify assigned employee
+        if (appointment.salonEmployee?.userId) {
+          this.logger.log(
+            `📬 Sending appointment booked notification to employee ${appointment.salonEmployee.userId}`,
+          );
+
+          try {
+            await this.notificationOrchestrator.notify(
+              NotificationType.APPOINTMENT_BOOKED,
+              {
+                userId: appointment.salonEmployee.userId,
+                // customerId: result.customerId, // Removed to prevent customer from seeing this notification
+                appointmentId: result.id,
+                isEmployee: true,
+                recipientEmail: appointment.salonEmployee?.user?.email,
+                customerName: appointment.customer?.fullName,
+                salonName: appointment.salon?.name,
+                serviceName: appointment.service?.name,
+                appointmentDate: format(new Date(result.scheduledStart), 'PPP'),
+                appointmentTime: format(new Date(result.scheduledStart), 'p'),
+                employeeName: appointment.salonEmployee?.user?.fullName,
+              },
+            );
+            this.logger.log(`✅ Employee notification sent successfully`);
+          } catch (empError) {
+            this.logger.error(
+              `❌ Failed to send notification to employee: ${empError.message}`,
+              empError.stack,
+            );
+          }
+        }
+      } catch (error) {
+        this.logger.error(
+          `❌ Failed to send appointment booked notification: ${error.message}`,
+          error.stack,
         );
       }
     }
@@ -130,6 +267,7 @@ export class AppointmentsService {
         'customer',
         'service',
         'salon',
+        'salon.owner',
         'createdBy',
         'salonEmployee',
         'salonEmployee.user',
@@ -159,6 +297,21 @@ export class AppointmentsService {
         'salonEmployee.user',
       ],
     });
+
+    // Handle status change notifications
+    if (existingAppointment.status !== updateData.status && updateData.status) {
+      try {
+        await this.handleAppointmentStatusChange(
+          existingAppointment,
+          updatedAppointment,
+          updateData.status,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to handle appointment status change notification: ${error.message}`,
+        );
+      }
+    }
 
     // Record visit and create commission when appointment status changes to completed
     if (
@@ -332,6 +485,41 @@ export class AppointmentsService {
         this.logger.log(
           `✅ Recorded appointment visit for customer ${updatedAppointment.customerId} at salon ${updatedAppointment.salonId} - Visit count incremented, Amount added: RWF ${serviceAmount}`,
         );
+
+        // Award loyalty points for completed appointment
+        if (updatedAppointment.customerId && serviceAmount > 0) {
+          try {
+            // Get rewards config for the salon (defaults to 0.01 if not configured)
+            const rewardsConfig = await this.rewardsConfigService.getOrCreate(
+              updatedAppointment.salonId,
+            );
+            const pointsEarned =
+              this.loyaltyPointsService.calculatePointsEarned(
+                serviceAmount,
+                Number(rewardsConfig.pointsPerCurrencyUnit),
+              );
+            if (pointsEarned > 0) {
+              await this.loyaltyPointsService.addPoints(
+                updatedAppointment.customerId,
+                pointsEarned,
+                {
+                  sourceType: LoyaltyPointSourceType.APPOINTMENT,
+                  sourceId: updatedAppointment.id,
+                  description: `Points earned from appointment ${updatedAppointment.id.slice(0, 8)} - Service: ${updatedAppointment.service?.name || 'N/A'}, Amount: RWF ${serviceAmount.toLocaleString()}`,
+                },
+              );
+              this.logger.log(
+                `Awarded ${pointsEarned} loyalty points to customer ${updatedAppointment.customerId} for appointment ${updatedAppointment.id}`,
+              );
+            }
+          } catch (error) {
+            // Log but don't fail appointment update if points awarding fails
+            this.logger.warn(
+              `Failed to award loyalty points for appointment: ${error.message}`,
+              error.stack,
+            );
+          }
+        }
       } catch (error) {
         // Log but don't fail appointment update if visit tracking fails
         this.logger.warn(
@@ -342,6 +530,126 @@ export class AppointmentsService {
     }
 
     return updatedAppointment;
+  }
+
+  private async handleAppointmentStatusChange(
+    existingAppointment: Appointment,
+    updatedAppointment: Appointment,
+    newStatus: string,
+  ): Promise<void> {
+    const customerId = updatedAppointment.customerId;
+    const salonId = updatedAppointment.salonId;
+    const appointmentId = updatedAppointment.id;
+
+    this.logger.log(
+      `🔄 Handling appointment status change - ID: ${appointmentId}, Old: ${existingAppointment.status}, New: ${newStatus}, Customer: ${customerId}`,
+    );
+
+    if (!customerId) {
+      this.logger.warn(
+        `⚠️ No customer ID for appointment ${appointmentId} - skipping notifications`,
+      );
+      return;
+    }
+
+    const context = {
+      customerId,
+      appointmentId,
+      recipientEmail: updatedAppointment.customer?.email,
+      customerName: updatedAppointment.customer?.fullName,
+      salonName: updatedAppointment.salon?.name,
+      serviceName: updatedAppointment.service?.name,
+      appointmentDate: format(
+        new Date(updatedAppointment.scheduledStart),
+        'PPP',
+      ),
+      appointmentTime: format(new Date(updatedAppointment.scheduledStart), 'p'),
+      employeeName: updatedAppointment.salonEmployee?.user?.fullName,
+    };
+
+    this.logger.log(
+      `📋 Context prepared - Customer: ${context.customerName}, Salon: ${context.salonName}, Service: ${context.serviceName}`,
+    );
+
+    // Notify salon owner
+    if (salonId && updatedAppointment.salon?.ownerId) {
+      this.logger.log(
+        `📬 Sending status change notification to salon owner ${updatedAppointment.salon.ownerId}`,
+      );
+      try {
+        await this.notificationOrchestrator.notify(
+          this.getNotificationTypeForStatus(newStatus),
+          {
+            userId: updatedAppointment.salon.ownerId,
+            ...context,
+          },
+        );
+        this.logger.log(`✅ Salon owner notification sent successfully`);
+      } catch (error) {
+        this.logger.error(
+          `❌ Failed to send notification to salon owner: ${error.message}`,
+          error.stack,
+        );
+      }
+    } else {
+      this.logger.warn(
+        `⚠️ No salon owner to notify - SalonID: ${salonId}, OwnerID: ${updatedAppointment.salon?.ownerId || 'N/A'}`,
+      );
+    }
+
+    // Notify employee
+    if (
+      updatedAppointment.salonEmployeeId &&
+      updatedAppointment.salonEmployee?.userId
+    ) {
+      this.logger.log(
+        `📬 Sending status change notification to employee ${updatedAppointment.salonEmployee.userId}`,
+      );
+      try {
+        await this.notificationOrchestrator.notify(
+          this.getNotificationTypeForStatus(newStatus),
+          {
+            userId: updatedAppointment.salonEmployee.userId,
+            ...context,
+          },
+        );
+        this.logger.log(`✅ Employee notification sent successfully`);
+      } catch (error) {
+        this.logger.error(
+          `❌ Failed to send notification to employee: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+
+    // Notify customer
+    this.logger.log(
+      `📬 Sending status change notification to customer ${customerId}`,
+    );
+    try {
+      await this.notificationOrchestrator.notify(
+        this.getNotificationTypeForStatus(newStatus),
+        context,
+      );
+      this.logger.log(`✅ Customer notification sent successfully`);
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to send notification to customer: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private getNotificationTypeForStatus(status: string): NotificationType {
+    const statusMap: Record<string, NotificationType> = {
+      booked: NotificationType.APPOINTMENT_BOOKED,
+      confirmed: NotificationType.APPOINTMENT_CONFIRMED,
+      cancelled: NotificationType.APPOINTMENT_CANCELLED,
+      completed: NotificationType.APPOINTMENT_COMPLETED,
+      no_show: NotificationType.APPOINTMENT_NO_SHOW,
+    };
+
+    return statusMap[status] || NotificationType.APPOINTMENT_BOOKED;
   }
 
   async remove(id: string): Promise<void> {

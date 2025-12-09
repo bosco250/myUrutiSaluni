@@ -34,6 +34,8 @@ import { CustomerStyleReferencesService } from './customer-style-references.serv
 import { CreateStyleReferenceDto } from './dto/create-style-reference.dto';
 import { UpdateStyleReferenceDto } from './dto/update-style-reference.dto';
 import { FileUploadService } from '../common/services/file-upload.service';
+import { LoyaltyPointsService } from './loyalty-points.service';
+import { LoyaltyPointSourceType } from './entities/loyalty-point-transaction.entity';
 
 @ApiTags('Customers')
 @ApiBearerAuth()
@@ -45,6 +47,7 @@ export class CustomersController {
     private readonly usersService: UsersService,
     private readonly customerStyleReferencesService: CustomerStyleReferencesService,
     private readonly fileUploadService: FileUploadService,
+    private readonly loyaltyPointsService: LoyaltyPointsService,
   ) {}
 
   @Post()
@@ -431,6 +434,159 @@ export class CustomersController {
   @ApiOperation({ summary: 'Delete a customer' })
   remove(@Param('id') id: string) {
     return this.customersService.remove(id);
+  }
+
+  // ==================== Loyalty Points Management ====================
+
+  @Post(':customerId/loyalty-points/add')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({ summary: 'Add loyalty points to a customer' })
+  async addPoints(
+    @Param('customerId') customerId: string,
+    @Body() body: { points: number; reason?: string },
+    @CurrentUser() user: any,
+  ) {
+    if (!body.points || body.points <= 0) {
+      throw new BadRequestException('Points must be greater than 0');
+    }
+
+    return this.loyaltyPointsService.addPoints(customerId, body.points, {
+      sourceType: LoyaltyPointSourceType.MANUAL,
+      description:
+        body.reason ||
+        `Points added manually by ${user.fullName || user.email}`,
+      createdById: user.id,
+    });
+  }
+
+  @Post(':customerId/loyalty-points/deduct')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({ summary: 'Deduct loyalty points from a customer' })
+  async deductPoints(
+    @Param('customerId') customerId: string,
+    @Body() body: { points: number; reason?: string },
+    @CurrentUser() user: any,
+  ) {
+    if (!body.points || body.points <= 0) {
+      throw new BadRequestException('Points must be greater than 0');
+    }
+
+    return this.loyaltyPointsService.deductPoints(customerId, body.points, {
+      sourceType: LoyaltyPointSourceType.MANUAL,
+      description:
+        body.reason ||
+        `Points deducted manually by ${user.fullName || user.email}`,
+      createdById: user.id,
+    });
+  }
+
+  @Patch(':customerId/loyalty-points/adjust')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({
+    summary: 'Adjust customer loyalty points to a specific balance',
+  })
+  async adjustPoints(
+    @Param('customerId') customerId: string,
+    @Body() body: { balance: number; reason: string },
+    @CurrentUser() user: any,
+  ) {
+    if (body.balance < 0) {
+      throw new BadRequestException('Points balance cannot be negative');
+    }
+    if (!body.reason || body.reason.trim().length === 0) {
+      throw new BadRequestException('Reason is required for points adjustment');
+    }
+
+    return this.loyaltyPointsService.adjustPoints(
+      customerId,
+      body.balance,
+      body.reason,
+      user.id,
+    );
+  }
+
+  @Get(':customerId/loyalty-points/transactions')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
+  @ApiOperation({
+    summary: 'Get loyalty points transaction history for a customer',
+  })
+  async getPointsHistory(
+    @Param('customerId') customerId: string,
+    @CurrentUser() user: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sourceType') sourceType?: string,
+  ) {
+    // Customers can only view their own points history
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      const customer = await this.customersService.findByUserId(
+        user.id || user.userId,
+      );
+      if (!customer || customer.id !== customerId) {
+        throw new ForbiddenException(
+          'You can only view your own points history',
+        );
+      }
+    }
+
+    return this.loyaltyPointsService.getPointsHistory(customerId, {
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      sourceType: sourceType as LoyaltyPointSourceType | undefined,
+    });
+  }
+
+  @Get(':customerId/loyalty-points/balance')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
+  @ApiOperation({
+    summary: 'Get current loyalty points balance for a customer',
+  })
+  async getPointsBalance(
+    @Param('customerId') customerId: string,
+    @CurrentUser() user: any,
+  ) {
+    // Customers can only view their own balance
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      const customer = await this.customersService.findByUserId(
+        user.id || user.userId,
+      );
+      if (!customer || customer.id !== customerId) {
+        throw new ForbiddenException(
+          'You can only view your own points balance',
+        );
+      }
+    }
+
+    const balance =
+      await this.loyaltyPointsService.getCurrentBalance(customerId);
+    return { balance };
   }
 
   private async ensureCustomerAccess(customerId: string, currentUser: any) {

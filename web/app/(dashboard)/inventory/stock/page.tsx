@@ -16,6 +16,7 @@ import {
   ArrowDown,
   Minus,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -458,7 +459,7 @@ function StockLevelsTab({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {stockLoading ? (
+              {isLoading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8">
                     <div className="flex items-center justify-center gap-3">
@@ -473,7 +474,7 @@ function StockLevelsTab({
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <EmptyState
-                      icon={Package}
+                      icon={<Package />}
                       title="No products found"
                       description={
                         searchQuery

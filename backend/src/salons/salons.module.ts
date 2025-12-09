@@ -6,11 +6,13 @@ import { Salon } from './entities/salon.entity';
 import { SalonEmployee } from './entities/salon-employee.entity';
 import { MembershipsModule } from '../memberships/memberships.module';
 import { CustomersModule } from '../customers/customers.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Salon, SalonEmployee]),
     forwardRef(() => MembershipsModule),
+    forwardRef(() => NotificationsModule),
     CustomersModule,
   ],
   controllers: [SalonsController],

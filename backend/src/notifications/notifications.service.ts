@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -9,10 +9,13 @@ import {
   NotificationStatus,
 } from './entities/notification.entity';
 import { NotificationPreference } from './entities/notification-preference.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { EmailService } from './services/email.service';
 import { SmsService } from './services/sms.service';
+import { InAppNotificationService } from './services/in-app-notification.service';
+import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { AppointmentsService } from '../appointments/appointments.service';
-import { format, addHours, isBefore } from 'date-fns';
+import { format, addHours } from 'date-fns';
 
 @Injectable()
 export class NotificationsService {
@@ -23,8 +26,15 @@ export class NotificationsService {
     private notificationsRepository: Repository<Notification>,
     @InjectRepository(NotificationPreference)
     private preferencesRepository: Repository<NotificationPreference>,
+    @InjectRepository(Customer)
+    private customersRepository: Repository<Customer>,
     private emailService: EmailService,
     private smsService: SmsService,
+    @Inject(forwardRef(() => InAppNotificationService))
+    private inAppService: InAppNotificationService,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private orchestrator: NotificationOrchestratorService,
+    @Inject(forwardRef(() => AppointmentsService))
     private appointmentsService: AppointmentsService,
   ) {}
 
@@ -95,10 +105,20 @@ export class NotificationsService {
       switch (notification.channel) {
         case NotificationChannel.EMAIL:
           if (notification.recipientEmail) {
-            success = await this.emailService.sendEmail(
+            const emailResult = await this.emailService.sendEmail(
               notification.recipientEmail,
               notification.title,
               notification.body,
+            );
+            success = emailResult.success;
+            if (!success) {
+              notification.errorMessage = emailResult.error;
+            }
+          } else {
+            success = false;
+            notification.errorMessage = 'Recipient email is missing';
+            this.logger.warn(
+              `Notification ${notification.id} failed: Recipient email is missing`,
             );
           }
           break;
@@ -139,57 +159,45 @@ export class NotificationsService {
   async sendAppointmentReminder(
     appointmentId: string,
     reminderHours: number = 24,
-    channels: NotificationChannel[] = [
-      NotificationChannel.EMAIL,
-      NotificationChannel.SMS,
-    ],
   ): Promise<void> {
-    const appointment = await this.appointmentsService.findOne(appointmentId);
-    if (!appointment) {
-      this.logger.warn(`Appointment ${appointmentId} not found`);
-      return;
-    }
+    try {
+      const appointment = await this.appointmentsService.findOne(appointmentId);
+      if (!appointment) {
+        this.logger.warn(`Appointment ${appointmentId} not found`);
+        return;
+      }
 
-    const appointmentDate = new Date(appointment.scheduledStart);
-    const reminderTime = addHours(appointmentDate, -reminderHours);
-
-    // Only schedule if reminder time is in the future
-    if (isBefore(reminderTime, new Date())) {
       this.logger.log(
-        `Reminder time for appointment ${appointmentId} is in the past, skipping`,
-      );
-      return;
-    }
-
-    const customer = appointment.customer;
-    if (!customer) {
-      this.logger.warn(`Appointment ${appointmentId} has no customer`);
-      return;
-    }
-
-    const title = `Appointment Reminder - ${appointment.salon?.name || 'Salon'}`;
-    const body = `Your appointment for ${appointment.service?.name || 'service'} is scheduled for ${format(appointmentDate, 'PPpp')} at ${appointment.salon?.name || 'the salon'}.`;
-
-    for (const channel of channels) {
-      const notification = await this.sendNotification(
-        undefined,
-        customer.id,
-        appointmentId,
-        channel,
-        NotificationType.APPOINTMENT_REMINDER,
-        title,
-        body,
-        reminderTime,
+        `📅 Preparing reminder for appointment ${appointmentId} - ${reminderHours}h before`,
       );
 
-      // Set recipient info
-      if (channel === NotificationChannel.EMAIL && customer.email) {
-        notification.recipientEmail = customer.email;
+      const customerId = appointment.customerId;
+      if (!customerId) {
+        this.logger.warn(`Appointment ${appointmentId} has no customer`);
+        return;
       }
-      if (channel === NotificationChannel.SMS && customer.phone) {
-        notification.recipientPhone = customer.phone;
-      }
-      await this.notificationsRepository.save(notification);
+
+      // Send reminder notification using orchestrator
+      await this.orchestrator.notify(NotificationType.APPOINTMENT_REMINDER, {
+        customerId,
+        appointmentId: appointment.id,
+        recipientEmail: appointment.customer?.email,
+        customerName: appointment.customer?.fullName,
+        salonName: appointment.salon?.name,
+        serviceName: appointment.service?.name,
+        appointmentDate: format(new Date(appointment.scheduledStart), 'PPP'),
+        appointmentTime: format(new Date(appointment.scheduledStart), 'p'),
+        employeeName: appointment.salonEmployee?.user?.fullName,
+      });
+
+      this.logger.log(
+        `✅ Reminder sent for appointment ${appointmentId} to customer ${customerId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to send appointment reminder for ${appointmentId}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -282,6 +290,48 @@ export class NotificationsService {
     });
   }
 
+  // In-app notification methods (delegated to InAppNotificationService)
+  async getInAppNotifications(
+    userId?: string,
+    customerId?: string,
+    options?: {
+      unreadOnly?: boolean;
+      limit?: number;
+      offset?: number;
+      type?: NotificationType;
+    },
+  ) {
+    return this.inAppService.getUserNotifications(userId, customerId, options);
+  }
+
+  async getUnreadCount(userId?: string, customerId?: string): Promise<number> {
+    return this.inAppService.getUnreadCount(userId, customerId);
+  }
+
+  async markAsRead(
+    notificationId: string,
+    userId?: string,
+    customerId?: string,
+  ): Promise<Notification> {
+    return this.inAppService.markAsRead(notificationId, userId, customerId);
+  }
+
+  async markAllAsRead(userId?: string, customerId?: string): Promise<number> {
+    return this.inAppService.markAllAsRead(userId, customerId);
+  }
+
+  async deleteNotification(
+    notificationId: string,
+    userId?: string,
+    customerId?: string,
+  ): Promise<void> {
+    return this.inAppService.deleteNotification(
+      notificationId,
+      userId,
+      customerId,
+    );
+  }
+
   async getPreferences(
     userId?: string,
     customerId?: string,
@@ -320,5 +370,11 @@ export class NotificationsService {
     }
 
     return this.preferencesRepository.save(preference);
+  }
+
+  async findCustomerByUserId(userId: string): Promise<Customer | null> {
+    return this.customersRepository.findOne({
+      where: { userId },
+    });
   }
 }

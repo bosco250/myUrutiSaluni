@@ -11,6 +11,10 @@ import { SalonCustomer } from './entities/salon-customer.entity';
 import { SalonCustomerService } from './salon-customer.service';
 import { CustomerCommunication } from './entities/customer-communication.entity';
 import { CustomerCommunicationService } from './customer-communication.service';
+import { LoyaltyPointTransaction } from './entities/loyalty-point-transaction.entity';
+import { LoyaltyPointsService } from './loyalty-points.service';
+import { SalonRewardsConfig } from './entities/rewards-config.entity';
+import { RewardsConfigService } from './rewards-config.service';
 
 @Module({
   imports: [
@@ -19,6 +23,8 @@ import { CustomerCommunicationService } from './customer-communication.service';
       CustomerStyleReference,
       SalonCustomer,
       CustomerCommunication,
+      LoyaltyPointTransaction,
+      SalonRewardsConfig,
     ]),
     UsersModule,
     FileUploadModule,
@@ -29,12 +35,16 @@ import { CustomerCommunicationService } from './customer-communication.service';
     CustomerStyleReferencesService,
     SalonCustomerService,
     CustomerCommunicationService,
+    LoyaltyPointsService,
+    RewardsConfigService,
   ],
   exports: [
     CustomersService,
     CustomerStyleReferencesService,
     SalonCustomerService,
     CustomerCommunicationService,
+    LoyaltyPointsService,
+    RewardsConfigService,
   ],
 })
 export class CustomersModule {}

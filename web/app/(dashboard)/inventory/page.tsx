@@ -55,14 +55,12 @@ export default function InventoryPage() {
 
 function InventoryContent() {
   const { user } = useAuthStore();
-  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'inventory' | 'non-inventory'>('all');
   
-  // Initialize selectedSalonId from localStorage or empty string
   const [selectedSalonId, setSelectedSalonId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('inventory-selected-salon-id') || '';
@@ -70,14 +68,12 @@ function InventoryContent() {
     return '';
   });
   
-  // Persist selectedSalonId to localStorage
   useEffect(() => {
     if (selectedSalonId) {
       localStorage.setItem('inventory-selected-salon-id', selectedSalonId);
     }
   }, [selectedSalonId]);
 
-  // Fetch salons
   const { data: salons = [], isLoading: salonsLoading } = useQuery<Salon[]>({
     queryKey: ['salons', user?.id],
     queryFn: async () => {
@@ -91,117 +87,87 @@ function InventoryContent() {
     enabled: !!user,
   });
 
-  // Check if user can view all salons (admin)
   const canViewAll = canViewAllSalons(user?.role);
 
-  // Auto-select first salon if only one or if none selected (but not for admins)
   useEffect(() => {
     if (!salonsLoading && salons.length > 0 && !canViewAll) {
-      // Validate that the stored salon ID still exists
       const storedSalonId = localStorage.getItem('inventory-selected-salon-id');
       const isValidStoredSalon = storedSalonId && salons.some(s => s.id === storedSalonId);
       
-      // If only one salon, always select it
       if (salons.length === 1) {
         if (selectedSalonId !== salons[0].id) {
           setSelectedSalonId(salons[0].id);
         }
-      }
-      // If we have a valid stored salon ID, use it
-      else if (isValidStoredSalon && selectedSalonId !== storedSalonId) {
+      } else if (isValidStoredSalon && selectedSalonId !== storedSalonId) {
         setSelectedSalonId(storedSalonId);
-      }
-      // If no salon selected but salons exist, select the first one
-      else if (!selectedSalonId && !isValidStoredSalon) {
+      } else if (!selectedSalonId && !isValidStoredSalon) {
         setSelectedSalonId(salons[0].id);
       }
     }
-    // For admins, don't auto-select - let them choose "All Salons"
   }, [salons, selectedSalonId, salonsLoading, canViewAll]);
 
-  // Determine the effective salon ID for the query
-  // Wait for salons to load before determining the effective salon ID
   const effectiveSalonId = useMemo(() => {
-    if (salonsLoading) return null; // Still loading, don't query yet
+    if (salonsLoading) return null;
     if (canViewAll) return selectedSalonId || 'all';
-    if (salons.length === 0) return null; // No salons, can't query
+    if (salons.length === 0) return null;
     return selectedSalonId || (salons.length === 1 ? salons[0].id : 'all-owned');
   }, [selectedSalonId, salons, salonsLoading, canViewAll]);
 
-  // Fetch products - only for selected salon or all owned salons (or all salons for admins)
   const productsQueryKey = [
     'inventory-products',
     effectiveSalonId || 'pending',
   ];
+
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: productsQueryKey,
     queryFn: async (): Promise<Product[]> => {
-      // Early return if no user
       if (!user) {
         return [];
       }
 
       try {
-        // If salon is selected, filter by that salon
-        // For admins: if no salon selected, get all products
-        // For salon owners: if no salon selected, backend returns all their salons' products
         const params = effectiveSalonId && effectiveSalonId !== 'all' && effectiveSalonId !== 'all-owned' 
           ? { salonId: effectiveSalonId } 
           : {};
         
         const response = await api.get('/inventory/products', { params });
 
-        // Handle different response structures
         let data: Product[] = [];
 
         if (response?.data) {
-          // Check if response.data is an array directly
           if (Array.isArray(response.data)) {
             data = response.data;
-          }
-          // Check if response.data.data exists and is an array
-          else if (response.data.data && Array.isArray(response.data.data)) {
+          } else if (response.data.data && Array.isArray(response.data.data)) {
             data = response.data.data;
-          }
-          // If response.data is an object but not an array, return empty
-          else {
+          } else {
             data = [];
           }
         }
 
-        // Always return an array, never undefined or null
         return Array.isArray(data) ? data : [];
       } catch (error: any) {
-        // Always return an array, never undefined
         return [];
       }
     },
-    enabled: !!user && effectiveSalonId !== null && !salonsLoading, // Wait for salons to load and effectiveSalonId to be determined
-    // Retry configuration
+    enabled: !!user && effectiveSalonId !== null && !salonsLoading,
     retry: 1,
     retryDelay: 1000,
-    // Keep data in cache for 5 minutes
     staleTime: 5 * 60 * 1000,
-    // Cache data for 10 minutes
     gcTime: 10 * 60 * 1000,
-    // Refetch on window focus
     refetchOnWindowFocus: true,
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await api.delete(`/inventory/products/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productsQueryKey });
-      // Also invalidate general products query for other pages
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
     },
   });
 
-  // Filter products
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch =
@@ -219,7 +185,6 @@ function InventoryContent() {
     });
   }, [products, searchQuery, typeFilter]);
 
-  // Stats
   const stats = useMemo(() => {
     const total = products.length;
     const inventoryItems = products.filter((p) => p.isInventoryItem).length;
@@ -259,7 +224,6 @@ function InventoryContent() {
     );
   }
 
-  // Show message if user has no salons (but not for admins who can view all)
   if (!salonsLoading && salons.length === 0 && !canViewAll) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -279,7 +243,6 @@ function InventoryContent() {
 
   return (
     <>
-      {/* Header */}
       <div className="mb-8">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -313,7 +276,6 @@ function InventoryContent() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
             <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
@@ -345,7 +307,6 @@ function InventoryContent() {
           </div>
         </div>
 
-        {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           {(salons.length > 1 || canViewAll) && (
             <div className="relative min-w-[200px]">
@@ -390,7 +351,6 @@ function InventoryContent() {
         </div>
       </div>
 
-      {/* Products List */}
       {filteredProducts.length === 0 ? (
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
           <EmptyState
@@ -448,46 +408,7 @@ function InventoryContent() {
                 </tr>
               </thead>
               <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
-                {productsLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8">
-                      <div className="flex items-center justify-center gap-3">
-                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                        <span className="text-text-light/60 dark:text-text-dark/60">
-                          Loading products...
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <EmptyState
-                        icon={Package}
-                        title="No products found"
-                        description={
-                          searchQuery || typeFilter !== 'all'
-                            ? 'Try adjusting your search or filter criteria.'
-                            : 'Add your first product to get started. Products can be sold and tracked in inventory.'
-                        }
-                        action={
-                          filteredProducts.length === 0 ? (
-                            <Button
-                              onClick={() => {
-                                setEditingProduct(null);
-                                setShowModal(true);
-                              }}
-                            >
-                              <Plus className="w-5 h-5" />
-                              Add First Product
-                            </Button>
-                          ) : null
-                        }
-                      />
-                    </td>
-                  </tr>
-                ) : (
-                  filteredProducts.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr
                     key={product.id}
                     className="hover:bg-surface-accent-light dark:hover:bg-surface-accent-dark transition"
@@ -561,15 +482,13 @@ function InventoryContent() {
                       </div>
                     </td>
                   </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Product Modal */}
       {showModal && (
         <ProductModal
           product={editingProduct}
@@ -580,7 +499,6 @@ function InventoryContent() {
           }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: productsQueryKey });
-            // Also invalidate general products query for other pages
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
             setShowModal(false);
@@ -637,7 +555,6 @@ function ProductModal({
     setError('');
     setLoading(true);
 
-    // Validation
     if (!formData.salonId) {
       setError('Please select a salon');
       setLoading(false);

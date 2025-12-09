@@ -22,7 +22,6 @@ import {
   Sparkles,
   BarChart3,
   Wallet,
-  FileText,
   MapPin,
   Phone,
   Mail

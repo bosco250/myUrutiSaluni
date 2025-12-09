@@ -48,6 +48,13 @@ export class NotificationPreference {
   @Column({ default: true })
   enabled: boolean;
 
+  // Quiet hours
+  @Column({ name: 'quiet_hours_start', type: 'time', nullable: true })
+  quietHoursStart?: string; // e.g., "22:00"
+
+  @Column({ name: 'quiet_hours_end', type: 'time', nullable: true })
+  quietHoursEnd?: string; // e.g., "08:00"
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

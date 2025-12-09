@@ -320,15 +320,17 @@ export default function CustomerDashboard() {
         </div>
       )}
 
-      {/* Membership Application Status - Only show if customer has an application or explicitly wants to apply */}
-      {(membershipStatus?.application || (!customer && !membershipStatus?.isMember)) && (
+      {/* Membership Application Status - Always show for customers who are not approved members */}
+      {authUser?.role === 'customer' && !membershipStatus?.isMember && (
         <div
           className={`mb-8 rounded-2xl p-8 border-2 ${
             membershipStatus?.application?.status === 'approved'
               ? 'bg-success/10 border-success'
               : membershipStatus?.application?.status === 'pending'
                 ? 'bg-warning/10 border-warning'
-                : 'bg-primary/10 border-primary'
+                : membershipStatus?.application?.status === 'rejected'
+                  ? 'bg-danger/10 border-danger'
+                  : 'bg-primary/10 border-primary'
           }`}
         >
           <div className="flex items-start gap-6">
@@ -338,7 +340,9 @@ export default function CustomerDashboard() {
                   ? 'bg-success/20'
                   : membershipStatus?.application?.status === 'pending'
                     ? 'bg-warning/20'
-                    : 'bg-primary/20'
+                    : membershipStatus?.application?.status === 'rejected'
+                      ? 'bg-danger/20'
+                      : 'bg-primary/20'
               }`}
             >
               {membershipStatus?.application?.status === 'approved' ? (
@@ -355,32 +359,61 @@ export default function CustomerDashboard() {
                   ? 'Membership Approved! 🎉'
                   : membershipStatus?.application?.status === 'pending'
                     ? 'Application Under Review'
-                    : 'Become a Salon Owner'}
+                    : membershipStatus?.application?.status === 'rejected'
+                      ? 'Application Rejected'
+                      : 'Become a Salon Owner'}
               </h2>
               <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
                 {membershipStatus?.application?.status === 'approved'
                   ? 'Congratulations! You can now add salons, manage employees, and access all business management features.'
                   : membershipStatus?.application?.status === 'pending'
                     ? "Your membership application is being reviewed by our team. We'll notify you once a decision is made. This usually takes 1-3 business days."
-                    : 'Want to manage your own salon? Apply for membership to access salon management, employee management, appointments, sales, and more.'}
+                    : membershipStatus?.application?.status === 'rejected'
+                      ? membershipStatus?.application?.rejectionReason
+                        ? `Your application was rejected: ${membershipStatus.application.rejectionReason}. You can apply again with updated information.`
+                        : 'Your previous application was rejected. You can apply again with updated information.'
+                      : 'Want to manage your own salon? Apply for membership to access salon management, employee management, appointments, sales, and more.'}
               </p>
               <div className="flex flex-wrap gap-3">
-                {membershipStatus?.application?.status !== 'pending' && (
+                {membershipStatus?.application?.status === 'approved' ? (
                   <Button
-                    onClick={() => router.push('/membership/apply')}
+                    onClick={() => router.push('/salons')}
                     variant="primary"
                     className="flex items-center gap-2"
                   >
-                    {membershipStatus?.application?.status === 'approved'
-                      ? 'Go to Salons'
-                      : 'Apply for Membership'}
+                    Go to Salons
                     <ArrowRight className="w-4 h-4" />
                   </Button>
-                )}
-                {membershipStatus?.application?.status === 'pending' && (
-                  <Button onClick={() => router.push('/membership/apply')} variant="secondary">
-                    View Application Details
-                  </Button>
+                ) : membershipStatus?.application?.status === 'pending' ? (
+                  <>
+                    <Button onClick={() => router.push('/membership/status')} variant="primary">
+                      Check Application Status
+                    </Button>
+                    <Button onClick={() => router.push('/membership/apply')} variant="secondary">
+                      View Application Details
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      onClick={() => router.push('/membership/apply')}
+                      variant="primary"
+                      className="flex items-center gap-2"
+                    >
+                      {membershipStatus?.application?.status === 'rejected'
+                        ? 'Apply Again'
+                        : 'Apply for Membership'}
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                    {membershipStatus?.application?.status === 'rejected' && (
+                      <Button
+                        onClick={() => router.push('/membership/status')}
+                        variant="secondary"
+                      >
+                        View Application Details
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

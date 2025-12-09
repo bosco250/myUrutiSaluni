@@ -1,323 +1,427 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
-import { useAuthStore } from '@/store/auth-store';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { UserRole } from '@/lib/permissions';
-import {
-  Bell,
-  Mail,
-  MessageSquare,
-  Smartphone,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Settings,
-  Send,
-  Calendar,
-} from 'lucide-react';
-import { format } from 'date-fns';
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { Bell, Check, X, Filter, CheckCheck } from 'lucide-react';
+import api from '@/lib/api';
+import { formatDistanceToNow, format } from 'date-fns';
+import Button from '@/components/ui/Button';
 
 interface Notification {
   id: string;
   type: string;
-  channel: string;
   title: string;
   body: string;
-  status: string;
+  isRead: boolean;
   createdAt: string;
-  sentAt?: string;
-  appointment?: {
-    id: string;
-    scheduledStart: string;
-    service?: { name: string };
-    salon?: { name: string };
-  };
-}
-
-interface NotificationPreference {
-  id: string;
-  type: string;
-  channel: string;
-  enabled: boolean;
+  readAt?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  icon?: string;
+  metadata?: Record<string, any>;
 }
 
 export default function NotificationsPage() {
-  return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER]}>
-      <NotificationsContent />
-    </ProtectedRoute>
-  );
-}
-
-function NotificationsContent() {
-  const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'history' | 'settings'>('history');
-
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Notifications</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your notifications and preferences</p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-4 mb-6 border-b border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`px-4 py-2 font-medium transition ${
-            activeTab === 'history'
-              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4" />
-            History
-          </div>
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`px-4 py-2 font-medium transition ${
-            activeTab === 'settings'
-              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Preferences
-          </div>
-        </button>
-      </div>
-
-      {activeTab === 'history' ? <NotificationHistory /> : <NotificationSettings />}
-    </div>
-  );
-}
-
-function NotificationHistory() {
-  const { user } = useAuthStore();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
-    queryKey: ['notifications'],
+  // Fetch notifications
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['notifications', 'all', filter, page],
     queryFn: async () => {
-      const response = await api.get('/notifications?limit=100');
-      return response.data?.data || response.data || [];
+      try {
+        const params = new URLSearchParams({
+          limit: limit.toString(),
+          offset: ((page - 1) * limit).toString(),
+        });
+
+        if (filter === 'unread') {
+          params.append('unreadOnly', 'true');
+        }
+
+        const response = await api.get(`/notifications?${params.toString()}`);
+        // Backend returns { data: Notification[], total: number }
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          return {
+            data: response.data.data,
+            total: response.data.total || response.data.data.length,
+          };
+        }
+        // Fallback: if data is directly an array
+        if (Array.isArray(response.data)) {
+          return {
+            data: response.data,
+            total: response.data.length,
+          };
+        }
+        return {
+          data: [],
+          total: 0,
+        };
+      } catch (error: any) {
+        console.error('Failed to fetch notifications:', error);
+        // Don't throw for 401/403 (not authenticated)
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return { data: [], total: 0 };
+        }
+        throw error;
+      }
+    },
+    retry: 1,
+  });
+
+  // Fetch unread count
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/notifications/unread-count');
+        // Backend returns { count: number }
+        if (response.data && typeof response.data === 'object' && 'count' in response.data) {
+          const count = Number(response.data.count);
+          return isNaN(count) ? 0 : count;
+        }
+        // Fallback: if it's already a number
+        if (typeof response.data === 'number') {
+          return response.data;
+        }
+        return 0;
+      } catch (error: any) {
+        console.error('Failed to fetch unread count:', error);
+        // Don't show error for 401/403 (not authenticated)
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          return 0;
+        }
+        return 0;
+      }
+    },
+    refetchInterval: 30000, // Poll every 30 seconds
+    retry: 1,
+  });
+
+  // Mark as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.patch(`/notifications/${id}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
     },
   });
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case 'email':
-        return <Mail className="w-4 h-4" />;
-      case 'sms':
-        return <MessageSquare className="w-4 h-4" />;
-      case 'push':
-        return <Smartphone className="w-4 h-4" />;
-      default:
-        return <Bell className="w-4 h-4" />;
+  // Mark all as read mutation
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      return api.post('/notifications/mark-all-read');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+    },
+  });
+
+  // Delete notification mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/notifications/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+    },
+  });
+
+  const notifications = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit);
+
+  // Ensure unreadCount is always a number
+  const count = typeof unreadCount === 'number' ? unreadCount : 0;
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.isRead) {
+      markAsReadMutation.mutate(notification.id);
+    }
+
+    if (notification.actionUrl) {
+      router.push(notification.actionUrl);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'sent':
-      case 'delivered':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
+  const handleMarkAsRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    markAsReadMutation.mutate(id);
+  };
+
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this notification?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case 'critical':
+        return 'bg-red-500 text-white';
+      case 'high':
+        return 'bg-orange-500 text-white';
+      case 'medium':
+        return 'bg-blue-500 text-white';
       default:
-        return null;
+        return 'bg-gray-400 text-white';
+    }
+  };
+
+  const getPriorityLabel = (priority?: string) => {
+    switch (priority) {
+      case 'critical':
+        return 'Critical';
+      case 'high':
+        return 'High';
+      case 'medium':
+        return 'Medium';
+      default:
+        return 'Low';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading notifications...</p>
+      <div className="container mx-auto px-6 py-8">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-text-light/60 dark:text-text-dark/60">Loading notifications...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="bg-danger/10 border border-danger/30 rounded-xl p-6 text-center">
+          <p className="text-danger">Failed to load notifications. Please try again.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="container mx-auto px-6 py-8 max-w-4xl">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
+              Notifications
+            </h1>
+            <p className="text-text-light/60 dark:text-text-dark/60">
+              {count > 0
+                ? `${count} unread notification${count !== 1 ? 's' : ''}`
+                : 'All caught up!'}
+            </p>
+          </div>
+          {count > 0 && (
+            <Button
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+              variant="secondary"
+              className="flex items-center gap-2"
+            >
+              <CheckCheck className="w-4 h-4" />
+              {markAllReadMutation.isPending ? 'Marking...' : 'Mark all read'}
+            </Button>
+          )}
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
+          <button
+            onClick={() => {
+              setFilter('all');
+              setPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              filter === 'all'
+                ? 'bg-primary text-white'
+                : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+            }`}
+          >
+            All ({total})
+          </button>
+          <button
+            onClick={() => {
+              setFilter('unread');
+              setPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              filter === 'unread'
+                ? 'bg-primary text-white'
+                : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+            }`}
+          >
+            Unread ({count})
+          </button>
+          <button
+            onClick={() => {
+              setFilter('read');
+              setPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              filter === 'read'
+                ? 'bg-primary text-white'
+                : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+            }`}
+          >
+            Read ({Math.max(0, total - count)})
+          </button>
+        </div>
+      </div>
+
+      {/* Notifications List */}
       {notifications.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <Bell className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Notifications</h3>
-          <p className="text-gray-600 dark:text-gray-400">You haven't received any notifications yet.</p>
+        <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-12 text-center">
+          <Bell className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
+            No notifications
+          </h3>
+          <p className="text-text-light/60 dark:text-text-dark/60">
+            {filter === 'unread'
+              ? "You're all caught up! No unread notifications."
+              : filter === 'read'
+                ? 'No read notifications yet.'
+                : "You don't have any notifications yet."}
+          </p>
         </div>
       ) : (
-        notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                    {getChannelIcon(notification.channel)}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{notification.title}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{notification.body}</p>
-                  </div>
-                </div>
+        <>
+          <div className="space-y-2">
+            {notifications.map((notification: Notification) => (
+              <div
+                key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
+                className={`p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50 transition cursor-pointer ${
+                  !notification.isRead
+                    ? 'ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10'
+                    : ''
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  {/* Priority Badge */}
+                  {notification.priority && notification.priority !== 'low' && (
+                    <div
+                      className={`px-2 py-1 rounded text-xs font-semibold flex-shrink-0 ${getPriorityColor(
+                        notification.priority
+                      )}`}
+                    >
+                      {getPriorityLabel(notification.priority)}
+                    </div>
+                  )}
 
-                {notification.appointment && (
-                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {notification.appointment.service?.name} at {notification.appointment.salon?.name}
-                      </span>
-                      <span className="mx-2">•</span>
-                      <span>{format(new Date(notification.appointment.scheduledStart), 'PPpp')}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3
+                        className={`text-base font-medium text-text-light dark:text-text-dark ${
+                          !notification.isRead ? 'font-semibold' : ''
+                        }`}
+                      >
+                        {notification.title}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {!notification.isRead && (
+                          <button
+                            onClick={(e) => handleMarkAsRead(notification.id, e)}
+                            className="p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded transition"
+                            title="Mark as read"
+                            aria-label="Mark as read"
+                          >
+                            <Check className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => handleDelete(notification.id, e)}
+                          className="p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded transition"
+                          title="Delete"
+                          aria-label="Delete notification"
+                        >
+                          <X className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-text-light/70 dark:text-text-dark/70 mb-3">
+                      {notification.body}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-xs text-text-light/50 dark:text-text-dark/50">
+                        <span>
+                          {formatDistanceToNow(new Date(notification.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                        {notification.readAt && (
+                          <span>
+                            Read{' '}
+                            {formatDistanceToNow(new Date(notification.readAt), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                        )}
+                        <span>
+                          {format(new Date(notification.createdAt), 'MMM d, yyyy h:mm a')}
+                        </span>
+                      </div>
+                      {notification.actionLabel && (
+                        <span className="text-sm text-primary font-medium">
+                          {notification.actionLabel} →
+                        </span>
+                      )}
                     </div>
                   </div>
-                )}
 
-                <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
-                  <span className="flex items-center gap-1">
-                    {getStatusIcon(notification.status)}
-                    {notification.status}
-                  </span>
-                  <span>{format(new Date(notification.createdAt), 'PPpp')}</span>
-                  {notification.sentAt && (
-                    <span>Sent: {format(new Date(notification.sentAt), 'PPpp')}</span>
+                  {!notification.isRead && (
+                    <div className="w-3 h-3 bg-primary rounded-full flex-shrink-0 mt-2" />
                   )}
                 </div>
               </div>
-            </div>
+            ))}
           </div>
-        ))
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <Button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                variant="secondary"
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                variant="secondary"
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
-
-function NotificationSettings() {
-  const { user } = useAuthStore();
-  const queryClient = useQueryClient();
-
-  const { data: preferences = [], isLoading } = useQuery<NotificationPreference[]>({
-    queryKey: ['notification-preferences'],
-    queryFn: async () => {
-      const response = await api.get('/notifications/preferences');
-      return response.data?.data || response.data || [];
-    },
-  });
-
-  const updatePreferenceMutation = useMutation({
-    mutationFn: async (data: { type: string; channel: string; enabled: boolean }) => {
-      await api.patch('/notifications/preferences', data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-    },
-  });
-
-  const notificationTypes = [
-    { value: 'appointment_reminder', label: 'Appointment Reminders', icon: Calendar },
-    { value: 'appointment_confirmed', label: 'Appointment Confirmations', icon: CheckCircle2 },
-    { value: 'appointment_cancelled', label: 'Appointment Cancellations', icon: XCircle },
-    { value: 'appointment_rescheduled', label: 'Appointment Reschedules', icon: Clock },
-    { value: 'payment_received', label: 'Payment Notifications', icon: Send },
-  ];
-
-  const channels = [
-    { value: 'email', label: 'Email', icon: Mail },
-    { value: 'sms', label: 'SMS', icon: MessageSquare },
-    { value: 'push', label: 'Push Notifications', icon: Smartphone },
-  ];
-
-  const getPreference = (type: string, channel: string): boolean => {
-    const pref = preferences.find((p) => p.type === type && p.channel === channel);
-    return pref ? pref.enabled : true; // Default to enabled if not set
-  };
-
-  const togglePreference = (type: string, channel: string, enabled: boolean) => {
-    updatePreferenceMutation.mutate({ type, channel, enabled });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading preferences...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Notification Preferences
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          Choose how you want to receive different types of notifications
-        </p>
-
-        <div className="space-y-6">
-          {notificationTypes.map((type) => {
-            const Icon = type.icon;
-            return (
-              <div key={type.value} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                    <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">{type.label}</h3>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-12">
-                  {channels.map((channel) => {
-                    const ChannelIcon = channel.icon;
-                    const enabled = getPreference(type.value, channel.value);
-                    return (
-                      <label
-                        key={channel.value}
-                        className="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={enabled}
-                          onChange={(e) => togglePreference(type.value, channel.value, e.target.checked)}
-                          className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                        />
-                        <div className="flex items-center gap-2">
-                          <ChannelIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {channel.label}
-                          </span>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-

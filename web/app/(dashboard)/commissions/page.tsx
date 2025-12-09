@@ -272,14 +272,33 @@ function CommissionsContent() {
   }, [commissions, searchQuery]);
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredCommissions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedCommissions = filteredCommissions.slice(startIndex, endIndex);
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredCommissions.length / itemsPerPage) || 1;
+  }, [filteredCommissions.length, itemsPerPage]);
 
+  const startIndex = useMemo(() => {
+    return (currentPage - 1) * itemsPerPage;
+  }, [currentPage, itemsPerPage]);
+
+  const endIndex = useMemo(() => {
+    return startIndex + itemsPerPage;
+  }, [startIndex, itemsPerPage]);
+
+  const paginatedCommissions = useMemo(() => {
+    return filteredCommissions.slice(startIndex, endIndex);
+  }, [filteredCommissions, startIndex, endIndex]);
+
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, employeeFilter, dateRange.start, dateRange.end]);
+
+  // Ensure currentPage doesn't exceed totalPages when filters change
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -961,7 +980,8 @@ function CommissionsContent() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4 flex-wrap">
                 <span className="text-sm text-text-light/60 dark:text-text-dark/60">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredCommissions.length)} of{' '}
+                  Showing {Math.min(startIndex + 1, filteredCommissions.length)} to{' '}
+                  {Math.min(endIndex, filteredCommissions.length)} of{' '}
                   {filteredCommissions.length} commission
                   {filteredCommissions.length !== 1 ? 's' : ''}
                 </span>

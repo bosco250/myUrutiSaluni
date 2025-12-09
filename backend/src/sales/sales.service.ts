@@ -14,6 +14,11 @@ import {
 import { JournalEntryStatus } from '../accounting/entities/journal-entry.entity';
 import { CommissionsService } from '../commissions/commissions.service';
 import { SalonCustomerService } from '../customers/salon-customer.service';
+import { LoyaltyPointsService } from '../customers/loyalty-points.service';
+import { LoyaltyPointSourceType } from '../customers/entities/loyalty-point-transaction.entity';
+import { RewardsConfigService } from '../customers/rewards-config.service';
+import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 export interface SaleWithDetails extends Sale {
   employees?: { id: string; name: string }[];
@@ -42,6 +47,12 @@ export class SalesService {
     private commissionsService: CommissionsService,
     @Inject(forwardRef(() => SalonCustomerService))
     private salonCustomerService: SalonCustomerService,
+    @Inject(forwardRef(() => LoyaltyPointsService))
+    private loyaltyPointsService: LoyaltyPointsService,
+    @Inject(forwardRef(() => RewardsConfigService))
+    private rewardsConfigService: RewardsConfigService,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
   async create(
@@ -79,6 +90,125 @@ export class SalesService {
           this.logger.warn(
             `Failed to record customer visit: ${error.message}`,
             error.stack,
+          );
+        }
+
+        // Award loyalty points for sale
+        try {
+          const saleAmount = Number(savedSale.totalAmount) || 0;
+          if (saleAmount > 0 && savedSale.salonId && savedSale.customerId) {
+            // Get rewards config for the salon (defaults to 0.01 if not configured)
+            const rewardsConfig = await this.rewardsConfigService.getOrCreate(
+              savedSale.salonId,
+            );
+            const pointsEarned =
+              this.loyaltyPointsService.calculatePointsEarned(
+                saleAmount,
+                Number(rewardsConfig.pointsPerCurrencyUnit),
+              );
+            if (pointsEarned > 0) {
+              await this.loyaltyPointsService.addPoints(
+                savedSale.customerId,
+                pointsEarned,
+                {
+                  sourceType: LoyaltyPointSourceType.SALE,
+                  sourceId: savedSale.id,
+                  description: `Points earned from sale ${savedSale.id.slice(0, 8)} - Amount: RWF ${saleAmount.toLocaleString()}`,
+                },
+              );
+              this.logger.log(
+                `Awarded ${pointsEarned} loyalty points to customer ${savedSale.customerId} for sale ${savedSale.id}`,
+              );
+
+              // Send notification for points earned
+              try {
+                const sale = await this.findOne(savedSale.id);
+                await this.notificationOrchestrator.notify(
+                  NotificationType.POINTS_EARNED,
+                  {
+                    customerId: savedSale.customerId,
+                    saleId: savedSale.id,
+                    recipientEmail: sale.customer?.email,
+                    customerName: sale.customer?.fullName,
+                    salonName: sale.salon?.name,
+                    pointsEarned,
+                    pointsBalance: sale.customer?.loyaltyPoints || 0,
+                  },
+                );
+              } catch (error) {
+                this.logger.warn(
+                  `Failed to send points earned notification: ${error.message}`,
+                );
+              }
+            }
+          }
+        } catch (error) {
+          // Log but don't fail sale creation if points awarding fails
+          this.logger.warn(
+            `Failed to award loyalty points for sale: ${error.message}`,
+            error.stack,
+          );
+        }
+
+        // Send sale completed notification
+        try {
+          const sale = await this.findOne(savedSale.id);
+          const notificationSaleAmount = Number(savedSale.totalAmount) || 0;
+          const notificationRewardsConfig =
+            await this.rewardsConfigService.getOrCreate(savedSale.salonId);
+          const notificationPointsEarned =
+            this.loyaltyPointsService.calculatePointsEarned(
+              notificationSaleAmount,
+              Number(notificationRewardsConfig.pointsPerCurrencyUnit),
+            );
+
+          // Notify customer
+          await this.notificationOrchestrator.notify(
+            NotificationType.SALE_COMPLETED,
+            {
+              customerId: savedSale.customerId,
+              saleId: savedSale.id,
+              recipientEmail: sale.customer?.email,
+              customerName: sale.customer?.fullName,
+              salonName: sale.salon?.name,
+              saleAmount: `RWF ${notificationSaleAmount.toLocaleString()}`,
+              paymentMethod: savedSale.paymentMethod || 'Unknown',
+              pointsEarned: notificationPointsEarned || 0,
+              saleItems: sale.items?.map((item) => ({
+                name:
+                  item.product?.name || item.service?.name || 'Unknown Item',
+                quantity: item.quantity,
+                price: `RWF ${Number(item.unitPrice).toLocaleString()}`,
+              })),
+            },
+          );
+
+          // Notify salon owner
+          if (sale.salon?.ownerId) {
+            await this.notificationOrchestrator.notify(
+              NotificationType.SALE_COMPLETED,
+              {
+                userId: sale.salon.ownerId,
+                recipientEmail: sale.salon.owner?.email,
+                customerId: savedSale.customerId,
+                saleId: savedSale.id,
+                customerName: sale.customer?.fullName,
+                salonName: sale.salon?.name,
+                saleAmount: `RWF ${notificationSaleAmount.toLocaleString()}`,
+                paymentMethod: savedSale.paymentMethod || 'Unknown',
+                pointsEarned: notificationPointsEarned || 0,
+                saleItems: sale.items?.map((item) => ({
+                  name:
+                    item.product?.name || item.service?.name || 'Unknown Item',
+                  quantity: item.quantity,
+                  price: `RWF ${Number(item.unitPrice).toLocaleString()}`,
+                })),
+              },
+            );
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Failed to send sale completed notification: ${error.message}`,
           );
         }
       }
@@ -169,9 +299,9 @@ export class SalesService {
       if (item.productId && item.quantity) {
         try {
           // Check if product is an inventory item
-          const product = await this.inventoryService.findOneProduct(
-            item.productId,
-          ).catch(() => null);
+          const product = await this.inventoryService
+            .findOneProduct(item.productId)
+            .catch(() => null);
 
           if (!product) {
             this.logger.warn(
@@ -487,7 +617,9 @@ export class SalesService {
     if (startDate) {
       const start = new Date(startDate);
       start.setUTCHours(0, 0, 0, 0);
-      queryBuilder.andWhere('sale.createdAt >= :startDate', { startDate: start });
+      queryBuilder.andWhere('sale.createdAt >= :startDate', {
+        startDate: start,
+      });
     }
 
     if (endDate) {
@@ -541,7 +673,9 @@ export class SalesService {
     if (startDate) {
       const start = new Date(startDate);
       start.setUTCHours(0, 0, 0, 0);
-      queryBuilder.andWhere('sale.createdAt >= :startDate', { startDate: start });
+      queryBuilder.andWhere('sale.createdAt >= :startDate', {
+        startDate: start,
+      });
     }
 
     if (endDate) {
@@ -669,6 +803,7 @@ export class SalesService {
         'customer',
         'createdBy',
         'salon',
+        'salon.owner',
         'items',
         'items.service',
         'items.product',

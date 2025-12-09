@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Commission } from './entities/commission.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
+import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class CommissionsService {
@@ -13,6 +15,8 @@ export class CommissionsService {
     private commissionsRepository: Repository<Commission>,
     @InjectRepository(SalonEmployee)
     private salonEmployeesRepository: Repository<SalonEmployee>,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
   async createCommission(
@@ -54,12 +58,34 @@ export class CommissionsService {
       metadata: metadata || {},
     });
 
-    return this.commissionsRepository.save(commission);
+    const savedCommission = await this.commissionsRepository.save(commission);
+
+    // Send notification for commission earned
+    if (commissionAmount > 0 && employee.user?.id) {
+      try {
+        await this.notificationOrchestrator.notify(
+          NotificationType.COMMISSION_EARNED,
+          {
+            userId: employee.user.id,
+            recipientEmail: employee.user.email,
+            commissionId: savedCommission.id,
+            commissionAmount: `RWF ${commissionAmount.toLocaleString()}`,
+          },
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to send commission earned notification: ${error.message}`,
+        );
+      }
+    }
+
+    return savedCommission;
   }
 
   async findByIds(ids: string[]): Promise<Commission[]> {
     return this.commissionsRepository.find({
       where: ids.map((id) => ({ id })),
+      relations: ['salonEmployee', 'salonEmployee.user'],
     });
   }
 
@@ -161,7 +187,33 @@ export class CommissionsService {
       }
     }
 
-    return this.commissionsRepository.save(commission);
+    const savedCommission = await this.commissionsRepository.save(commission);
+
+    // Send notification for commission paid
+    // Reload with relations to get employee user
+    const commissionWithRelations = await this.commissionsRepository.findOne({
+      where: { id: savedCommission.id },
+      relations: ['salonEmployee', 'salonEmployee.user'],
+    });
+
+    if (commissionWithRelations?.salonEmployee?.user?.id) {
+      try {
+        await this.notificationOrchestrator.notify(
+          NotificationType.COMMISSION_PAID,
+          {
+            userId: commissionWithRelations.salonEmployee.user.id,
+            commissionId: savedCommission.id,
+            commissionAmount: `RWF ${savedCommission.amount.toLocaleString()}`,
+          },
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to send commission paid notification: ${error.message}`,
+        );
+      }
+    }
+
+    return savedCommission;
   }
 
   async markMultipleAsPaid(

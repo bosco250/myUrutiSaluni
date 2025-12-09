@@ -188,7 +188,7 @@ export class CommunicationsService {
           communication.customerId,
           communication.appointmentId,
           NotificationChannel.EMAIL,
-          NotificationType.SYSTEM,
+          NotificationType.SYSTEM_ALERT,
           'Follow-up Reminder',
           `You have a pending follow-up for: ${communication.subject}`,
         );

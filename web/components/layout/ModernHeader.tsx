@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Bell, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { Search, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import CommandPalette from '@/components/navigation/CommandPalette';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function ModernHeader() {
   const { user, logout } = useAuthStore();
@@ -49,18 +50,11 @@ export default function ModernHeader() {
                 className="relative p-2.5 text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition group"
                 title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
 
               {/* Notifications */}
-              <button className="relative p-2.5 text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition group">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-surface-light dark:ring-surface-dark" />
-              </button>
+              <NotificationBell />
 
               {/* User Menu */}
               <div className="relative">
@@ -72,7 +66,9 @@ export default function ModernHeader() {
                     {user?.fullName?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">{user?.fullName || 'User'}</p>
+                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                      {user?.fullName || 'User'}
+                    </p>
                     <p className="text-xs text-text-light/60 dark:text-text-dark/60 capitalize">
                       {user?.role?.replace('_', ' ') || 'User'}
                     </p>
@@ -82,14 +78,15 @@ export default function ModernHeader() {
                 {/* User Dropdown */}
                 {showUserMenu && (
                   <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowUserMenu(false)}
-                    />
+                    <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
                     <div className="absolute right-0 mt-2 w-56 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-4 border-b border-border-light dark:border-border-dark">
-                        <p className="text-sm font-semibold text-text-light dark:text-text-dark">{user?.fullName}</p>
-                        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">{user?.email}</p>
+                        <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                          {user?.fullName}
+                        </p>
+                        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                          {user?.email}
+                        </p>
                       </div>
                       <div className="p-2">
                         <button
@@ -126,4 +123,3 @@ export default function ModernHeader() {
     </>
   );
 }
-

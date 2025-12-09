@@ -11,6 +11,8 @@ import { Salon } from './entities/salon.entity';
 import { SalonEmployee } from './entities/salon-employee.entity';
 import { MembershipsService } from '../memberships/memberships.service';
 import { MembershipStatus } from '../memberships/entities/membership.entity';
+import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SalonsService {
@@ -21,6 +23,8 @@ export class SalonsService {
     private salonEmployeesRepository: Repository<SalonEmployee>,
     @Inject(forwardRef(() => MembershipsService))
     private membershipsService: MembershipsService,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
   async create(salonData: Partial<Salon>): Promise<Salon> {
@@ -113,7 +117,29 @@ export class SalonsService {
     }
 
     const employee = this.salonEmployeesRepository.create(employeeData);
-    return this.salonEmployeesRepository.save(employee);
+    const savedEmployee = await this.salonEmployeesRepository.save(employee);
+
+    // Send notification to the new employee
+    try {
+      // Fetch salon details for the notification
+      const salon = await this.salonsRepository.findOne({
+        where: { id: savedEmployee.salonId },
+      });
+
+      await this.notificationOrchestrator.notify(
+        NotificationType.EMPLOYEE_ASSIGNED,
+        {
+          userId: savedEmployee.userId,
+          salonName: salon?.name,
+          employeeName: savedEmployee.user?.fullName, // Note: user might not be loaded here, might need to fetch if critical
+        },
+      );
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Failed to send employee assignment notification:', error);
+    }
+
+    return savedEmployee;
   }
 
   async getSalonEmployees(salonId: string): Promise<SalonEmployee[]> {
