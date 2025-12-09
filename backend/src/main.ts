@@ -5,7 +5,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { AppModule } from './app.module';
-import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');

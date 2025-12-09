@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
 import { SaleItem } from '../../sales/entities/sale-item.entity';
 
@@ -60,4 +68,3 @@ export class Commission {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

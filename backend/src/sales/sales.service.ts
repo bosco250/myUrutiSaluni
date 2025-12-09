@@ -155,8 +155,39 @@ export class SalesService {
     saleData: Partial<Sale>,
   ): Promise<void> {
     for (const item of items) {
+      // Only process products, not services
+      // Services should never affect stock
+      if (item.serviceId) {
+        // Service sold - skip inventory processing
+        this.logger.debug(
+          `Skipping inventory movement for service ${item.serviceId} - services do not affect stock`,
+        );
+        continue;
+      }
+
+      // Only process products that are inventory items
       if (item.productId && item.quantity) {
         try {
+          // Check if product is an inventory item
+          const product = await this.inventoryService.findOneProduct(
+            item.productId,
+          ).catch(() => null);
+
+          if (!product) {
+            this.logger.warn(
+              `Product ${item.productId} not found - skipping inventory movement`,
+            );
+            continue;
+          }
+
+          // Only create inventory movement if product is marked as inventory item
+          if (!product.isInventoryItem) {
+            this.logger.debug(
+              `Skipping inventory movement for product ${item.productId} (${product.name}) - product is not an inventory item (isInventoryItem = false)`,
+            );
+            continue;
+          }
+
           const quantity = Math.abs(Number(item.quantity));
           await this.inventoryService.createMovement({
             salonId: saleData.salonId,
@@ -167,6 +198,10 @@ export class SalesService {
             performedById: saleData.createdById,
             notes: `Product sold in sale ${sale.id}`,
           });
+
+          this.logger.debug(
+            `Created inventory movement for product ${item.productId} (${product.name}) - quantity: ${quantity}`,
+          );
         } catch (error) {
           this.logger.error(
             `Failed to create inventory movement for product ${item.productId}: ${error.message}`,
@@ -179,47 +214,84 @@ export class SalesService {
 
   private async processCommissions(saleId: string): Promise<void> {
     try {
-      const items = await this.saleItemsRepository.find({ 
+      const items = await this.saleItemsRepository.find({
         where: { saleId },
-        relations: ['salonEmployee', 'service', 'product'],
+        relations: [
+          'salonEmployee',
+          'salonEmployee.user',
+          'service',
+          'product',
+        ],
       });
 
       let commissionsCreated = 0;
       let commissionsSkipped = 0;
 
+      this.logger.debug(
+        `Processing commissions for sale ${saleId} with ${items.length} items`,
+      );
+
       for (const item of items) {
-        if (item.salonEmployeeId && item.lineTotal) {
-          try {
-            const lineTotal = Number(item.lineTotal);
-            if (lineTotal <= 0) {
-              commissionsSkipped++;
-              continue;
-            }
+        const itemName = item.service?.name || item.product?.name || 'Unknown';
+        const employeeName =
+          item.salonEmployee?.user?.fullName ||
+          item.salonEmployee?.roleTitle ||
+          'Unknown';
 
-            await this.commissionsService.createCommission(
-              item.salonEmployeeId,
-              item.id,
-              lineTotal,
-              {
-                saleId: saleId,
-                source: 'sale',
-                serviceId: item.serviceId || null,
-                productId: item.productId || null,
-              },
+        if (!item.salonEmployeeId) {
+          this.logger.debug(
+            `Skipping commission for sale item ${item.id} (${itemName}): No employee assigned`,
+          );
+          commissionsSkipped++;
+          continue;
+        }
+
+        if (!item.lineTotal || Number(item.lineTotal) <= 0) {
+          this.logger.warn(
+            `Skipping commission for sale item ${item.id} (${itemName}) assigned to ${employeeName}: Line total is ${item.lineTotal} (must be > 0)`,
+          );
+          commissionsSkipped++;
+          continue;
+        }
+
+        try {
+          const lineTotal = Number(item.lineTotal);
+
+          const commission = await this.commissionsService.createCommission(
+            item.salonEmployeeId,
+            item.id,
+            lineTotal,
+            {
+              saleId: saleId,
+              source: 'sale',
+              serviceId: item.serviceId || null,
+              productId: item.productId || null,
+            },
+          );
+
+          if (commission.amount > 0) {
+            this.logger.log(
+              `✅ Created commission for employee ${employeeName} (${item.salonEmployeeId}) from sale item ${item.id} (${itemName}) - Sale Amount: RWF ${lineTotal}, Commission Rate: ${commission.commissionRate}%, Commission: RWF ${commission.amount}`,
             );
-
             commissionsCreated++;
-          } catch (commissionError) {
-            this.logger.error(
-              `Failed to create commission for sale item ${item.id}: ${commissionError.message}`,
-              commissionError.stack,
+          } else {
+            this.logger.warn(
+              `⚠️ Commission created but amount is 0 for sale item ${item.id} (${itemName}) assigned to ${employeeName} - Employee has ${commission.commissionRate}% commission rate. Commission record created but will show as RWF 0.`,
             );
-            commissionsSkipped++;
+            commissionsCreated++; // Still count as created even if amount is 0
           }
-        } else {
+        } catch (commissionError) {
+          this.logger.error(
+            `❌ Failed to create commission for sale item ${item.id} (${itemName}) assigned to ${employeeName} (${item.salonEmployeeId}): ${commissionError.message}`,
+            commissionError.stack,
+          );
           commissionsSkipped++;
         }
       }
+
+      this.logger.log(
+        `Commission processing completed for sale ${saleId}: ${commissionsCreated} created, ${commissionsSkipped} skipped`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to process commissions for sale ${saleId}: ${error.message}`,
@@ -257,8 +329,14 @@ export class SalesService {
       });
     } catch (error) {
       // If duplicate key error, account was created by another request
-      if (error instanceof QueryFailedError && error.message.includes('duplicate key')) {
-        const account = await this.accountingService.findAccountByCode(code, salonId);
+      if (
+        error instanceof QueryFailedError &&
+        error.message.includes('duplicate key')
+      ) {
+        const account = await this.accountingService.findAccountByCode(
+          code,
+          salonId,
+        );
         if (account) {
           return account;
         }
@@ -284,7 +362,7 @@ export class SalesService {
       AccountType.ASSET,
     );
 
-    const accountsReceivableAccount = await this.getOrCreateAccount(
+    await this.getOrCreateAccount(
       salonId,
       '1020',
       'Accounts Receivable',
@@ -298,14 +376,14 @@ export class SalesService {
       AccountType.REVENUE,
     );
 
-    const cogsAccount = await this.getOrCreateAccount(
+    await this.getOrCreateAccount(
       salonId,
       '5000',
       'Cost of Goods Sold',
       AccountType.EXPENSE,
     );
 
-    const inventoryAccount = await this.getOrCreateAccount(
+    await this.getOrCreateAccount(
       salonId,
       '1200',
       'Inventory',
@@ -386,26 +464,43 @@ export class SalesService {
     salonId?: string,
     page: number = 1,
     limit: number = 10,
+    startDate?: Date,
+    endDate?: Date,
   ): Promise<PaginatedResult<SaleWithDetails>> {
     const skip = (page - 1) * limit;
-    const where = salonId ? { salonId } : {};
 
-    const [data, total] = await this.salesRepository.findAndCount({
-      where,
-      relations: [
-        'customer',
-        'createdBy',
-        'salon',
-        'items',
-        'items.service',
-        'items.product',
-        'items.salonEmployee',
-        'items.salonEmployee.user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    const queryBuilder = this.salesRepository
+      .createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.customer', 'customer')
+      .leftJoinAndSelect('sale.createdBy', 'createdBy')
+      .leftJoinAndSelect('sale.salon', 'salon')
+      .leftJoinAndSelect('sale.items', 'items')
+      .leftJoinAndSelect('items.service', 'service')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.salonEmployee', 'salonEmployee')
+      .leftJoinAndSelect('salonEmployee.user', 'employeeUser');
+
+    if (salonId) {
+      queryBuilder.andWhere('sale.salonId = :salonId', { salonId });
+    }
+
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setUTCHours(0, 0, 0, 0);
+      queryBuilder.andWhere('sale.createdAt >= :startDate', { startDate: start });
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setUTCHours(23, 59, 59, 999);
+      queryBuilder.andWhere('sale.createdAt <= :endDate', { endDate: end });
+    }
+
+    queryBuilder.orderBy('sale.createdAt', 'DESC');
+    queryBuilder.skip(skip);
+    queryBuilder.take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
 
     return this.enrichSalesWithDetails(data, total, page, limit);
   }
@@ -414,6 +509,8 @@ export class SalesService {
     salonIds: string[],
     page: number = 1,
     limit: number = 10,
+    startDate?: Date,
+    endDate?: Date,
   ): Promise<PaginatedResult<SaleWithDetails>> {
     if (!salonIds || salonIds.length === 0) {
       return {
@@ -427,22 +524,37 @@ export class SalesService {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.salesRepository.findAndCount({
-      where: { salonId: In(salonIds) },
-      relations: [
-        'customer',
-        'createdBy',
-        'salon',
-        'items',
-        'items.service',
-        'items.product',
-        'items.salonEmployee',
-        'items.salonEmployee.user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    // Build query with date filters
+    const queryBuilder = this.salesRepository
+      .createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.customer', 'customer')
+      .leftJoinAndSelect('sale.createdBy', 'createdBy')
+      .leftJoinAndSelect('sale.salon', 'salon')
+      .leftJoinAndSelect('sale.items', 'items')
+      .leftJoinAndSelect('items.service', 'service')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.salonEmployee', 'salonEmployee')
+      .leftJoinAndSelect('salonEmployee.user', 'employeeUser');
+
+    queryBuilder.andWhere('sale.salonId IN (:...salonIds)', { salonIds });
+
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setUTCHours(0, 0, 0, 0);
+      queryBuilder.andWhere('sale.createdAt >= :startDate', { startDate: start });
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setUTCHours(23, 59, 59, 999);
+      queryBuilder.andWhere('sale.createdAt <= :endDate', { endDate: end });
+    }
+
+    queryBuilder.orderBy('sale.createdAt', 'DESC');
+    queryBuilder.skip(skip);
+    queryBuilder.take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
 
     return this.enrichSalesWithDetails(data, total, page, limit);
   }
@@ -566,6 +678,220 @@ export class SalesService {
     });
 
     return sale;
+  }
+
+  async diagnoseCommissionIssues(saleId: string): Promise<{
+    saleId: string;
+    saleFound: boolean;
+    items: Array<{
+      itemId: string;
+      itemName: string;
+      serviceId?: string;
+      productId?: string;
+      lineTotal: number;
+      salonEmployeeId?: string;
+      employeeName?: string;
+      employeeCommissionRate?: number;
+      hasCommission: boolean;
+      commissionAmount?: number;
+      issue?: string;
+    }>;
+    summary: {
+      totalItems: number;
+      itemsWithEmployee: number;
+      itemsWithCommissions: number;
+      itemsWithoutCommissions: number;
+      issues: string[];
+    };
+  }> {
+    const sale = await this.findOne(saleId);
+
+    if (!sale) {
+      return {
+        saleId,
+        saleFound: false,
+        items: [],
+        summary: {
+          totalItems: 0,
+          itemsWithEmployee: 0,
+          itemsWithCommissions: 0,
+          itemsWithoutCommissions: 0,
+          issues: ['Sale not found'],
+        },
+      };
+    }
+
+    const items = await this.saleItemsRepository.find({
+      where: { saleId },
+      relations: ['salonEmployee', 'salonEmployee.user', 'service', 'product'],
+    });
+
+    const itemIds = items.map((item) => item.id);
+    const existingCommissions =
+      itemIds.length > 0
+        ? await this.commissionsService.findBySaleItemIds(itemIds)
+        : [];
+
+    const commissionsByItem = new Map<string, any[]>();
+    existingCommissions.forEach((commission) => {
+      if (commission.saleItemId) {
+        if (!commissionsByItem.has(commission.saleItemId)) {
+          commissionsByItem.set(commission.saleItemId, []);
+        }
+        commissionsByItem.get(commission.saleItemId)!.push(commission);
+      }
+    });
+
+    const diagnosticItems = items.map((item) => {
+      const itemName = item.service?.name || item.product?.name || 'Unknown';
+      const employeeName =
+        item.salonEmployee?.user?.fullName || item.salonEmployee?.roleTitle;
+      const commissionRate = item.salonEmployee?.commissionRate;
+      const lineTotal = Number(item.lineTotal) || 0;
+      const hasCommission = commissionsByItem.has(item.id);
+      const commissions = commissionsByItem.get(item.id) || [];
+      const commissionAmount = commissions.reduce(
+        (sum, c) => sum + Number(c.amount),
+        0,
+      );
+
+      let issue: string | undefined;
+      if (!item.salonEmployeeId) {
+        issue = 'No employee assigned to this sale item';
+      } else if (lineTotal <= 0) {
+        issue = `Line total is ${lineTotal} (must be > 0)`;
+      } else if (
+        commissionRate === 0 ||
+        commissionRate === null ||
+        commissionRate === undefined
+      ) {
+        issue = `Employee has ${commissionRate}% commission rate (must be > 0)`;
+      } else if (!hasCommission) {
+        issue = 'Commission was not created (check backend logs for errors)';
+      } else if (commissionAmount === 0) {
+        issue = `Commission created but amount is 0 (employee has ${commissionRate}% rate)`;
+      }
+
+      return {
+        itemId: item.id,
+        itemName,
+        serviceId: item.serviceId || undefined,
+        productId: item.productId || undefined,
+        lineTotal,
+        salonEmployeeId: item.salonEmployeeId || undefined,
+        employeeName: employeeName || undefined,
+        employeeCommissionRate:
+          commissionRate !== undefined ? Number(commissionRate) : undefined,
+        hasCommission,
+        commissionAmount: hasCommission ? commissionAmount : undefined,
+        issue,
+      };
+    });
+
+    const itemsWithEmployee = diagnosticItems.filter(
+      (item) => item.salonEmployeeId,
+    ).length;
+    const itemsWithCommissions = diagnosticItems.filter(
+      (item) => item.hasCommission,
+    ).length;
+    const itemsWithoutCommissions = diagnosticItems.filter(
+      (item) => !item.hasCommission && item.salonEmployeeId,
+    ).length;
+    const issues = diagnosticItems
+      .filter((item) => item.issue)
+      .map((item) => `${item.itemName}: ${item.issue}`);
+
+    return {
+      saleId,
+      saleFound: true,
+      items: diagnosticItems,
+      summary: {
+        totalItems: items.length,
+        itemsWithEmployee,
+        itemsWithCommissions,
+        itemsWithoutCommissions,
+        issues,
+      },
+    };
+  }
+
+  async reprocessCommissions(saleId: string): Promise<{
+    success: boolean;
+    commissionsCreated: number;
+    commissionsSkipped: number;
+    message: string;
+  }> {
+    try {
+      // Check if commissions already exist
+      const items = await this.saleItemsRepository.find({
+        where: { saleId },
+        relations: ['salonEmployee', 'service', 'product'],
+      });
+
+      const itemIds = items.map((item) => item.id);
+      const existingCommissions =
+        itemIds.length > 0
+          ? await this.commissionsService.findBySaleItemIds(itemIds)
+          : [];
+
+      // Only process items that don't have commissions yet
+      const itemsWithoutCommissions = items.filter((item) => {
+        return !existingCommissions.some((comm) => comm.saleItemId === item.id);
+      });
+
+      let commissionsCreated = 0;
+      let commissionsSkipped = 0;
+
+      for (const item of itemsWithoutCommissions) {
+        if (
+          item.salonEmployeeId &&
+          item.lineTotal &&
+          Number(item.lineTotal) > 0
+        ) {
+          try {
+            const commission = await this.commissionsService.createCommission(
+              item.salonEmployeeId,
+              item.id,
+              Number(item.lineTotal),
+              {
+                saleId: saleId,
+                source: 'sale',
+                serviceId: item.serviceId || null,
+                productId: item.productId || null,
+              },
+            );
+            commissionsCreated++;
+            this.logger.log(
+              `✅ Retroactively created commission for sale ${saleId}, item ${item.id}: RWF ${commission.amount}`,
+            );
+          } catch (error) {
+            commissionsSkipped++;
+            this.logger.error(
+              `Failed to retroactively create commission for sale ${saleId}, item ${item.id}: ${error.message}`,
+            );
+          }
+        } else {
+          commissionsSkipped++;
+        }
+      }
+
+      return {
+        success: true,
+        commissionsCreated,
+        commissionsSkipped,
+        message: `Processed ${itemsWithoutCommissions.length} items: ${commissionsCreated} commissions created, ${commissionsSkipped} skipped`,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to reprocess commissions for sale ${saleId}: ${error.message}`,
+      );
+      return {
+        success: false,
+        commissionsCreated: 0,
+        commissionsSkipped: 0,
+        message: `Error: ${error.message}`,
+      };
+    }
   }
 
   async getCustomerStatistics(customerId: string): Promise<{

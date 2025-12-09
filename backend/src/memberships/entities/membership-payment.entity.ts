@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Membership } from './membership.entity';
 
@@ -46,7 +55,12 @@ export class MembershipPayment {
   @Column({ name: 'total_amount', type: 'decimal', precision: 14, scale: 2 })
   totalAmount: number; // 3000 RWF per year
 
-  @Column({ name: 'installment_amount', type: 'decimal', precision: 14, scale: 2 })
+  @Column({
+    name: 'installment_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+  })
   installmentAmount: number; // 1500 RWF per installment
 
   @Column({ name: 'due_date', type: 'date' })
@@ -60,7 +74,13 @@ export class MembershipPayment {
   @Index()
   status: PaymentStatus;
 
-  @Column({ name: 'paid_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'paid_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   paidAmount: number;
 
   @Column({ name: 'paid_date', type: 'date', nullable: true })
@@ -94,4 +114,3 @@ export class MembershipPayment {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

@@ -1,4 +1,11 @@
-import { IsString, IsUUID, IsNumber, IsOptional, IsBoolean, Min } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateServiceDto {
@@ -36,4 +43,3 @@ export class CreateServiceDto {
   @IsBoolean()
   isActive?: boolean;
 }
-

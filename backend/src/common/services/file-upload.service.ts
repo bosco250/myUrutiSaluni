@@ -20,13 +20,22 @@ export class FileUploadService {
     }
   }
 
-  async saveFile(file: Express.Multer.File, subfolder: string = 'style-references'): Promise<{ filename: string; path: string; url: string }> {
+  async saveFile(
+    file: Express.Multer.File,
+    subfolder: string = 'style-references',
+  ): Promise<{ filename: string; path: string; url: string }> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
 
     // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ];
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
         `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`,
@@ -64,7 +73,10 @@ export class FileUploadService {
     };
   }
 
-  async deleteFile(filename: string, subfolder: string = 'style-references'): Promise<void> {
+  async deleteFile(
+    filename: string,
+    subfolder: string = 'style-references',
+  ): Promise<void> {
     const filePath = path.join(this.uploadPath, subfolder, filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -76,4 +88,3 @@ export class FileUploadService {
     return `${baseUrl}/uploads/${subfolder}/${filename}`;
   }
 }
-

@@ -1,4 +1,12 @@
-import { IsUUID, IsString, IsDateString, IsOptional, IsEnum, IsArray, ValidateNested, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsDateString,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { JournalEntryStatus } from '../entities/journal-entry.entity';
@@ -52,7 +60,11 @@ export class CreateJournalEntryDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ enum: JournalEntryStatus, required: false, default: JournalEntryStatus.DRAFT })
+  @ApiProperty({
+    enum: JournalEntryStatus,
+    required: false,
+    default: JournalEntryStatus.DRAFT,
+  })
   @IsOptional()
   @IsEnum(JournalEntryStatus)
   status?: JournalEntryStatus;
@@ -63,4 +75,3 @@ export class CreateJournalEntryDto {
   @Type(() => CreateJournalEntryLineDto)
   lines: CreateJournalEntryLineDto[];
 }
-

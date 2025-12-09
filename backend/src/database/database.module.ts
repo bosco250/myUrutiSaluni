@@ -48,7 +48,7 @@ import { PayrollItem } from '../payroll/entities/payroll-item.entity';
         const dbType = configService.get('DB_TYPE', 'postgres');
         const nodeEnv = configService.get('NODE_ENV', 'development');
         const isDevelopment = nodeEnv !== 'production';
-        
+
         const entities = [
           User,
           Salon,
@@ -88,16 +88,21 @@ import { PayrollItem } from '../payroll/entities/payroll-item.entity';
           PayrollRun,
           PayrollItem,
         ];
-        
+
         // Use PostgreSQL by default, SQLite only if explicitly set
         if (dbType === 'sqlite') {
-          const dbPath = configService.get('DB_DATABASE', 'database/salon_association.db');
+          const dbPath = configService.get(
+            'DB_DATABASE',
+            'database/salon_association.db',
+          );
           return {
             type: 'better-sqlite3',
             database: dbPath,
             entities,
             synchronize: isDevelopment, // Auto-create tables in development
-            logging: isDevelopment ? ['error', 'warn', 'schema', 'migration'] : ['error'],
+            logging: isDevelopment
+              ? ['error', 'warn', 'schema', 'migration']
+              : ['error'],
             migrations: ['dist/migrations/*.js'],
           };
         } else {
@@ -114,7 +119,10 @@ import { PayrollItem } from '../payroll/entities/payroll-item.entity';
             logging: isDevelopment ? ['error', 'warn', 'migration'] : ['error'],
             migrations: ['dist/migrations/*.js'],
             migrationsRun: false,
-            ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+            ssl:
+              configService.get('DB_SSL') === 'true'
+                ? { rejectUnauthorized: false }
+                : false,
             extra: {
               max: 20,
               connectionTimeoutMillis: 5000,
@@ -129,4 +137,3 @@ import { PayrollItem } from '../payroll/entities/payroll-item.entity';
   exports: [TypeOrmModule],
 })
 export class DatabaseModule {}
-

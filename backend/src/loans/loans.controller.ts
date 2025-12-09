@@ -42,4 +42,3 @@ export class LoansController {
     return this.loansService.calculateCreditScore(userId);
   }
 }
-

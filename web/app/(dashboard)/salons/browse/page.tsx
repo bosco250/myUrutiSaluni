@@ -24,7 +24,7 @@ interface Salon {
 
 export default function BrowseSalonsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER]}>
+    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE]}>
       <BrowseSalonsContent />
     </ProtectedRoute>
   );
@@ -42,7 +42,7 @@ function BrowseSalonsContent() {
     queryKey: ['salons-browse'],
     queryFn: async () => {
       try {
-        const response = await api.get('/salons');
+        const response = await api.get('/salons?browse=true');
         // Handle different response structures: { data: [...] } or [...]
         const salonsData = response.data?.data || response.data;
         const salonsArray = Array.isArray(salonsData) ? salonsData : [];

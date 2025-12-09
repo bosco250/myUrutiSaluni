@@ -1,4 +1,11 @@
-import { IsUUID, IsString, IsNumber, IsOptional, IsEnum, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsEnum,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { InventoryMovementType } from '../entities/inventory-movement.entity';
 
@@ -31,4 +38,3 @@ export class CreateMovementDto {
   @IsString()
   notes?: string;
 }
-

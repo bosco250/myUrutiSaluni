@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CustomersService } from './customers.service';
 import { CustomersController } from './customers.controller';
@@ -38,4 +38,3 @@ import { CustomerCommunicationService } from './customer-communication.service';
   ],
 })
 export class CustomersModule {}
-

@@ -396,7 +396,31 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredCustomers.map((customer) => (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-5 h-5 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-gray-600 dark:text-gray-400">Loading customers...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <User className="w-12 h-12 text-gray-400 mb-2" />
+                        <p className="text-gray-600 dark:text-gray-400 font-medium">No customers found</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">
+                          {searchQuery || filterType !== 'all'
+                            ? 'Try adjusting your search or filters'
+                            : 'Get started by adding your first customer'}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -474,7 +498,8 @@ export default function CustomersPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

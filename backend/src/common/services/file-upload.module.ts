@@ -6,4 +6,3 @@ import { FileUploadService } from './file-upload.service';
   exports: [FileUploadService],
 })
 export class FileUploadModule {}
-

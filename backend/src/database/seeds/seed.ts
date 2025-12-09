@@ -44,7 +44,6 @@ async function runSeeds() {
   console.log('🌱 Starting database seeding...\n');
 
   const dbType = configService.get('DB_TYPE', 'postgres');
-  const isDevelopment = configService.get('NODE_ENV') !== 'production';
 
   let dataSource: DataSource;
 
@@ -83,9 +82,12 @@ async function runSeeds() {
 
   try {
     if (dbType === 'sqlite') {
-      const dbPath = configService.get('DB_DATABASE', 'database/salon_association.db');
+      const dbPath = configService.get(
+        'DB_DATABASE',
+        'database/salon_association.db',
+      );
       console.log(`📂 Using SQLite database: ${dbPath}\n`);
-      
+
       dataSource = new DataSource({
         type: 'better-sqlite3',
         database: dbPath,
@@ -95,7 +97,7 @@ async function runSeeds() {
       });
     } else {
       console.log(`📂 Using PostgreSQL database\n`);
-      
+
       dataSource = new DataSource({
         type: 'postgres',
         host: configService.get('DB_HOST', 'localhost'),
@@ -106,7 +108,10 @@ async function runSeeds() {
         entities,
         synchronize: true, // Enable to auto-create tables for development
         logging: false,
-        ssl: configService.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        ssl:
+          configService.get('DB_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
       });
     }
 
@@ -127,10 +132,11 @@ async function runSeeds() {
     console.log('   - All salon owners have the password: Password123!');
     console.log('\n🎯 You can now:');
     console.log('   - Login with any salon owner account');
-    console.log('   - Review membership applications at /membership/applications');
+    console.log(
+      '   - Review membership applications at /membership/applications',
+    );
     console.log('   - View appointments at /appointments');
     console.log('   - Approve/reject pending applications');
-    
   } catch (error) {
     console.error('\n❌ Seeding failed:', error);
     throw error;

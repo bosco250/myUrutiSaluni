@@ -11,7 +11,13 @@ import { SalonsModule } from '../salons/salons.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MembershipApplication, Membership, MembershipPayment, User, Salon]),
+    TypeOrmModule.forFeature([
+      MembershipApplication,
+      Membership,
+      MembershipPayment,
+      User,
+      Salon,
+    ]),
     forwardRef(() => SalonsModule),
   ],
   controllers: [MembershipsController],

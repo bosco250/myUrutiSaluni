@@ -1,4 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  OneToMany,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 import { User } from '../../users/entities/user.entity';
 import { JournalEntryLine } from './journal-entry-line.entity';
@@ -52,7 +62,9 @@ export class JournalEntry {
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 
-  @OneToMany(() => JournalEntryLine, line => line.journalEntry, { cascade: true })
+  @OneToMany(() => JournalEntryLine, (line) => line.journalEntry, {
+    cascade: true,
+  })
   lines: JournalEntryLine[];
 
   @CreateDateColumn({ name: 'created_at' })
@@ -61,4 +73,3 @@ export class JournalEntry {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

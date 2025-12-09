@@ -28,6 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 interface Commission {
   id: string;
@@ -108,33 +109,119 @@ function CommissionsContent() {
     start: '',
     end: '',
   });
+  const [selectedQuickFilter, setSelectedQuickFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch commissions
-  // Backend automatically filters to employee's own commissions for SALON_EMPLOYEE role
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateRange = (filter: string): { start: string; end: string } => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    switch (filter) {
+      case 'today': {
+        const start = formatLocalDate(today);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      case 'yesterday': {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const start = formatLocalDate(yesterday);
+        const end = formatLocalDate(yesterday);
+        return { start, end };
+      }
+      case 'thisWeek': {
+        const startOfWeek = new Date(today);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+        const start = formatLocalDate(startOfWeek);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      case 'thisMonth': {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const start = formatLocalDate(startOfMonth);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      case 'lastMonth': {
+        const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        const start = formatLocalDate(startOfLastMonth);
+        const end = formatLocalDate(endOfLastMonth);
+        return { start, end };
+      }
+      case 'thisYear': {
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        const start = formatLocalDate(startOfYear);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      default:
+        return { start: '', end: '' };
+    }
+  };
+
+  const handleQuickFilter = async (filter: string) => {
+    try {
+      setSelectedQuickFilter(filter);
+      if (filter === 'all') {
+        setDateRange({ start: '', end: '' });
+      } else {
+        const range = getDateRange(filter);
+        if (!range.start || !range.end) {
+          console.error('Invalid date range for filter:', filter);
+          return;
+        }
+        setDateRange(range);
+      }
+      await refetch();
+    } catch (error) {
+      console.error('Error applying filter:', error);
+    }
+  };
+
   const {
     data: commissions = [],
     isLoading,
+    isRefetching,
     error,
+    refetch,
   } = useQuery<Commission[]>({
-    queryKey: ['commissions', statusFilter, employeeFilter, dateRange, user?.role, user?.id],
+    queryKey: ['commissions', statusFilter, employeeFilter, dateRange.start, dateRange.end, user?.role, user?.id],
     queryFn: async () => {
+      try {
       const params = new URLSearchParams();
       if (statusFilter === 'paid') params.append('paid', 'true');
       if (statusFilter === 'unpaid') params.append('paid', 'false');
-      // Only add employee filter for non-employees (owners/admins)
-      // Backend automatically filters for employees based on their user ID
       if (user?.role !== UserRole.SALON_EMPLOYEE && employeeFilter && employeeFilter !== 'all') {
         params.append('salonEmployeeId', employeeFilter);
       }
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
 
-      const response = await api.get(`/commissions?${params.toString()}`);
-      return response.data || [];
+        const response = await api.get(`/commissions?${params.toString()}`);
+        return response.data || [];
+      } catch (err: any) {
+        console.error('Error fetching commissions:', err);
+        throw new Error(
+          err?.response?.data?.message || 
+          err?.message || 
+          'Failed to load commissions. Please try again.'
+        );
+      }
     },
     enabled: !!user,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Fetch employees for filter (if user is owner/admin)
@@ -190,7 +277,6 @@ function CommissionsContent() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedCommissions = filteredCommissions.slice(startIndex, endIndex);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, employeeFilter, dateRange.start, dateRange.end]);
@@ -321,10 +407,19 @@ function CommissionsContent() {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
-          <p className="text-danger font-semibold mb-2">Failed to load commissions</p>
-          <p className="text-danger/80 text-sm mb-2">{errorMessage}</p>
+          <X className="w-12 h-12 text-danger mx-auto mb-4" />
+          <p className="text-danger font-semibold mb-2 text-lg">Failed to load commissions</p>
+          <p className="text-danger/80 text-sm mb-4">{errorMessage}</p>
+          <Button
+            onClick={() => refetch()}
+            variant="primary"
+            className="mt-4"
+          >
+            <Loader2 className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
           {user?.role === UserRole.SALON_EMPLOYEE && (
-            <p className="text-text-light/60 dark:text-text-dark/60 text-xs">
+            <p className="text-text-light/60 dark:text-text-dark/60 text-xs mt-4">
               If you don't have an employee record, please contact your salon owner to set up your
               employee profile.
             </p>
@@ -401,6 +496,112 @@ function CommissionsContent() {
 
       {/* Filters */}
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
+        {/* Quick Date Filters */}
+        <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
+          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            Quick Date Filters
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleQuickFilter('all')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'all'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'all' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              All Time
+            </button>
+            <button
+              onClick={() => handleQuickFilter('today')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'today'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'today' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              Today
+            </button>
+            <button
+              onClick={() => handleQuickFilter('yesterday')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'yesterday'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'yesterday' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              Yesterday
+            </button>
+            <button
+              onClick={() => handleQuickFilter('thisWeek')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'thisWeek'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'thisWeek' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              This Week
+            </button>
+            <button
+              onClick={() => handleQuickFilter('thisMonth')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'thisMonth'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'thisMonth' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              This Month
+            </button>
+            <button
+              onClick={() => handleQuickFilter('lastMonth')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'lastMonth'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'lastMonth' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              Last Month
+            </button>
+            <button
+              onClick={() => handleQuickFilter('thisYear')}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                selectedQuickFilter === 'thisYear'
+                  ? 'bg-primary text-white'
+                  : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {isLoading && selectedQuickFilter === 'thisYear' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              This Year
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-2">
             <div className="relative">
@@ -466,7 +667,15 @@ function CommissionsContent() {
             <input
               type="date"
               value={dateRange.start}
-              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              onChange={async (e) => {
+                setDateRange({ ...dateRange, start: e.target.value });
+                setSelectedQuickFilter('custom');
+                try {
+                  await refetch();
+                } catch (error) {
+                  console.error('Error refetching commissions:', error);
+                }
+              }}
               className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
@@ -477,7 +686,15 @@ function CommissionsContent() {
             <input
               type="date"
               value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              onChange={async (e) => {
+                setDateRange({ ...dateRange, end: e.target.value });
+                setSelectedQuickFilter('custom');
+                try {
+                  await refetch();
+                } catch (error) {
+                  console.error('Error refetching commissions:', error);
+                }
+              }}
               className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
@@ -523,16 +740,39 @@ function CommissionsContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {filteredCommissions.length === 0 ? (
+              {isLoading || isRefetching ? (
+                <tr>
+                  <td colSpan={10} className="px-6 py-8">
+                    <div className="flex items-center justify-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-text-light/60 dark:text-text-dark/60">
+                        Loading commissions...
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredCommissions.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-text-light/60 dark:text-text-dark/60">
-                        {user?.role === UserRole.SALON_EMPLOYEE
+                      <Calendar className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
+                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                        {selectedQuickFilter !== 'all' && (dateRange.start || dateRange.end)
+                          ? `No commissions found for the selected period`
+                          : user?.role === UserRole.SALON_EMPLOYEE
                           ? 'You have no commissions yet'
                           : 'No commissions found'}
                       </p>
-                      {user?.role === UserRole.SALON_EMPLOYEE && (
+                      {selectedQuickFilter !== 'all' && (dateRange.start || dateRange.end) && (
+                        <p className="text-xs text-text-light/40 dark:text-text-dark/40">
+                          {dateRange.start && dateRange.end
+                            ? `Period: ${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}`
+                            : dateRange.start
+                            ? `From: ${new Date(dateRange.start).toLocaleDateString()}`
+                            : `Until: ${new Date(dateRange.end).toLocaleDateString()}`}
+                        </p>
+                      )}
+                      {user?.role === UserRole.SALON_EMPLOYEE && selectedQuickFilter === 'all' && (
                         <p className="text-xs text-text-light/40 dark:text-text-dark/40">
                           Commissions will appear here when sales or appointments are completed with
                           you assigned

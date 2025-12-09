@@ -1,9 +1,10 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateWaitlistEntryDto } from './create-waitlist-entry.dto';
 
-export class UpdateWaitlistEntryDto extends PartialType(CreateWaitlistEntryDto) {
+export class UpdateWaitlistEntryDto extends PartialType(
+  CreateWaitlistEntryDto,
+) {
   status?: string;
   appointmentId?: string;
   contactedAt?: Date;
 }
-

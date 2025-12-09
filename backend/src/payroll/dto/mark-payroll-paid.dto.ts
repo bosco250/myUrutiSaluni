@@ -6,9 +6,11 @@ export class MarkPayrollPaidDto {
   @IsString()
   paymentMethod: string;
 
-  @ApiProperty({ description: 'Payment reference/transaction ID', required: false })
+  @ApiProperty({
+    description: 'Payment reference/transaction ID',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   paymentReference?: string;
 }
-

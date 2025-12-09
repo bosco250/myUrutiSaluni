@@ -1,4 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, Unique } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  Unique,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 
 export enum AccountType {
@@ -56,4 +66,3 @@ export class ChartOfAccount {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

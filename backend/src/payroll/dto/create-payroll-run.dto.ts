@@ -1,4 +1,4 @@
-import { IsString, IsDateString, IsUUID } from 'class-validator';
+import { IsDateString, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePayrollRunDto {
@@ -14,4 +14,3 @@ export class CreatePayrollRunDto {
   @IsDateString()
   periodEnd: string;
 }
-

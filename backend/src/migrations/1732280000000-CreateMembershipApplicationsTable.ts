@@ -1,6 +1,14 @@
-import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  Table,
+  TableForeignKey,
+  TableIndex,
+} from 'typeorm';
 
-export class CreateMembershipApplicationsTable1732280000000 implements MigrationInterface {
+export class CreateMembershipApplicationsTable1732280000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
@@ -10,12 +18,14 @@ export class CreateMembershipApplicationsTable1732280000000 implements Migration
             name: 'id',
             type: 'uuid',
             isPrimary: true,
-            default: queryRunner.connection.driver.options.type === 'postgres' 
-              ? 'uuid_generate_v4()' 
-              : undefined,
-            generationStrategy: queryRunner.connection.driver.options.type === 'postgres' 
-              ? 'uuid' 
-              : undefined,
+            default:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'uuid_generate_v4()'
+                : undefined,
+            generationStrategy:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'uuid'
+                : undefined,
           },
           {
             name: 'applicant_id',
@@ -91,33 +101,49 @@ export class CreateMembershipApplicationsTable1732280000000 implements Migration
           },
           {
             name: 'reviewed_at',
-            type: queryRunner.connection.driver.options.type === 'postgres' ? 'timestamp' : 'datetime',
+            type:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'timestamp'
+                : 'datetime',
             isNullable: true,
           },
           {
             name: 'metadata',
-            type: queryRunner.connection.driver.options.type === 'postgres' ? 'jsonb' : 'text',
-            default: queryRunner.connection.driver.options.type === 'postgres' 
-              ? "'{}'::jsonb" 
-              : "'{}'",
+            type:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'jsonb'
+                : 'text',
+            default:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? "'{}'::jsonb"
+                : "'{}'",
             isNullable: true,
           },
           {
             name: 'created_at',
-            type: queryRunner.connection.driver.options.type === 'postgres' ? 'timestamp' : 'datetime',
-            default: queryRunner.connection.driver.options.type === 'postgres' 
-              ? 'CURRENT_TIMESTAMP' 
-              : "CURRENT_TIMESTAMP",
+            type:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'timestamp'
+                : 'datetime',
+            default:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'CURRENT_TIMESTAMP'
+                : 'CURRENT_TIMESTAMP',
           },
           {
             name: 'updated_at',
-            type: queryRunner.connection.driver.options.type === 'postgres' ? 'timestamp' : 'datetime',
-            default: queryRunner.connection.driver.options.type === 'postgres' 
-              ? 'CURRENT_TIMESTAMP' 
-              : "CURRENT_TIMESTAMP",
-            onUpdate: queryRunner.connection.driver.options.type === 'postgres' 
-              ? undefined 
-              : "CURRENT_TIMESTAMP",
+            type:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'timestamp'
+                : 'datetime',
+            default:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? 'CURRENT_TIMESTAMP'
+                : 'CURRENT_TIMESTAMP',
+            onUpdate:
+              queryRunner.connection.driver.options.type === 'postgres'
+                ? undefined
+                : 'CURRENT_TIMESTAMP',
           },
         ],
       }),
@@ -173,23 +199,34 @@ export class CreateMembershipApplicationsTable1732280000000 implements Migration
         (fk) => fk.columnNames.indexOf('applicant_id') !== -1,
       );
       if (foreignKeyApplicant) {
-        await queryRunner.dropForeignKey('membership_applications', foreignKeyApplicant);
+        await queryRunner.dropForeignKey(
+          'membership_applications',
+          foreignKeyApplicant,
+        );
       }
 
       const foreignKeyReviewedBy = table.foreignKeys.find(
         (fk) => fk.columnNames.indexOf('reviewed_by_id') !== -1,
       );
       if (foreignKeyReviewedBy) {
-        await queryRunner.dropForeignKey('membership_applications', foreignKeyReviewedBy);
+        await queryRunner.dropForeignKey(
+          'membership_applications',
+          foreignKeyReviewedBy,
+        );
       }
     }
 
     // Drop indexes
-    await queryRunner.dropIndex('membership_applications', 'IDX_membership_applications_applicant');
-    await queryRunner.dropIndex('membership_applications', 'IDX_membership_applications_status');
+    await queryRunner.dropIndex(
+      'membership_applications',
+      'IDX_membership_applications_applicant',
+    );
+    await queryRunner.dropIndex(
+      'membership_applications',
+      'IDX_membership_applications_status',
+    );
 
     // Drop table
     await queryRunner.dropTable('membership_applications');
   }
 }
-

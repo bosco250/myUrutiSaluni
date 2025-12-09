@@ -26,4 +26,3 @@ export class CreateCustomerDto {
   @IsNumber()
   loyaltyPoints?: number;
 }
-

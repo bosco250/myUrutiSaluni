@@ -12,4 +12,3 @@ import { SalonsModule } from '../salons/salons.module';
   exports: [ServicesService],
 })
 export class ServicesModule {}
-

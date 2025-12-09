@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Salon } from '../../salons/entities/salon.entity';
 
@@ -46,10 +55,22 @@ export class AirtelAgent {
   @Column({ length: 32, default: 'pending' })
   status: string;
 
-  @Column({ name: 'float_balance', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'float_balance',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   floatBalance: number;
 
-  @Column({ name: 'total_commissions', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'total_commissions',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   totalCommissions: number;
 
   @Column({ name: 'registered_at', type: 'timestamp', nullable: true })
@@ -64,4 +85,3 @@ export class AirtelAgent {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

@@ -65,7 +65,7 @@ interface SalonEmployee {
 
 export default function SalonDetailsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER]}>
+    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE]}>
       <SalonDetailsContent />
     </ProtectedRoute>
   );
@@ -84,7 +84,7 @@ function SalonDetailsContent() {
   const { data: salon, isLoading: isLoadingSalon } = useQuery<Salon>({
     queryKey: ['salon', salonId],
     queryFn: async () => {
-      const response = await api.get(`/salons/${salonId}`);
+      const response = await api.get(`/salons/${salonId}?browse=true`);
       // Handle different response structures: { data: {...} } or {...}
       const salonData = response.data?.data || response.data;
       return salonData;
@@ -128,7 +128,7 @@ function SalonDetailsContent() {
     queryKey: ['salon-employees-browse', salonId],
     queryFn: async () => {
       try {
-        const response = await api.get(`/salons/${salonId}/employees`);
+        const response = await api.get(`/salons/${salonId}/employees?browse=true`);
         // Handle different response structures: { data: [...] } or [...]
         const employeesData = response.data?.data || response.data;
         const employeesArray = Array.isArray(employeesData) ? employeesData : [];

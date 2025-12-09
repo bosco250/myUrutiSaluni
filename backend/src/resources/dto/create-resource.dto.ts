@@ -1,5 +1,19 @@
-import { IsString, IsBoolean, IsOptional, IsEnum, IsArray, IsInt, Min, IsUrl, MaxLength } from 'class-validator';
-import { ResourceType, ResourceCategory, ResourceStatus } from '../entities/resource.entity';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  IsInt,
+  Min,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
+import {
+  ResourceType,
+  ResourceCategory,
+  ResourceStatus,
+} from '../entities/resource.entity';
 
 export class CreateResourceDto {
   @IsString()
@@ -75,4 +89,3 @@ export class CreateResourceDto {
   @IsOptional()
   metadata?: Record<string, any>;
 }
-

@@ -1,4 +1,13 @@
-import { IsUUID, IsNumber, IsOptional, IsEnum, IsString, IsArray, ValidateNested, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  IsEnum,
+  IsString,
+  IsArray,
+  ValidateNested,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from '../entities/sale.entity';
@@ -67,4 +76,3 @@ export class CreateSaleDto {
   @Type(() => CreateSaleItemDto)
   items: CreateSaleItemDto[];
 }
-

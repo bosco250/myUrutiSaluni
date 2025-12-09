@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
 export enum UserRole {
   SUPER_ADMIN = 'super_admin',
@@ -35,7 +42,12 @@ export class User {
   role: UserRole;
 
   @Index()
-  @Column({ name: 'membership_number', unique: true, nullable: true, length: 128 })
+  @Column({
+    name: 'membership_number',
+    unique: true,
+    nullable: true,
+    length: 128,
+  })
   membershipNumber: string;
 
   @Column({ type: 'simple-json', default: '{}' })
@@ -50,4 +62,3 @@ export class User {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { Plus, Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock, Loader2 } from 'lucide-react';
 import React, { useState, Fragment } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -355,7 +355,33 @@ function SalonEmployeesContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {employees.map((employee) => (
+                {isLoadingEmployees ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8">
+                      <div className="flex items-center justify-center gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        <span className="text-text-light/60 dark:text-text-dark/60">
+                          Loading employees...
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Users className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
+                        <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                          No employees found
+                        </p>
+                        <p className="text-xs text-text-light/40 dark:text-text-dark/40">
+                          Add your first employee to get started
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  employees.map((employee) => (
                   <tr
                     key={employee.id}
                     className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
@@ -541,7 +567,8 @@ function SalonEmployeesContent() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,10 +20,16 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { Salon } from '../salons/entities/salon.entity';
-import { CreateMembershipApplicationDto, ReviewApplicationDto } from './dto/create-membership-application.dto';
+import {
+  CreateMembershipApplicationDto,
+  ReviewApplicationDto,
+} from './dto/create-membership-application.dto';
 import { CreateMembershipDto } from './dto/create-membership.dto';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
-import { CreateMembershipPaymentDto, RecordPaymentDto } from './dto/create-membership-payment.dto';
+import {
+  CreateMembershipPaymentDto,
+  RecordPaymentDto,
+} from './dto/create-membership-payment.dto';
 import { ApplicationStatus } from './entities/membership-application.entity';
 
 @ApiTags('Memberships')
@@ -29,7 +46,10 @@ export class MembershipsController {
   @Post('apply')
   @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Apply for membership' })
-  async apply(@Body() createDto: CreateMembershipApplicationDto, @CurrentUser() user: any) {
+  async apply(
+    @Body() createDto: CreateMembershipApplicationDto,
+    @CurrentUser() user: any,
+  ) {
     return this.membershipsService.createApplication(user.id, createDto);
   }
 
@@ -59,12 +79,15 @@ export class MembershipsController {
   @ApiOperation({ summary: 'Get a membership application by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const application = await this.membershipsService.findOne(id);
-    
+
     // Salon owners can only view their own application
-    if (user.role === UserRole.SALON_OWNER && application.applicantId !== user.id) {
+    if (
+      user.role === UserRole.SALON_OWNER &&
+      application.applicantId !== user.id
+    ) {
       throw new ForbiddenException('You can only view your own application');
     }
-    
+
     return application;
   }
 
@@ -76,27 +99,38 @@ export class MembershipsController {
     @Body() reviewDto: ReviewApplicationDto,
     @CurrentUser() user: any,
   ) {
-    console.log(`[Membership Controller] Reviewing application ${id} with status: ${reviewDto.status}`);
+    console.log(
+      `[Membership Controller] Reviewing application ${id} with status: ${reviewDto.status}`,
+    );
     console.log(`[Membership Controller] Reviewer: ${user.id} (${user.email})`);
-    
-    const result = await this.membershipsService.reviewApplication(id, user.id, reviewDto);
-    
-    console.log(`[Membership Controller] Review completed. Application status: ${result.status}`);
-    
+
+    const result = await this.membershipsService.reviewApplication(
+      id,
+      user.id,
+      reviewDto,
+    );
+
+    console.log(
+      `[Membership Controller] Review completed. Application status: ${result.status}`,
+    );
+
     // If approved, return message about re-authentication
     if (reviewDto.status === ApplicationStatus.APPROVED) {
       // Verify the applicant's role was updated
       const applicantRole = result.applicant?.role;
-      console.log(`[Membership Controller] Applicant role after approval: ${applicantRole}`);
-      
+      console.log(
+        `[Membership Controller] Applicant role after approval: ${applicantRole}`,
+      );
+
       return {
         ...result,
-        message: 'Application approved successfully. The user role has been updated to SALON_OWNER. The user must log out and log back in to access new features.',
+        message:
+          'Application approved successfully. The user role has been updated to SALON_OWNER. The user must log out and log back in to access new features.',
         requiresReauth: true,
         roleUpdated: applicantRole === UserRole.SALON_OWNER,
       };
     }
-    
+
     return result;
   }
 
@@ -113,7 +147,10 @@ export class MembershipsController {
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Create a membership for a salon' })
-  async createMembership(@Body() createDto: CreateMembershipDto, @CurrentUser() user: any) {
+  async createMembership(
+    @Body() createDto: CreateMembershipDto,
+    @CurrentUser() user: any,
+  ) {
     // Salon owners can only create memberships for their own salons
     if (user.role === UserRole.SALON_OWNER) {
       // Verify salon ownership - check if salon exists and belongs to user
@@ -121,50 +158,73 @@ export class MembershipsController {
         where: { id: createDto.salonId },
       });
       if (!salon || salon.ownerId !== user.id) {
-        throw new ForbiddenException('You can only create memberships for your own salons');
+        throw new ForbiddenException(
+          'You can only create memberships for your own salons',
+        );
       }
     }
     return this.membershipsService.createMembership(createDto);
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+  )
   @ApiOperation({ summary: 'Get all memberships' })
-  async findAllMemberships(@Query('salonId') salonId?: string, @CurrentUser() user?: any) {
+  async findAllMemberships(
+    @Query('salonId') salonId?: string,
+    @CurrentUser() user?: any,
+  ) {
     // Salon owners can only see memberships for their own salons
     if (user?.role === UserRole.SALON_OWNER) {
       // Get user's salons and filter memberships
       const salons = await this.salonsRepository.find({
         where: { ownerId: user.id },
       });
-      const salonIds = salons.map(s => s.id);
+      const salonIds = salons.map((s) => s.id);
       if (salonIds.length === 0) {
         return [];
       }
       const allMemberships = await this.membershipsService.findAllMemberships();
-      return allMemberships.filter(m => salonIds.includes(m.salonId));
+      return allMemberships.filter((m) => salonIds.includes(m.salonId));
     }
     return this.membershipsService.findAllMemberships(salonId);
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+  )
   @ApiOperation({ summary: 'Get a membership by ID' })
   async findOneMembership(@Param('id') id: string, @CurrentUser() user: any) {
     const membership = await this.membershipsService.findOneMembership(id);
-    
+
     // Salon owners can only view memberships for their own salons
-    if (user.role === UserRole.SALON_OWNER && membership.salon.ownerId !== user.id) {
-      throw new ForbiddenException('You can only view memberships for your own salons');
+    if (
+      user.role === UserRole.SALON_OWNER &&
+      membership.salon.ownerId !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You can only view memberships for your own salons',
+      );
     }
-    
+
     return membership;
   }
 
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Update a membership' })
-  async updateMembership(@Param('id') id: string, @Body() updateDto: UpdateMembershipDto) {
+  async updateMembership(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateMembershipDto,
+  ) {
     return this.membershipsService.updateMembership(id, updateDto);
   }
 
@@ -178,7 +238,10 @@ export class MembershipsController {
   @Patch(':id/renew')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Renew a membership' })
-  async renewMembership(@Param('id') id: string, @Body() body: { endDate: string }) {
+  async renewMembership(
+    @Param('id') id: string,
+    @Body() body: { endDate: string },
+  ) {
     return this.membershipsService.renewMembership(id, new Date(body.endDate));
   }
 
@@ -216,7 +279,10 @@ export class MembershipsController {
   @Post('payments/record')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Record a payment for a membership contribution' })
-  async recordPayment(@Body() recordDto: RecordPaymentDto, @CurrentUser() user: any) {
+  async recordPayment(
+    @Body() recordDto: RecordPaymentDto,
+    @CurrentUser() user: any,
+  ) {
     return this.membershipsService.recordPayment(recordDto, user.id);
   }
 
@@ -232,7 +298,10 @@ export class MembershipsController {
     if (user.role === UserRole.SALON_OWNER && memberId !== user.id) {
       throw new ForbiddenException('You can only view your own payments');
     }
-    return this.membershipsService.findPaymentsByMember(memberId, year ? parseInt(year) : undefined);
+    return this.membershipsService.findPaymentsByMember(
+      memberId,
+      year ? parseInt(year) : undefined,
+    );
   }
 
   @Get('payments/year/:year')
@@ -244,7 +313,9 @@ export class MembershipsController {
 
   @Get('payments/status/:memberId/:year')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
-  @ApiOperation({ summary: 'Get payment status for a member for a specific year' })
+  @ApiOperation({
+    summary: 'Get payment status for a member for a specific year',
+  })
   async getPaymentStatus(
     @Param('memberId') memberId: string,
     @Param('year') year: string,
@@ -259,8 +330,16 @@ export class MembershipsController {
 
   @Post('payments/initialize/:memberId/:year')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
-  @ApiOperation({ summary: 'Initialize yearly payment installments for a member' })
-  async initializePayments(@Param('memberId') memberId: string, @Param('year') year: string) {
-    return this.membershipsService.initializeYearlyPayments(memberId, parseInt(year));
+  @ApiOperation({
+    summary: 'Initialize yearly payment installments for a member',
+  })
+  async initializePayments(
+    @Param('memberId') memberId: string,
+    @Param('year') year: string,
+  ) {
+    return this.membershipsService.initializeYearlyPayments(
+      memberId,
+      parseInt(year),
+    );
   }
 }

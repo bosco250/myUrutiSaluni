@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { JournalEntry } from './journal-entry.entity';
 import { ChartOfAccount } from './chart-of-account.entity';
 
@@ -21,10 +28,22 @@ export class JournalEntryLine {
   @Column({ name: 'account_id' })
   accountId: string;
 
-  @Column({ name: 'debit_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'debit_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   debitAmount: number;
 
-  @Column({ name: 'credit_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'credit_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   creditAmount: number;
 
   @Column({ type: 'text', nullable: true })
@@ -39,4 +58,3 @@ export class JournalEntryLine {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

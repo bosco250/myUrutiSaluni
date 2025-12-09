@@ -458,7 +458,33 @@ function StockLevelsTab({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {filteredProducts.map((product) => {
+              {stockLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8">
+                    <div className="flex items-center justify-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-text-light/60 dark:text-text-dark/60">
+                        Loading stock levels...
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <EmptyState
+                      icon={Package}
+                      title="No products found"
+                      description={
+                        searchQuery
+                          ? 'Try adjusting your search criteria.'
+                          : 'No inventory items found. Add products to track stock levels.'
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map((product) => {
                 const isLowStock = product.stockLevel > 0 && product.stockLevel < 10;
                 const isOutOfStock = product.stockLevel <= 0;
                 const totalValue = product.stockLevel * (product.unitPrice || 0);
@@ -516,7 +542,8 @@ function StockLevelsTab({
                     </td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
         </div>

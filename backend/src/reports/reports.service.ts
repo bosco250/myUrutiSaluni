@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import * as QRCode from 'qrcode';
 
 // Use require for jsreport as it doesn't have proper ES module exports
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const jsreport = require('jsreport');
 import { SalesService } from '../sales/sales.service';
 import { Sale } from '../sales/entities/sale.entity';
@@ -40,17 +41,22 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       const originalInfo = console.info;
       const originalDebug = console.debug;
       const originalError = console.error;
-      
+
       console.log = () => {};
       console.info = () => {};
       console.debug = () => {};
       console.error = (message?: any, ...optionalParams: any[]) => {
         // Only show actual errors, not jsreport info messages
-        if (message && typeof message === 'string' && !message.includes('jsreport') && !message.includes('info:')) {
+        if (
+          message &&
+          typeof message === 'string' &&
+          !message.includes('jsreport') &&
+          !message.includes('info:')
+        ) {
           originalError(message, ...optionalParams);
         }
       };
-      
+
       try {
         this.jsreportInstance = jsreport({
           logger: {
@@ -70,7 +76,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         });
 
         await this.jsreportInstance.init();
-        
+
         // Create receipt template if it doesn't exist
         await this.ensureReceiptTemplate();
         // Create membership certificate template if it doesn't exist
@@ -94,7 +100,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     } else if (this.jsreportInitializing) {
       await this.jsreportInitializing;
     }
-    
+
     await this.ensureJsReportReady();
   }
 
@@ -107,19 +113,23 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   private async ensureReceiptTemplate() {
     try {
       if (!this.jsreportInstance) return;
-      
+
       // Check if template exists
-      const templates = await this.jsreportInstance.documentStore.collection('templates').find({});
+      const templates = await this.jsreportInstance.documentStore
+        .collection('templates')
+        .find({});
       const receiptTemplate = templates.find((t: any) => t.name === 'receipt');
 
       if (!receiptTemplate) {
         // Create receipt template
-        await this.jsreportInstance.documentStore.collection('templates').insert({
-          name: 'receipt',
-          engine: 'handlebars',
-          recipe: 'chrome-pdf',
-          content: this.getReceiptTemplate(),
-        });
+        await this.jsreportInstance.documentStore
+          .collection('templates')
+          .insert({
+            name: 'receipt',
+            engine: 'handlebars',
+            recipe: 'chrome-pdf',
+            content: this.getReceiptTemplate(),
+          });
       }
     } catch (error) {
       console.error('Error ensuring receipt template:', error);
@@ -348,7 +358,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     await this.ensureJsReportReady();
 
     const sale = await this.salesService.findOne(saleId);
-    
+
     if (!sale) {
       throw new Error('Sale not found');
     }
@@ -359,13 +369,25 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     console.log('[RECEIPT] Sale items:', JSON.stringify(saleItems, null, 2));
 
     // Calculate totals
-    const subtotal = saleItems.reduce((sum: number, item: any) => 
-      sum + (Number(item.unitPrice) * Number(item.quantity)), 0) || 0;
-    const discount = saleItems.reduce((sum: number, item: any) => 
-      sum + (Number(item.discountAmount) || 0), 0) || 0;
+    const subtotal =
+      saleItems.reduce(
+        (sum: number, item: any) =>
+          sum + Number(item.unitPrice) * Number(item.quantity),
+        0,
+      ) || 0;
+    const discount =
+      saleItems.reduce(
+        (sum: number, item: any) => sum + (Number(item.discountAmount) || 0),
+        0,
+      ) || 0;
     const tax = 0; // Calculate if needed
-    
-    console.log('[RECEIPT] Calculated totals:', { subtotal, discount, tax, total: sale.totalAmount });
+
+    console.log('[RECEIPT] Calculated totals:', {
+      subtotal,
+      discount,
+      tax,
+      total: sale.totalAmount,
+    });
 
     // Helper function to format dates (used before passing to jsreport)
     const formatDate = (date: Date | string) => {
@@ -407,9 +429,12 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       customer: sale.customer || null,
       createdBy: sale.createdBy || null,
       items: saleItems.map((item: any) => {
-        const itemLineTotal = Number(item.lineTotal) || (Number(item.unitPrice) * Number(item.quantity) - Number(item.discountAmount || 0));
+        const itemLineTotal =
+          Number(item.lineTotal) ||
+          Number(item.unitPrice) * Number(item.quantity) -
+            Number(item.discountAmount || 0);
         const itemName = item.service?.name || item.product?.name || 'Item';
-        
+
         console.log('[RECEIPT] Processing item:', {
           id: item.id,
           name: itemName,
@@ -419,21 +444,28 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           hasService: !!item.service,
           hasProduct: !!item.product,
         });
-        
+
         return {
           id: item.id,
           name: itemName,
-          description: item.service?.description || item.product?.description || '',
+          description:
+            item.service?.description || item.product?.description || '',
           unitPrice: formatNumber(Number(item.unitPrice)),
           quantity: Number(item.quantity),
           lineTotal: formatNumber(itemLineTotal),
-          discountAmount: item.discountAmount ? formatNumber(Number(item.discountAmount)) : '0.00',
-          salonEmployee: item.salonEmployee ? {
-            id: item.salonEmployee.id,
-            user: item.salonEmployee.user ? {
-              fullName: item.salonEmployee.user.fullName,
-            } : null,
-          } : null,
+          discountAmount: item.discountAmount
+            ? formatNumber(Number(item.discountAmount))
+            : '0.00',
+          salonEmployee: item.salonEmployee
+            ? {
+                id: item.salonEmployee.id,
+                user: item.salonEmployee.user
+                  ? {
+                      fullName: item.salonEmployee.user.fullName,
+                    }
+                  : null,
+              }
+            : null,
         };
       }),
       subtotal: formatNumber(subtotal),
@@ -441,12 +473,23 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       tax: formatNumber(tax),
       total: formatNumber(sale.totalAmount),
       currency: sale.currency || 'RWF',
-      paymentMethodFormatted: sale.paymentMethod ? formatPaymentMethod(sale.paymentMethod) : '',
+      paymentMethodFormatted: sale.paymentMethod
+        ? formatPaymentMethod(sale.paymentMethod)
+        : '',
     };
 
-    console.log('[RECEIPT] Template data items count:', templateData.items.length);
-    console.log('[RECEIPT] Template data items:', JSON.stringify(templateData.items, null, 2));
-    console.log('[RECEIPT] Full template data keys:', Object.keys(templateData));
+    console.log(
+      '[RECEIPT] Template data items count:',
+      templateData.items.length,
+    );
+    console.log(
+      '[RECEIPT] Template data items:',
+      JSON.stringify(templateData.items, null, 2),
+    );
+    console.log(
+      '[RECEIPT] Full template data keys:',
+      Object.keys(templateData),
+    );
 
     const report = await this.jsreportInstance.render({
       template: {
@@ -472,7 +515,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       : await this.salesService.findAll(undefined, 1, 10000); // Get all sales with high limit
 
     // Extract the sales array from paginated result
-    let sales: Sale[] = Array.isArray(salesResult) ? salesResult : salesResult.data;
+    const sales: Sale[] = Array.isArray(salesResult)
+      ? salesResult
+      : salesResult.data;
 
     // Filter by date if provided
     let filteredSales: Sale[] = sales;
@@ -489,7 +534,10 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       });
     }
 
-    const totalRevenue = filteredSales.reduce((sum: number, sale: Sale) => sum + Number(sale.totalAmount), 0);
+    const totalRevenue = filteredSales.reduce(
+      (sum: number, sale: Sale) => sum + Number(sale.totalAmount),
+      0,
+    );
     const totalSales = filteredSales.length;
 
     const reportContent = `
@@ -520,7 +568,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       </tr>
     </thead>
     <tbody>
-      ${filteredSales.map(sale => `
+      ${filteredSales
+        .map(
+          (sale) => `
         <tr>
           <td>${new Date(sale.createdAt).toLocaleDateString()}</td>
           <td>${sale.id.slice(0, 8)}</td>
@@ -528,7 +578,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           <td>RWF ${Number(sale.totalAmount).toLocaleString()}</td>
           <td>${sale.paymentMethod}</td>
         </tr>
-      `).join('')}
+      `,
+        )
+        .join('')}
     </tbody>
   </table>
 </body>
@@ -550,35 +602,47 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   private async ensureMembershipCertificateTemplate() {
     try {
       if (!this.jsreportInstance) {
-        console.warn('jsreport instance not available, skipping template creation');
+        console.warn(
+          'jsreport instance not available, skipping template creation',
+        );
         return;
       }
-      
+
       // Check if template exists
-      const templates = await this.jsreportInstance.documentStore.collection('templates').find({});
-      const certificateTemplate = templates.find((t: any) => t.name === 'membership-certificate');
+      const templates = await this.jsreportInstance.documentStore
+        .collection('templates')
+        .find({});
+      const certificateTemplate = templates.find(
+        (t: any) => t.name === 'membership-certificate',
+      );
 
       if (!certificateTemplate) {
         // Template creation in progress (suppressed for cleaner logs)
         // Create certificate template
-        await this.jsreportInstance.documentStore.collection('templates').insert({
-          name: 'membership-certificate',
-          engine: 'handlebars',
-          recipe: 'chrome-pdf',
-          content: this.getMembershipCertificateTemplate(),
-        });
+        await this.jsreportInstance.documentStore
+          .collection('templates')
+          .insert({
+            name: 'membership-certificate',
+            engine: 'handlebars',
+            recipe: 'chrome-pdf',
+            content: this.getMembershipCertificateTemplate(),
+          });
         // Membership certificate template ready
       } else {
         // Update template if it exists (in case of changes)
         // Updating membership certificate template (suppressed)
         // Remove old template and insert new one
-        await this.jsreportInstance.documentStore.collection('templates').remove({ name: 'membership-certificate' });
-        await this.jsreportInstance.documentStore.collection('templates').insert({
-          name: 'membership-certificate',
-          engine: 'handlebars',
-          recipe: 'chrome-pdf',
-          content: this.getMembershipCertificateTemplate(),
-        });
+        await this.jsreportInstance.documentStore
+          .collection('templates')
+          .remove({ name: 'membership-certificate' });
+        await this.jsreportInstance.documentStore
+          .collection('templates')
+          .insert({
+            name: 'membership-certificate',
+            engine: 'handlebars',
+            recipe: 'chrome-pdf',
+            content: this.getMembershipCertificateTemplate(),
+          });
         // Membership certificate template updated
       }
     } catch (error) {
@@ -811,13 +875,15 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
 
       // Get user information
       const user = await this.usersService.findOne(userId);
-      
+
       if (!user) {
         throw new Error(`User not found: ${userId}`);
       }
 
       if (!user.membershipNumber) {
-        throw new Error(`User ${user.fullName} (${user.email}) does not have a membership number assigned`);
+        throw new Error(
+          `User ${user.fullName} (${user.email}) does not have a membership number assigned`,
+        );
       }
 
       // Get user's salon if they are a salon owner
@@ -860,15 +926,17 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           email: user.email,
           phone: user.phone,
           memberSince: new Date(user.createdAt).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
         },
-        salon: salon ? {
-          name: salon.name,
-          registrationNumber: salon.registrationNumber,
-        } : null,
+        salon: salon
+          ? {
+              name: salon.name,
+              registrationNumber: salon.registrationNumber,
+            }
+          : null,
         qrCodeDataUrl,
         certificateId,
         issueDate: new Date().toLocaleDateString('en-US', {
@@ -882,11 +950,17 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       await this.ensureMembershipCertificateTemplate();
 
       // Verify template exists
-      const templates = await this.jsreportInstance.documentStore.collection('templates').find({});
-      const certificateTemplate = templates.find((t: any) => t.name === 'membership-certificate');
-      
+      const templates = await this.jsreportInstance.documentStore
+        .collection('templates')
+        .find({});
+      const certificateTemplate = templates.find(
+        (t: any) => t.name === 'membership-certificate',
+      );
+
       if (!certificateTemplate) {
-        throw new Error('Membership certificate template not found in jsreport. Please check template initialization.');
+        throw new Error(
+          'Membership certificate template not found in jsreport. Please check template initialization.',
+        );
       }
 
       let report;
@@ -899,7 +973,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         });
       } catch (renderError) {
         console.error('jsreport render error:', renderError);
-        throw new Error(`Failed to render PDF: ${renderError.message || JSON.stringify(renderError)}`);
+        throw new Error(
+          `Failed to render PDF: ${renderError.message || JSON.stringify(renderError)}`,
+        );
       }
 
       if (!report || !report.content) {
@@ -913,4 +989,3 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 }
-

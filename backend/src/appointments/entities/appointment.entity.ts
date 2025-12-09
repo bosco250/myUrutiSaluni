@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { Service } from '../../services/entities/service.entity';
@@ -71,7 +80,13 @@ export class Appointment {
   @Column({ name: 'salon_employee_id', nullable: true })
   salonEmployeeId: string;
 
-  @Column({ name: 'service_amount', type: 'decimal', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'service_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   serviceAmount: number;
 
   @Column({ type: 'text', nullable: true })
@@ -86,4 +101,3 @@ export class Appointment {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

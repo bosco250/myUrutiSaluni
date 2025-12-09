@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsEnum, IsUUID, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsUUID,
+  IsDateString,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { MembershipStatus } from '../entities/membership.entity';
 
@@ -32,4 +38,3 @@ export class CreateMembershipDto {
   @IsString()
   membershipNumber?: string;
 }
-

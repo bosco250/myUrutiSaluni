@@ -1,4 +1,11 @@
-import { IsUUID, IsDateString, IsOptional, IsString, IsEnum, IsObject } from 'class-validator';
+import {
+  IsUUID,
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsObject,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { AppointmentStatus } from '../entities/appointment.entity';
 
@@ -25,7 +32,11 @@ export class CreateAppointmentDto {
   @IsDateString()
   scheduledEnd: string;
 
-  @ApiProperty({ enum: AppointmentStatus, required: false, default: AppointmentStatus.PENDING })
+  @ApiProperty({
+    enum: AppointmentStatus,
+    required: false,
+    default: AppointmentStatus.PENDING,
+  })
   @IsOptional()
   @IsEnum(AppointmentStatus)
   status?: AppointmentStatus;
@@ -35,9 +46,11 @@ export class CreateAppointmentDto {
   @IsString()
   notes?: string;
 
-  @ApiProperty({ required: false, description: 'Additional metadata (e.g., preferredEmployeeId)' })
+  @ApiProperty({
+    required: false,
+    description: 'Additional metadata (e.g., preferredEmployeeId)',
+  })
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
 }
-

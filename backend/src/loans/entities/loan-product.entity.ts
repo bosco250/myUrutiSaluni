@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum LoanProductType {
   WORKING_CAPITAL = 'working_capital',
@@ -56,4 +62,3 @@ export class LoanProduct {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

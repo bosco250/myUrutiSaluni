@@ -109,4 +109,3 @@ export class CustomerCommunicationService {
     return this.communicationRepository.save(communication);
   }
 }
-

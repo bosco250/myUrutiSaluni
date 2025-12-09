@@ -1,4 +1,12 @@
-import { IsUUID, IsString, IsNumber, IsDateString, IsOptional, IsEnum, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsNumber,
+  IsDateString,
+  IsOptional,
+  IsEnum,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { LoanStatus } from '../entities/loan.entity';
 
@@ -54,4 +62,3 @@ export class CreateLoanDto {
   @IsDateString()
   applicationDate: string;
 }
-

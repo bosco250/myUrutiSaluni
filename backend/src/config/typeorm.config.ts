@@ -6,7 +6,6 @@ config();
 
 const configService = new ConfigService();
 const dbType = configService.get('DB_TYPE', 'postgres');
-const isDevelopment = configService.get('NODE_ENV') === 'development';
 
 // Use PostgreSQL by default, SQLite only if explicitly set
 const isSQLite = dbType === 'sqlite';
@@ -14,7 +13,10 @@ const isSQLite = dbType === 'sqlite';
 const dataSourceConfig = isSQLite
   ? {
       type: 'better-sqlite3' as const,
-      database: configService.get('DB_DATABASE', 'database/salon_association.db'),
+      database: configService.get(
+        'DB_DATABASE',
+        'database/salon_association.db',
+      ),
       entities: ['src/**/*.entity.ts'],
       migrations: ['src/migrations/*.ts'],
       synchronize: false,
@@ -32,4 +34,3 @@ const dataSourceConfig = isSQLite
     };
 
 export default new DataSource(dataSourceConfig);
-

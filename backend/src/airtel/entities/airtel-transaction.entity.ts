@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { AirtelAgent } from './airtel-agent.entity';
 
 export enum AirtelTransactionType {
@@ -45,7 +53,13 @@ export class AirtelTransaction {
   @Column({ length: 32, default: 'pending' })
   status: string;
 
-  @Column({ name: 'commission_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'commission_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   commissionAmount: number;
 
   @Column({ name: 'airtel_response', type: 'simple-json', nullable: true })
@@ -57,4 +71,3 @@ export class AirtelTransaction {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

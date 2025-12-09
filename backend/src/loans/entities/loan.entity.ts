@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { LoanProduct } from './loan-product.entity';
 import { User } from '../../users/entities/user.entity';
 import { Salon } from '../../salons/entities/salon.entity';
@@ -44,7 +53,12 @@ export class Loan {
   @Column({ name: 'salon_id', nullable: true })
   salonId: string;
 
-  @Column({ name: 'principal_amount', type: 'decimal', precision: 14, scale: 2 })
+  @Column({
+    name: 'principal_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+  })
   principalAmount: number;
 
   @Column({ name: 'interest_rate', type: 'decimal', precision: 5, scale: 2 })
@@ -56,7 +70,12 @@ export class Loan {
   @Column({ name: 'monthly_payment', type: 'decimal', precision: 14, scale: 2 })
   monthlyPayment: number;
 
-  @Column({ name: 'total_amount_due', type: 'decimal', precision: 14, scale: 2 })
+  @Column({
+    name: 'total_amount_due',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+  })
   totalAmountDue: number;
 
   @Index()
@@ -79,7 +98,13 @@ export class Loan {
   @Column({ name: 'disbursed_date', type: 'date', nullable: true })
   disbursedDate: Date;
 
-  @Column({ name: 'disbursed_amount', type: 'decimal', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'disbursed_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   disbursedAmount: number;
 
   @Column({ name: 'disbursement_method', length: 32, nullable: true })
@@ -109,4 +134,3 @@ export class Loan {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

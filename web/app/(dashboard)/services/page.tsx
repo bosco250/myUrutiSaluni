@@ -12,6 +12,7 @@ import {
   Clock,
   DollarSign,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';

@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  X,
 } from 'lucide-react';
 
 interface SaleItem {
@@ -79,7 +80,15 @@ interface Salon {
 
 export default function SalesHistoryPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+        UserRole.CUSTOMER,
+      ]}
+    >
       <SalesHistoryContent />
     </ProtectedRoute>
   );
@@ -96,9 +105,87 @@ function SalesHistoryContent() {
     start: '',
     end: '',
   });
+  const [selectedQuickFilter, setSelectedQuickFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
+
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateRange = (filter: string): { start: string; end: string } => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    switch (filter) {
+      case 'today': {
+        const start = formatLocalDate(today);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      case 'yesterday': {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const start = formatLocalDate(yesterday);
+        const end = formatLocalDate(yesterday);
+        return { start, end };
+      }
+      case 'thisWeek': {
+        const startOfWeek = new Date(today);
+        const day = startOfWeek.getDay();
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1);
+        startOfWeek.setDate(diff);
+        const start = formatLocalDate(startOfWeek);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      case 'thisMonth': {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const start = formatLocalDate(startOfMonth);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      case 'lastMonth': {
+        const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        const start = formatLocalDate(startOfLastMonth);
+        const end = formatLocalDate(endOfLastMonth);
+        return { start, end };
+      }
+      case 'thisYear': {
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        const start = formatLocalDate(startOfYear);
+        const end = formatLocalDate(today);
+        return { start, end };
+      }
+      default:
+        return { start: '', end: '' };
+    }
+  };
+
+  const handleQuickFilter = async (filter: string) => {
+    try {
+      setSelectedQuickFilter(filter);
+      if (filter === 'all') {
+        setDateRange({ start: '', end: '' });
+      } else {
+        const range = getDateRange(filter);
+        if (!range.start || !range.end) {
+          console.error('Invalid date range for filter:', filter);
+          return;
+        }
+        setDateRange(range);
+      }
+      handleFilterChange();
+      await refetch();
+    } catch (error) {
+      console.error('Error applying filter:', error);
+    }
+  };
 
   // Fetch salons for filter
   const { data: salons = [] } = useQuery<Salon[]>({
@@ -113,9 +200,13 @@ function SalesHistoryContent() {
     },
   });
 
-  // Check if we need to fetch all sales for client-side filtering
-  const hasClientSideFilters = searchQuery || statusFilter !== 'all' || paymentMethodFilter !== 'all' || dateRange.start || dateRange.end;
-  
+  const hasClientSideFilters =
+    searchQuery ||
+    statusFilter !== 'all' ||
+    paymentMethodFilter !== 'all' ||
+    dateRange.start ||
+    dateRange.end;
+
   // Get customer record for customer users
   const { data: customer } = useQuery({
     queryKey: ['customer-by-user', user?.id],
@@ -129,15 +220,29 @@ function SalesHistoryContent() {
     enabled: user?.role === 'customer',
   });
 
-  // Fetch sales with pagination (or all if client-side filters are active)
-  const { data: salesData, isLoading, error } = useQuery<{
+  const {
+    data: salesData,
+    isLoading,
+    isRefetching,
+    error,
+    refetch,
+  } = useQuery<{
     data: Sale[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }>({
-    queryKey: ['sales', user?.role, customer?.id, salonFilter, hasClientSideFilters ? 'all' : currentPage, hasClientSideFilters ? 10000 : itemsPerPage],
+    queryKey: [
+      'sales',
+      user?.role,
+      customer?.id,
+      salonFilter,
+      dateRange.start,
+      dateRange.end,
+      hasClientSideFilters ? 'all' : currentPage,
+      hasClientSideFilters ? 10000 : itemsPerPage,
+    ],
     queryFn: async () => {
       try {
         // For customers, fetch their own sales
@@ -153,37 +258,39 @@ function SalesHistoryContent() {
           const response = await api.get(`/sales/customer/${customer.id}?${params.toString()}`);
           return response.data;
         }
-        
-        // For other roles, use the regular sales endpoint
+
         const params = new URLSearchParams();
-        if (salonFilter !== 'all') {
-          params.append('salonId', salonFilter);
-        }
-        // If client-side filters are active, fetch all sales (with high limit)
-        // Otherwise, use pagination
+        if (salonFilter !== 'all') params.append('salonId', salonFilter);
+        if (dateRange.start) params.append('startDate', dateRange.start);
+        if (dateRange.end) params.append('endDate', dateRange.end);
         if (hasClientSideFilters) {
           params.append('page', '1');
-          params.append('limit', '10000'); // High limit to get all sales
+          params.append('limit', '10000');
         } else {
           params.append('page', currentPage.toString());
           params.append('limit', itemsPerPage.toString());
         }
-        
+
         const response = await api.get(`/sales?${params.toString()}`);
-        
+
         // Handle response wrapped by TransformInterceptor: { data: {...}, statusCode: 200, timestamp: "..." }
         let responseData = response.data;
-        
+
         // If response is wrapped by interceptor (has statusCode and data property)
-        if (response.data && typeof response.data === 'object' && 'statusCode' in response.data && 'data' in response.data) {
+        if (
+          response.data &&
+          typeof response.data === 'object' &&
+          'statusCode' in response.data &&
+          'data' in response.data
+        ) {
           responseData = response.data.data;
         }
-        
+
         // Ensure responseData has the expected structure
         if (!responseData || typeof responseData !== 'object') {
           return { data: [], total: 0, page: 1, limit: 10, totalPages: 0 };
         }
-        
+
         // If responseData is an array (old format or backend returned array), wrap it
         if (Array.isArray(responseData)) {
           return {
@@ -194,7 +301,7 @@ function SalesHistoryContent() {
             totalPages: Math.ceil(responseData.length / itemsPerPage),
           };
         }
-        
+
         // Check if responseData has the expected paginated structure
         if (!('data' in responseData) || !('total' in responseData)) {
           // If it's an object but not the right structure, try to extract data
@@ -204,22 +311,32 @@ function SalesHistoryContent() {
               total: responseData.total || responseData.data.length,
               page: responseData.page || 1,
               limit: responseData.limit || itemsPerPage,
-              totalPages: responseData.totalPages || Math.ceil((responseData.total || responseData.data.length) / (responseData.limit || itemsPerPage)),
+              totalPages:
+                responseData.totalPages ||
+                Math.ceil(
+                  (responseData.total || responseData.data.length) /
+                    (responseData.limit || itemsPerPage)
+                ),
             };
           }
           return { data: [], total: 0, page: 1, limit: 10, totalPages: 0 };
         }
-        
+
         // Ensure all required fields exist
         return {
           data: responseData.data || [],
           total: responseData.total || 0,
           page: responseData.page || 1,
           limit: responseData.limit || itemsPerPage,
-          totalPages: responseData.totalPages || Math.ceil((responseData.total || 0) / (responseData.limit || itemsPerPage)),
+          totalPages:
+            responseData.totalPages ||
+            Math.ceil((responseData.total || 0) / (responseData.limit || itemsPerPage)),
         };
-      } catch (error) {
-        return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+      } catch (err: any) {
+        console.error('Error fetching sales:', err);
+        throw new Error(
+          err?.response?.data?.message || err?.message || 'Failed to load sales. Please try again.'
+        );
       }
     },
   });
@@ -274,7 +391,7 @@ function SalesHistoryContent() {
 
       return true;
     });
-    
+
     // Sort by date (most recent first) to ensure correct order after filtering
     return filtered.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
@@ -291,9 +408,9 @@ function SalesHistoryContent() {
     }, 0);
     const filteredCount = filteredSales.length;
     const averageSale = filteredCount > 0 ? totalRevenue / filteredCount : 0;
-    const cashSales = filteredSales.filter(s => s.paymentMethod === 'cash').length;
-    const cardSales = filteredSales.filter(s => s.paymentMethod === 'card').length;
-    const mobileMoneySales = filteredSales.filter(s => s.paymentMethod === 'mobile_money').length;
+    const cashSales = filteredSales.filter((s) => s.paymentMethod === 'cash').length;
+    const cardSales = filteredSales.filter((s) => s.paymentMethod === 'card').length;
+    const mobileMoneySales = filteredSales.filter((s) => s.paymentMethod === 'mobile_money').length;
 
     return {
       totalRevenue,
@@ -332,7 +449,7 @@ function SalesHistoryContent() {
   const formatPaymentMethod = (method: string) => {
     return method
       .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
 
@@ -350,10 +467,18 @@ function SalesHistoryContent() {
   }
 
   if (error) {
+    const errorMessage =
+      (error as any)?.response?.data?.message || (error as any)?.message || 'Unknown error';
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
-          <p className="text-danger">Failed to load sales history. Please try again.</p>
+          <X className="w-12 h-12 text-danger mx-auto mb-4" />
+          <p className="text-danger font-semibold mb-2 text-lg">Failed to load sales history</p>
+          <p className="text-danger/80 text-sm mb-4">{errorMessage}</p>
+          <Button onClick={() => refetch()} variant="primary" className="mt-4">
+            <Loader2 className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -366,36 +491,27 @@ function SalesHistoryContent() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <Button
-                onClick={() => router.push('/sales')}
-                variant="secondary"
-                className="p-2"
-              >
+              <Button onClick={() => router.push('/sales')} variant="secondary" className="p-2">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">Sales History</h1>
+              <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
+                Sales History
+              </h1>
             </div>
-            <p className="text-text-light/60 dark:text-text-dark/60">View and manage all sales transactions</p>
+            <p className="text-text-light/60 dark:text-text-dark/60">
+              View and manage all sales transactions
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => setShowFilters(!showFilters)}
-              variant="secondary"
-            >
+            <Button onClick={() => setShowFilters(!showFilters)} variant="secondary">
               <Filter className="w-4 h-4 mr-2" />
               {showFilters ? 'Hide' : 'Show'} Filters
             </Button>
-            <Button
-              onClick={() => router.push('/sales/analytics')}
-              variant="secondary"
-            >
+            <Button onClick={() => router.push('/sales/analytics')} variant="secondary">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
             </Button>
-            <Button
-              onClick={() => router.push('/sales')}
-              variant="primary"
-            >
+            <Button onClick={() => router.push('/sales')} variant="primary">
               <Receipt className="w-4 h-4 mr-2" />
               New Sale
             </Button>
@@ -407,7 +523,9 @@ function SalesHistoryContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Total Revenue</span>
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              Total Revenue
+            </span>
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-primary" />
             </div>
@@ -419,17 +537,23 @@ function SalesHistoryContent() {
         </div>
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Total Sales</span>
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              Total Sales
+            </span>
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <Receipt className="w-5 h-5 text-primary" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-text-light dark:text-text-dark">{stats.totalSales}</p>
+          <p className="text-3xl font-bold text-text-light dark:text-text-dark">
+            {stats.totalSales}
+          </p>
           <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">transactions</p>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Average Sale</span>
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              Average Sale
+            </span>
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
@@ -441,7 +565,9 @@ function SalesHistoryContent() {
         </div>
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Payment Methods</span>
+            <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              Payment Methods
+            </span>
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-primary" />
             </div>
@@ -463,98 +589,216 @@ function SalesHistoryContent() {
       {/* Filters */}
       {showFilters && (
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 mb-6 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleFilterChange();
-                }}
-                placeholder="Search by ID, customer, phone, reference..."
-                className="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              />
+          {/* Quick Date Filters */}
+          <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              Quick Date Filters
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleQuickFilter('all')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'all'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'all' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                All Time
+              </button>
+              <button
+                onClick={() => handleQuickFilter('today')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'today'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'today' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                Today
+              </button>
+              <button
+                onClick={() => handleQuickFilter('yesterday')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'yesterday'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'yesterday' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                Yesterday
+              </button>
+              <button
+                onClick={() => handleQuickFilter('thisWeek')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'thisWeek'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'thisWeek' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                This Week
+              </button>
+              <button
+                onClick={() => handleQuickFilter('thisMonth')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'thisMonth'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'thisMonth' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                This Month
+              </button>
+              <button
+                onClick={() => handleQuickFilter('lastMonth')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'lastMonth'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'lastMonth' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                Last Month
+              </button>
+              <button
+                onClick={() => handleQuickFilter('thisYear')}
+                disabled={isLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                  selectedQuickFilter === 'thisYear'
+                    ? 'bg-primary text-white'
+                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoading && selectedQuickFilter === 'thisYear' && (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                )}
+                This Year
+              </button>
             </div>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              handleFilterChange();
-            }}
-            className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-          >
-            <option value="all">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select
-            value={paymentMethodFilter}
-            onChange={(e) => {
-              setPaymentMethodFilter(e.target.value);
-              handleFilterChange();
-            }}
-            className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-          >
-            <option value="all">All Methods</option>
-            <option value="cash">Cash</option>
-            <option value="card">Card</option>
-            <option value="mobile_money">Mobile Money</option>
-            <option value="bank_transfer">Bank Transfer</option>
-          </select>
-          {salons.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="lg:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleFilterChange();
+                  }}
+                  placeholder="Search by ID, customer, phone, reference..."
+                  className="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                />
+              </div>
+            </div>
             <select
-              value={salonFilter}
+              value={statusFilter}
               onChange={(e) => {
-                setSalonFilter(e.target.value);
+                setStatusFilter(e.target.value);
                 handleFilterChange();
               }}
               className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             >
-              <option value="all">All Salons</option>
-              {salons.map((salon) => (
-                <option key={salon.id} value={salon.id}>
-                  {salon.name}
-                </option>
-              ))}
+              <option value="all">All Status</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="cancelled">Cancelled</option>
             </select>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-              Start Date
-            </label>
-            <input
-              type="date"
-              value={dateRange.start}
+            <select
+              value={paymentMethodFilter}
               onChange={(e) => {
-                setDateRange({ ...dateRange, start: e.target.value });
+                setPaymentMethodFilter(e.target.value);
                 handleFilterChange();
               }}
-              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-            />
+              className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+            >
+              <option value="all">All Methods</option>
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="mobile_money">Mobile Money</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+            {salons.length > 0 && (
+              <select
+                value={salonFilter}
+                onChange={(e) => {
+                  setSalonFilter(e.target.value);
+                  handleFilterChange();
+                }}
+                className="px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              >
+                <option value="all">All Salons</option>
+                {salons.map((salon) => (
+                  <option key={salon.id} value={salon.id}>
+                    {salon.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-              End Date
-            </label>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => {
-                setDateRange({ ...dateRange, end: e.target.value });
-                handleFilterChange();
-              }}
-              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={dateRange.start}
+                onChange={async (e) => {
+                  setDateRange({ ...dateRange, start: e.target.value });
+                  setSelectedQuickFilter('custom');
+                  handleFilterChange();
+                  try {
+                    await refetch();
+                  } catch (error) {
+                    console.error('Error refetching sales:', error);
+                  }
+                }}
+                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={async (e) => {
+                  setDateRange({ ...dateRange, end: e.target.value });
+                  setSelectedQuickFilter('custom');
+                  handleFilterChange();
+                  try {
+                    await refetch();
+                  } catch (error) {
+                    console.error('Error refetching sales:', error);
+                  }
+                }}
+                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              />
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Sales Table */}
@@ -599,23 +843,42 @@ function SalesHistoryContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {paginatedSales.length === 0 ? (
+              {isLoading || isRefetching ? (
+                <tr>
+                  <td colSpan={11} className="px-6 py-8">
+                    <div className="flex items-center justify-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-text-light/60 dark:text-text-dark/60">
+                        Loading sales...
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedSales.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center">
                       <Receipt className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
-                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium text-lg">No sales found</p>
+                      <Receipt className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
+                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium text-lg">
+                        No sales found
+                      </p>
                       <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-2">
-                        {searchQuery || statusFilter !== 'all' || paymentMethodFilter !== 'all' || dateRange.start || dateRange.end
-                          ? 'Try adjusting your filters'
-                          : 'No sales have been recorded yet'}
+                        {selectedQuickFilter !== 'all' || dateRange.start || dateRange.end
+                          ? `No sales found for the selected period${dateRange.start && dateRange.end ? ` (${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()})` : ''}`
+                          : searchQuery || statusFilter !== 'all' || paymentMethodFilter !== 'all'
+                            ? 'Try adjusting your filters'
+                            : 'No sales have been recorded yet'}
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 paginatedSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-background-light dark:hover:bg-background-dark transition">
+                  <tr
+                    key={sale.id}
+                    className="hover:bg-background-light dark:hover:bg-background-dark transition"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {formatDate(sale.createdAt)}
                     </td>
@@ -635,7 +898,9 @@ function SalesHistoryContent() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">Walk-in</span>
+                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">
+                          Walk-in
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
@@ -647,12 +912,14 @@ function SalesHistoryContent() {
                           {sale.employees.map((emp, idx, arr) => (
                             <span key={emp.id}>
                               {emp.name}
-                              {idx < arr.length - 1 && ', '}  
+                              {idx < arr.length - 1 && ', '}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">N/A</span>
+                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">
+                          N/A
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -663,13 +930,16 @@ function SalesHistoryContent() {
                     <td className="px-6 py-4">
                       {sale.items && sale.items.length > 0 ? (
                         <div className="text-sm text-text-light dark:text-text-dark">
-                          <div className="font-medium mb-1">{sale.items.length} item{sale.items.length !== 1 ? 's' : ''}</div>
+                          <div className="font-medium mb-1">
+                            {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}
+                          </div>
                           <div className="text-xs text-text-light/60 dark:text-text-dark/60 space-y-1">
                             {sale.items.slice(0, 2).map((item, idx) => (
                               <div key={item.id || idx}>
-                                {item.service?.name || item.product?.name || 'Unknown'} 
+                                {item.service?.name || item.product?.name || 'Unknown'}
                                 <span className="text-text-light/40 dark:text-text-dark/40">
-                                  {' '}({item.quantity}×)
+                                  {' '}
+                                  ({item.quantity}×)
                                 </span>
                               </div>
                             ))}
@@ -681,7 +951,9 @@ function SalesHistoryContent() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">No items</span>
+                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">
+                          No items
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -700,8 +972,8 @@ function SalesHistoryContent() {
                           sale.status === 'completed'
                             ? 'bg-success/20 text-success border border-success/30'
                             : sale.status === 'pending'
-                            ? 'bg-warning/20 text-warning border border-warning/30'
-                            : 'bg-danger/20 text-danger border border-danger/30'
+                              ? 'bg-warning/20 text-warning border border-warning/30'
+                              : 'bg-danger/20 text-danger border border-danger/30'
                         }`}
                       >
                         {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
@@ -725,7 +997,10 @@ function SalesHistoryContent() {
                               const url = window.URL.createObjectURL(new Blob([response.data]));
                               const link = document.createElement('a');
                               link.href = url;
-                              link.setAttribute('download', `receipt-${sale.id.slice(0, 8)}-${new Date(sale.createdAt).toISOString().split('T')[0]}.pdf`);
+                              link.setAttribute(
+                                'download',
+                                `receipt-${sale.id.slice(0, 8)}-${new Date(sale.createdAt).toISOString().split('T')[0]}.pdf`
+                              );
                               document.body.appendChild(link);
                               link.click();
                               link.remove();
@@ -757,7 +1032,9 @@ function SalesHistoryContent() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-text-light/60 dark:text-text-dark/60">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSales.length)} of {filteredSales.length} sales
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+                  {Math.min(currentPage * itemsPerPage, filteredSales.length)} of{' '}
+                  {filteredSales.length} sales
                 </span>
                 <select
                   value={itemsPerPage}
@@ -776,7 +1053,7 @@ function SalesHistoryContent() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   className="p-2"
                 >
@@ -811,7 +1088,7 @@ function SalesHistoryContent() {
                 </div>
                 <Button
                   variant="secondary"
-                  onClick={() => setCurrentPage(prev => Math.min(filteredTotalPages, prev + 1))}
+                  onClick={() => setCurrentPage((prev) => Math.min(filteredTotalPages, prev + 1))}
                   disabled={currentPage >= filteredTotalPages}
                   className="p-2"
                 >
@@ -835,7 +1112,7 @@ function SalesHistoryContent() {
                     if (salonFilter !== 'all') params.append('salonId', salonFilter);
                     if (dateRange.start) params.append('startDate', dateRange.start);
                     if (dateRange.end) params.append('endDate', dateRange.end);
-                    
+
                     const response = await api.get(`/reports/sales?${params.toString()}`, {
                       responseType: 'blob',
                     });
@@ -863,4 +1140,3 @@ function SalesHistoryContent() {
     </div>
   );
 }
-

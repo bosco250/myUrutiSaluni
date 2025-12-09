@@ -11,7 +11,12 @@ import { SalonsModule } from '../salons/salons.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PayrollRun, PayrollItem, SalonEmployee, Commission]),
+    TypeOrmModule.forFeature([
+      PayrollRun,
+      PayrollItem,
+      SalonEmployee,
+      Commission,
+    ]),
     CommissionsModule,
     SalonsModule,
   ],
@@ -20,4 +25,3 @@ import { SalonsModule } from '../salons/salons.module';
   exports: [PayrollService],
 })
 export class PayrollModule {}
-

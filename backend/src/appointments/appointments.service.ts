@@ -75,25 +75,50 @@ export class AppointmentsService {
     if (salonId) {
       return this.appointmentsRepository.find({
         where: { salonId },
-        relations: ['customer', 'service', 'salon', 'salonEmployee', 'salonEmployee.user'],
+        relations: [
+          'customer',
+          'service',
+          'salon',
+          'salonEmployee',
+          'salonEmployee.user',
+        ],
       });
     }
     return this.appointmentsRepository.find({
-      relations: ['customer', 'service', 'salon', 'salonEmployee', 'salonEmployee.user'],
+      relations: [
+        'customer',
+        'service',
+        'salon',
+        'salonEmployee',
+        'salonEmployee.user',
+      ],
     });
   }
 
   async findBySalonIds(salonIds: string[]): Promise<Appointment[]> {
     return this.appointmentsRepository.find({
       where: salonIds.map((id) => ({ salonId: id })),
-      relations: ['customer', 'service', 'salon', 'salonEmployee', 'salonEmployee.user'],
+      relations: [
+        'customer',
+        'service',
+        'salon',
+        'salonEmployee',
+        'salonEmployee.user',
+      ],
     });
   }
 
   async findByCustomerId(customerId: string): Promise<Appointment[]> {
     return this.appointmentsRepository.find({
       where: { customerId },
-      relations: ['customer', 'service', 'salon', 'createdBy', 'salonEmployee', 'salonEmployee.user'],
+      relations: [
+        'customer',
+        'service',
+        'salon',
+        'createdBy',
+        'salonEmployee',
+        'salonEmployee.user',
+      ],
       order: { scheduledStart: 'DESC' },
     });
   }
@@ -101,7 +126,14 @@ export class AppointmentsService {
   async findOne(id: string): Promise<Appointment> {
     return this.appointmentsRepository.findOne({
       where: { id },
-      relations: ['customer', 'service', 'salon', 'createdBy', 'salonEmployee', 'salonEmployee.user'],
+      relations: [
+        'customer',
+        'service',
+        'salon',
+        'createdBy',
+        'salonEmployee',
+        'salonEmployee.user',
+      ],
     });
   }
 
@@ -118,7 +150,14 @@ export class AppointmentsService {
     // Reload appointment with all relations including metadata
     const updatedAppointment = await this.appointmentsRepository.findOne({
       where: { id },
-      relations: ['customer', 'service', 'salon', 'createdBy', 'salonEmployee', 'salonEmployee.user'],
+      relations: [
+        'customer',
+        'service',
+        'salon',
+        'createdBy',
+        'salonEmployee',
+        'salonEmployee.user',
+      ],
     });
 
     // Record visit and create commission when appointment status changes to completed
@@ -174,8 +213,9 @@ export class AppointmentsService {
         }
 
         // Get employee ID from multiple sources
-        let employeeId = updatedAppointment.salonEmployeeId || updateData.salonEmployeeId;
-        
+        let employeeId =
+          updatedAppointment.salonEmployeeId || updateData.salonEmployeeId;
+
         // If no direct employee ID, check metadata for preferredEmployeeId
         if (!employeeId && updatedAppointment.metadata) {
           try {
@@ -192,23 +232,26 @@ export class AppointmentsService {
                 metadata = {};
               }
             }
-            
+
             // Check for preferredEmployeeId in metadata
             employeeId = metadata?.preferredEmployeeId;
-            
+
             this.logger.debug(
               `Checking metadata for appointment ${updatedAppointment.id}: metadata=${JSON.stringify(metadata)}, preferredEmployeeId=${employeeId}`,
             );
-            
+
             // If we found preferredEmployeeId in metadata, update the salonEmployeeId field
             // This ensures proper linking for future queries
             if (employeeId && !updatedAppointment.salonEmployeeId) {
-              await this.appointmentsRepository.update(id, { salonEmployeeId: employeeId });
+              await this.appointmentsRepository.update(id, {
+                salonEmployeeId: employeeId,
+              });
               // Reload to get updated appointment
               const reloadedAppointment = await this.findOne(id);
               if (reloadedAppointment) {
                 updatedAppointment.salonEmployeeId = employeeId;
-                updatedAppointment.salonEmployee = reloadedAppointment.salonEmployee;
+                updatedAppointment.salonEmployee =
+                  reloadedAppointment.salonEmployee;
               }
               this.logger.log(
                 `✅ Updated appointment ${updatedAppointment.id} with salonEmployeeId from metadata: ${employeeId}`,
@@ -221,7 +264,7 @@ export class AppointmentsService {
             );
           }
         }
-        
+
         // Log current state for debugging
         this.logger.debug(
           `Appointment ${updatedAppointment.id} commission check: employeeId=${employeeId}, serviceAmount=${serviceAmount}, serviceId=${updatedAppointment.serviceId}`,
@@ -233,7 +276,7 @@ export class AppointmentsService {
             this.logger.debug(
               `Creating commission for appointment ${updatedAppointment.id}: employeeId=${employeeId}, serviceAmount=${serviceAmount}`,
             );
-            
+
             const commission = await this.commissionsService.createCommission(
               employeeId,
               null, // No sale item ID for appointment-based commissions
@@ -244,7 +287,7 @@ export class AppointmentsService {
                 serviceId: updatedAppointment.serviceId,
               },
             );
-            
+
             if (commission.amount > 0) {
               this.logger.log(
                 `✅ Created commission for employee ${employeeId} from completed appointment ${updatedAppointment.id} - Service Amount: RWF ${serviceAmount}, Commission: RWF ${commission.amount} (${commission.commissionRate}%)`,
@@ -265,12 +308,16 @@ export class AppointmentsService {
           // Detailed logging for why commission wasn't created
           const reasons: string[] = [];
           if (!employeeId) {
-            reasons.push('no employee assigned (checked salonEmployeeId and metadata.preferredEmployeeId)');
+            reasons.push(
+              'no employee assigned (checked salonEmployeeId and metadata.preferredEmployeeId)',
+            );
           }
           if (serviceAmount === 0) {
-            reasons.push(`no service amount (serviceId: ${updatedAppointment.serviceId}, service: ${updatedAppointment.service?.name || 'N/A'})`);
+            reasons.push(
+              `no service amount (serviceId: ${updatedAppointment.serviceId}, service: ${updatedAppointment.service?.name || 'N/A'})`,
+            );
           }
-          
+
           this.logger.warn(
             `⚠️ Skipping commission creation for appointment ${updatedAppointment.id}: ${reasons.join(', ')}`,
           );

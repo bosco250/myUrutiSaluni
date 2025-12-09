@@ -17,18 +17,24 @@ export class ServicesService {
 
   async findAll(salonId?: string): Promise<Service[]> {
     if (salonId) {
-      return this.servicesRepository.find({ where: { salonId }, relations: ['salon'] });
+      return this.servicesRepository.find({
+        where: { salonId },
+        relations: ['salon'],
+      });
     }
     return this.servicesRepository.find({ relations: ['salon'] });
   }
 
   async findOne(id: string): Promise<Service> {
-    return this.servicesRepository.findOne({ where: { id }, relations: ['salon'] });
+    return this.servicesRepository.findOne({
+      where: { id },
+      relations: ['salon'],
+    });
   }
 
   async findBySalonIds(salonIds: string[]): Promise<Service[]> {
     return this.servicesRepository.find({
-      where: salonIds.map(id => ({ salonId: id })),
+      where: salonIds.map((id) => ({ salonId: id })),
       relations: ['salon'],
     });
   }
@@ -42,4 +48,3 @@ export class ServicesService {
     await this.servicesRepository.delete(id);
   }
 }
-

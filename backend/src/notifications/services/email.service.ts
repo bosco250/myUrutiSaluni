@@ -21,7 +21,12 @@ export class EmailService {
     });
   }
 
-  async sendEmail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
+  async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+  ): Promise<boolean> {
     try {
       // In development, log instead of actually sending
       if (this.configService.get('NODE_ENV') === 'development') {
@@ -95,4 +100,3 @@ export class EmailService {
     return this.sendEmail(to, subject, html);
   }
 }
-

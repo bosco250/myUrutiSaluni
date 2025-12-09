@@ -88,4 +88,3 @@ export class CustomerCommunication {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

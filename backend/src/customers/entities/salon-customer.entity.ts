@@ -45,7 +45,13 @@ export class SalonCustomer {
   firstVisitDate: Date | null;
 
   // Customer lifetime value for this salon
-  @Column({ name: 'total_spent', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'total_spent',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   totalSpent: number;
 
   // Segmentation
@@ -69,7 +75,11 @@ export class SalonCustomer {
   @Column({ name: 'follow_up_date', type: 'timestamp', nullable: true })
   followUpDate: Date | null;
 
-  @Column({ name: 'communication_preferences', type: 'simple-json', default: '{}' })
+  @Column({
+    name: 'communication_preferences',
+    type: 'simple-json',
+    default: '{}',
+  })
   communicationPreferences: Record<string, any>; // e.g., { sms: true, email: false }
 
   @CreateDateColumn({ name: 'created_at' })
@@ -78,4 +88,3 @@ export class SalonCustomer {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

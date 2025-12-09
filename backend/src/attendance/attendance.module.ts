@@ -11,4 +11,3 @@ import { AttendanceLog } from './entities/attendance-log.entity';
   exports: [AttendanceService],
 })
 export class AttendanceModule {}
-

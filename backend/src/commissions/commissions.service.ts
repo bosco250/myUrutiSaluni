@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Commission } from './entities/commission.entity';
@@ -6,6 +6,8 @@ import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 
 @Injectable()
 export class CommissionsService {
+  private readonly logger = new Logger(CommissionsService.name);
+
   constructor(
     @InjectRepository(Commission)
     private commissionsRepository: Repository<Commission>,
@@ -29,15 +31,25 @@ export class CommissionsService {
       throw new Error(`Employee ${salonEmployeeId} not found`);
     }
 
-    const commissionRate = employee.commissionRate || 0;
-    const commissionAmount = (saleAmount * commissionRate) / 100;
+    const employeeName =
+      employee.user?.fullName || employee.roleTitle || 'Unknown';
+    const commissionRate = Number(employee.commissionRate) || 0;
+    const saleAmountNum = Number(saleAmount) || 0;
+    const commissionAmount = (saleAmountNum * commissionRate) / 100;
+
+    // Warn if commission rate is 0
+    if (commissionRate === 0) {
+      this.logger.warn(
+        `⚠️ Creating commission with 0% rate for employee ${employeeName} (${salonEmployeeId}). Sale amount: RWF ${saleAmountNum}, Commission: RWF 0. Please set a commission rate for this employee.`,
+      );
+    }
 
     const commission = this.commissionsRepository.create({
       salonEmployeeId,
       saleItemId,
       amount: commissionAmount,
       commissionRate,
-      saleAmount,
+      saleAmount: saleAmountNum,
       paid: false,
       metadata: metadata || {},
     });
@@ -47,12 +59,13 @@ export class CommissionsService {
 
   async findByIds(ids: string[]): Promise<Commission[]> {
     return this.commissionsRepository.find({
-      where: ids.map(id => ({ id })),
+      where: ids.map((id) => ({ id })),
     });
   }
 
   async findAll(filters?: {
     salonEmployeeId?: string;
+    salonEmployeeIds?: string[];
     salonId?: string;
     paid?: boolean;
     startDate?: Date;
@@ -66,13 +79,20 @@ export class CommissionsService {
       .leftJoinAndSelect('commission.saleItem', 'saleItem')
       .leftJoinAndSelect('saleItem.sale', 'sale');
 
-    if (filters?.salonEmployeeId) {
+    // Support multiple employee IDs (for employees working at multiple salons)
+    if (filters?.salonEmployeeIds && filters.salonEmployeeIds.length > 0) {
+      query.andWhere('commission.salonEmployeeId IN (:...salonEmployeeIds)', {
+        salonEmployeeIds: filters.salonEmployeeIds,
+      });
+    } else if (filters?.salonEmployeeId) {
       query.andWhere('commission.salonEmployeeId = :salonEmployeeId', {
         salonEmployeeId: filters.salonEmployeeId,
       });
     }
 
-    if (filters?.salonId) {
+    // Only apply salonId filter if not using multiple employee IDs
+    // (when using multiple employee IDs, the salon filter is implicit via employee records)
+    if (filters?.salonId && !filters?.salonEmployeeIds) {
       query.andWhere('salon.id = :salonId', { salonId: filters.salonId });
     }
 
@@ -81,15 +101,15 @@ export class CommissionsService {
     }
 
     if (filters?.startDate) {
-      query.andWhere('commission.createdAt >= :startDate', {
-        startDate: filters.startDate,
-      });
+      const startDate = new Date(filters.startDate);
+      startDate.setUTCHours(0, 0, 0, 0);
+      query.andWhere('commission.createdAt >= :startDate', { startDate });
     }
 
     if (filters?.endDate) {
-      query.andWhere('commission.createdAt <= :endDate', {
-        endDate: filters.endDate,
-      });
+      const endDate = new Date(filters.endDate);
+      endDate.setUTCHours(23, 59, 59, 999);
+      query.andWhere('commission.createdAt <= :endDate', { endDate });
     }
 
     return query.orderBy('commission.createdAt', 'DESC').getMany();
@@ -99,7 +119,7 @@ export class CommissionsService {
     if (!saleItemIds || saleItemIds.length === 0) {
       return [];
     }
-    
+
     return this.commissionsRepository.find({
       where: { saleItemId: In(saleItemIds) },
       relations: ['salonEmployee', 'salonEmployee.user', 'saleItem'],
@@ -125,7 +145,7 @@ export class CommissionsService {
 
     commission.paid = true;
     commission.paidAt = new Date();
-    
+
     if (paymentDetails) {
       if (paymentDetails.paymentMethod) {
         commission.paymentMethod = paymentDetails.paymentMethod;
@@ -154,11 +174,11 @@ export class CommissionsService {
     },
   ): Promise<Commission[]> {
     const commissions = await this.findByIds(commissionIds);
-    
+
     commissions.forEach((commission) => {
       commission.paid = true;
       commission.paidAt = new Date();
-      
+
       if (paymentDetails) {
         if (paymentDetails.paymentMethod) {
           commission.paymentMethod = paymentDetails.paymentMethod;
@@ -191,7 +211,9 @@ export class CommissionsService {
   }> {
     const query = this.commissionsRepository
       .createQueryBuilder('commission')
-      .where('commission.salonEmployeeId = :salonEmployeeId', { salonEmployeeId });
+      .where('commission.salonEmployeeId = :salonEmployeeId', {
+        salonEmployeeId,
+      });
 
     if (startDate) {
       query.andWhere('commission.createdAt >= :startDate', { startDate });
@@ -203,12 +225,18 @@ export class CommissionsService {
 
     const commissions = await query.getMany();
 
-    const totalCommissions = commissions.reduce((sum, c) => sum + Number(c.amount), 0);
+    const totalCommissions = commissions.reduce(
+      (sum, c) => sum + Number(c.amount),
+      0,
+    );
     const paidCommissions = commissions
       .filter((c) => c.paid)
       .reduce((sum, c) => sum + Number(c.amount), 0);
     const unpaidCommissions = totalCommissions - paidCommissions;
-    const totalSales = commissions.reduce((sum, c) => sum + Number(c.saleAmount), 0);
+    const totalSales = commissions.reduce(
+      (sum, c) => sum + Number(c.saleAmount),
+      0,
+    );
 
     return {
       totalCommissions,
@@ -219,4 +247,3 @@ export class CommissionsService {
     };
   }
 }
-

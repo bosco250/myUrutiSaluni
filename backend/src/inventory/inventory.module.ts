@@ -7,10 +7,12 @@ import { InventoryMovement } from './entities/inventory-movement.entity';
 import { SalonsModule } from '../salons/salons.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product, InventoryMovement]), SalonsModule],
+  imports: [
+    TypeOrmModule.forFeature([Product, InventoryMovement]),
+    SalonsModule,
+  ],
   controllers: [InventoryController],
   providers: [InventoryService],
   exports: [InventoryService],
 })
 export class InventoryModule {}
-

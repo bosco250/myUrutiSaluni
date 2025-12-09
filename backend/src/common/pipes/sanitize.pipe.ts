@@ -1,8 +1,9 @@
-import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
 
 @Injectable()
 export class SanitizePipe implements PipeTransform {
-  transform(value: any, metadata: ArgumentMetadata) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  transform(value: any, _metadata: ArgumentMetadata) {
     if (typeof value === 'string') {
       return this.sanitizeString(value);
     }

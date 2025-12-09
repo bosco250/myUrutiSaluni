@@ -30,11 +30,7 @@ export class PayrollController {
   ) {}
 
   @Post('calculate')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.SALON_OWNER,
-  )
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Calculate payroll for a period' })
   async calculatePayroll(
     @Body() createPayrollDto: CreatePayrollRunDto,
@@ -60,11 +56,7 @@ export class PayrollController {
   }
 
   @Post(':id/mark-paid')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.SALON_OWNER,
-  )
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Mark payroll as paid' })
   async markAsPaid(
     @Param('id') id: string,
@@ -92,11 +84,7 @@ export class PayrollController {
   }
 
   @Get('summary')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.SALON_OWNER,
-  )
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Get payroll summary' })
   async getSummary(
     @Query('salonId') salonId: string,
@@ -123,11 +111,7 @@ export class PayrollController {
   }
 
   @Get('salon/:salonId')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.SALON_OWNER,
-  )
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Get payroll history for a salon' })
   async getPayrollHistory(
     @Param('salonId') salonId: string,
@@ -148,11 +132,7 @@ export class PayrollController {
   }
 
   @Get(':id')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.SALON_OWNER,
-  )
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
   @ApiOperation({ summary: 'Get a single payroll run' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     const payrollRun = await this.payrollService.findOne(id);
@@ -171,4 +151,3 @@ export class PayrollController {
     return payrollRun;
   }
 }
-

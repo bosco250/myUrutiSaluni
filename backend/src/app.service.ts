@@ -6,4 +6,3 @@ export class AppService {
     return 'Salon Association Platform API is running!';
   }
 }
-

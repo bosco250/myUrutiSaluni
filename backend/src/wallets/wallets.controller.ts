@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WalletsService } from './wallets.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,7 +21,10 @@ export class WalletsController {
 
   @Get(':userId')
   @ApiOperation({ summary: 'Get or create wallet for user' })
-  getWallet(@Param('userId') userId: string, @Query('salonId') salonId?: string) {
+  getWallet(
+    @Param('userId') userId: string,
+    @Query('salonId') salonId?: string,
+  ) {
     return this.walletsService.getOrCreateWallet(userId, salonId);
   }
 
@@ -25,7 +36,10 @@ export class WalletsController {
 
   @Post(':walletId/transactions')
   @ApiOperation({ summary: 'Create a wallet transaction' })
-  createTransaction(@Param('walletId') walletId: string, @Body() createTransactionDto: CreateWalletTransactionDto) {
+  createTransaction(
+    @Param('walletId') walletId: string,
+    @Body() createTransactionDto: CreateWalletTransactionDto,
+  ) {
     return this.walletsService.createTransaction(
       walletId,
       createTransactionDto.transactionType,
@@ -34,4 +48,3 @@ export class WalletsController {
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { logger } from './logger';
 import { secureStorage } from './secure-storage';
+import { clearAllSessionData } from './auth';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -44,11 +45,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Clear all auth data
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      secureStorage.removeToken();
-      secureStorage.removeUser();
+      // Session expired - clear ALL localStorage data for security
+      clearAllSessionData();
 
       // Redirect to login
       window.location.href = '/login';

@@ -9,10 +9,15 @@ import { ServicesModule } from '../services/services.module';
 import { CommissionsModule } from '../commissions/commissions.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Appointment]), SalonsModule, CustomersModule, ServicesModule, CommissionsModule],
+  imports: [
+    TypeOrmModule.forFeature([Appointment]),
+    SalonsModule,
+    CustomersModule,
+    ServicesModule,
+    CommissionsModule,
+  ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
   exports: [AppointmentsService],
 })
 export class AppointmentsModule {}
-

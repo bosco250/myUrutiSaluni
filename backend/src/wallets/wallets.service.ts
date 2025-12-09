@@ -2,7 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Wallet } from './entities/wallet.entity';
-import { WalletTransaction, WalletTransactionType, WalletTransactionStatus } from './entities/wallet-transaction.entity';
+import {
+  WalletTransaction,
+  WalletTransactionType,
+  WalletTransactionStatus,
+} from './entities/wallet-transaction.entity';
 
 @Injectable()
 export class WalletsService {
@@ -40,11 +44,12 @@ export class WalletsService {
       }
 
       const balanceBefore = Number(wallet.balance);
-      const balanceAfter = type === WalletTransactionType.DEPOSIT || 
-                          type === WalletTransactionType.COMMISSION ||
-                          type === WalletTransactionType.REFUND
-        ? balanceBefore + amount
-        : balanceBefore - amount;
+      const balanceAfter =
+        type === WalletTransactionType.DEPOSIT ||
+        type === WalletTransactionType.COMMISSION ||
+        type === WalletTransactionType.REFUND
+          ? balanceBefore + amount
+          : balanceBefore - amount;
 
       if (balanceAfter < 0) {
         throw new Error('Insufficient balance');
@@ -73,4 +78,3 @@ export class WalletsService {
     });
   }
 }
-

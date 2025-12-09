@@ -22,23 +22,41 @@ export class LoansService {
   async createLoan(loanData: any): Promise<Loan> {
     const loan = this.loansRepository.create({
       ...loanData,
-      applicationDate: loanData.applicationDate ? new Date(loanData.applicationDate) : new Date(),
-      approvedDate: loanData.approvedDate ? new Date(loanData.approvedDate) : undefined,
-      disbursedDate: loanData.disbursedDate ? new Date(loanData.disbursedDate) : undefined,
-      firstPaymentDate: loanData.firstPaymentDate ? new Date(loanData.firstPaymentDate) : undefined,
-      nextPaymentDate: loanData.nextPaymentDate ? new Date(loanData.nextPaymentDate) : undefined,
-      completedDate: loanData.completedDate ? new Date(loanData.completedDate) : undefined,
-      defaultedDate: loanData.defaultedDate ? new Date(loanData.defaultedDate) : undefined,
+      applicationDate: loanData.applicationDate
+        ? new Date(loanData.applicationDate)
+        : new Date(),
+      approvedDate: loanData.approvedDate
+        ? new Date(loanData.approvedDate)
+        : undefined,
+      disbursedDate: loanData.disbursedDate
+        ? new Date(loanData.disbursedDate)
+        : undefined,
+      firstPaymentDate: loanData.firstPaymentDate
+        ? new Date(loanData.firstPaymentDate)
+        : undefined,
+      nextPaymentDate: loanData.nextPaymentDate
+        ? new Date(loanData.nextPaymentDate)
+        : undefined,
+      completedDate: loanData.completedDate
+        ? new Date(loanData.completedDate)
+        : undefined,
+      defaultedDate: loanData.defaultedDate
+        ? new Date(loanData.defaultedDate)
+        : undefined,
     });
     const saved = await this.loansRepository.save(loan);
     return Array.isArray(saved) ? saved[0] : saved;
   }
 
   async findAllLoans(): Promise<Loan[]> {
-    return this.loansRepository.find({ relations: ['applicant', 'loanProduct'] });
+    return this.loansRepository.find({
+      relations: ['applicant', 'loanProduct'],
+    });
   }
 
-  async createLoanProduct(productData: Partial<LoanProduct>): Promise<LoanProduct> {
+  async createLoanProduct(
+    productData: Partial<LoanProduct>,
+  ): Promise<LoanProduct> {
     const product = this.loanProductsRepository.create(productData);
     return this.loanProductsRepository.save(product);
   }
@@ -50,8 +68,15 @@ export class LoansService {
   async calculateCreditScore(userId: string): Promise<CreditScore> {
     // Simplified credit scoring - implement actual logic
     const score = Math.floor(Math.random() * 500) + 500; // 500-1000
-    const riskLevel = score >= 750 ? 'excellent' : score >= 600 ? 'good' : score >= 450 ? 'fair' : 'poor';
-    
+    const riskLevel =
+      score >= 750
+        ? 'excellent'
+        : score >= 600
+          ? 'good'
+          : score >= 450
+            ? 'fair'
+            : 'poor';
+
     const creditScore = this.creditScoresRepository.create({
       userId,
       score,
@@ -61,4 +86,3 @@ export class LoansService {
     return this.creditScoresRepository.save(creditScore);
   }
 }
-

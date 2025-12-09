@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CommissionsService } from './commissions.service';
@@ -22,10 +23,30 @@ import { SalonsService } from '../salons/salons.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('commissions')
 export class CommissionsController {
+  private readonly logger = new Logger(CommissionsController.name);
+
   constructor(
     private readonly commissionsService: CommissionsService,
     private readonly salonsService: SalonsService,
   ) {}
+
+  /**
+   * Parse YYYY-MM-DD date string to UTC Date object
+   * @param dateString - Date string in YYYY-MM-DD format
+   * @param isEndDate - If true, sets time to end of day (23:59:59.999), otherwise midnight (00:00:00)
+   */
+  private parseDateFilter(
+    dateString: string | undefined,
+    isEndDate = false,
+  ): Date | undefined {
+    if (!dateString) return undefined;
+
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (isEndDate) {
+      return new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    }
+    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  }
 
   @Get()
   @Roles(
@@ -46,24 +67,26 @@ export class CommissionsController {
   ) {
     // If salon employee, automatically filter to their own commissions only
     if (user.role === UserRole.SALON_EMPLOYEE) {
-      // Find the employee record for this user
-      const employee = await this.salonsService.findEmployeeByUserId(user.id);
-      if (!employee) {
+      // Find ALL employee records for this user (they may work at multiple salons)
+      const employees = await this.salonsService.findAllEmployeesByUserId(user.id);
+      
+      if (!employees || employees.length === 0) {
+        // Log warning for debugging
+        this.logger.warn(
+          `No employee records found for user ${user.id} (${user.email || 'unknown email'}). User may need to be added as an employee to a salon.`,
+        );
         // Return empty array instead of throwing error - employee might not have record yet
         return [];
       }
 
-      // Override salonEmployeeId to only show this employee's commissions
-      salonEmployeeId = employee.id;
+      const employeeIds = employees.map((emp) => emp.id);
 
-      // Set salonId to employee's salon to ensure proper filtering
-      if (!salonId) {
-        salonId = employee.salonId;
-      } else if (salonId !== employee.salonId) {
-        throw new ForbiddenException(
-          'You can only access commissions for your own salon',
-        );
-      }
+      return this.commissionsService.findAll({
+        salonEmployeeIds: employeeIds,
+        paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
+        startDate: this.parseDateFilter(startDate, false),
+        endDate: this.parseDateFilter(endDate, true),
+      });
     } else if (user.role === UserRole.SALON_OWNER) {
       // Salon owners can see commissions for their salons
       const salons = await this.salonsService.findByOwnerId(user.id);
@@ -91,8 +114,8 @@ export class CommissionsController {
       salonEmployeeId,
       salonId,
       paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      startDate: this.parseDateFilter(startDate, false),
+      endDate: this.parseDateFilter(endDate, true),
     });
   }
 

@@ -8,10 +8,16 @@ import { JournalEntryLine } from './entities/journal-entry-line.entity';
 import { Invoice } from './entities/invoice.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ChartOfAccount, JournalEntry, JournalEntryLine, Invoice])],
+  imports: [
+    TypeOrmModule.forFeature([
+      ChartOfAccount,
+      JournalEntry,
+      JournalEntryLine,
+      Invoice,
+    ]),
+  ],
   controllers: [AccountingController],
   providers: [AccountingService],
   exports: [AccountingService],
 })
 export class AccountingModule {}
-

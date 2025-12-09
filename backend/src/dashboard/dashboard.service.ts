@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class DashboardService {
-  async getDashboardStats(salonId?: string) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getDashboardStats(_salonId?: string) {
     // Placeholder - implement actual analytics
     return {
       totalRevenue: 0,
@@ -14,4 +15,3 @@ export class DashboardService {
     };
   }
 }
-

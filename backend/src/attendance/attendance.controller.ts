@@ -23,4 +23,3 @@ export class AttendanceController {
     return this.attendanceService.findByEmployee(employeeId);
   }
 }
-

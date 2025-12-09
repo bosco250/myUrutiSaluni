@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, Between } from 'typeorm';
-import { Inspection, InspectionStatus, ComplianceStatus } from './entities/inspection.entity';
+import {
+  Inspection,
+  InspectionStatus,
+  ComplianceStatus,
+} from './entities/inspection.entity';
 import { CreateInspectionDto } from './dto/create-inspection.dto';
 import { UpdateInspectionDto } from './dto/update-inspection.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,9 +25,15 @@ export class InspectionsService {
     const inspection = this.inspectionsRepository.create({
       ...createDto,
       scheduledDate: new Date(createDto.scheduledDate),
-      inspectionDate: createDto.inspectionDate ? new Date(createDto.inspectionDate) : undefined,
-      nextInspectionDate: createDto.nextInspectionDate ? new Date(createDto.nextInspectionDate) : undefined,
-      certificateExpiryDate: createDto.certificateExpiryDate ? new Date(createDto.certificateExpiryDate) : undefined,
+      inspectionDate: createDto.inspectionDate
+        ? new Date(createDto.inspectionDate)
+        : undefined,
+      nextInspectionDate: createDto.nextInspectionDate
+        ? new Date(createDto.nextInspectionDate)
+        : undefined,
+      certificateExpiryDate: createDto.certificateExpiryDate
+        ? new Date(createDto.certificateExpiryDate)
+        : undefined,
       checklistItems,
       status: createDto.status || InspectionStatus.SCHEDULED,
       complianceStatus: createDto.complianceStatus || ComplianceStatus.PENDING,
@@ -33,7 +43,10 @@ export class InspectionsService {
     return this.inspectionsRepository.save(inspection);
   }
 
-  async findAll(salonId?: string, status?: InspectionStatus): Promise<Inspection[]> {
+  async findAll(
+    salonId?: string,
+    status?: InspectionStatus,
+  ): Promise<Inspection[]> {
     const where: any = {};
     if (salonId) where.salonId = salonId;
     if (status) where.status = status;
@@ -58,7 +71,10 @@ export class InspectionsService {
     return inspection;
   }
 
-  async update(id: string, updateDto: UpdateInspectionDto): Promise<Inspection> {
+  async update(
+    id: string,
+    updateDto: UpdateInspectionDto,
+  ): Promise<Inspection> {
     const inspection = await this.findOne(id);
 
     // Calculate scores if checklist items are updated
@@ -86,11 +102,16 @@ export class InspectionsService {
       updateDto.inspectionDate = new Date(updateDto.inspectionDate) as any;
     }
     if (updateDto.nextInspectionDate) {
-      updateDto.nextInspectionDate = new Date(updateDto.nextInspectionDate) as any;
+      updateDto.nextInspectionDate = new Date(
+        updateDto.nextInspectionDate,
+      ) as any;
     }
 
     // Mark as completed if status is completed
-    if (updateDto.status === InspectionStatus.COMPLETED && !inspection.completedAt) {
+    if (
+      updateDto.status === InspectionStatus.COMPLETED &&
+      !inspection.completedAt
+    ) {
       updateDto.completedAt = new Date().toISOString();
       if (!updateDto.inspectionDate) {
         updateDto.inspectionDate = new Date().toISOString();
@@ -157,15 +178,24 @@ export class InspectionsService {
       where,
     });
 
-    const compliant = inspections.filter((i) => i.complianceStatus === ComplianceStatus.COMPLIANT).length;
-    const nonCompliant = inspections.filter((i) => i.complianceStatus === ComplianceStatus.NON_COMPLIANT).length;
+    const compliant = inspections.filter(
+      (i) => i.complianceStatus === ComplianceStatus.COMPLIANT,
+    ).length;
+    const nonCompliant = inspections.filter(
+      (i) => i.complianceStatus === ComplianceStatus.NON_COMPLIANT,
+    ).length;
     const partiallyCompliant = inspections.filter(
       (i) => i.complianceStatus === ComplianceStatus.PARTIALLY_COMPLIANT,
     ).length;
-    const pending = inspections.filter((i) => i.complianceStatus === ComplianceStatus.PENDING).length;
+    const pending = inspections.filter(
+      (i) => i.complianceStatus === ComplianceStatus.PENDING,
+    ).length;
 
-    const scores = inspections.filter((i) => i.overallScore !== null && i.overallScore !== undefined).map((i) => i.overallScore!);
-    const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const scores = inspections
+      .filter((i) => i.overallScore !== null && i.overallScore !== undefined)
+      .map((i) => i.overallScore!);
+    const averageScore =
+      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
 
     return {
       total: inspections.length,
@@ -299,4 +329,3 @@ export class InspectionsService {
     ];
   }
 }
-

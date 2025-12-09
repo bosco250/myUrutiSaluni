@@ -59,4 +59,3 @@ export class AddEmployeeToAppointments1732600000000
     await queryRunner.dropColumn('appointments', 'salon_employee_id');
   }
 }
-

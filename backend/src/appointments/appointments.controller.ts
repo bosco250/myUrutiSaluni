@@ -470,8 +470,13 @@ export class AppointmentsController {
     if (appointment.status === 'completed') {
       throw new ForbiddenException('Cannot modify a completed appointment');
     }
-    if (appointment.status === 'cancelled' && updateAppointmentDto.status !== 'cancelled') {
-      throw new ForbiddenException('Cannot modify a cancelled appointment. Please create a new appointment instead.');
+    if (
+      appointment.status === 'cancelled' &&
+      updateAppointmentDto.status !== 'cancelled'
+    ) {
+      throw new ForbiddenException(
+        'Cannot modify a cancelled appointment. Please create a new appointment instead.',
+      );
     }
 
     // Salon owners can only update appointments for their salon

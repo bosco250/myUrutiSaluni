@@ -24,4 +24,3 @@ import { CustomersModule } from '../customers/customers.module';
   exports: [SalesService],
 })
 export class SalesModule {}
-

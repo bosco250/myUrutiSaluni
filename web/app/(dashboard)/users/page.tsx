@@ -18,6 +18,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -303,7 +304,35 @@ function UsersPageContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {paginatedUsers.map((user) => (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8">
+                      <div className="flex items-center justify-center gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        <span className="text-text-light/60 dark:text-text-dark/60">
+                          Loading users...
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : paginatedUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <UserIcon className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
+                        <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                          No users found
+                        </p>
+                        <p className="text-xs text-text-light/40 dark:text-text-dark/40">
+                          {searchQuery || roleFilter !== 'all'
+                            ? 'Try adjusting your search or filters'
+                            : 'No users have been registered yet'}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedUsers.map((user) => (
                   <tr
                     key={user.id}
                     className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
@@ -388,7 +417,8 @@ function UsersPageContent() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

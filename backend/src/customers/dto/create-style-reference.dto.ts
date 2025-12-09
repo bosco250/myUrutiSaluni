@@ -1,4 +1,11 @@
-import { IsBoolean, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateStyleReferenceDto {
   @IsString()
@@ -25,5 +32,3 @@ export class CreateStyleReferenceDto {
   @IsBoolean()
   sharedWithEmployees?: boolean;
 }
-
-

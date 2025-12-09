@@ -12,4 +12,3 @@ import { WalletTransaction } from './entities/wallet-transaction.entity';
   exports: [WalletsService],
 })
 export class WalletsModule {}
-

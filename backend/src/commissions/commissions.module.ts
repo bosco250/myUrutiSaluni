@@ -16,4 +16,3 @@ import { SalonEmployee } from '../salons/entities/salon-employee.entity';
   exports: [CommissionsService],
 })
 export class CommissionsModule {}
-

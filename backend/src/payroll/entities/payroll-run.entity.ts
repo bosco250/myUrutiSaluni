@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 import { PayrollItem } from './payroll-item.entity';
 
@@ -28,7 +37,13 @@ export class PayrollRun {
   @Column({ name: 'period_end', type: 'date' })
   periodEnd: Date;
 
-  @Column({ name: 'total_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'total_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   totalAmount: number;
 
   @Column({
@@ -53,4 +68,3 @@ export class PayrollRun {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

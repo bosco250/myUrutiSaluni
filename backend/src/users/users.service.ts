@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
@@ -59,25 +63,30 @@ export class UsersService {
     await this.usersRepository.delete(id);
   }
 
-  async assignMembershipNumber(userId: string, membershipNumber?: string): Promise<User> {
+  async assignMembershipNumber(
+    userId: string,
+    membershipNumber?: string,
+  ): Promise<User> {
     const user = await this.findOne(userId);
-    
+
     if (membershipNumber) {
       // Check if the membership number is already taken
       const existing = await this.usersRepository.findOne({
         where: { membershipNumber },
       });
-      
+
       if (existing && existing.id !== userId) {
-        throw new BadRequestException(`Membership number ${membershipNumber} is already assigned to another user`);
+        throw new BadRequestException(
+          `Membership number ${membershipNumber} is already assigned to another user`,
+        );
       }
-      
+
       user.membershipNumber = membershipNumber;
     } else {
       // Generate a new membership number if not provided
       user.membershipNumber = await this.generateMemberMembershipNumber();
     }
-    
+
     return this.usersRepository.save(user);
   }
 
@@ -91,7 +100,9 @@ export class UsersService {
 
     while (!isUnique && attempts < maxAttempts) {
       const year = new Date().getFullYear();
-      const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+      const random = Math.floor(Math.random() * 1000000)
+        .toString()
+        .padStart(6, '0');
       membershipNumber = `MEMBER-${year}-${random}`;
 
       // Check if this membership number already exists
@@ -116,4 +127,3 @@ export class UsersService {
     return membershipNumber!;
   }
 }
-

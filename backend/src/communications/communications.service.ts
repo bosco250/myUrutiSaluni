@@ -2,12 +2,20 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Communication, CommunicationType, CommunicationStatus, CommunicationDirection } from './entities/communication.entity';
+import {
+  Communication,
+  CommunicationType,
+  CommunicationStatus,
+  CommunicationDirection,
+} from './entities/communication.entity';
 import { CreateCommunicationDto } from './dto/create-communication.dto';
 import { UpdateCommunicationDto } from './dto/update-communication.dto';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationChannel, NotificationType } from '../notifications/entities/notification.entity';
-import { addDays, isBefore, isAfter } from 'date-fns';
+import {
+  NotificationChannel,
+  NotificationType,
+} from '../notifications/entities/notification.entity';
+import { isBefore } from 'date-fns';
 
 @Injectable()
 export class CommunicationsService {
@@ -20,16 +28,30 @@ export class CommunicationsService {
   async create(createDto: CreateCommunicationDto): Promise<Communication> {
     const communication = this.communicationsRepository.create({
       ...createDto,
-      scheduledFor: createDto.scheduledFor ? new Date(createDto.scheduledFor) : undefined,
-      followUpDate: createDto.followUpDate ? new Date(createDto.followUpDate) : undefined,
-      status: createDto.status || (createDto.scheduledFor ? CommunicationStatus.SCHEDULED : CommunicationStatus.COMPLETED),
-      completedAt: createDto.status === CommunicationStatus.COMPLETED ? new Date() : undefined,
+      scheduledFor: createDto.scheduledFor
+        ? new Date(createDto.scheduledFor)
+        : undefined,
+      followUpDate: createDto.followUpDate
+        ? new Date(createDto.followUpDate)
+        : undefined,
+      status:
+        createDto.status ||
+        (createDto.scheduledFor
+          ? CommunicationStatus.SCHEDULED
+          : CommunicationStatus.COMPLETED),
+      completedAt:
+        createDto.status === CommunicationStatus.COMPLETED
+          ? new Date()
+          : undefined,
     });
 
     return this.communicationsRepository.save(communication);
   }
 
-  async findAll(customerId?: string, limit: number = 100): Promise<Communication[]> {
+  async findAll(
+    customerId?: string,
+    limit: number = 100,
+  ): Promise<Communication[]> {
     const where: any = {};
     if (customerId) where.customerId = customerId;
 
@@ -54,7 +76,10 @@ export class CommunicationsService {
     return communication;
   }
 
-  async update(id: string, updateDto: UpdateCommunicationDto): Promise<Communication> {
+  async update(
+    id: string,
+    updateDto: UpdateCommunicationDto,
+  ): Promise<Communication> {
     const communication = await this.findOne(id);
 
     if (updateDto.scheduledFor) {
@@ -126,13 +151,20 @@ export class CommunicationsService {
       byType[comm.type] = (byType[comm.type] || 0) + 1;
       byDirection[comm.direction] = (byDirection[comm.direction] || 0) + 1;
 
-      if (comm.completedAt && (!lastContactDate || comm.completedAt > lastContactDate)) {
+      if (
+        comm.completedAt &&
+        (!lastContactDate || comm.completedAt > lastContactDate)
+      ) {
         lastContactDate = comm.completedAt;
       }
     });
 
     const pendingFollowUps = communications.filter(
-      (comm) => comm.followUpRequired && !comm.followUpCompleted && comm.followUpDate && isBefore(comm.followUpDate, new Date()),
+      (comm) =>
+        comm.followUpRequired &&
+        !comm.followUpCompleted &&
+        comm.followUpDate &&
+        isBefore(comm.followUpDate, new Date()),
     ).length;
 
     return {
@@ -181,7 +213,9 @@ export class CommunicationsService {
       saleId: original.saleId,
       type: CommunicationType.FOLLOW_UP,
       direction: CommunicationDirection.OUTBOUND,
-      status: followUpData.scheduledFor ? CommunicationStatus.SCHEDULED : CommunicationStatus.PENDING,
+      status: followUpData.scheduledFor
+        ? CommunicationStatus.SCHEDULED
+        : CommunicationStatus.PENDING,
       subject: followUpData.subject,
       content: followUpData.content,
       scheduledFor: followUpData.scheduledFor,
@@ -194,4 +228,3 @@ export class CommunicationsService {
     return this.communicationsRepository.save(followUp);
   }
 }
-

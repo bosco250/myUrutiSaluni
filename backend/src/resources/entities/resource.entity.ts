@@ -127,4 +127,3 @@ export class Resource {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Wallet } from './wallet.entity';
 
 export enum WalletTransactionType {
@@ -78,4 +87,3 @@ export class WalletTransaction {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

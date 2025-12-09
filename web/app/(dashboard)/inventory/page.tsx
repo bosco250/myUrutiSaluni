@@ -12,6 +12,7 @@ import {
   DollarSign,
   Percent,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -447,7 +448,46 @@ function InventoryContent() {
                 </tr>
               </thead>
               <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
-                {filteredProducts.map((product) => (
+                {productsLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8">
+                      <div className="flex items-center justify-center gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                        <span className="text-text-light/60 dark:text-text-dark/60">
+                          Loading products...
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <EmptyState
+                        icon={Package}
+                        title="No products found"
+                        description={
+                          searchQuery || typeFilter !== 'all'
+                            ? 'Try adjusting your search or filter criteria.'
+                            : 'Add your first product to get started. Products can be sold and tracked in inventory.'
+                        }
+                        action={
+                          filteredProducts.length === 0 ? (
+                            <Button
+                              onClick={() => {
+                                setEditingProduct(null);
+                                setShowModal(true);
+                              }}
+                            >
+                              <Plus className="w-5 h-5" />
+                              Add First Product
+                            </Button>
+                          ) : null
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((product) => (
                   <tr
                     key={product.id}
                     className="hover:bg-surface-accent-light dark:hover:bg-surface-accent-dark transition"
@@ -521,7 +561,8 @@ function InventoryContent() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

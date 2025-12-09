@@ -20,12 +20,17 @@ export class AccountingService {
     private dataSource: DataSource,
   ) {}
 
-  async createAccount(accountData: Partial<ChartOfAccount>): Promise<ChartOfAccount> {
+  async createAccount(
+    accountData: Partial<ChartOfAccount>,
+  ): Promise<ChartOfAccount> {
     const account = this.chartOfAccountsRepository.create(accountData);
     return this.chartOfAccountsRepository.save(account);
   }
 
-  async findAccountByCode(code: string, salonId: string): Promise<ChartOfAccount | null> {
+  async findAccountByCode(
+    code: string,
+    salonId: string,
+  ): Promise<ChartOfAccount | null> {
     return this.chartOfAccountsRepository.findOne({
       where: { code, salonId },
     });
@@ -48,21 +53,27 @@ export class AccountingService {
       const entry = manager.create(JournalEntry, {
         salonId: entryData.salonId,
         entryNumber: entryData.entryNumber,
-        entryDate: entryData.entryDate ? new Date(entryData.entryDate) : new Date(),
+        entryDate: entryData.entryDate
+          ? new Date(entryData.entryDate)
+          : new Date(),
         description: entryData.description,
         status: entryData.status,
         createdById: entryData.createdById,
       });
-      
+
       const savedEntry = await manager.save(JournalEntry, entry);
-      
+
       if (entryData.lines && entryData.lines.length > 0) {
         const lines = entryData.lines.map((line: any) =>
           manager.create(JournalEntryLine, {
             journalEntryId: savedEntry.id,
             accountId: line.accountId,
-            debitAmount: line.debitAmount ? parseFloat(String(line.debitAmount)) : 0,
-            creditAmount: line.creditAmount ? parseFloat(String(line.creditAmount)) : 0,
+            debitAmount: line.debitAmount
+              ? parseFloat(String(line.debitAmount))
+              : 0,
+            creditAmount: line.creditAmount
+              ? parseFloat(String(line.creditAmount))
+              : 0,
             description: line.description,
             referenceType: line.referenceType,
             referenceId: line.referenceId,
@@ -70,7 +81,7 @@ export class AccountingService {
         );
         await manager.save(JournalEntryLine, lines);
       }
-      
+
       return manager.findOne(JournalEntry, {
         where: { id: savedEntry.id },
         relations: ['lines', 'lines.account'],
@@ -81,11 +92,12 @@ export class AccountingService {
   async createInvoice(invoiceData: any): Promise<Invoice> {
     const invoice = this.invoicesRepository.create({
       ...invoiceData,
-      issueDate: invoiceData.issueDate ? new Date(invoiceData.issueDate) : new Date(),
+      issueDate: invoiceData.issueDate
+        ? new Date(invoiceData.issueDate)
+        : new Date(),
       dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : undefined,
     });
     const saved = await this.invoicesRepository.save(invoice);
     return Array.isArray(saved) ? saved[0] : saved;
   }
 }
-

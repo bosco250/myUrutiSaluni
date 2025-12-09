@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsEmail, IsEnum, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  IsEnum,
+  IsNumber,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ApplicationStatus } from '../entities/membership-application.entity';
 import { Type } from 'class-transformer';
@@ -49,16 +55,30 @@ export class CreateMembershipApplicationDto {
   @IsString()
   taxId?: string;
 
-  @ApiProperty({ required: false, type: 'number', description: 'Latitude coordinate' })
+  @ApiProperty({
+    required: false,
+    type: 'number',
+    description: 'Latitude coordinate',
+  })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber({ allowNaN: false, allowInfinity: false }, { message: 'Latitude must be a valid number' })
+  @IsNumber(
+    { allowNaN: false, allowInfinity: false },
+    { message: 'Latitude must be a valid number' },
+  )
   latitude?: number;
 
-  @ApiProperty({ required: false, type: 'number', description: 'Longitude coordinate' })
+  @ApiProperty({
+    required: false,
+    type: 'number',
+    description: 'Longitude coordinate',
+  })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber({ allowNaN: false, allowInfinity: false }, { message: 'Longitude must be a valid number' })
+  @IsNumber(
+    { allowNaN: false, allowInfinity: false },
+    { message: 'Longitude must be a valid number' },
+  )
   longitude?: number;
 
   @ApiProperty({ required: false, type: 'object', additionalProperties: true })
@@ -76,4 +96,3 @@ export class ReviewApplicationDto {
   @IsString()
   rejectionReason?: string;
 }
-

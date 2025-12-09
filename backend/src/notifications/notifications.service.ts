@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, In } from 'typeorm';
+import { Repository, LessThanOrEqual } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Notification, NotificationChannel, NotificationType, NotificationStatus } from './entities/notification.entity';
+import {
+  Notification,
+  NotificationChannel,
+  NotificationType,
+  NotificationStatus,
+} from './entities/notification.entity';
 import { NotificationPreference } from './entities/notification-preference.entity';
 import { EmailService } from './services/email.service';
 import { SmsService } from './services/sms.service';
@@ -42,7 +47,9 @@ export class NotificationsService {
       title,
       body,
       scheduledFor,
-      status: scheduledFor ? NotificationStatus.PENDING : NotificationStatus.PENDING,
+      status: scheduledFor
+        ? NotificationStatus.PENDING
+        : NotificationStatus.PENDING,
     });
 
     const saved = await this.notificationsRepository.save(notification);
@@ -60,13 +67,23 @@ export class NotificationsService {
       // Check if user/customer has this notification type enabled
       const preference = await this.preferencesRepository.findOne({
         where: [
-          { userId: notification.userId, type: notification.type, channel: notification.channel },
-          { customerId: notification.customerId, type: notification.type, channel: notification.channel },
+          {
+            userId: notification.userId,
+            type: notification.type,
+            channel: notification.channel,
+          },
+          {
+            customerId: notification.customerId,
+            type: notification.type,
+            channel: notification.channel,
+          },
         ],
       });
 
       if (preference && !preference.enabled) {
-        this.logger.log(`Notification ${notification.id} skipped - preference disabled`);
+        this.logger.log(
+          `Notification ${notification.id} skipped - preference disabled`,
+        );
         notification.status = NotificationStatus.FAILED;
         notification.errorMessage = 'Notification preference disabled';
         await this.notificationsRepository.save(notification);
@@ -87,7 +104,10 @@ export class NotificationsService {
           break;
         case NotificationChannel.SMS:
           if (notification.recipientPhone) {
-            success = await this.smsService.sendSms(notification.recipientPhone, notification.body);
+            success = await this.smsService.sendSms(
+              notification.recipientPhone,
+              notification.body,
+            );
           }
           break;
         case NotificationChannel.PUSH:
@@ -97,13 +117,18 @@ export class NotificationsService {
           break;
       }
 
-      notification.status = success ? NotificationStatus.SENT : NotificationStatus.FAILED;
+      notification.status = success
+        ? NotificationStatus.SENT
+        : NotificationStatus.FAILED;
       notification.sentAt = new Date();
       await this.notificationsRepository.save(notification);
 
       return success;
     } catch (error) {
-      this.logger.error(`Failed to process notification ${notification.id}:`, error);
+      this.logger.error(
+        `Failed to process notification ${notification.id}:`,
+        error,
+      );
       notification.status = NotificationStatus.FAILED;
       notification.errorMessage = error.message;
       await this.notificationsRepository.save(notification);
@@ -114,7 +139,10 @@ export class NotificationsService {
   async sendAppointmentReminder(
     appointmentId: string,
     reminderHours: number = 24,
-    channels: NotificationChannel[] = [NotificationChannel.EMAIL, NotificationChannel.SMS],
+    channels: NotificationChannel[] = [
+      NotificationChannel.EMAIL,
+      NotificationChannel.SMS,
+    ],
   ): Promise<void> {
     const appointment = await this.appointmentsService.findOne(appointmentId);
     if (!appointment) {
@@ -127,7 +155,9 @@ export class NotificationsService {
 
     // Only schedule if reminder time is in the future
     if (isBefore(reminderTime, new Date())) {
-      this.logger.log(`Reminder time for appointment ${appointmentId} is in the past, skipping`);
+      this.logger.log(
+        `Reminder time for appointment ${appointmentId} is in the past, skipping`,
+      );
       return;
     }
 
@@ -180,7 +210,10 @@ export class NotificationsService {
       }
     } catch (error) {
       // Only log actual errors, not missing table errors
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         // Table doesn't exist yet, skip silently
         return;
       }
@@ -200,7 +233,9 @@ export class NotificationsService {
       const appointments = await this.appointmentsService.findAll();
       const upcomingAppointments = appointments.filter((apt) => {
         const aptDate = new Date(apt.scheduledStart);
-        return aptDate >= tomorrow && aptDate <= dayAfter && apt.status === 'booked';
+        return (
+          aptDate >= tomorrow && aptDate <= dayAfter && apt.status === 'booked'
+        );
       });
 
       for (const appointment of upcomingAppointments) {
@@ -218,7 +253,10 @@ export class NotificationsService {
       }
     } catch (error) {
       // Only log actual errors, not missing table errors
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         // Table doesn't exist yet, skip silently
         return;
       }
@@ -244,7 +282,10 @@ export class NotificationsService {
     });
   }
 
-  async getPreferences(userId?: string, customerId?: string): Promise<NotificationPreference[]> {
+  async getPreferences(
+    userId?: string,
+    customerId?: string,
+  ): Promise<NotificationPreference[]> {
     const where: any = {};
     if (userId) where.userId = userId;
     if (customerId) where.customerId = customerId;

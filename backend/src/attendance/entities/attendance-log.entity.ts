@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
 
 export enum AttendanceType {
@@ -35,4 +43,3 @@ export class AttendanceLog {
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 }
-

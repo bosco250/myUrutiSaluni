@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { UserRole } from '../users/entities/user.entity';
@@ -16,7 +16,8 @@ export class AuthService {
     if (user && user.passwordHash) {
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (isPasswordValid) {
-        const { passwordHash, ...result } = user;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { passwordHash: _, ...result } = user;
         return result;
       }
     }
@@ -28,7 +29,8 @@ export class AuthService {
     if (user && user.passwordHash) {
       const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (isPasswordValid) {
-        const { passwordHash, ...result } = user;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { passwordHash: _, ...result } = user;
         return result;
       }
     }
@@ -54,22 +56,34 @@ export class AuthService {
     };
   }
 
-  async register(email: string, password: string, fullName: string, phone?: string, role?: string) {
+  async register(
+    email: string,
+    password: string,
+    fullName: string,
+    phone?: string,
+    role?: string,
+  ) {
     // Validate and restrict role selection for public registration
     // Only allow CUSTOMER, SALON_OWNER, or SALON_EMPLOYEE roles for public registration
-    const allowedRoles = [UserRole.CUSTOMER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE];
+    const allowedRoles = [
+      UserRole.CUSTOMER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ];
     let userRole = UserRole.CUSTOMER; // Default
-    
+
     if (role) {
       const requestedRole = role as UserRole;
       if (allowedRoles.includes(requestedRole)) {
         userRole = requestedRole;
       } else {
         // If invalid role provided, default to CUSTOMER
-        console.warn(`[AUTH] Invalid role '${role}' provided during registration. Defaulting to CUSTOMER.`);
+        console.warn(
+          `[AUTH] Invalid role '${role}' provided during registration. Defaulting to CUSTOMER.`,
+        );
       }
     }
-    
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await this.usersService.create({
       email,
@@ -81,4 +95,3 @@ export class AuthService {
     return this.login(user);
   }
 }
-

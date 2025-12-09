@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { PayrollRun } from './payroll-run.entity';
 import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
 
@@ -23,19 +31,43 @@ export class PayrollItem {
   @Column({ name: 'salon_employee_id' })
   salonEmployeeId: string;
 
-  @Column({ name: 'base_salary', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'base_salary',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   baseSalary: number;
 
-  @Column({ name: 'commission_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'commission_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   commissionAmount: number;
 
-  @Column({ name: 'overtime_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'overtime_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   overtimeAmount: number;
 
   @Column({ name: 'gross_pay', type: 'decimal', precision: 14, scale: 2 })
   grossPay: number;
 
-  @Column({ name: 'deductions', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'deductions',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   deductions: number;
 
   @Column({ name: 'net_pay', type: 'decimal', precision: 14, scale: 2 })
@@ -62,4 +94,3 @@ export class PayrollItem {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { PayrollRun, PayrollStatus } from './entities/payroll-run.entity';
 import { PayrollItem } from './entities/payroll-item.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
@@ -33,7 +37,7 @@ export class PayrollService {
     // Normalize dates: set start to beginning of day, end to end of day
     const startDate = new Date(periodStart);
     startDate.setHours(0, 0, 0, 0);
-    
+
     const endDate = new Date(periodEnd);
     endDate.setHours(23, 59, 59, 999);
 
@@ -96,8 +100,8 @@ export class PayrollService {
   ): Promise<PayrollItem> {
     let baseSalary = 0;
     let commissionAmount = 0;
-    let overtimeAmount = 0;
-    let deductions = 0;
+    const overtimeAmount = 0;
+    const deductions = 0;
 
     // Calculate base salary based on pay frequency
     // baseSalary is stored as the rate for the specified frequency (not annual)
@@ -137,13 +141,10 @@ export class PayrollService {
         order: { createdAt: 'ASC' },
       });
 
-      commissionAmount = unpaidCommissions.reduce(
-        (sum, c) => {
-          const amount = Number(c.amount || 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        },
-        0,
-      );
+      commissionAmount = unpaidCommissions.reduce((sum, c) => {
+        const amount = Number(c.amount || 0);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
     }
 
     // TODO: Calculate overtime (requires attendance data)
@@ -176,7 +177,6 @@ export class PayrollService {
     return payrollItem;
   }
 
-
   /**
    * Mark payroll as paid
    */
@@ -196,7 +196,9 @@ export class PayrollService {
     }
 
     if (payrollRun.status === PayrollStatus.PAID) {
-      throw new BadRequestException('This payroll has already been marked as paid');
+      throw new BadRequestException(
+        'This payroll has already been marked as paid',
+      );
     }
 
     // Mark all items as paid
@@ -253,7 +255,10 @@ export class PayrollService {
       } catch (error) {
         // Log error but continue with other commissions
         // Commission might have been marked as paid already
-        console.error(`Failed to mark commission ${commission.id} as paid:`, error);
+        console.error(
+          `Failed to mark commission ${commission.id} as paid:`,
+          error,
+        );
       }
     }
   }
@@ -275,7 +280,12 @@ export class PayrollService {
   async findOne(id: string): Promise<PayrollRun> {
     const payrollRun = await this.payrollRunsRepository.findOne({
       where: { id },
-      relations: ['items', 'items.salonEmployee', 'items.salonEmployee.user', 'salon'],
+      relations: [
+        'items',
+        'items.salonEmployee',
+        'items.salonEmployee.user',
+        'salon',
+      ],
     });
 
     if (!payrollRun) {
@@ -323,9 +333,10 @@ export class PayrollService {
       totalDeductions,
       totalNetPay,
       employeeCount: new Set(
-        payrollRuns.flatMap((run) => run.items.map((item) => item.salonEmployeeId)),
+        payrollRuns.flatMap((run) =>
+          run.items.map((item) => item.salonEmployeeId),
+        ),
       ).size,
     };
   }
 }
-

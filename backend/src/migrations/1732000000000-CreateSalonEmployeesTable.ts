@@ -7,14 +7,16 @@ import {
   TableIndex,
 } from 'typeorm';
 
-export class CreateSalonEmployeesTable1732000000000 implements MigrationInterface {
+export class CreateSalonEmployeesTable1732000000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     const isPostgres =
       queryRunner.connection.driver.options.type === 'postgres';
 
     // Check if table already exists
     const tableExists = await queryRunner.hasTable('salon_employees');
-    
+
     if (!tableExists) {
       await queryRunner.createTable(
         new Table({
@@ -120,12 +122,12 @@ export class CreateSalonEmployeesTable1732000000000 implements MigrationInterfac
             {
               name: 'created_at',
               type: isPostgres ? 'timestamptz' : 'datetime',
-              default: isPostgres ? 'now()' : "CURRENT_TIMESTAMP",
+              default: isPostgres ? 'now()' : 'CURRENT_TIMESTAMP',
             },
             {
               name: 'updated_at',
               type: isPostgres ? 'timestamptz' : 'datetime',
-              default: isPostgres ? 'now()' : "CURRENT_TIMESTAMP",
+              default: isPostgres ? 'now()' : 'CURRENT_TIMESTAMP',
             },
           ],
         }),
@@ -164,7 +166,7 @@ export class CreateSalonEmployeesTable1732000000000 implements MigrationInterfac
     } else {
       // Table exists, check and add missing columns
       const table = await queryRunner.getTable('salon_employees');
-      
+
       // Add base_salary if missing
       if (!table.findColumnByName('base_salary')) {
         await queryRunner.addColumn(
@@ -276,12 +278,12 @@ export class CreateSalonEmployeesTable1732000000000 implements MigrationInterfac
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const tableExists = await queryRunner.hasTable('salon_employees');
-    
+
     if (tableExists) {
       // Drop foreign keys first
       const table = await queryRunner.getTable('salon_employees');
       const foreignKeys = table.foreignKeys;
-      
+
       for (const foreignKey of foreignKeys) {
         await queryRunner.dropForeignKey('salon_employees', foreignKey);
       }
@@ -297,4 +299,3 @@ export class CreateSalonEmployeesTable1732000000000 implements MigrationInterfac
     }
   }
 }
-

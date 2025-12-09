@@ -1,17 +1,15 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  TableIndex,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, TableIndex } from 'typeorm';
 
-export class FixChartOfAccountsUniqueConstraint1732500000000 implements MigrationInterface {
+export class FixChartOfAccountsUniqueConstraint1732500000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     const isPostgres =
       queryRunner.connection.driver.options.type === 'postgres';
 
     // Get the table to check existing constraints
     const table = await queryRunner.getTable('chart_of_accounts');
-    
+
     if (!table) {
       console.warn('chart_of_accounts table not found, skipping migration');
       return;
@@ -37,24 +35,30 @@ export class FixChartOfAccountsUniqueConstraint1732500000000 implements Migratio
       // Drop unique constraints
       for (const constraint of constraints) {
         await queryRunner.query(
-          `ALTER TABLE chart_of_accounts DROP CONSTRAINT IF EXISTS "${constraint.conname}"`
+          `ALTER TABLE chart_of_accounts DROP CONSTRAINT IF EXISTS "${constraint.conname}"`,
         );
       }
 
       // Also check for unique indexes on code
       const codeUniqueIndex = table.indices.find(
-        (index) => index.isUnique && index.columnNames.length === 1 && index.columnNames[0] === 'code'
+        (index) =>
+          index.isUnique &&
+          index.columnNames.length === 1 &&
+          index.columnNames[0] === 'code',
       );
 
       if (codeUniqueIndex) {
         await queryRunner.query(
-          `DROP INDEX IF EXISTS "${codeUniqueIndex.name}"`
+          `DROP INDEX IF EXISTS "${codeUniqueIndex.name}"`,
         );
       }
     } else {
       // For SQLite, find and drop unique index on code
       const codeUniqueIndex = table.indices.find(
-        (index) => index.isUnique && index.columnNames.length === 1 && index.columnNames[0] === 'code'
+        (index) =>
+          index.isUnique &&
+          index.columnNames.length === 1 &&
+          index.columnNames[0] === 'code',
       );
 
       if (codeUniqueIndex) {
@@ -64,11 +68,11 @@ export class FixChartOfAccountsUniqueConstraint1732500000000 implements Migratio
 
     // Check if composite unique constraint already exists
     const compositeUniqueIndex = table.indices.find(
-      (index) => 
-        index.isUnique && 
-        index.columnNames.length === 2 && 
-        index.columnNames.includes('code') && 
-        index.columnNames.includes('salon_id')
+      (index) =>
+        index.isUnique &&
+        index.columnNames.length === 2 &&
+        index.columnNames.includes('code') &&
+        index.columnNames.includes('salon_id'),
     );
 
     if (!compositeUniqueIndex) {
@@ -91,10 +95,13 @@ export class FixChartOfAccountsUniqueConstraint1732500000000 implements Migratio
     // Drop the composite unique constraint
     if (isPostgres) {
       await queryRunner.query(
-        `ALTER TABLE chart_of_accounts DROP CONSTRAINT IF EXISTS "UQ_chart_of_accounts_code_salon_id"`
+        `ALTER TABLE chart_of_accounts DROP CONSTRAINT IF EXISTS "UQ_chart_of_accounts_code_salon_id"`,
       );
     } else {
-      await queryRunner.dropIndex('chart_of_accounts', 'UQ_chart_of_accounts_code_salon_id');
+      await queryRunner.dropIndex(
+        'chart_of_accounts',
+        'UQ_chart_of_accounts_code_salon_id',
+      );
     }
 
     // Recreate the old unique constraint on code only
@@ -108,4 +115,3 @@ export class FixChartOfAccountsUniqueConstraint1732500000000 implements Migratio
     );
   }
 }
-

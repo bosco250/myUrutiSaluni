@@ -14,7 +14,13 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -42,16 +48,28 @@ export class CustomersController {
   ) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Create a new customer' })
   create(@Body() createCustomerDto: CreateCustomerDto) {
     return this.customersService.create(createCustomerDto);
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get all customers' })
-  findAll(@CurrentUser() user: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  findAll(@CurrentUser() _user: any) {
     // Salon owners and employees can see all customers (they work with customers)
     // District leaders can see customers in their district
     // Admins can see all
@@ -59,15 +77,30 @@ export class CustomersController {
   }
 
   @Get('search')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Search customer by phone' })
   findByPhone(@Query('phone') phone: string) {
     return this.customersService.findByPhone(phone);
   }
 
   @Get('by-user/:userId')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Get customer by user ID, auto-create if not exists for CUSTOMER role' })
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
+  @ApiOperation({
+    summary:
+      'Get customer by user ID, auto-create if not exists for CUSTOMER role',
+  })
   async findByUserId(
     @Param('userId') userId: string,
     @CurrentUser() currentUser: any,
@@ -83,18 +116,25 @@ export class CustomersController {
     });
     // Customers can only see their own customer record
     const currentUserId = currentUser.id || currentUser.userId;
-    if (currentUser.role === UserRole.CUSTOMER || currentUser.role === 'customer') {
+    if (
+      currentUser.role === UserRole.CUSTOMER ||
+      currentUser.role === 'customer'
+    ) {
       if (currentUserId !== userId) {
-        throw new ForbiddenException('You can only access your own customer information');
+        throw new ForbiddenException(
+          'You can only access your own customer information',
+        );
       }
     }
-    
+
     let customer = await this.customersService.findByUserId(userId);
-    
+
     // Auto-create customer record for users with CUSTOMER role if it doesn't exist
-    const isCustomerRole = currentUser.role === UserRole.CUSTOMER || currentUser.role === 'customer';
-    const isOwnRecord = currentUser.id === userId || currentUser.userId === userId;
-    
+    const isCustomerRole =
+      currentUser.role === UserRole.CUSTOMER || currentUser.role === 'customer';
+    const isOwnRecord =
+      currentUser.id === userId || currentUser.userId === userId;
+
     console.log('[CUSTOMERS CONTROLLER] Auto-create check:', {
       hasCustomer: !!customer,
       isCustomerRole,
@@ -104,16 +144,19 @@ export class CustomersController {
       currentUserId: currentUser.id || currentUser.userId,
       requestedUserId: userId,
     });
-    
+
     if (!customer && isCustomerRole && isOwnRecord) {
-      console.log('[CUSTOMERS CONTROLLER] Auto-creating customer record for user:', userId);
-      console.log('[CUSTOMERS CONTROLLER] Current user object:', { 
-        id: currentUser.id || currentUser.userId, 
-        email: currentUser.email, 
-        phone: currentUser.phone, 
-        role: currentUser.role 
+      console.log(
+        '[CUSTOMERS CONTROLLER] Auto-creating customer record for user:',
+        userId,
+      );
+      console.log('[CUSTOMERS CONTROLLER] Current user object:', {
+        id: currentUser.id || currentUser.userId,
+        email: currentUser.email,
+        phone: currentUser.phone,
+        role: currentUser.role,
       });
-      
+
       // Fetch full user details to get fullName (JWT payload doesn't include it)
       const userIdToFetch = currentUser.id || currentUser.userId || userId;
       const user = await this.usersService.findOne(userIdToFetch);
@@ -121,9 +164,14 @@ export class CustomersController {
         console.error('[CUSTOMERS CONTROLLER] User not found:', userIdToFetch);
         throw new ForbiddenException('User not found');
       }
-      
-      console.log('[CUSTOMERS CONTROLLER] User details:', { id: user.id, fullName: user.fullName, email: user.email, phone: user.phone });
-      
+
+      console.log('[CUSTOMERS CONTROLLER] User details:', {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+      });
+
       try {
         customer = await this.customersService.create({
           userId: user.id,
@@ -132,13 +180,19 @@ export class CustomersController {
           email: user.email || null,
           loyaltyPoints: 0,
         });
-        console.log('[CUSTOMERS CONTROLLER] Customer record created successfully:', customer.id);
+        console.log(
+          '[CUSTOMERS CONTROLLER] Customer record created successfully:',
+          customer.id,
+        );
       } catch (error) {
-        console.error('[CUSTOMERS CONTROLLER] Error creating customer record:', error);
+        console.error(
+          '[CUSTOMERS CONTROLLER] Error creating customer record:',
+          error,
+        );
         throw error;
       }
     }
-    
+
     // Always return customer, even if null (frontend will handle it)
     // Log the result for debugging
     console.log('[CUSTOMERS CONTROLLER] Returning customer:', {
@@ -146,7 +200,7 @@ export class CustomersController {
       customerId: customer?.id,
       userId: userId,
     });
-    
+
     return customer || null;
   }
 
@@ -199,16 +253,24 @@ export class CustomersController {
       await this.ensureCustomerAccess(customerId, currentUser);
 
       if (!file) {
-        throw new BadRequestException('No file provided. Please select an image file.');
+        throw new BadRequestException(
+          'No file provided. Please select an image file.',
+        );
       }
 
       // Upload file and get URL
       const uploadResult = await this.fileUploadService.saveFile(file);
-      console.log('[UPLOAD STYLE REFERENCE] File uploaded successfully:', uploadResult);
+      console.log(
+        '[UPLOAD STYLE REFERENCE] File uploaded successfully:',
+        uploadResult,
+      );
 
       // Parse tags if provided as string
       const tags = body.tags
-        ? body.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+        ? body.tags
+            .split(',')
+            .map((tag: string) => tag.trim())
+            .filter(Boolean)
         : [];
 
       const dto: CreateStyleReferenceDto = {
@@ -216,13 +278,25 @@ export class CustomersController {
         description: body.description || undefined,
         imageUrl: uploadResult.url,
         tags: tags.length > 0 ? tags : undefined,
-        sharedWithEmployees: body.sharedWithEmployees === 'true' || body.sharedWithEmployees === true,
+        sharedWithEmployees:
+          body.sharedWithEmployees === 'true' ||
+          body.sharedWithEmployees === true,
         appointmentId: body.appointmentId || undefined,
       };
 
-      console.log('[UPLOAD STYLE REFERENCE] Creating style reference with DTO:', dto);
-      const result = await this.customerStyleReferencesService.create(customerId, dto, currentUser.id);
-      console.log('[UPLOAD STYLE REFERENCE] Style reference created successfully:', result.id);
+      console.log(
+        '[UPLOAD STYLE REFERENCE] Creating style reference with DTO:',
+        dto,
+      );
+      const result = await this.customerStyleReferencesService.create(
+        customerId,
+        dto,
+        currentUser.id,
+      );
+      console.log(
+        '[UPLOAD STYLE REFERENCE] Style reference created successfully:',
+        result.id,
+      );
       return result;
     } catch (error: any) {
       console.error('[UPLOAD STYLE REFERENCE] Error:', {
@@ -243,7 +317,9 @@ export class CustomersController {
     UserRole.SALON_EMPLOYEE,
     UserRole.CUSTOMER,
   )
-  @ApiOperation({ summary: 'Create a style reference for a customer (with URL)' })
+  @ApiOperation({
+    summary: 'Create a style reference for a customer (with URL)',
+  })
   async createStyleReference(
     @Param('customerId') customerId: string,
     @Body() dto: CreateStyleReferenceDto,
@@ -309,14 +385,26 @@ export class CustomersController {
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get a customer by ID' })
   findOne(@Param('id') id: string) {
     return this.customersService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
   @ApiOperation({ summary: 'Update a customer' })
   async update(
     @Param('id') id: string,
@@ -324,8 +412,13 @@ export class CustomersController {
     @CurrentUser() currentUser: any,
   ) {
     // Customers can only update their own profile
-    if (currentUser.role === UserRole.CUSTOMER || currentUser.role === 'customer') {
-      const customer = await this.customersService.findByUserId(currentUser.id || currentUser.userId);
+    if (
+      currentUser.role === UserRole.CUSTOMER ||
+      currentUser.role === 'customer'
+    ) {
+      const customer = await this.customersService.findByUserId(
+        currentUser.id || currentUser.userId,
+      );
       if (!customer || customer.id !== id) {
         throw new ForbiddenException('You can only update your own profile');
       }
@@ -345,7 +438,10 @@ export class CustomersController {
       throw new ForbiddenException('Customer ID is required');
     }
 
-    if (currentUser.role === UserRole.CUSTOMER || currentUser.role === 'customer') {
+    if (
+      currentUser.role === UserRole.CUSTOMER ||
+      currentUser.role === 'customer'
+    ) {
       const customer = await this.customersService.findByUserId(
         currentUser.id || currentUser.userId,
       );
@@ -356,4 +452,3 @@ export class CustomersController {
     }
   }
 }
-

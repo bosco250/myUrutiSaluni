@@ -1,4 +1,12 @@
-import { IsUUID, IsString, IsDateString, IsNumber, IsOptional, IsEnum, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsDateString,
+  IsNumber,
+  IsOptional,
+  IsEnum,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { InvoiceStatus } from '../entities/invoice.entity';
 
@@ -63,9 +71,12 @@ export class CreateInvoiceDto {
   @Min(0)
   totalAmount: number;
 
-  @ApiProperty({ enum: InvoiceStatus, required: false, default: InvoiceStatus.DRAFT })
+  @ApiProperty({
+    enum: InvoiceStatus,
+    required: false,
+    default: InvoiceStatus.DRAFT,
+  })
   @IsOptional()
   @IsEnum(InvoiceStatus)
   status?: InvoiceStatus;
 }
-

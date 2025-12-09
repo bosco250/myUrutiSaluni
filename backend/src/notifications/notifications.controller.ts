@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -6,7 +15,10 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
-import { NotificationChannel, NotificationType } from './entities/notification.entity';
+import {
+  NotificationChannel,
+  NotificationType,
+} from './entities/notification.entity';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -16,7 +28,12 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Post('send')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Send a notification' })
   sendNotification(@Body() sendNotificationDto: any) {
     return this.notificationsService.sendNotification(
@@ -27,12 +44,19 @@ export class NotificationsController {
       sendNotificationDto.type,
       sendNotificationDto.title,
       sendNotificationDto.body,
-      sendNotificationDto.scheduledFor ? new Date(sendNotificationDto.scheduledFor) : undefined,
+      sendNotificationDto.scheduledFor
+        ? new Date(sendNotificationDto.scheduledFor)
+        : undefined,
     );
   }
 
   @Post('appointments/:appointmentId/reminder')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Send appointment reminder' })
   sendAppointmentReminder(
     @Param('appointmentId') appointmentId: string,
@@ -52,12 +76,19 @@ export class NotificationsController {
     @Query('customerId') customerId?: string,
     @Query('limit') limit?: number,
   ) {
-    return this.notificationsService.getNotifications(user.id, customerId, limit);
+    return this.notificationsService.getNotifications(
+      user.id,
+      customerId,
+      limit,
+    );
   }
 
   @Get('preferences')
   @ApiOperation({ summary: 'Get notification preferences' })
-  getPreferences(@CurrentUser() user: any, @Query('customerId') customerId?: string) {
+  getPreferences(
+    @CurrentUser() user: any,
+    @Query('customerId') customerId?: string,
+  ) {
     return this.notificationsService.getPreferences(user.id, customerId);
   }
 
@@ -65,7 +96,8 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Update notification preference' })
   updatePreference(
     @CurrentUser() user: any,
-    @Body() body: {
+    @Body()
+    body: {
       customerId?: string;
       type: NotificationType;
       channel: NotificationChannel;

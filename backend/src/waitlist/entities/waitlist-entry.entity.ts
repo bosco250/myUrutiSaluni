@@ -97,4 +97,3 @@ export class WaitlistEntry {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

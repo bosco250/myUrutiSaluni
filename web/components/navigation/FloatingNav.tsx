@@ -79,7 +79,7 @@ const allNavItems: NavItem[] = [
     href: '/salons/browse',
     icon: Scissors,
     color: 'from-purple-500 to-pink-500',
-    requiredRoles: [UserRole.CUSTOMER],
+    requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE],
   },
   {
     name: 'Customers',

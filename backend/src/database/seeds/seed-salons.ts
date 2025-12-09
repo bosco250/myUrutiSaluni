@@ -11,7 +11,9 @@ export async function seedSalons(dataSource: DataSource) {
 
   // Check how many salons exist
   const existingSalonsCount = await salonRepository.count();
-  console.log(`📊 Current database state: ${existingSalonsCount} existing salon(s)`);
+  console.log(
+    `📊 Current database state: ${existingSalonsCount} existing salon(s)`,
+  );
 
   const hashedPassword = await bcrypt.hash('Password123!', 10);
 
@@ -24,7 +26,8 @@ export async function seedSalons(dataSource: DataSource) {
       city: 'Kigali',
       district: 'Gasabo',
       salonName: 'Elegance Beauty Lounge',
-      description: 'Premium beauty salon offering hair styling, spa treatments, and nail services in the heart of Kigali',
+      description:
+        'Premium beauty salon offering hair styling, spa treatments, and nail services in the heart of Kigali',
       address: 'KG 11 Ave, Kimihurura',
       registrationNumber: 'SAL-2020-001',
       website: 'https://elegancebeauty.rw',
@@ -81,7 +84,8 @@ export async function seedSalons(dataSource: DataSource) {
       city: 'Kigali',
       district: 'Gasabo',
       salonName: 'Executive Grooming Lounge',
-      description: 'Luxury grooming experience for professionals and executives',
+      description:
+        'Luxury grooming experience for professionals and executives',
       address: 'KG 5 Ave, Gacuriro',
       registrationNumber: 'SAL-2022-008',
       website: 'https://executivegrooming.rw',
@@ -100,7 +104,8 @@ export async function seedSalons(dataSource: DataSource) {
       city: 'Kigali',
       district: 'Kicukiro',
       salonName: 'Divine Beauty Palace',
-      description: 'Complete beauty services including bridal makeup and event styling',
+      description:
+        'Complete beauty services including bridal makeup and event styling',
       address: 'KK 8 Rd, Gikondo',
       registrationNumber: 'SAL-2022-024',
       website: 'https://divinebeauty.rw',
@@ -119,7 +124,8 @@ export async function seedSalons(dataSource: DataSource) {
       city: 'Huye',
       district: 'Huye',
       salonName: 'Southern Style Hub',
-      description: 'Leading salon in the Southern Province serving Huye and surrounding areas',
+      description:
+        'Leading salon in the Southern Province serving Huye and surrounding areas',
       address: 'Avenue de la Cathedrale, Huye Town',
       registrationNumber: 'SAL-2021-045',
       website: null,
@@ -175,7 +181,7 @@ export async function seedSalons(dataSource: DataSource) {
       phone: '+250788901234',
       city: 'Kigali',
       district: 'Nyarugenge',
-      salonName: 'Claudine\'s Beauty Haven',
+      salonName: "Claudine's Beauty Haven",
       description: 'Family-friendly salon with affordable prices',
       address: 'KN 12 St, Kicukiro',
       registrationNumber: 'SAL-2023-003',
@@ -213,7 +219,7 @@ export async function seedSalons(dataSource: DataSource) {
       phone: '+250788123457',
       city: 'Kigali',
       district: 'Gasabo',
-      salonName: 'Josephine\'s Natural Hair Boutique',
+      salonName: "Josephine's Natural Hair Boutique",
       description: 'Specialized natural hair care and protective styling',
       address: 'KG 7 Rd, Kacyiru',
       registrationNumber: 'SAL-2023-012',
@@ -221,7 +227,11 @@ export async function seedSalons(dataSource: DataSource) {
       settings: {
         numberOfEmployees: 5,
         businessType: 'Hair Boutique',
-        specialties: ['Natural Hair Care', 'Protective Styles', 'Hair Products'],
+        specialties: [
+          'Natural Hair Care',
+          'Protective Styles',
+          'Hair Products',
+        ],
         openingHours: '09:00-19:00',
         acceptsAppointments: true,
       },
@@ -254,10 +264,7 @@ export async function seedSalons(dataSource: DataSource) {
     try {
       // Check if owner already exists by email or phone
       let owner = await userRepository.findOne({
-        where: [
-          { email: ownerData.email },
-          { phone: ownerData.phone }
-        ]
+        where: [{ email: ownerData.email }, { phone: ownerData.phone }],
       });
 
       if (!owner) {
@@ -286,8 +293,8 @@ export async function seedSalons(dataSource: DataSource) {
       const existingSalon = await salonRepository.findOne({
         where: [
           { name: ownerData.salonName },
-          { registrationNumber: ownerData.registrationNumber }
-        ]
+          { registrationNumber: ownerData.registrationNumber },
+        ],
       });
 
       if (!existingSalon) {
@@ -315,7 +322,10 @@ export async function seedSalons(dataSource: DataSource) {
         console.log(`  → Salon already exists: ${ownerData.salonName}`);
       }
     } catch (error) {
-      console.error(`  ✗ Error creating salon for ${ownerData.fullName}:`, error.message);
+      console.error(
+        `  ✗ Error creating salon for ${ownerData.fullName}:`,
+        error.message,
+      );
     }
   }
 

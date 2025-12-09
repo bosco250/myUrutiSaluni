@@ -20,4 +20,3 @@ import { AppointmentsModule } from '../appointments/appointments.module';
   exports: [NotificationsService, EmailService, SmsService],
 })
 export class NotificationsModule {}
-
