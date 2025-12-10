@@ -248,7 +248,7 @@ export class AppointmentsController {
     return this.appointmentsService.findAll(salonId);
   }
 
-  @Get('availability/:employeeId')
+  @Get('employee/:employeeId/slots')
   @Roles(
     UserRole.SUPER_ADMIN,
     UserRole.ASSOCIATION_ADMIN,

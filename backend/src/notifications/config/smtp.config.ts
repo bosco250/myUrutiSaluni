@@ -32,7 +32,7 @@ export class SmtpConfigService implements OnModuleInit {
     const fromEmail = this.configService.get<string>('SMTP_FROM_EMAIL');
     const fromName = this.configService.get<string>(
       'SMTP_FROM_NAME',
-      'SalonJu',
+      'UrutiSalonu',
     );
 
     // Check if SMTP is configured (at least host and user should be present)

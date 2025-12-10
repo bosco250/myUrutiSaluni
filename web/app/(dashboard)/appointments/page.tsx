@@ -31,6 +31,7 @@ import {
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { useState, useMemo } from 'react';
 import { exportToCSV, formatDateForExport } from '@/lib/export-utils';
+import CalendarBookingModal from '@/components/appointments/CalendarBookingModal';
 
 interface Appointment {
   id: string;
@@ -92,6 +93,7 @@ export default function AppointmentsPage() {
 function AppointmentsContent() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const [showNewBookingModal, setShowNewBookingModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -359,10 +361,7 @@ function AppointmentsContent() {
               Calendar View
             </Button>
             <Button
-              onClick={() => {
-                setEditingAppointment(null);
-                setShowModal(true);
-              }}
+              onClick={() => setShowNewBookingModal(true)}
               variant="primary"
               className="flex items-center gap-2"
             >
@@ -485,10 +484,7 @@ function AppointmentsContent() {
               dateFilter === 'all' &&
               salonFilter === 'all' && (
                 <Button
-                  onClick={() => {
-                    setEditingAppointment(null);
-                    setShowModal(true);
-                  }}
+                  onClick={() => setShowNewBookingModal(true)}
                   variant="primary"
                   className="flex items-center gap-2 mx-auto"
                 >
@@ -676,7 +672,17 @@ function AppointmentsContent() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* New Booking Modal (Calendar-based) */}
+      <CalendarBookingModal
+        isOpen={showNewBookingModal}
+        onClose={() => setShowNewBookingModal(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
+          setShowNewBookingModal(false);
+        }}
+      />
+
+      {/* Edit Modal (Form-based) */}
       {showModal && (
         <AppointmentModal
           appointment={editingAppointment}

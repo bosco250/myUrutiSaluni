@@ -1,0 +1,7 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.spec.ts", "test/**/*", "dist"],
+  "exec": "npm run start:dev",
+  "delay": "1000"
+}

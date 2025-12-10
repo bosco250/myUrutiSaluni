@@ -10,6 +10,8 @@ import { MembershipApplication } from '../memberships/entities/membership-applic
 import { MembershipPayment } from '../memberships/entities/membership-payment.entity';
 import { Service } from '../services/entities/service.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
+import { EmployeeWorkingHours } from '../appointments/entities/employee-working-hours.entity';
+import { EmployeeAvailabilityRules } from '../appointments/entities/employee-availability-rules.entity';
 import { Sale } from '../sales/entities/sale.entity';
 import { SaleItem } from '../sales/entities/sale-item.entity';
 import { Product } from '../inventory/entities/product.entity';
@@ -61,6 +63,8 @@ import { SalonRewardsConfig } from '../customers/entities/rewards-config.entity'
           MembershipPayment,
           Service,
           Appointment,
+          EmployeeWorkingHours,
+          EmployeeAvailabilityRules,
           Sale,
           SaleItem,
           Product,

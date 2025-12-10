@@ -45,17 +45,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Don't redirect if it's a login attempt failure
-      // Check both relative and absolute URLs
-      const isLoginRequest = error.config?.url?.includes('/auth/login');
-      
-      if (!isLoginRequest) {
-        // Session expired - clear ALL localStorage data for security
-        clearAllSessionData();
+      // Session expired - clear ALL localStorage data for security
+      clearAllSessionData();
 
-        // Redirect to login
-        window.location.href = '/login';
-      }
+      // Redirect to login
+      window.location.href = '/login';
     }
 
     // Log error using logger

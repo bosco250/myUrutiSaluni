@@ -24,6 +24,14 @@ export class CreateAppointmentDto {
   @IsUUID()
   serviceId?: string;
 
+  @ApiProperty({
+    required: false,
+    description: 'Assigned employee for the appointment',
+  })
+  @IsOptional()
+  @IsUUID()
+  salonEmployeeId?: string;
+
   @ApiProperty()
   @IsDateString()
   scheduledStart: string;
