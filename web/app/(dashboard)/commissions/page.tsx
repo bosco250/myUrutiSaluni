@@ -52,6 +52,11 @@ interface Commission {
   };
   salonEmployee?: {
     id: string;
+    salonId?: string;
+    salon?: {
+      id: string;
+      name: string;
+    };
     user?: {
       fullName: string;
       email?: string;
@@ -199,14 +204,16 @@ function CommissionsContent() {
     queryKey: ['commissions', statusFilter, employeeFilter, dateRange.start, dateRange.end, user?.role, user?.id],
     queryFn: async () => {
       try {
-      const params = new URLSearchParams();
-      if (statusFilter === 'paid') params.append('paid', 'true');
-      if (statusFilter === 'unpaid') params.append('paid', 'false');
-      if (user?.role !== UserRole.SALON_EMPLOYEE && employeeFilter && employeeFilter !== 'all') {
-        params.append('salonEmployeeId', employeeFilter);
-      }
-      if (dateRange.start) params.append('startDate', dateRange.start);
-      if (dateRange.end) params.append('endDate', dateRange.end);
+        // Backend automatically filters commissions by salon owner's salons
+        // No need to pass salonId - backend handles it based on user role
+        const params = new URLSearchParams();
+        if (statusFilter === 'paid') params.append('paid', 'true');
+        if (statusFilter === 'unpaid') params.append('paid', 'false');
+        if (user?.role !== UserRole.SALON_EMPLOYEE && employeeFilter && employeeFilter !== 'all') {
+          params.append('salonEmployeeId', employeeFilter);
+        }
+        if (dateRange.start) params.append('startDate', dateRange.start);
+        if (dateRange.end) params.append('endDate', dateRange.end);
 
         const response = await api.get(`/commissions?${params.toString()}`);
         return response.data || [];
@@ -224,12 +231,35 @@ function CommissionsContent() {
     retryDelay: 1000,
   });
 
-  // Fetch employees for filter (if user is owner/admin)
-  const { data: employees = [] } = useQuery({
-    queryKey: ['salon-employees'],
+  // Fetch owner's salons for filtering (salon owners only)
+  const { data: ownerSalons = [] } = useQuery({
+    queryKey: ['owner-salons', user?.id],
     queryFn: async () => {
       try {
-        // Get user's salons first
+        // Backend automatically filters to owner's salons for SALON_OWNER role
+        const salonsResponse = await api.get('/salons');
+        return salonsResponse.data || [];
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: user?.role === UserRole.SALON_OWNER,
+  });
+
+  // Get owner's salon IDs for safety filtering
+  const ownerSalonIds = useMemo(() => {
+    if (user?.role === UserRole.SALON_OWNER) {
+      return ownerSalons.map((salon: any) => salon.id);
+    }
+    return [];
+  }, [ownerSalons, user?.role]);
+
+  // Fetch employees for filter (if user is owner/admin)
+  const { data: employees = [] } = useQuery({
+    queryKey: ['salon-employees', user?.id],
+    queryFn: async () => {
+      try {
+        // Get user's salons first (backend filters for salon owners)
         const salonsResponse = await api.get('/salons');
         const salons = salonsResponse.data || [];
 
@@ -256,8 +286,21 @@ function CommissionsContent() {
   });
 
   // Filter commissions
+  // Note: Backend already filters commissions by salon owner's salons, but we add a safety filter here
   const filteredCommissions = useMemo(() => {
     return commissions.filter((commission) => {
+      // Safety filter: For salon owners, ensure commission is from their salon
+      if (user?.role === UserRole.SALON_OWNER && ownerSalonIds.length > 0) {
+        const commissionSalonId =
+          commission.salonEmployee?.salonId ||
+          commission.salonEmployee?.salon?.id;
+        if (commissionSalonId && !ownerSalonIds.includes(commissionSalonId)) {
+          // This shouldn't happen if backend filtering works correctly, but filter it out as safety measure
+          return false;
+        }
+      }
+
+      // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
@@ -269,7 +312,7 @@ function CommissionsContent() {
       }
       return true;
     });
-  }, [commissions, searchQuery]);
+  }, [commissions, searchQuery, user?.role, ownerSalonIds]);
 
   // Pagination calculations
   const totalPages = useMemo(() => {
@@ -300,14 +343,44 @@ function CommissionsContent() {
     }
   }, [totalPages, currentPage]);
 
+  // Helper function to safely convert to number (handles decimal strings from database)
+  const toNumber = (value: any): number => {
+    if (value === null || value === undefined || value === '') return 0;
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
+  };
+
   // Calculate statistics
   const stats = useMemo(() => {
-    const totalCommissions = filteredCommissions.reduce((sum, c) => sum + Number(c.amount), 0);
+    const totalCommissions = filteredCommissions.reduce(
+      (sum, c) => sum + toNumber(c.amount),
+      0
+    );
     const paidCommissions = filteredCommissions
       .filter((c) => c.paid)
-      .reduce((sum, c) => sum + Number(c.amount), 0);
+      .reduce((sum, c) => sum + toNumber(c.amount), 0);
     const unpaidCommissions = totalCommissions - paidCommissions;
-    const totalSales = filteredCommissions.reduce((sum, c) => sum + Number(c.saleAmount), 0);
+    // Calculate total sales - use sale totalAmount if available, otherwise use item amount
+    // Group by sale ID to avoid double-counting the same sale
+    const saleTotals = new Map<string, number>();
+    filteredCommissions.forEach((c) => {
+      const saleId = c.saleItem?.sale?.id;
+      if (saleId && c.saleItem?.sale) {
+        const totalAmount = toNumber(c.saleItem.sale.totalAmount);
+        if (!saleTotals.has(saleId)) {
+          saleTotals.set(saleId, totalAmount);
+        }
+      } else {
+        // Fallback: use item amount if sale info not available
+        const itemAmount = toNumber(c.saleAmount);
+        saleTotals.set(c.id, itemAmount); // Use commission ID as key to avoid grouping
+      }
+    });
+    const totalSales = Array.from(saleTotals.values()).reduce((sum, amount) => sum + amount, 0);
     const paidCount = filteredCommissions.filter((c) => c.paid).length;
     const unpaidCount = filteredCommissions.length - paidCount;
 
@@ -886,14 +959,21 @@ function CommissionsContent() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        RWF {Number(commission.saleAmount).toLocaleString()}
+                        {(() => {
+                          // Use total sale amount if available, otherwise fall back to item amount
+                          const totalSaleAmount = commission.saleItem?.sale?.totalAmount;
+                          const displayAmount = totalSaleAmount !== undefined 
+                            ? toNumber(totalSaleAmount)
+                            : toNumber(commission.saleAmount);
+                          return `RWF ${displayAmount.toLocaleString()}`;
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        {commission.commissionRate}%
+                        {toNumber(commission.commissionRate).toFixed(2)}%
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-semibold text-primary">
-                          RWF {Number(commission.amount).toLocaleString()}
+                          RWF {toNumber(commission.amount).toLocaleString()}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1065,8 +1145,8 @@ function CommissionsContent() {
             selectedCommission.id === 'batch'
               ? filteredCommissions
                   .filter((c) => !c.paid)
-                  .reduce((sum, c) => sum + Number(c.amount), 0)
-              : Number(selectedCommission.amount)
+                  .reduce((sum, c) => sum + toNumber(c.amount), 0)
+              : toNumber(selectedCommission.amount)
           }
           onClose={() => {
             setShowPaymentModal(false);

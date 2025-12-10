@@ -2,7 +2,24 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, LayoutDashboard, Users, Scissors, Calendar, ShoppingCart, Package, DollarSign, CreditCard, Wallet, Phone, BarChart3, Settings, X, TrendingUp, Sparkles } from 'lucide-react';
+import {
+  Search,
+  LayoutDashboard,
+  Users,
+  Scissors,
+  Calendar,
+  ShoppingCart,
+  Package,
+  DollarSign,
+  CreditCard,
+  Wallet,
+  Phone,
+  BarChart3,
+  Settings,
+  X,
+  TrendingUp,
+  Sparkles,
+} from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
@@ -18,25 +35,247 @@ interface CommandItem {
 }
 
 const allCommands: CommandItem[] = [
-  { id: 'dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, category: 'Main', keywords: ['home', 'overview', 'stats'] },
-  { id: 'users', name: 'Users', href: '/users', icon: Users, category: 'Management', keywords: ['user', 'people', 'admin', 'role'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN] },
-  { id: 'membership-apply', name: 'Apply for Membership', href: '/membership/apply', icon: CreditCard, category: 'Membership', keywords: ['membership', 'apply', 'application', 'join', 'member'], requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_OWNER] },
-  { id: 'membership-applications', name: 'Review Applications', href: '/membership/applications', icon: Users, category: 'Membership', keywords: ['membership', 'applications', 'review', 'approve'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN] },
-  { id: 'memberships', name: 'Memberships', href: '/memberships', icon: CreditCard, category: 'Management', keywords: ['membership', 'salon', 'member', 'association', 'active'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { id: 'salons', name: 'Salons', href: '/salons', icon: Scissors, category: 'Management', keywords: ['salon', 'business', 'shop'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'customers', name: 'Customers', href: '/customers', icon: Users, category: 'Management', keywords: ['client', 'customer', 'people'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'appointments', name: 'Appointments', href: '/appointments', icon: Calendar, category: 'Operations', keywords: ['booking', 'schedule', 'calendar'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'services', name: 'Services', href: '/services', icon: Sparkles, category: 'Operations', keywords: ['service', 'offering', 'treatment', 'haircut', 'manicure'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'sales', name: 'Sales & POS', href: '/sales', icon: ShoppingCart, category: 'Operations', keywords: ['pos', 'transaction', 'sale', 'checkout'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'commissions', name: 'Commissions', href: '/commissions', icon: TrendingUp, category: 'Finance', keywords: ['commission', 'employee', 'earnings'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'payroll', name: 'Payroll', href: '/payroll', icon: DollarSign, category: 'Finance', keywords: ['payroll', 'salary', 'payment', 'employee', 'wages'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER] },
-  { id: 'inventory', name: 'Inventory', href: '/inventory', icon: Package, category: 'Operations', keywords: ['stock', 'products', 'items'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-  { id: 'accounting', name: 'Accounting', href: '/accounting', icon: DollarSign, category: 'Finance', keywords: ['finance', 'money', 'accounts'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { id: 'loans', name: 'Loans', href: '/loans', icon: CreditCard, category: 'Finance', keywords: ['loan', 'credit', 'lending'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { id: 'wallets', name: 'Wallets', href: '/wallets', icon: Wallet, category: 'Finance', keywords: ['wallet', 'balance', 'payment'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { id: 'airtel', name: 'Airtel', href: '/airtel', icon: Phone, category: 'Integrations', keywords: ['airtel', 'mobile', 'money'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { id: 'reports', name: 'Reports', href: '/reports', icon: BarChart3, category: 'Analytics', keywords: ['report', 'analytics', 'data'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-  { id: 'settings', name: 'Settings', href: '/settings', icon: Settings, category: 'System', keywords: ['config', 'preferences', 'setup'] },
+  {
+    id: 'dashboard',
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    category: 'Main',
+    keywords: ['home', 'overview', 'stats'],
+  },
+  {
+    id: 'users',
+    name: 'Users',
+    href: '/users',
+    icon: Users,
+    category: 'Management',
+    keywords: ['user', 'people', 'admin', 'role'],
+    requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN],
+  },
+  {
+    id: 'membership-apply',
+    name: 'Apply for Membership',
+    href: '/membership/apply',
+    icon: CreditCard,
+    category: 'Membership',
+    keywords: ['membership', 'apply', 'application', 'join', 'member'],
+    requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_OWNER],
+  },
+  {
+    id: 'membership-applications',
+    name: 'Review Applications',
+    href: '/membership/applications',
+    icon: Users,
+    category: 'Membership',
+    keywords: ['membership', 'applications', 'review', 'approve'],
+    requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN],
+  },
+  {
+    id: 'memberships',
+    name: 'Memberships',
+    href: '/memberships',
+    icon: CreditCard,
+    category: 'Management',
+    keywords: ['membership', 'salon', 'member', 'association', 'active'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    id: 'salons',
+    name: 'Salons',
+    href: '/salons',
+    icon: Scissors,
+    category: 'Management',
+    keywords: ['salon', 'business', 'shop'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'customers',
+    name: 'Customers',
+    href: '/customers',
+    icon: Users,
+    category: 'Management',
+    keywords: ['client', 'customer', 'people'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'appointments',
+    name: 'Appointments',
+    href: '/appointments',
+    icon: Calendar,
+    category: 'Operations',
+    keywords: ['booking', 'schedule', 'calendar'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'services',
+    name: 'Services',
+    href: '/services',
+    icon: Sparkles,
+    category: 'Operations',
+    keywords: ['service', 'offering', 'treatment', 'haircut', 'manicure'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'sales',
+    name: 'Sales & POS',
+    href: '/sales',
+    icon: ShoppingCart,
+    category: 'Operations',
+    keywords: ['pos', 'transaction', 'sale', 'checkout'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'commissions',
+    name: 'Commissions',
+    href: '/commissions',
+    icon: TrendingUp,
+    category: 'Finance',
+    keywords: ['commission', 'employee', 'earnings'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'payroll',
+    name: 'Payroll',
+    href: '/payroll',
+    icon: DollarSign,
+    category: 'Finance',
+    keywords: ['payroll', 'salary', 'payment', 'employee', 'wages'],
+    requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER],
+  },
+  {
+    id: 'inventory',
+    name: 'Inventory',
+    href: '/inventory',
+    icon: Package,
+    category: 'Operations',
+    keywords: ['stock', 'products', 'items'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
+    ],
+  },
+  {
+    id: 'accounting',
+    name: 'Accounting',
+    href: '/accounting',
+    icon: DollarSign,
+    category: 'Finance',
+    keywords: ['finance', 'money', 'accounts'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    id: 'loans',
+    name: 'Loans',
+    href: '/loans',
+    icon: CreditCard,
+    category: 'Finance',
+    keywords: ['loan', 'credit', 'lending'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    id: 'wallets',
+    name: 'Wallets',
+    href: '/wallets',
+    icon: Wallet,
+    category: 'Finance',
+    keywords: ['wallet', 'balance', 'payment'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    id: 'airtel',
+    name: 'Airtel',
+    href: '/airtel',
+    icon: Phone,
+    category: 'Integrations',
+    keywords: ['airtel', 'mobile', 'money'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    id: 'reports',
+    name: 'Reports',
+    href: '/reports',
+    icon: BarChart3,
+    category: 'Analytics',
+    keywords: ['report', 'analytics', 'data'],
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    href: '/settings',
+    icon: Settings,
+    category: 'System',
+    keywords: ['config', 'preferences', 'setup'],
+  },
 ];
 
 interface CommandPaletteProps {
@@ -49,7 +288,12 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
   const { hasAnyRole } = usePermissions();
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const setIsOpen = onClose ? () => { setInternalOpen(false); onClose(); } : setInternalOpen;
+  const setIsOpen = onClose
+    ? () => {
+        setInternalOpen(false);
+        onClose();
+      }
+    : setInternalOpen;
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
@@ -77,11 +321,14 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
       )
     : commands;
 
-  const groupedCommands = filteredCommands.reduce((acc, cmd) => {
-    if (!acc[cmd.category]) acc[cmd.category] = [];
-    acc[cmd.category].push(cmd);
-    return acc;
-  }, {} as Record<string, CommandItem[]>);
+  const groupedCommands = filteredCommands.reduce(
+    (acc, cmd) => {
+      if (!acc[cmd.category]) acc[cmd.category] = [];
+      acc[cmd.category].push(cmd);
+      return acc;
+    },
+    {} as Record<string, CommandItem[]>
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -219,11 +466,13 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
                           isSelected
                             ? 'bg-primary/20 text-primary'
                             : isActive
-                            ? 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark'
-                            : 'text-text-light/80 dark:text-text-dark/80 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light dark:hover:text-text-dark'
+                              ? 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark'
+                              : 'text-text-light/80 dark:text-text-dark/80 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light dark:hover:text-text-dark'
                         }`}
                       >
-                        <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`} />
+                        <Icon
+                          className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
+                        />
                         <span className="flex-1 font-medium">{cmd.name}</span>
                         {isActive && (
                           <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded">
@@ -242,18 +491,28 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
           <div className="px-4 py-3 border-t border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 flex items-center justify-between text-xs text-text-light/40 dark:text-text-dark/40">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">↑</kbd>
-                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">↓</kbd>
+                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                  ↑
+                </kbd>
+                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                  ↓
+                </kbd>
                 <span>Navigate</span>
               </div>
               <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">↵</kbd>
+                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                  ↵
+                </kbd>
                 <span>Select</span>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">⌘</kbd>
-              <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">K</kbd>
+              <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                ⌘
+              </kbd>
+              <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                K
+              </kbd>
               <span>to open</span>
             </div>
           </div>
@@ -262,4 +521,3 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
     </>
   );
 }
-

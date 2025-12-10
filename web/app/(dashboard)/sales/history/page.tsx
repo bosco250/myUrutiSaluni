@@ -259,6 +259,8 @@ function SalesHistoryContent() {
           return response.data;
         }
 
+        // Backend automatically filters sales by salon owner's salons
+        // For salon owners, backend only returns sales from their salons
         const params = new URLSearchParams();
         if (salonFilter !== 'all') params.append('salonId', salonFilter);
         if (dateRange.start) params.append('startDate', dateRange.start);
@@ -514,31 +516,43 @@ function SalesHistoryContent() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <Button onClick={() => router.push('/sales')} variant="secondary" className="p-2">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
+              {user?.role !== UserRole.CUSTOMER && (
+                <Button onClick={() => router.push('/sales')} variant="secondary" className="p-2">
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              )}
               <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
-                Sales History
+                {user?.role === UserRole.CUSTOMER ? 'My Purchase History' : 'Sales History'}
               </h1>
             </div>
             <p className="text-text-light/60 dark:text-text-dark/60">
-              View and manage all sales transactions
+              {user?.role === UserRole.CUSTOMER
+                ? 'View your purchase history and receipts'
+                : 'View and manage all sales transactions'}
             </p>
           </div>
-          <div className="flex gap-2">
+          {user?.role !== UserRole.CUSTOMER && (
+            <div className="flex gap-2">
+              <Button onClick={() => setShowFilters(!showFilters)} variant="secondary">
+                <Filter className="w-4 h-4 mr-2" />
+                {showFilters ? 'Hide' : 'Show'} Filters
+              </Button>
+              <Button onClick={() => router.push('/sales/analytics')} variant="secondary">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Analytics
+              </Button>
+              <Button onClick={() => router.push('/sales')} variant="primary">
+                <Receipt className="w-4 h-4 mr-2" />
+                New Sale
+              </Button>
+            </div>
+          )}
+          {user?.role === UserRole.CUSTOMER && (
             <Button onClick={() => setShowFilters(!showFilters)} variant="secondary">
               <Filter className="w-4 h-4 mr-2" />
               {showFilters ? 'Hide' : 'Show'} Filters
             </Button>
-            <Button onClick={() => router.push('/sales/analytics')} variant="secondary">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analytics
-            </Button>
-            <Button onClick={() => router.push('/sales')} variant="primary">
-              <Receipt className="w-4 h-4 mr-2" />
-              New Sale
-            </Button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -761,7 +775,7 @@ function SalesHistoryContent() {
               <option value="mobile_money">Mobile Money</option>
               <option value="bank_transfer">Bank Transfer</option>
             </select>
-            {salons.length > 0 && (
+            {salons.length > 0 && user?.role !== UserRole.CUSTOMER && (
               <select
                 value={salonFilter}
                 onChange={(e) => {
@@ -836,24 +850,30 @@ function SalesHistoryContent() {
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Sale ID
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                  Customer
-                </th>
+                {user?.role !== UserRole.CUSTOMER && (
+                  <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Customer
+                  </th>
+                )}
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Salon
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                  Employee
-                </th>
+                {user?.role !== UserRole.CUSTOMER && (
+                  <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Employee
+                  </th>
+                )}
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Amount
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Items
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                  Commission
-                </th>
+                {user?.role !== UserRole.CUSTOMER && (
+                  <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    Commission
+                  </th>
+                )}
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                   Payment Method
                 </th>
@@ -868,7 +888,7 @@ function SalesHistoryContent() {
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {isLoading || isRefetching ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-8">
+                  <td colSpan={user?.role === UserRole.CUSTOMER ? 8 : 11} className="px-6 py-8">
                     <div className="flex items-center justify-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                       <span className="text-text-light/60 dark:text-text-dark/60">
@@ -879,7 +899,7 @@ function SalesHistoryContent() {
                 </tr>
               ) : paginatedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-16 text-center">
+                  <td colSpan={user?.role === UserRole.CUSTOMER ? 8 : 11} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center">
                       <Receipt className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
                       <Receipt className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
@@ -910,41 +930,45 @@ function SalesHistoryContent() {
                         {sale.id.slice(0, 8)}...
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sale.customer ? (
-                        <div>
-                          <div className="text-sm font-medium text-text-light dark:text-text-dark">
-                            {sale.customer.fullName}
+                    {user?.role !== UserRole.CUSTOMER && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {sale.customer ? (
+                          <div>
+                            <div className="text-sm font-medium text-text-light dark:text-text-dark">
+                              {sale.customer.fullName}
+                            </div>
+                            <div className="text-xs text-text-light/60 dark:text-text-dark/60">
+                              {sale.customer.phone}
+                            </div>
                           </div>
-                          <div className="text-xs text-text-light/60 dark:text-text-dark/60">
-                            {sale.customer.phone}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">
-                          Walk-in
-                        </span>
-                      )}
-                    </td>
+                        ) : (
+                          <span className="text-sm text-text-light/40 dark:text-text-dark/40">
+                            Walk-in
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                       {sale.salon?.name || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sale.employees && sale.employees.length > 0 ? (
-                        <div className="text-sm text-text-light dark:text-text-dark">
-                          {sale.employees.map((emp, idx, arr) => (
-                            <span key={emp.id}>
-                              {emp.name}
-                              {idx < arr.length - 1 && ', '}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-text-light/40 dark:text-text-dark/40">
-                          N/A
-                        </span>
-                      )}
-                    </td>
+                    {user?.role !== UserRole.CUSTOMER && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {sale.employees && sale.employees.length > 0 ? (
+                          <div className="text-sm text-text-light dark:text-text-dark">
+                            {sale.employees.map((emp, idx, arr) => (
+                              <span key={emp.id}>
+                                {emp.name}
+                                {idx < arr.length - 1 && ', '}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-text-light/40 dark:text-text-dark/40">
+                            N/A
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-base font-bold text-primary">
                         {sale.currency || 'RWF'} {Number(sale.totalAmount || 0).toLocaleString()}
@@ -979,11 +1003,13 @@ function SalesHistoryContent() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-bold text-success">
-                        {sale.currency || 'RWF'} {(sale.totalCommission || 0).toLocaleString()}
-                      </span>
-                    </td>
+                    {user?.role !== UserRole.CUSTOMER && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-bold text-success">
+                          {sale.currency || 'RWF'} {(sale.totalCommission || 0).toLocaleString()}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-text-light dark:text-text-dark">
                         {formatPaymentMethod(sale.paymentMethod)}

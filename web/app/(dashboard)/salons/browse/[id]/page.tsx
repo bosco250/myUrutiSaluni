@@ -26,6 +26,22 @@ import { UserRole } from '@/lib/permissions';
 import SalonLocationMap from '@/components/maps/SalonLocationMap';
 import CustomerBookingModal from '@/components/appointments/CustomerBookingModal';
 
+interface DayHours {
+  isOpen: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+interface WorkingHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
 interface Salon {
   id: string;
   name: string;
@@ -42,6 +58,10 @@ interface Salon {
   reviewCount?: number;
   city?: string;
   district?: string;
+  settings?: {
+    operatingHours?: string | WorkingHours;
+    [key: string]: any;
+  };
 }
 
 interface Service {
@@ -167,6 +187,61 @@ function SalonDetailsContent() {
 
   const activeServices = services?.filter((s) => s.isActive) || [];
   const bgGradient = getGradient(salon.id);
+
+  // Parse operating hours from settings
+  const parseOperatingHours = (): WorkingHours | null => {
+    if (!salon?.settings?.operatingHours) return null;
+
+    try {
+      const hours = salon.settings.operatingHours;
+      if (typeof hours === 'string') {
+        return JSON.parse(hours) as WorkingHours;
+      }
+      return hours as WorkingHours;
+    } catch {
+      return null;
+    }
+  };
+
+  const operatingHours = parseOperatingHours();
+
+  // Format time from 24-hour to 12-hour format
+  const formatTime = (time24: string): string => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  // Get day label
+  const getDayLabel = (day: keyof WorkingHours): string => {
+    const labels: Record<keyof WorkingHours, string> = {
+      monday: 'Monday',
+      tuesday: 'Tuesday',
+      wednesday: 'Wednesday',
+      thursday: 'Thursday',
+      friday: 'Friday',
+      saturday: 'Saturday',
+      sunday: 'Sunday',
+    };
+    return labels[day];
+  };
+
+  // Get short day label
+  const getShortDayLabel = (day: keyof WorkingHours): string => {
+    const labels: Record<keyof WorkingHours, string> = {
+      monday: 'Mon',
+      tuesday: 'Tue',
+      wednesday: 'Wed',
+      thursday: 'Thu',
+      friday: 'Fri',
+      saturday: 'Sat',
+      sunday: 'Sun',
+    };
+    return labels[day];
+  };
 
   return (
     <div className="min-h-screen pb-12 md:pb-20 bg-background-light dark:bg-background-dark">
@@ -470,26 +545,61 @@ function SalonDetailsContent() {
                 <h3 className="font-bold text-text-light dark:text-text-dark mb-3 md:mb-4 text-xs md:text-sm uppercase tracking-wider">
                   Business Hours
                 </h3>
-                <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-text-light/60 dark:text-text-dark/60">Mon - Fri</span>
-                    <span className="font-semibold text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                      9:00 AM - 6:00 PM
-                    </span>
+                {operatingHours ? (
+                  <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
+                    {(Object.keys(operatingHours) as Array<keyof WorkingHours>).map((day) => {
+                      const dayHours = operatingHours[day];
+                      const isOpen = dayHours.isOpen;
+                      const dayLabel = getDayLabel(day);
+
+                      return (
+                        <div
+                          key={day}
+                          className={`flex justify-between items-center ${
+                            !isOpen ? 'opacity-75' : ''
+                          }`}
+                        >
+                          <span className="text-text-light/60 dark:text-text-dark/60">
+                            {dayLabel}
+                          </span>
+                          {isOpen ? (
+                            <span className="font-semibold text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                              {formatTime(dayHours.startTime)} - {formatTime(dayHours.endTime)}
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-danger bg-danger/10 dark:bg-danger/20 px-2 py-0.5 rounded">
+                              Closed
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-text-light/60 dark:text-text-dark/60">Saturday</span>
-                    <span className="font-semibold text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                      10:00 AM - 4:00 PM
-                    </span>
+                ) : (
+                  <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-light/60 dark:text-text-dark/60">Mon - Fri</span>
+                      <span className="font-semibold text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                        9:00 AM - 6:00 PM
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-light/60 dark:text-text-dark/60">Saturday</span>
+                      <span className="font-semibold text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                        10:00 AM - 4:00 PM
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center opacity-75">
+                      <span className="text-text-light/60 dark:text-text-dark/60">Sunday</span>
+                      <span className="font-semibold text-danger bg-danger/10 dark:bg-danger/20 px-2 py-0.5 rounded">
+                        Closed
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2 italic">
+                      Hours not specified
+                    </p>
                   </div>
-                  <div className="flex justify-between items-center opacity-75">
-                    <span className="text-text-light/60 dark:text-text-dark/60">Sunday</span>
-                    <span className="font-semibold text-danger bg-danger/10 dark:bg-danger/20 px-2 py-0.5 rounded">
-                      Closed
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

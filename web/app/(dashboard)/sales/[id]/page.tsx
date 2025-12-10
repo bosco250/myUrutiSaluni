@@ -79,7 +79,7 @@ interface Sale {
 
 export default function SaleDetailPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER]}>
       <SaleDetailContent />
     </ProtectedRoute>
   );
@@ -88,6 +88,7 @@ export default function SaleDetailPage() {
 function SaleDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuthStore();
   const saleId = params.id as string;
 
   const { data: sale, isLoading, error } = useQuery<Sale>({
@@ -156,10 +157,12 @@ function SaleDetailContent() {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
-          <p className="text-danger mb-4">Failed to load sale details.</p>
+          <p className="text-danger mb-4">
+            {error ? 'Failed to load sale details. You may not have permission to view this sale.' : 'Sale not found.'}
+          </p>
           <Button onClick={() => router.push('/sales/history')} variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Sales History
+            Back to {user?.role === UserRole.CUSTOMER ? 'Purchase History' : 'Sales History'}
           </Button>
         </div>
       </div>
@@ -209,9 +212,11 @@ function SaleDetailContent() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">Sale Details</h1>
+            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
+              {user?.role === UserRole.CUSTOMER ? 'Purchase Details' : 'Sale Details'}
+            </h1>
             <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-              Sale ID: <span className="font-mono">{sale.id}</span>
+              {user?.role === UserRole.CUSTOMER ? 'Receipt' : 'Sale'} ID: <span className="font-mono">{sale.id}</span>
             </p>
           </div>
         </div>
@@ -224,10 +229,12 @@ function SaleDetailContent() {
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>
-          <Button onClick={() => router.push('/sales')} variant="primary">
-            <Receipt className="w-4 h-4 mr-2" />
-            New Sale
-          </Button>
+          {user?.role !== UserRole.CUSTOMER && (
+            <Button onClick={() => router.push('/sales')} variant="primary">
+              <Receipt className="w-4 h-4 mr-2" />
+              New Sale
+            </Button>
+          )}
         </div>
       </div>
 
@@ -263,7 +270,7 @@ function SaleDetailContent() {
         <div className="p-6 space-y-6">
           {/* Customer & Employee Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sale.customer && (
+            {sale.customer && user?.role !== UserRole.CUSTOMER && (
               <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="w-5 h-5 text-primary" />
@@ -276,7 +283,7 @@ function SaleDetailContent() {
                 )}
               </div>
             )}
-            {sale.createdBy && (
+            {sale.createdBy && user?.role !== UserRole.CUSTOMER && (
               <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-5 h-5 text-primary" />
@@ -324,7 +331,7 @@ function SaleDetailContent() {
                             </>
                           )}
                         </div>
-                        {item.salonEmployee && (
+                        {item.salonEmployee && user?.role !== UserRole.CUSTOMER && (
                           <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                             Assigned to: {item.salonEmployee.user?.fullName || item.salonEmployee.roleTitle || 'Employee'}
                           </p>
