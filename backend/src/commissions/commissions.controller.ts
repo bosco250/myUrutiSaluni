@@ -94,6 +94,11 @@ export class CommissionsController {
       const salons = await this.salonsService.findByOwnerId(user.id);
       const salonIds = salons.map((s) => s.id);
 
+      if (salonIds.length === 0) {
+        // Owner has no salons, return empty array
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
           'You can only access commissions for your own salon',
@@ -110,6 +115,16 @@ export class CommissionsController {
           );
         }
       }
+
+      // Filter by owner's salons - if specific salonId provided, use it, otherwise use all owner's salons
+      return this.commissionsService.findAll({
+        salonEmployeeId,
+        salonId: salonId || undefined,
+        salonIds: salonId ? undefined : salonIds, // Use salonIds if no specific salonId
+        paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
+        startDate: this.parseDateFilter(startDate, false),
+        endDate: this.parseDateFilter(endDate, true),
+      });
     }
 
     return this.commissionsService.findAll({

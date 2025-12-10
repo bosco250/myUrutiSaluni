@@ -11,6 +11,7 @@ import { EmployeeWorkingHours } from './entities/employee-working-hours.entity';
 import { EmployeeAvailabilityRules } from './entities/employee-availability-rules.entity';
 import { Service } from '../services/entities/service.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
+import { Salon } from '../salons/entities/salon.entity';
 import { SalonsModule } from '../salons/salons.module';
 import { CustomersModule } from '../customers/customers.module';
 import { ServicesModule } from '../services/services.module';
@@ -25,6 +26,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       EmployeeAvailabilityRules,
       Service,
       SalonEmployee,
+      Salon,
     ]),
     forwardRef(() => SalonsModule),
     CustomersModule,

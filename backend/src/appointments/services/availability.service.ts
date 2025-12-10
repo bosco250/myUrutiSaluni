@@ -16,6 +16,7 @@ import { EmployeeWorkingHours } from '../entities/employee-working-hours.entity'
 import { EmployeeAvailabilityRules } from '../entities/employee-availability-rules.entity';
 import { Service } from '../../services/entities/service.entity';
 import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
+import { Salon } from '../../salons/entities/salon.entity';
 
 export interface TimeSlot {
   startTime: string;
@@ -45,6 +46,17 @@ export interface AvailabilityQuery {
 export class AvailabilityService {
   private readonly logger = new Logger(AvailabilityService.name);
 
+  // Day name mapping for operating hours (0=Sunday, 1=Monday, etc.)
+  private readonly dayNames = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ] as const;
+
   constructor(
     @InjectRepository(Appointment)
     private appointmentsRepository: Repository<Appointment>,
@@ -56,6 +68,8 @@ export class AvailabilityService {
     private servicesRepository: Repository<Service>,
     @InjectRepository(SalonEmployee)
     private employeesRepository: Repository<SalonEmployee>,
+    @InjectRepository(Salon)
+    private salonsRepository: Repository<Salon>,
   ) {}
 
   /**
@@ -141,19 +155,12 @@ export class AvailabilityService {
       where: { employeeId, dayOfWeek, isActive: true },
     });
 
-    // DEFAULT: If no working hours configured, assume 9:00 - 18:00 (full availability)
+    // FALLBACK: If no employee working hours, use salon operating hours
     if (!workingHours) {
-      this.logger.debug(
-        `No working hours for employee ${employeeId} on day ${dayOfWeek}, using default 9:00-18:00`,
-      );
-      workingHours = {
+      workingHours = await this.getSalonOperatingHoursAsWorkingHours(
         employeeId,
         dayOfWeek,
-        startTime: '09:00',
-        endTime: '18:00',
-        breaks: [],
-        isActive: true,
-      } as EmployeeWorkingHours;
+      );
     }
 
     // Get availability rules (optional - if none, we skip rule checks)
@@ -290,25 +297,18 @@ export class AvailabilityService {
         };
       }
 
-      // Check working hours - use default 9:00-18:00 if none configured
+      // Check working hours - fallback to salon operating hours if none configured
       const dayOfWeek = scheduledStart.getDay();
       let workingHours = await this.workingHoursRepository.findOne({
         where: { employeeId, dayOfWeek, isActive: true },
       });
 
-      // DEFAULT: If no working hours configured, assume 9:00 - 18:00
+      // FALLBACK: If no employee working hours, use salon operating hours
       if (!workingHours) {
-        this.logger.debug(
-          `No working hours for employee ${employeeId} on day ${dayOfWeek}, using default 9:00-18:00`,
-        );
-        workingHours = {
+        workingHours = await this.getSalonOperatingHoursAsWorkingHours(
           employeeId,
           dayOfWeek,
-          startTime: '09:00',
-          endTime: '18:00',
-          breaks: [],
-          isActive: true,
-        } as EmployeeWorkingHours;
+        );
       }
 
       // Check if time is within working hours
@@ -419,6 +419,82 @@ export class AvailabilityService {
     return this.availabilityRulesRepository.findOne({
       where: { employeeId },
     });
+  }
+
+  /**
+   * Get salon operating hours as employee working hours fallback
+   */
+  private async getSalonOperatingHoursAsWorkingHours(
+    employeeId: string,
+    dayOfWeek: number,
+  ): Promise<EmployeeWorkingHours | null> {
+    // Get employee to find salon
+    const employee = await this.employeesRepository.findOne({
+      where: { id: employeeId },
+      relations: ['salon'],
+    });
+
+    if (!employee?.salonId) {
+      return this.getDefaultWorkingHours(employeeId, dayOfWeek);
+    }
+
+    const salon = await this.salonsRepository.findOne({
+      where: { id: employee.salonId },
+    });
+
+    if (!salon?.settings?.operatingHours) {
+      return this.getDefaultWorkingHours(employeeId, dayOfWeek);
+    }
+
+    try {
+      const operatingHours =
+        typeof salon.settings.operatingHours === 'string'
+          ? JSON.parse(salon.settings.operatingHours)
+          : salon.settings.operatingHours;
+
+      const dayName = this.dayNames[dayOfWeek];
+      const dayHours = operatingHours[dayName];
+
+      if (dayHours?.isOpen && dayHours.startTime && dayHours.endTime) {
+        this.logger.debug(
+          `Using salon operating hours for employee ${employeeId} on ${dayName}: ${dayHours.startTime}-${dayHours.endTime}`,
+        );
+        return {
+          employeeId,
+          dayOfWeek,
+          startTime: dayHours.startTime,
+          endTime: dayHours.endTime,
+          breaks: dayHours.breaks || [],
+          isActive: true,
+        } as EmployeeWorkingHours;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to parse salon operating hours: ${error.message}`,
+      );
+    }
+
+    return this.getDefaultWorkingHours(employeeId, dayOfWeek);
+  }
+
+  /**
+   * Get default working hours (9:00 - 18:00)
+   */
+  private getDefaultWorkingHours(
+    employeeId: string,
+    dayOfWeek: number,
+  ): EmployeeWorkingHours {
+    this.logger.debug(
+      `No working hours for employee ${employeeId} on day ${dayOfWeek}, using default 9:00-18:00`,
+    );
+    return {
+      employeeId,
+      dayOfWeek,
+      startTime: '09:00',
+      endTime: '18:00',
+      breaks: [],
+      isActive: true,
+    } as EmployeeWorkingHours;
   }
 
   /**

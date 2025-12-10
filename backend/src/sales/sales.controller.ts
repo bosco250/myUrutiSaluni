@@ -173,6 +173,7 @@ export class SalesController {
     UserRole.DISTRICT_LEADER,
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
   )
   @ApiOperation({ summary: 'Get a sale by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
@@ -180,6 +181,14 @@ export class SalesController {
 
     if (!sale) {
       throw new NotFoundException('Sale not found');
+    }
+
+    // Customers can only access their own sales
+    if (user.role === UserRole.CUSTOMER) {
+      const customer = await this.customersService.findByUserId(user.id);
+      if (!customer || sale.customerId !== customer.id) {
+        throw new ForbiddenException('You can only access your own sales');
+      }
     }
 
     // Salon owners and employees can only access sales for their salon

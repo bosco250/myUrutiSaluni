@@ -93,6 +93,7 @@ export class CommissionsService {
     salonEmployeeId?: string;
     salonEmployeeIds?: string[];
     salonId?: string;
+    salonIds?: string[];
     paid?: boolean;
     startDate?: Date;
     endDate?: Date;
@@ -116,9 +117,14 @@ export class CommissionsService {
       });
     }
 
-    // Only apply salonId filter if not using multiple employee IDs
-    // (when using multiple employee IDs, the salon filter is implicit via employee records)
-    if (filters?.salonId && !filters?.salonEmployeeIds) {
+    // Support multiple salon IDs (for salon owners with multiple salons)
+    if (filters?.salonIds && filters.salonIds.length > 0) {
+      query.andWhere('salon.id IN (:...salonIds)', {
+        salonIds: filters.salonIds,
+      });
+    } else if (filters?.salonId && !filters?.salonEmployeeIds) {
+      // Only apply salonId filter if not using multiple employee IDs
+      // (when using multiple employee IDs, the salon filter is implicit via employee records)
       query.andWhere('salon.id = :salonId', { salonId: filters.salonId });
     }
 
