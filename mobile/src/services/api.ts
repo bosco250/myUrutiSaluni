@@ -1,40 +1,29 @@
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// API service configuration and methods
+const API_BASE_URL = __DEV__ 
+  ? 'http://localhost:3000/api' 
+  : 'https://api.production.com';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:3000/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  async config => {
-    const token = await AsyncStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+export const api = {
+  get: async <T>(endpoint: string): Promise<T> => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
     }
-    return config;
+    return response.json();
   },
-  error => {
-    return Promise.reject(error);
-  },
-);
-
-// Response interceptor for error handling
-api.interceptors.response.use(
-  response => response,
-  async error => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized - clear token and redirect to login
-      await AsyncStorage.removeItem('auth_token');
+  
+  post: async <T>(endpoint: string, data: unknown): Promise<T> => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText}`);
     }
-    return Promise.reject(error);
+    return response.json();
   },
-);
-
-export default api;
+};
 
