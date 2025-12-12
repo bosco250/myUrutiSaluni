@@ -105,10 +105,14 @@ class ExploreService {
 
   /**
    * Get a single salon by ID
+   * @param browse If true, includes full details with settings (for booking)
    */
-  async getSalonById(salonId: string): Promise<Salon> {
+  async getSalonById(salonId: string, browse?: boolean): Promise<Salon> {
     try {
-      const response = await api.get<Salon>(`/salons/${salonId}`);
+      const endpoint = browse
+        ? `/salons/${salonId}?browse=true`
+        : `/salons/${salonId}`;
+      const response = await api.get<Salon>(endpoint);
       return response;
     } catch (error: any) {
       console.error("Error fetching salon:", error);
@@ -153,22 +157,101 @@ class ExploreService {
   /**
    * Get products for a salon
    * Customers can now view products for any salon
+   * Backend endpoint: GET /api/inventory/products?salonId={salonId}
    */
   async getProducts(salonId: string): Promise<Product[]> {
     try {
+      if (!salonId) {
+        return [];
+      }
+
       const response = await api.get<Product[]>(
         `/inventory/products?salonId=${salonId}`
       );
-      return Array.isArray(response) ? response : [];
+
+      // Ensure we return an array of valid products
+      if (!Array.isArray(response)) {
+        return [];
+      }
+
+      // Map backend unitPrice to price for frontend consistency
+      return response.map((product: any) => ({
+        ...product,
+        price: product.unitPrice ?? product.price ?? null,
+      }));
     } catch (error: any) {
-      console.error("Error fetching products:", error);
-      throw new Error(error.message || "Failed to fetch products");
+      // Return empty array instead of throwing to prevent UI crashes
+      // The UI will show "No products available" message
+      return [];
+    }
+  }
+
+  /**
+   * Get employees for a salon
+   * Customers can view employees for booking purposes
+   * Backend endpoint: GET /api/salons/{salonId}/employees
+   */
+  async getSalonEmployees(salonId: string): Promise<Employee[]> {
+    try {
+      if (!salonId) {
+        return [];
+      }
+
+      const response = await api.get<Employee[]>(
+        `/salons/${salonId}/employees`
+      );
+
+      if (!Array.isArray(response)) {
+        return [];
+      }
+
+      return response;
+    } catch (error: any) {
+      return [];
+    }
+  }
+
+  /**
+   * Get a single employee by ID
+   */
+  async getEmployeeById(
+    employeeId: string,
+    salonId: string
+  ): Promise<Employee | null> {
+    try {
+      const employees = await this.getSalonEmployees(salonId);
+      return employees.find((emp) => emp.id === employeeId) || null;
+    } catch (error: any) {
+      return null;
     }
   }
 }
 
 /**
+ * Employee data structure from backend
+ */
+export interface Employee {
+  id: string;
+  salonId: string;
+  userId?: string;
+  roleTitle?: string;
+  skills?: string[];
+  isActive: boolean;
+  user?: {
+    id: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+  };
+  salon?: {
+    id: string;
+    name: string;
+  };
+}
+
+/**
  * Product data structure from backend
+ * Backend entity uses unitPrice, but we map it to price for consistency
  */
 export interface Product {
   id: string;
@@ -176,12 +259,15 @@ export interface Product {
   name: string;
   description?: string;
   sku?: string;
-  price: number;
+  price?: number; // Frontend alias for unitPrice
+  unitPrice?: number; // Backend field name
   cost?: number;
   stockQuantity?: number;
   unit?: string;
   category?: string;
-  isActive: boolean;
+  isActive?: boolean;
+  isInventoryItem?: boolean;
+  taxRate?: number;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;

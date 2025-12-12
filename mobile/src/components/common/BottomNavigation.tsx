@@ -13,7 +13,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
   const { isDark } = useTheme();
   const tabs = [
     { id: 'home' as const, label: 'Home', icon: 'home' },
-    { id: 'bookings' as const, label: 'Bookings', icon: 'event' },
+    { id: 'bookings' as const, label: 'Bookings', icon: 'event' as any },
     { id: 'explore' as const, label: 'Explore', icon: 'explore' },
     { id: 'favorites' as const, label: 'Favorites', icon: 'favorite' },
     { id: 'profile' as const, label: 'Profile', icon: 'person' },

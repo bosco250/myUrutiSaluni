@@ -47,13 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedToken && savedUser) {
         setToken(savedToken);
         setUser(savedUser);
-        console.log("AuthContext: Restored session from storage", {
-          userId: savedUser.id,
-          email: savedUser.email,
-          role: savedUser.role,
-        });
-      } else {
-        console.log("AuthContext: No saved session found");
       }
     } catch (error) {
       console.error("Error initializing auth:", error);
@@ -73,12 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(response.access_token);
       setUser(response.user);
 
-      console.log("AuthContext: User logged in successfully", {
-        userId: response.user.id,
-        email: response.user.email,
-        role: response.user.role,
-      });
-
       return response;
     } catch (error) {
       // Re-throw error so calling component can handle it
@@ -95,12 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update state with token and all user data (id, email, phone, fullName, role)
       setToken(response.access_token);
       setUser(response.user);
-
-      console.log("AuthContext: User registered successfully", {
-        userId: response.user.id,
-        email: response.user.email,
-        role: response.user.role,
-      });
 
       return response;
     } catch (error) {

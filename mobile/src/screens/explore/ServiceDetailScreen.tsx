@@ -84,8 +84,12 @@ export default function ServiceDetailScreen({
   };
 
   const handleBookNow = () => {
-    // TODO: Navigate to booking screen
-    Alert.alert("Book Now", "Booking functionality coming soon");
+    if (!service) return;
+    navigation?.navigate("BookingFlow", {
+      serviceId: service.id,
+      service: service,
+      salonId: service.salonId,
+    });
   };
 
   const dynamicStyles = {

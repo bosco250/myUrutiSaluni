@@ -16,7 +16,7 @@ import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import BottomNavigation from "../../components/common/BottomNavigation";
 import ServiceCard from "./components/ServiceCard";
-import { exploreService, Salon, Service, Product } from "../../services/explore";
+import { exploreService, Salon, Service, Product, Employee } from "../../services/explore";
 
 interface SalonDetailScreenProps {
   navigation?: {
@@ -31,7 +31,7 @@ interface SalonDetailScreenProps {
   };
 }
 
-type TabType = "Overview" | "Services" | "Products";
+type TabType = "Overview" | "Services" | "Products" | "Employees";
 
 export default function SalonDetailScreen({
   navigation,
@@ -45,9 +45,11 @@ export default function SalonDetailScreen({
   const [salon, setSalon] = useState<Salon | null>(route?.params?.salon || null);
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(!route?.params?.salon);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
 
   const salonId = route?.params?.salonId || route?.params?.salon?.id;
 
@@ -58,6 +60,7 @@ export default function SalonDetailScreen({
     if (salonId) {
       fetchServices();
       fetchProducts();
+      fetchEmployees();
     }
   }, [salonId]);
 
@@ -97,9 +100,15 @@ export default function SalonDetailScreen({
     try {
       setProductsLoading(true);
       const salonProducts = await exploreService.getProducts(salonId);
-      setProducts(salonProducts.filter((p) => p.isActive));
+      // Filter out invalid products and ensure we have valid data
+      const validProducts = salonProducts.filter(
+        (p) => p && p.id && p.name
+      );
+      setProducts(validProducts);
     } catch (error: any) {
-      console.error("Error fetching products:", error);
+      // Set empty array on error to show "No products available" message
+      setProducts([]);
+      // Don't show alert for products as it's not critical
     } finally {
       setProductsLoading(false);
     }
@@ -120,6 +129,35 @@ export default function SalonDetailScreen({
     navigation?.navigate("ServiceDetail", {
       serviceId: service.id,
       service,
+    });
+  };
+
+  const fetchEmployees = async () => {
+    if (!salonId) return;
+
+    try {
+      setEmployeesLoading(true);
+      const salonEmployees = await exploreService.getSalonEmployees(salonId);
+      setEmployees(salonEmployees.filter((e) => e.isActive));
+    } catch (error: any) {
+      setEmployees([]);
+    } finally {
+      setEmployeesLoading(false);
+    }
+  };
+
+  const handleEmployeePress = (employee: Employee) => {
+    navigation?.navigate("EmployeeDetail", {
+      employeeId: employee.id,
+      salonId: salonId,
+      employee,
+    });
+  };
+
+  const handleViewAllEmployees = () => {
+    navigation?.navigate("EmployeeList", {
+      salonId: salonId,
+      salon,
     });
   };
 
@@ -385,6 +423,25 @@ export default function SalonDetailScreen({
                 <View style={[styles.tabUnderline, { backgroundColor: theme.colors.primary }]} />
               )}
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.tab}
+              onPress={() => setSelectedTab("Employees")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  selectedTab === "Employees"
+                    ? { color: theme.colors.primary }
+                    : dynamicStyles.textSecondary,
+                ]}
+              >
+                Employees ({employees.length})
+              </Text>
+              {selectedTab === "Employees" && (
+                <View style={[styles.tabUnderline, { backgroundColor: theme.colors.primary }]} />
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Tab Content */}
@@ -525,9 +582,11 @@ export default function SalonDetailScreen({
                         )}
                         <View style={styles.productFooter}>
                           <Text style={[styles.productPrice, { color: theme.colors.primary }]}>
-                            ${Number(product.price).toFixed(2)}
+                            {product.price && product.price > 0
+                              ? `$${Number(product.price).toFixed(2)}`
+                              : "Price N/A"}
                           </Text>
-                          {product.stockQuantity !== undefined && (
+                          {product.stockQuantity !== undefined && product.stockQuantity !== null && (
                             <Text style={[styles.productStock, dynamicStyles.textSecondary]}>
                               {product.stockQuantity} in stock
                             </Text>
@@ -537,6 +596,82 @@ export default function SalonDetailScreen({
                     </View>
                   ))}
                 </View>
+              )}
+            </View>
+          )}
+
+          {selectedTab === "Employees" && (
+            <View style={styles.employeesContent}>
+              {employeesLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                </View>
+              ) : employees.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <MaterialIcons
+                    name="people"
+                    size={48}
+                    color={dynamicStyles.textSecondary.color}
+                  />
+                  <Text style={[styles.emptyText, dynamicStyles.text]}>
+                    No employees available
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.employeesGrid}>
+                    {employees.slice(0, 4).map((employee) => (
+                      <TouchableOpacity
+                        key={employee.id}
+                        style={[styles.employeeCard, dynamicStyles.card]}
+                        onPress={() => handleEmployeePress(employee)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.employeeImage, { backgroundColor: theme.colors.primaryLight }]}>
+                          <Text style={styles.employeeInitials}>
+                            {employee.user?.fullName
+                              ? employee.user.fullName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                                  .slice(0, 2)
+                              : "EM"}
+                          </Text>
+                        </View>
+                        <Text style={[styles.employeeName, dynamicStyles.text]} numberOfLines={1}>
+                          {employee.user?.fullName || "Employee"}
+                        </Text>
+                        {employee.roleTitle && (
+                          <Text style={[styles.employeeRole, dynamicStyles.textSecondary]} numberOfLines={1}>
+                            {employee.roleTitle}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {employees.length > 4 && (
+                    <TouchableOpacity
+                      style={styles.viewAllButtonBottom}
+                      onPress={handleViewAllEmployees}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.viewAllText,
+                          { color: theme.colors.primary },
+                        ]}
+                      >
+                        View All Employees
+                      </Text>
+                      <MaterialIcons
+                        name="arrow-forward"
+                        size={16}
+                        color={theme.colors.primary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
           )}
@@ -820,6 +955,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
+  },
+  employeesContent: {
+    marginTop: theme.spacing.sm,
+  },
+  employeesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    justifyContent: "space-between",
+  },
+  employeeCard: {
+    width: (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.sm) / 2,
+    borderRadius: 12,
+    padding: theme.spacing.md,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    marginBottom: theme.spacing.md,
+  },
+  employeeImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: theme.spacing.sm,
+  },
+  employeeInitials: {
+    color: theme.colors.primary,
+    fontSize: 24,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+  },
+  employeeName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: theme.spacing.xs / 2,
+    fontFamily: theme.fonts.bold,
+  },
+  employeeRole: {
+    fontSize: 12,
+    textAlign: "center",
+    fontFamily: theme.fonts.regular,
   },
 });
 

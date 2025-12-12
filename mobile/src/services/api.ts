@@ -1,5 +1,5 @@
 import { config } from '../config';
-import { authService } from './auth';
+import { tokenStorage } from './tokenStorage';
 
 // API service configuration and methods
 const API_BASE_URL = config.apiUrl;
@@ -12,9 +12,6 @@ interface RequestOptions {
 class ApiService {
   /**
    * Get authentication headers
-   */
-  /**
-   * Get authentication headers
    * Automatically includes Bearer token for authenticated requests
    * Backend expects: Authorization: Bearer <token>
    */
@@ -24,7 +21,7 @@ class ApiService {
     };
 
     if (requireAuth) {
-      const token = await authService.getToken();
+      const token = await tokenStorage.getToken();
       if (token) {
         // Backend uses JWT Bearer token authentication
         // Format: Authorization: Bearer <jwt_token>
@@ -42,12 +39,11 @@ class ApiService {
     if (!response.ok) {
       // Handle 401 Unauthorized - token expired or invalid
       if (response.status === 401) {
-        // Clear stored auth data
+        // Clear stored token
         try {
-          await authService.logout();
-          console.log('Token expired or invalid - User logged out');
+          await tokenStorage.clearToken();
         } catch (error) {
-          console.error('Error clearing auth data:', error);
+          // Ignore errors on clear
         }
         
         const error = new Error('Session expired. Please login again.');

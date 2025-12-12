@@ -190,8 +190,8 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         >
           {/* Trending Now Section with Auto-Slider */}
           {trendingServices.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
+            <View style={styles.trendingSection}>
+              <View style={styles.trendingSectionHeader}>
                 <View style={styles.sectionTitleContainer}>
                   <MaterialIcons
                     name="local-fire-department"
@@ -407,6 +407,9 @@ const styles = StyleSheet.create({
   section: {
     marginTop: theme.spacing.xl,
   },
+  trendingSection: {
+    marginTop: theme.spacing.md,
+  },
   salonsSection: {
     marginTop: 0,
     paddingTop: theme.spacing.md,
@@ -417,6 +420,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.md,
+  },
+  trendingSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xs,
   },
   salonsSectionHeader: {
     paddingHorizontal: theme.spacing.md,

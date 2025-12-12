@@ -29,17 +29,14 @@ export default function TrendingCard({
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.placeholderImage, { backgroundColor: theme.colors.primaryLight }]}>
-        <MaterialIcons
-          name="spa"
-          size={48}
-          color={theme.colors.primary}
-        />
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+      <View
+        style={[
+          styles.placeholderImage,
+          { backgroundColor: theme.colors.primaryLight },
+        ]}
+      >
+        <MaterialIcons name="spa" size={48} color={theme.colors.primary} />
       </View>
       <View style={styles.overlay}>
         <View style={styles.categoryTag}>
@@ -57,6 +54,7 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 16,
     marginRight: theme.spacing.md,
+    marginTop: theme.spacing.sm,
     overflow: "hidden",
     position: "relative",
   },
@@ -95,4 +93,3 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.bold,
   },
 });
-

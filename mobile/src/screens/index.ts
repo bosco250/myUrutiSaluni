@@ -4,3 +4,4 @@ export { default as NotificationsScreen } from "./NotificationsScreen";
 export * from "./explore";
 export * from "./profile";
 export * from "./auth";
+export * from "./booking";

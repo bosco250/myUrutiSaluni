@@ -110,6 +110,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       navigation?.navigate("Profile");
     } else if (tab === "explore") {
       navigation?.navigate("Explore");
+    } else if (tab === "bookings") {
+      navigation?.navigate("Bookings");
     }
     // Other tabs can be handled here when their screens are created
   };

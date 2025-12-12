@@ -24,16 +24,30 @@ interface AutoSliderProps {
 
 export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
   const scrollViewRef = useRef<ScrollView>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const itemWidth = CARD_WIDTH + CARD_SPACING;
+  const initialIndex = children.length > 1 ? 1 : 0;
+  const scrollX = useRef(new Animated.Value(initialIndex * itemWidth)).current;
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const isPausedRef = useRef(false);
 
   // Calculate total width and offsets
-  const itemWidth = CARD_WIDTH + CARD_SPACING;
   const totalWidth = children.length * itemWidth;
+
+  // Initialize scroll position to second item
+  useEffect(() => {
+    if (children.length > 1 && scrollViewRef.current) {
+      // Small delay to ensure ScrollView is rendered
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: initialIndex * itemWidth,
+          animated: false,
+        });
+      }, 100);
+    }
+  }, [children.length, initialIndex, itemWidth]);
 
   useEffect(() => {
     if (children.length <= 1) return;
@@ -260,12 +274,12 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
         </ScrollView>
       </Animated.View>
 
-      {/* Pagination Dots */}
-      {children.length > 1 && (
+      {/* Pagination Dots - Hidden */}
+      {/* {children.length > 1 && (
         <View style={styles.paginationContainer}>
           {paginationDots}
         </View>
-      )}
+      )} */}
 
       {/* Decorative floating elements */}
       <Animated.View
@@ -299,7 +313,7 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
 const styles = StyleSheet.create({
   container: {
     position: "relative",
-    marginVertical: theme.spacing.md,
+    marginVertical: theme.spacing.xs,
   },
   scrollView: {
     overflow: "visible",
@@ -315,7 +329,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.xs,
     gap: theme.spacing.xs,
   },
   paginationDot: {

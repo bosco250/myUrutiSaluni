@@ -5,11 +5,14 @@ import WelcomeScreen from "../screens/WelcomeScreen";
 import HomeScreen from "../screens/HomeScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import { ExploreScreen, ServiceDetailScreen, AllServicesScreen, SalonDetailScreen } from "../screens/explore";
+import EmployeeListScreen from "../screens/explore/EmployeeListScreen";
+import EmployeeDetailScreen from "../screens/explore/EmployeeDetailScreen";
+import { BookingsScreen, AppointmentDetailScreen, BookingFlowScreen } from "../screens/booking";
 import { ProfileScreen } from "../screens/profile";
 import { ThemeProvider, AuthProvider, useAuth } from "../context";
 import { theme } from "../theme";
 
-type MainScreen = "Home" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "Profile" | "Login";
+type MainScreen = "Home" | "Bookings" | "AppointmentDetail" | "BookingFlow" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "EmployeeList" | "EmployeeDetail" | "Profile" | "Login";
 
 // Inner navigation component that uses auth context
 function NavigationContent() {
@@ -36,8 +39,8 @@ function NavigationContent() {
   };
 
   const handleNavigate = (screen: MainScreen, params?: any) => {
-    // If navigating to a main tab (Home, Explore, Profile), reset history
-    const mainTabs: MainScreen[] = ["Home", "Explore", "Profile", "Notifications"];
+    // If navigating to a main tab (Home, Bookings, Explore, Profile), reset history
+    const mainTabs: MainScreen[] = ["Home", "Bookings", "Explore", "Profile", "Notifications"];
     if (mainTabs.includes(screen)) {
       setScreenHistory([screen]);
     } else {
@@ -85,6 +88,22 @@ function NavigationContent() {
     const screenToShow = currentScreen || "Home";
     
     switch (screenToShow) {
+      case "Bookings":
+        return <BookingsScreen navigation={{ navigate: handleNavigate, goBack: handleGoBack }} />;
+      case "AppointmentDetail":
+        return (
+          <AppointmentDetailScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "BookingFlow":
+        return (
+          <BookingFlowScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
       case "Notifications":
         return <NotificationsScreen navigation={{ goBack: handleGoBack }} />;
       case "Explore":
@@ -105,6 +124,20 @@ function NavigationContent() {
       case "SalonDetail":
         return (
           <SalonDetailScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "EmployeeList":
+        return (
+          <EmployeeListScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "EmployeeDetail":
+        return (
+          <EmployeeDetailScreen
             navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
             route={{ params: screenParams }}
           />

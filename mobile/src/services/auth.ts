@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from './api';
+import { tokenStorage } from './tokenStorage';
 import { config } from '../config';
 
-const TOKEN_KEY = '@auth_token';
 const USER_KEY = '@auth_user';
 
 /**
@@ -113,7 +113,8 @@ class AuthService {
    * Logout and clear stored data
    */
   async logout(): Promise<void> {
-    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    await tokenStorage.clearToken();
+    await AsyncStorage.removeItem(USER_KEY);
     this.token = null;
     this.user = null;
   }
@@ -126,14 +127,9 @@ class AuthService {
       return this.token;
     }
     
-    try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      this.token = token;
-      return token;
-    } catch (error) {
-      console.error('Error getting token:', error);
-      return null;
-    }
+    const token = await tokenStorage.getToken();
+    this.token = token;
+    return token;
   }
 
   /**
@@ -169,13 +165,8 @@ class AuthService {
    * Set authentication token
    */
   private async setToken(token: string): Promise<void> {
-    try {
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-      this.token = token;
-    } catch (error) {
-      console.error('Error setting token:', error);
-      throw error;
-    }
+    await tokenStorage.setToken(token);
+    this.token = token;
   }
 
   /**
@@ -196,17 +187,17 @@ class AuthService {
    */
   async initialize(): Promise<void> {
     try {
-      const [token, userJson] = await AsyncStorage.multiGet([TOKEN_KEY, USER_KEY]);
-      
-      if (token[1]) {
-        this.token = token[1];
+      const token = await tokenStorage.getToken();
+      if (token) {
+        this.token = token;
       }
       
-      if (userJson[1]) {
-        this.user = JSON.parse(userJson[1]);
+      const userJson = await AsyncStorage.getItem(USER_KEY);
+      if (userJson) {
+        this.user = JSON.parse(userJson);
       }
     } catch (error) {
-      console.error('Error initializing auth:', error);
+      // Ignore initialization errors
     }
   }
 }
