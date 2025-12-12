@@ -7,10 +7,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Button, Input, SegmentedControl } from "../../components";
 import { MailIcon, LockIcon, PersonIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
+import { useAuth } from "../../context";
 
 interface SignUpScreenProps {
   navigation?: {
@@ -22,6 +24,7 @@ interface SignUpScreenProps {
 type AccountType = "Customer" | "Employee" | "Owner";
 
 export default function SignUpScreen({ navigation }: SignUpScreenProps) {
+  const { register } = useAuth();
   const [accountType, setAccountType] = useState<AccountType>("Customer");
   const [formData, setFormData] = useState({
     name: "",
@@ -60,12 +63,49 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      console.log("Sign up successful");
+    setErrors({});
+
+    try {
+      // Map account type to backend role
+      const roleMap: Record<AccountType, string> = {
+        Customer: 'customer',
+        Employee: 'salon_employee',
+        Owner: 'salon_owner',
+      };
+
+      // Call register through auth context (which handles storage automatically)
+      const response = await register({
+        email: formData.email.trim(),
+        password: formData.password,
+        fullName: formData.name.trim(),
+        role: roleMap[accountType],
+      });
+
+      console.log("Sign up successful:", response.user);
+      
+      // Navigate to OTP verification or home screen
+      // Note: You may want to navigate to home if registration auto-logs in
       navigation?.navigate("OTPVerification");
-    }, 1500);
+    } catch (error: any) {
+      // Handle errors
+      const errorMessage = error.message || "Registration failed. Please try again.";
+      
+      // Check if it's a validation error
+      if (errorMessage.toLowerCase().includes('email')) {
+        setErrors({
+          email: errorMessage,
+        });
+      } else if (errorMessage.toLowerCase().includes('password')) {
+        setErrors({
+          password: errorMessage,
+        });
+      } else {
+        // Show alert for other errors
+        Alert.alert("Registration Error", errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateField = (field: string, value: string) => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
+import { useTheme } from '../../context';
 
 interface BottomNavigationProps {
   activeTab: 'home' | 'bookings' | 'explore' | 'favorites' | 'profile';
@@ -9,6 +10,7 @@ interface BottomNavigationProps {
 }
 
 export default function BottomNavigation({ activeTab, onTabPress }: BottomNavigationProps) {
+  const { isDark } = useTheme();
   const tabs = [
     { id: 'home' as const, label: 'Home', icon: 'home' },
     { id: 'bookings' as const, label: 'Bookings', icon: 'event' },
@@ -17,8 +19,25 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
     { id: 'profile' as const, label: 'Profile', icon: 'person' },
   ];
 
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      borderTopColor: isDark ? theme.colors.gray700 : theme.colors.border,
+    },
+    tabLabel: {
+      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+    },
+    tabLabelActive: {
+      color: theme.colors.primary,
+    },
+    iconColor: (isActive: boolean) => {
+      if (isActive) return theme.colors.primary;
+      return isDark ? theme.colors.gray600 : theme.colors.textSecondary;
+    },
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, dynamicStyles.container]}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -31,12 +50,12 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
             <MaterialIcons
               name={tab.icon as any}
               size={24}
-              color={isActive ? theme.colors.primary : theme.colors.textSecondary}
+              color={dynamicStyles.iconColor(isActive)}
             />
             <Text
               style={[
                 styles.tabLabel,
-                isActive && styles.tabLabelActive,
+                isActive ? [styles.tabLabelActive, dynamicStyles.tabLabelActive] : dynamicStyles.tabLabel,
               ]}
             >
               {tab.label}
@@ -58,7 +77,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xs,
     justifyContent: 'space-around',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

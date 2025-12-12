@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
+import { useTheme } from '../../context';
 
 interface AppointmentCardProps {
   service: string;
@@ -22,12 +23,35 @@ export default function AppointmentCard({
   onViewDetails,
   onShare,
 }: AppointmentCardProps) {
+  const { isDark } = useTheme();
+
+  const dynamicStyles = {
+    card: {
+      backgroundColor: isDark ? "#2C2C2E" : "#1C1C1E",
+    },
+    text: {
+      color: isDark ? "#FFFFFF" : theme.colors.textInverse,
+    },
+    textSecondary: {
+      color: isDark ? "#8E8E93" : theme.colors.textInverse,
+    },
+    viewDetailsButton: {
+      backgroundColor: isDark ? "#3A3A3C" : theme.colors.background,
+    },
+    viewDetailsText: {
+      color: isDark ? "#FFFFFF" : theme.colors.text,
+    },
+    shareButton: {
+      backgroundColor: isDark ? "#3A3A3C" : "#2C2C2E",
+    },
+  };
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, dynamicStyles.card]}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
-          <Text style={styles.serviceName}>{service}</Text>
-          <Text style={styles.salonName}>{salon}</Text>
+          <Text style={[styles.serviceName, { color: dynamicStyles.text.color }]}>{service}</Text>
+          <Text style={[styles.salonName, { color: dynamicStyles.textSecondary.color }]}>{salon}</Text>
         </View>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{date}</Text>
@@ -37,24 +61,24 @@ export default function AppointmentCard({
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
           <MaterialIcons name="access-time" size={18} color={theme.colors.primary} />
-          <Text style={styles.detailText}>{time}</Text>
+          <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>{time}</Text>
         </View>
         <View style={styles.detailItem}>
           <MaterialIcons name="person" size={18} color={theme.colors.primary} />
-          <Text style={styles.detailText}>{stylist}</Text>
+          <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>{stylist}</Text>
         </View>
       </View>
 
       <View style={styles.actionsRow}>
         <TouchableOpacity
-          style={styles.viewDetailsButton}
+          style={[styles.viewDetailsButton, dynamicStyles.viewDetailsButton]}
           onPress={onViewDetails}
           activeOpacity={0.7}
         >
-          <Text style={styles.viewDetailsText}>View Details</Text>
+          <Text style={[styles.viewDetailsText, { color: dynamicStyles.viewDetailsText.color }]}>View Details</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.shareButton}
+          style={[styles.shareButton, dynamicStyles.shareButton]}
           onPress={onShare}
           activeOpacity={0.7}
         >

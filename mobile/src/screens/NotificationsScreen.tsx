@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,94 +6,254 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../theme";
-
-interface Notification {
-  id: string;
-  type: "appointment" | "offer" | "payment" | "review";
-  title: string;
-  description: string;
-  timestamp: string;
-  isRead: boolean;
-  icon: string;
-  iconColor: string;
-}
+import { useTheme } from "../context";
+import { notificationsService, Notification } from "../services/notifications";
 
 export default function NotificationsScreen({ navigation }: { navigation?: any }) {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      type: "appointment",
-      title: "Appointment Confirmed",
-      description: "Your booking with Jessica at Glamour Studio is confirmed for today at 2:30 PM.",
-      timestamp: "2 hours ago",
-      isRead: false,
-      icon: "event",
-      iconColor: "#5AC8FA",
-    },
-    {
-      id: "2",
-      type: "offer",
-      title: "Special Offer!",
-      description: "Get 20% off on all spa treatments this weekend. Limited slots available.",
-      timestamp: "5 hours ago",
-      isRead: false,
-      icon: "local-offer",
-      iconColor: "#FF9500",
-    },
-    {
-      id: "3",
-      type: "payment",
-      title: "Payment Successful",
-      description: "You have successfully paid $85.00 for your recent Hair Styling service.",
-      timestamp: "Yesterday",
-      isRead: true,
-      icon: "check-circle",
-      iconColor: "#34C759",
-    },
-    {
-      id: "4",
-      type: "review",
-      title: "Review Request",
-      description: "How was your experience at Luxe Nails? Rate your service now.",
-      timestamp: "Yesterday",
-      isRead: true,
-      icon: "info",
-      iconColor: "#8E8E93",
-    },
-  ]);
+  const { isDark } = useTheme();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [markingAsRead, setMarkingAsRead] = useState<string | null>(null);
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
+
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await notificationsService.getNotifications({
+        limit: 50,
+        offset: 0,
+      });
+      setNotifications(response.data || []);
+    } catch (error: any) {
+      console.error("Error fetching notifications:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to load notifications. Please try again."
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Load notifications on mount
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, isRead: true }))
-    );
+  // Map notification type to icon and color using theme colors
+  const getNotificationIcon = (type: string): { icon: string; color: string } => {
+    const typeMap: Record<string, { icon: string; color: string }> = {
+      // Appointment events
+      appointment_booked: { icon: "event", color: theme.colors.primary },
+      appointment_reminder: { icon: "schedule", color: theme.colors.warning },
+      appointment_confirmed: { icon: "check-circle", color: theme.colors.success },
+      appointment_cancelled: { icon: "cancel", color: theme.colors.error },
+      appointment_rescheduled: { icon: "update", color: theme.colors.warning },
+      appointment_completed: { icon: "check-circle", color: theme.colors.success },
+      appointment_no_show: { icon: "error", color: theme.colors.error },
+      // Payment events
+      sale_completed: { icon: "shopping-cart", color: theme.colors.success },
+      payment_received: { icon: "payment", color: theme.colors.success },
+      payment_failed: { icon: "error", color: theme.colors.error },
+      // Commission events
+      commission_earned: { icon: "attach-money", color: theme.colors.success },
+      commission_paid: { icon: "account-balance-wallet", color: theme.colors.primary },
+      commission_updated: { icon: "update", color: theme.colors.warning },
+      // Loyalty events
+      points_earned: { icon: "stars", color: theme.colors.warning },
+      points_redeemed: { icon: "card-giftcard", color: theme.colors.primary },
+      reward_available: { icon: "card-giftcard", color: theme.colors.warning },
+      vip_status_achieved: { icon: "workspace-premium", color: theme.colors.primary },
+      // Inventory events
+      low_stock_alert: { icon: "warning", color: theme.colors.warning },
+      out_of_stock: { icon: "error", color: theme.colors.error },
+      stock_replenished: { icon: "inventory", color: theme.colors.success },
+      // System events
+      salon_update: { icon: "store", color: theme.colors.primary },
+      employee_assigned: { icon: "person", color: theme.colors.primary },
+      membership_status: { icon: "card-membership", color: theme.colors.primary },
+      system_alert: { icon: "info", color: theme.colors.textSecondary },
+      security_alert: { icon: "security", color: theme.colors.error },
+    };
+
+    return typeMap[type] || { icon: "notifications", color: theme.colors.textSecondary };
   };
 
-  const handleNotificationPress = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, isRead: true } : notification
-      )
-    );
+  // Format timestamp to relative time
+  const formatTimestamp = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+      if (diffInSeconds < 60) {
+        return "Just now";
+      } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+      } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+      } else if (diffInSeconds < 604800) {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days} ${days === 1 ? "day" : "days"} ago`;
+      } else {
+        // Return formatted date for older notifications
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+        });
+      }
+    } catch (error) {
+      return "Recently";
+    }
   };
+
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+
+    try {
+      setMarkingAllAsRead(true);
+      await notificationsService.markAllAsRead();
+      
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
+      );
+    } catch (error: any) {
+      console.error("Error marking all as read:", error);
+      Alert.alert("Error", "Failed to mark all notifications as read");
+    } finally {
+      setMarkingAllAsRead(false);
+    }
+  };
+
+  const handleNotificationPress = async (notification: Notification) => {
+    // If already read, just return
+    if (notification.isRead) return;
+
+    try {
+      setMarkingAsRead(notification.id);
+      await notificationsService.markAsRead(notification.id);
+      
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id ? { ...n, isRead: true } : n
+        )
+      );
+    } catch (error: any) {
+      console.error("Error marking notification as read:", error);
+      // Don't show alert for individual read errors, just log
+    } finally {
+      setMarkingAsRead(null);
+    }
+  };
+
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    text: {
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+    },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+    },
+    cardUnread: {
+      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.background,
+    },
+    header: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, dynamicStyles.container, styles.loadingContainer]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: dynamicStyles.textSecondary.color }]}>
+          Loading notifications...
+        </Text>
+      </View>
+    );
+  }
+
+  // Empty state
+  if (notifications.length === 0) {
+    return (
+      <View style={[styles.container, dynamicStyles.container]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        
+        {/* Header */}
+        <View style={[styles.header, dynamicStyles.header]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation?.goBack()}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: dynamicStyles.text.color }]}>
+            Notifications
+          </Text>
+          <View style={styles.placeholder} />
+        </View>
+
+        <View style={styles.emptyContainer}>
+          <MaterialIcons
+            name="notifications-none"
+            size={64}
+            color={dynamicStyles.textSecondary.color}
+          />
+          <Text style={[styles.emptyText, { color: dynamicStyles.text.color }]}>
+            No notifications yet
+          </Text>
+          <Text style={[styles.emptySubtext, { color: dynamicStyles.textSecondary.color }]}>
+            You'll see your notifications here
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, dynamicStyles.container]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, dynamicStyles.header]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack()}
         >
-          <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
+          <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: dynamicStyles.text.color }]}>
+          Notifications
+        </Text>
         {unreadCount > 0 && (
           <View style={styles.newBadge}>
             <Text style={styles.newBadgeText}>{unreadCount} New</Text>
@@ -105,60 +265,101 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* Recent Section Header */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>RECENT</Text>
+          <Text style={[styles.sectionLabel, { color: dynamicStyles.textSecondary.color }]}>
+            RECENT
+          </Text>
           {unreadCount > 0 && (
-            <TouchableOpacity onPress={handleMarkAllAsRead}>
-              <Text style={styles.markAllReadLink}>Mark all as read</Text>
+            <TouchableOpacity
+              onPress={handleMarkAllAsRead}
+              disabled={markingAllAsRead}
+              activeOpacity={0.7}
+            >
+              {markingAllAsRead ? (
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              ) : (
+                <Text style={styles.markAllReadLink}>Mark all as read</Text>
+              )}
             </TouchableOpacity>
           )}
         </View>
 
         {/* Notifications List */}
         <View style={styles.notificationsList}>
-          {notifications.map((notification) => (
-            <TouchableOpacity
-              key={notification.id}
-              style={[
-                styles.notificationCard,
-                !notification.isRead && styles.notificationCardUnread,
-              ]}
-              onPress={() => handleNotificationPress(notification.id)}
-              activeOpacity={0.7}
-            >
-              {/* Unread Indicator */}
-              {!notification.isRead && (
-                <View style={styles.unreadIndicator} />
-              )}
+          {notifications.map((notification) => {
+            const { icon, color } = getNotificationIcon(notification.type);
+            const isMarkingRead = markingAsRead === notification.id;
 
-              {/* Icon */}
-              <View
+            return (
+              <TouchableOpacity
+                key={notification.id}
                 style={[
-                  styles.iconContainer,
-                  { backgroundColor: `${notification.iconColor}20` },
+                  styles.notificationCard,
+                  !notification.isRead
+                    ? [styles.notificationCardUnread, dynamicStyles.cardUnread]
+                    : dynamicStyles.card,
                 ]}
+                onPress={() => handleNotificationPress(notification)}
+                activeOpacity={0.7}
+                disabled={isMarkingRead}
               >
-                <MaterialIcons
-                  name={notification.icon as any}
-                  size={24}
-                  color={notification.iconColor}
-                />
-              </View>
+                {/* Unread Indicator */}
+                {!notification.isRead && (
+                  <View style={styles.unreadIndicator} />
+                )}
 
-              {/* Content */}
-              <View style={styles.notificationContent}>
-                <Text style={styles.notificationTitle}>{notification.title}</Text>
-                <Text style={styles.notificationDescription}>
-                  {notification.description}
-                </Text>
-                <Text style={styles.notificationTimestamp}>
-                  {notification.timestamp}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                {/* Icon */}
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: `${color}20` },
+                  ]}
+                >
+                  <MaterialIcons name={icon as any} size={24} color={color} />
+                </View>
+
+                {/* Content */}
+                <View style={styles.notificationContent}>
+                  <Text style={[styles.notificationTitle, { color: dynamicStyles.text.color }]}>
+                    {notification.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationDescription,
+                      { color: dynamicStyles.textSecondary.color },
+                    ]}
+                  >
+                    {notification.body}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.notificationTimestamp,
+                      { color: dynamicStyles.textSecondary.color },
+                    ]}
+                  >
+                    {formatTimestamp(notification.createdAt)}
+                  </Text>
+                </View>
+
+                {/* Loading indicator for marking as read */}
+                {isMarkingRead && (
+                  <View style={styles.markingIndicator}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </View>
@@ -170,6 +371,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -178,7 +388,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.borderLight,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -190,6 +400,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: theme.colors.text,
     fontFamily: theme.fonts.bold,
+  },
+  placeholder: {
+    width: 40,
   },
   newBadge: {
     backgroundColor: theme.colors.primary,
@@ -243,7 +456,7 @@ const styles = StyleSheet.create({
     position: "relative",
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: "#000",
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -300,5 +513,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
   },
+  markingIndicator: {
+    position: "absolute",
+    top: theme.spacing.md,
+    right: theme.spacing.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.xl,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: theme.spacing.md,
+    fontFamily: theme.fonts.bold,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    marginTop: theme.spacing.xs,
+    textAlign: "center",
+    fontFamily: theme.fonts.regular,
+  },
 });
-

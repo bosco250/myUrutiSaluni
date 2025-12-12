@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../theme";
+import { useTheme } from "../context";
 import BottomNavigation from "../components/common/BottomNavigation";
 import QuickActionButton from "../components/common/QuickActionButton";
 import AppointmentCard from "../components/common/AppointmentCard";
@@ -28,6 +29,7 @@ interface HomeScreenProps {
 }
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<
     "home" | "bookings" | "explore" | "favorites" | "profile"
   >("home");
@@ -35,6 +37,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const headerAnimatedValue = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? "#1C1C1E" : theme.colors.background,
+    },
+    text: {
+      color: isDark ? "#FFFFFF" : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? "#8E8E93" : theme.colors.textSecondary,
+    },
+    card: {
+      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
+    },
+  };
 
   const quickActions = [
     { icon: "search", label: "Search" },
@@ -85,9 +102,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     outputRange: [1, 0],
   });
 
+  const handleTabPress = (
+    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+  ) => {
+    setActiveTab(tab);
+    if (tab === "profile") {
+      navigation?.navigate("Profile");
+    } else if (tab === "explore") {
+      navigation?.navigate("Explore");
+    }
+    // Other tabs can be handled here when their screens are created
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <View style={[styles.container, dynamicStyles.container]}>
+      <StatusBar barStyle={isDark ? "light-content" : "light-content"} />
 
       {/* Header Section with Gold Background - Animated */}
       <Animated.View
@@ -149,7 +178,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <View style={styles.section}>
           <View style={styles.sectionTitleContainer}>
             <View style={styles.sectionTitleLine} />
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text
+              style={[styles.sectionTitle, { color: dynamicStyles.text.color }]}
+            >
+              Quick Actions
+            </Text>
             <View style={styles.sectionTitleLine} />
           </View>
           <View style={styles.quickActionsGrid}>
@@ -170,7 +203,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleWithIcon}>
               <View style={styles.sectionIcon} />
-              <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: dynamicStyles.text.color },
+                ]}
+              >
+                Upcoming Appointments
+              </Text>
             </View>
             <TouchableOpacity style={styles.viewAllButton}>
               <Text style={styles.viewAllLink}>View All</Text>
@@ -197,7 +237,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleWithIcon}>
               <View style={styles.sectionIcon} />
-              <Text style={styles.sectionTitle}>Top Rated Salons</Text>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: dynamicStyles.text.color },
+                ]}
+              >
+                Top Rated Salons
+              </Text>
             </View>
             <TouchableOpacity style={styles.viewAllButton}>
               <Text style={styles.viewAllLink}>See All</Text>
@@ -210,13 +257,20 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           </View>
           {/* Salon list would go here */}
           <View style={styles.placeholderSalons}>
-            <Text style={styles.placeholderText}>Coming soon...</Text>
+            <Text
+              style={[
+                styles.placeholderText,
+                { color: dynamicStyles.textSecondary.color },
+              ]}
+            >
+              Coming soon...
+            </Text>
           </View>
         </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={setActiveTab} />
+      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   );
 }

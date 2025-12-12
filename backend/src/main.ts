@@ -22,13 +22,33 @@ async function bootstrap() {
   });
 
   // Enable CORS
+  const nodeEnv = configService.get<string>('NODE_ENV', 'development');
   const frontendUrl = configService.get<string>('FRONTEND_URL');
+
+  // In development, allow all origins (including mobile apps)
+  // In production, use configured FRONTEND_URL or allow all if not set
+  const isDevelopment = nodeEnv === 'development';
+  const allowedOrigins = isDevelopment
+    ? true // Allow all origins in development (mobile apps, web, etc.)
+    : frontendUrl
+      ? frontendUrl.split(',').map((url) => url.trim())
+      : true; // Fallback to allow all if FRONTEND_URL not set in production
+
   app.enableCors({
-    origin: frontendUrl ? frontendUrl.split(',') : [],
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-Requested-With',
+    ],
   });
+
+  logger.log(
+    `🌐 CORS enabled: ${isDevelopment ? 'All origins allowed (development)' : `Restricted to: ${Array.isArray(allowedOrigins) ? allowedOrigins.join(', ') : 'All origins'}`}`,
+  );
 
   // Global validation pipe with detailed error messages
   app.useGlobalPipes(
@@ -115,9 +135,34 @@ async function bootstrap() {
   }
 
   logger.log('📦 Initializing modules...');
-  await app.listen(port);
+  // Listen on all network interfaces (0.0.0.0) to allow connections from other devices
+  await app.listen(port, '0.0.0.0');
+
+  // Get local network IP for mobile device access
+  const os = require('os');
+  const networkInterfaces = os.networkInterfaces();
+  let localIp = 'localhost';
+  for (const interfaceName in networkInterfaces) {
+    const addresses = networkInterfaces[interfaceName];
+    if (addresses) {
+      for (const addr of addresses) {
+        if (
+          addr.family === 'IPv4' &&
+          !addr.internal &&
+          addr.address.startsWith('192.168.')
+        ) {
+          localIp = addr.address;
+          break;
+        }
+      }
+      if (localIp !== 'localhost') break;
+    }
+  }
 
   logger.log(`✅ Application is running on: http://localhost:${port}`);
+  if (localIp !== 'localhost') {
+    logger.log(`📱 Mobile access: http://${localIp}:${port}/api`);
+  }
   logger.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
   logger.log(`❤️  Health check: http://localhost:${port}/health`);
   logger.log(

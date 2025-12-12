@@ -67,12 +67,23 @@ export class InventoryController {
     UserRole.DISTRICT_LEADER,
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
   )
   @ApiOperation({ summary: 'Get all products' })
   async findAllProducts(
     @Query('salonId') salonId: string | undefined,
     @CurrentUser() user: any,
   ) {
+    // Customers can view products for any salon (public browsing)
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      if (salonId) {
+        // Return products for the specified salon
+        return this.inventoryService.findAllProducts(salonId);
+      }
+      // If no salonId, return empty array (customers should specify a salon)
+      return [];
+    }
+
     // Salon owners and employees can only see products for their salon(s)
     if (
       user.role === UserRole.SALON_OWNER ||

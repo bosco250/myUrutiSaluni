@@ -9,7 +9,7 @@ interface NavigationContext {
 }
 
 interface AuthNavigatorProps {
-  onLoginSuccess?: () => void;
+  onLoginSuccess?: () => void; // Optional, kept for backward compatibility
 }
 
 export default function AuthNavigator({ onLoginSuccess }: AuthNavigatorProps) {
@@ -29,9 +29,10 @@ export default function AuthNavigator({ onLoginSuccess }: AuthNavigatorProps) {
     goBack,
   };
 
+  // Login success is now handled by AuthContext, but we keep the callback for compatibility
   const loginNavigationContext = {
     ...navigationContext,
-    onLoginSuccess: onLoginSuccess,
+    onLoginSuccess: onLoginSuccess || (() => {}), // Default empty function if not provided
   };
 
   switch (currentScreen) {

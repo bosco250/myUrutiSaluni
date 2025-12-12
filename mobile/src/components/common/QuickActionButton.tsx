@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
+import { useTheme } from '../../context';
 
 interface QuickActionButtonProps {
   icon: string;
@@ -10,9 +11,21 @@ interface QuickActionButtonProps {
 }
 
 export default function QuickActionButton({ icon, label, onPress }: QuickActionButtonProps) {
+  const { isDark } = useTheme();
+
+  const dynamicStyles = {
+    button: {
+      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
+      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
+    },
+    label: {
+      color: isDark ? "#FFFFFF" : theme.colors.text,
+    },
+  };
+
   return (
     <TouchableOpacity
-      style={styles.button}
+      style={[styles.button, dynamicStyles.button]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -23,7 +36,7 @@ export default function QuickActionButton({ icon, label, onPress }: QuickActionB
           color={theme.colors.primary}
         />
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, dynamicStyles.label]}>{label}</Text>
     </TouchableOpacity>
   );
 }

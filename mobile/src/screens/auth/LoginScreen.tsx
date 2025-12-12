@@ -9,10 +9,12 @@ import {
   TouchableOpacity,
   Image,
   Modal,
+  Alert,
 } from "react-native";
 import { Button, Input, Checkbox, SocialButton } from "../../components";
 import { MailIcon, LockIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
+import { useAuth } from "../../context";
 
 // Import logo
 const logo = require("../../../assets/Logo.png");
@@ -25,6 +27,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -57,12 +60,36 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    setErrors({});
+
+    try {
+      // Call login through auth context (which handles storage automatically)
+      const response = await login(email.trim(), password);
+
+      console.log("Login successful:", response.user);
+
+      // Show success modal
       setShowSuccessModal(true);
-      console.log("Login successful");
-    }, 1500);
+    } catch (error: any) {
+      // Handle errors
+      const errorMessage = error.message || "Login failed. Please try again.";
+
+      // Check if it's a validation error from backend
+      if (
+        errorMessage.toLowerCase().includes("email") ||
+        errorMessage.toLowerCase().includes("password")
+      ) {
+        setErrors({
+          email: errorMessage,
+          password: errorMessage,
+        });
+      } else {
+        // Show alert for other errors
+        Alert.alert("Login Error", errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSuccessClose = () => {
