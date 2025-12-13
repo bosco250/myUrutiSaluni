@@ -20,6 +20,7 @@ import {
 } from "../../services/appointments";
 import { customersService } from "../../services/customers";
 import { useAuth } from "../../context";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 
 interface BookingsScreenProps {
   navigation?: {
@@ -34,8 +35,9 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("bookings");
+  const unreadNotificationCount = useUnreadNotifications();
 
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -109,20 +111,26 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
         return;
       }
 
-      // Sort by scheduledStart date - future appointments first, then past
-      // Within each group, newest (most recent) come first
-      const now = new Date();
+      // Sort by creation time (newest first), then by scheduledStart date
       const sorted = data.sort((a, b) => {
+        // Primary sort: creation time (newest first - descending)
+        // Handle both camelCase (createdAt) and snake_case (created_at) from API
+        const createdA = new Date(
+          (a as any).created_at || a.createdAt || a.updatedAt || 0
+        );
+        const createdB = new Date(
+          (b as any).created_at || b.createdAt || b.updatedAt || 0
+        );
+        const createdDiff = createdB.getTime() - createdA.getTime();
+
+        // If creation times are different, sort by creation time
+        if (createdDiff !== 0) {
+          return createdDiff;
+        }
+
+        // Secondary sort: scheduledStart time (newest first - descending)
         const dateA = new Date(a.scheduledStart);
         const dateB = new Date(b.scheduledStart);
-        const isAFuture = dateA >= now;
-        const isBFuture = dateB >= now;
-
-        // Future appointments come first
-        if (isAFuture && !isBFuture) return -1;
-        if (!isAFuture && isBFuture) return 1;
-
-        // If both future or both past, sort by time (newest first - descending)
         return dateB.getTime() - dateA.getTime();
       });
       setAppointments(sorted);
@@ -140,7 +148,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "bookings") {
@@ -227,8 +235,6 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
 
   // Filter appointments based on selected filter and selected date
   const filteredAppointments = useMemo(() => {
-    const now = new Date();
-
     let filtered: Appointment[] = [];
 
     switch (selectedFilter) {
@@ -278,19 +284,26 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
       });
     }
 
-    // Sort by time - future appointments first, then past
-    // Within each group, newest (most recent) come first
+    // Sort by creation time (newest first), then by scheduledStart date
     return filtered.sort((a, b) => {
+      // Primary sort: creation time (newest first - descending)
+      // Handle both camelCase (createdAt) and snake_case (created_at) from API
+      const createdA = new Date(
+        (a as any).created_at || a.createdAt || a.updatedAt || 0
+      );
+      const createdB = new Date(
+        (b as any).created_at || b.createdAt || b.updatedAt || 0
+      );
+      const createdDiff = createdB.getTime() - createdA.getTime();
+
+      // If creation times are different, sort by creation time
+      if (createdDiff !== 0) {
+        return createdDiff;
+      }
+
+      // Secondary sort: scheduledStart time (newest first - descending)
       const dateA = new Date(a.scheduledStart);
       const dateB = new Date(b.scheduledStart);
-      const isAFuture = dateA >= now;
-      const isBFuture = dateB >= now;
-
-      // Future appointments come first
-      if (isAFuture && !isBFuture) return -1;
-      if (!isAFuture && isBFuture) return 1;
-
-      // If both future or both past, sort by time (newest first - descending)
       return dateB.getTime() - dateA.getTime();
     });
   }, [appointments, selectedFilter, selectedDate]);
@@ -370,6 +383,11 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   const days = getDaysInMonth(currentDate);
   const filterTabs: { id: FilterTab; label: string; count: number }[] = [
     {
+      id: "all",
+      label: "All",
+      count: appointments.length,
+    },
+    {
       id: "upcoming",
       label: "Upcoming",
       count: appointments.filter(
@@ -403,11 +421,6 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
           apt.status === AppointmentStatus.CANCELLED ||
           apt.status === AppointmentStatus.NO_SHOW
       ).length,
-    },
-    {
-      id: "all",
-      label: "All",
-      count: appointments.length,
     },
   ];
 
@@ -755,7 +768,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                   <View style={styles.appointmentDetails}>
                     <View style={styles.appointmentTime}>
                       <MaterialIcons
-                        name="access-time"
+                        name="event"
                         size={16}
                         color={dynamicStyles.textSecondary.color}
                       />
@@ -765,10 +778,37 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                           dynamicStyles.textSecondary,
                         ]}
                       >
-                        {formatDateLabel(appointment.scheduledStart)}{" "}
+                        Scheduled: {formatDateLabel(appointment.scheduledStart)}{" "}
                         {formatTime(appointment.scheduledStart)}
                       </Text>
                     </View>
+
+                    {((appointment as any).created_at ||
+                      appointment.createdAt) && (
+                      <View style={styles.appointmentTime}>
+                        <MaterialIcons
+                          name="add-circle-outline"
+                          size={16}
+                          color={dynamicStyles.textSecondary.color}
+                        />
+                        <Text
+                          style={[
+                            styles.appointmentDateTime,
+                            dynamicStyles.textSecondary,
+                          ]}
+                        >
+                          Created:{" "}
+                          {formatDateLabel(
+                            (appointment as any).created_at ||
+                              appointment.createdAt
+                          )}{" "}
+                          {formatTime(
+                            (appointment as any).created_at ||
+                              appointment.createdAt
+                          )}
+                        </Text>
+                      </View>
+                    )}
 
                     {appointment.salonEmployee?.user?.fullName && (
                       <View style={styles.appointmentEmployee}>
@@ -814,7 +854,11 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }

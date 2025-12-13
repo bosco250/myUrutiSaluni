@@ -212,4 +212,14 @@ export class SalonsService {
       relations: ['user', 'salon'],
     });
   }
+
+  async search(query: string): Promise<Salon[]> {
+    return this.salonsRepository
+      .createQueryBuilder('salon')
+      .leftJoinAndSelect('salon.owner', 'owner')
+      .where('salon.name ILIKE :query', { query: `%${query}%` })
+      .orWhere('salon.address ILIKE :query', { query: `%${query}%` })
+      .orWhere('salon.city ILIKE :query', { query: `%${query}%` })
+      .getMany();
+  }
 }

@@ -1,7 +1,9 @@
 {
   "watch": ["src"],
-  "ext": "ts,json",
-  "ignore": ["src/**/*.spec.ts", "test/**/*", "dist"],
-  "exec": "npm run start:dev",
-  "delay": "1000"
+  "ext": "ts",
+  "ignore": ["src/**/*.spec.ts"],
+  "exec": "nest start",
+  "signal": "SIGTERM",
+  "verbose": true,
+  "restartable": "rs"
 }

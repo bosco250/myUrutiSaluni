@@ -29,6 +29,11 @@ import { InspectionsModule } from './inspections/inspections.module';
 import { ResourcesModule } from './resources/resources.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { CommonModule } from './common/common.module';
+import { SearchModule } from './search/search.module';
+import { GeminiModule } from './gemini/gemini.module';
+import { ChatModule } from './chat/chat.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { PaymentsModule } from './payments/payments.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -65,6 +70,11 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     InspectionsModule,
     ResourcesModule,
     PayrollModule,
+    SearchModule,
+    GeminiModule,
+    ChatModule,
+    ReviewsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [

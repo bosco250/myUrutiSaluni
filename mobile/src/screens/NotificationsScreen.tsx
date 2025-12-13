@@ -14,6 +14,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../theme";
 import { useTheme } from "../context";
 import { notificationsService, Notification } from "../services/notifications";
+import { appointmentsService } from "../services/appointments";
+import BottomNavigation from "../components/common/BottomNavigation";
 
 export default function NotificationsScreen({ navigation }: { navigation?: any }) {
   const { isDark } = useTheme();
@@ -71,6 +73,7 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
       sale_completed: { icon: "shopping-cart", color: theme.colors.success },
       payment_received: { icon: "payment", color: theme.colors.success },
       payment_failed: { icon: "error", color: theme.colors.error },
+      payment: { icon: "payment", color: theme.colors.primary },
       // Commission events
       commission_earned: { icon: "attach-money", color: theme.colors.success },
       commission_paid: { icon: "account-balance-wallet", color: theme.colors.primary },
@@ -146,24 +149,90 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
   };
 
   const handleNotificationPress = async (notification: Notification) => {
-    // If already read, just return
-    if (notification.isRead) return;
+    // Mark as read first (if not already read)
+    if (!notification.isRead) {
+      try {
+        setMarkingAsRead(notification.id);
+        await notificationsService.markAsRead(notification.id);
+        
+        // Update local state
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, isRead: true } : n
+          )
+        );
+      } catch (error: any) {
+        console.error("Error marking notification as read:", error);
+        // Continue with navigation even if marking as read fails
+      } finally {
+        setMarkingAsRead(null);
+      }
+    }
 
+    // Always navigate, even if notification is already read
+
+    // Navigate based on notification type and metadata
     try {
-      setMarkingAsRead(notification.id);
-      await notificationsService.markAsRead(notification.id);
-      
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notification.id ? { ...n, isRead: true } : n
-        )
-      );
+      const metadata = notification.metadata || {};
+      // Check metadata first, then fallback to checking notification type
+      // Note: appointmentId might be in metadata or as a direct field (if backend includes it)
+      const appointmentId = metadata.appointmentId || (notification as any).appointmentId;
+      const salonId = metadata.salonId || (notification as any).salonId;
+      const serviceId = metadata.serviceId || (notification as any).serviceId;
+      const employeeId = metadata.employeeId || (notification as any).employeeId;
+
+      // Handle appointment-related notifications
+      if (notification.type?.startsWith('appointment_')) {
+        if (appointmentId) {
+          // Try to fetch appointment first to pass full data
+          try {
+            // Note: We need to get appointment by ID - check if there's a method for this
+            // For now, navigate with appointmentId - the screen will fetch it
+            navigation?.navigate('AppointmentDetail', {
+              appointmentId: appointmentId,
+            });
+          } catch (error) {
+            console.error('Error navigating to appointment:', error);
+            // Fallback: navigate to Bookings screen
+            navigation?.navigate('Bookings');
+          }
+        } else {
+          // No appointmentId, just go to Bookings
+          navigation?.navigate('Bookings');
+        }
+      }
+      // Handle salon-related notifications
+      else if (salonId && (notification.type === 'salon_update' || notification.type === 'employee_assigned')) {
+        navigation?.navigate('SalonDetail', {
+          salonId: salonId,
+        });
+      }
+      // Handle service-related notifications
+      else if (serviceId) {
+        navigation?.navigate('ServiceDetail', {
+          serviceId: serviceId,
+        });
+      }
+      // Handle employee-related notifications
+      else if (employeeId && salonId) {
+        navigation?.navigate('EmployeeDetail', {
+          employeeId: employeeId,
+          salonId: salonId,
+        });
+      }
+      // Handle payment/sale notifications - go to PaymentHistory
+      else if (notification.type?.startsWith('payment_') || notification.type?.startsWith('sale_') || notification.type === 'payment') {
+        const paymentId = metadata.paymentId || (notification as any).paymentId;
+        navigation?.navigate('PaymentHistory', {
+          highlightPaymentId: paymentId,
+        });
+      }
+      // For other notifications, stay on notifications screen or navigate to relevant screen
+      else {
+        console.log('No specific navigation for notification type:', notification.type);
+      }
     } catch (error: any) {
-      console.error("Error marking notification as read:", error);
-      // Don't show alert for individual read errors, just log
-    } finally {
-      setMarkingAsRead(null);
+      console.error('Error handling notification navigation:', error);
     }
   };
 
@@ -362,6 +431,24 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
           })}
         </View>
       </ScrollView>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation
+        activeTab="notifications"
+        onTabPress={(tab) => {
+          const screenMap: Record<string, string> = {
+            home: "Home",
+            bookings: "Bookings",
+            explore: "Explore",
+            notifications: "Notifications",
+            profile: "Profile",
+          };
+          if (tab !== "notifications") {
+            navigation?.navigate(screenMap[tab]);
+          }
+        }}
+        unreadNotificationCount={unreadCount}
+      />
     </View>
   );
 }

@@ -65,10 +65,21 @@ class NotificationsService {
    */
   async getUnreadCount(): Promise<number> {
     try {
-      const response = await api.get<UnreadCountResponse>(
+      const response = await api.get<any>(
         "/notifications/unread-count"
       );
-      return response.count || 0;
+      // Handle different response formats
+      if (typeof response === 'number') {
+        return response;
+      }
+      if (response && typeof response.count === 'number') {
+        return response.count;
+      }
+      if (response && response.data && typeof response.data.count === 'number') {
+        return response.data.count;
+      }
+      // If response structure is unexpected, return 0
+      return 0;
     } catch (error: any) {
       console.error("Error fetching unread count:", error);
       return 0; // Return 0 on error to prevent UI issues

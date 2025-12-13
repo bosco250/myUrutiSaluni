@@ -13,6 +13,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import BottomNavigation from "../../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import {
   exploreService,
   Employee,
@@ -40,8 +41,9 @@ export default function EmployeeDetailScreen({
 }: EmployeeDetailScreenProps) {
   const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("explore");
+  const unreadNotificationCount = useUnreadNotifications();
   const [employee, setEmployee] = useState<Employee | null>(
     route?.params?.employee || null
   );
@@ -110,7 +112,7 @@ export default function EmployeeDetailScreen({
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "explore") {
@@ -290,6 +292,23 @@ export default function EmployeeDetailScreen({
           </View>
         )}
 
+        {/* Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={styles.messageButton}
+            onPress={() => {
+              navigation?.navigate("Chat", {
+                employeeId: employee?.id,
+                salonId: salonId,
+              });
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="chat" size={20} color="#FFFFFF" />
+            <Text style={styles.messageButtonText}>Send Message</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Services Offered Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionHeading, dynamicStyles.text]}>
@@ -352,7 +371,11 @@ export default function EmployeeDetailScreen({
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabPress={handleTabPress} 
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }
@@ -520,5 +543,25 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     fontFamily: theme.fonts.regular,
+  },
+  actionButtonsContainer: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+  },
+  messageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 12,
+    gap: theme.spacing.sm,
+  },
+  messageButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
   },
 });

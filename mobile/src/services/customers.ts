@@ -3,6 +3,7 @@ import { api } from "./api";
 export interface Customer {
   id: string;
   userId: string;
+  fullName?: string; // Direct field on customer entity
   phone?: string;
   address?: string;
   dateOfBirth?: string;
@@ -25,11 +26,9 @@ class CustomersService {
    */
   async getCustomerByUserId(userId: string | number): Promise<Customer | null> {
     try {
-      console.log("Fetching customer for user ID:", userId);
       const response = await api.get<any>(
         `/customers/by-user/${userId}`
       );
-      console.log("Customer API response:", response);
       
       // Handle response format - might be wrapped in data property
       let customer = null;
@@ -48,18 +47,10 @@ class CustomersService {
         }
       }
       
-      console.log("Parsed customer:", customer);
       return customer;
     } catch (error: any) {
-      console.error("Error fetching customer by user ID:", error);
-      console.error("Error details:", {
-        message: error.message,
-        status: error.status || error.response?.status,
-        response: error.response?.data,
-      });
       // If customer doesn't exist, return null (backend will auto-create if needed)
       if (error.status === 404 || error.response?.status === 404) {
-        console.log("Customer not found for user ID:", userId);
         return null;
       }
       throw error;
@@ -72,7 +63,7 @@ class CustomersService {
   async getCustomerById(customerId: string): Promise<Customer> {
     try {
       const response = await api.get<Customer>(`/customers/${customerId}`);
-      return response.data;
+      return response;
     } catch (error: any) {
       console.error("Error fetching customer:", error);
       throw error;

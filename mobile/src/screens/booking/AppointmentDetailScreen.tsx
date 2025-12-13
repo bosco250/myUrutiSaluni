@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import BottomNavigation from "../../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import {
   appointmentsService,
   Appointment,
@@ -39,15 +40,37 @@ export default function AppointmentDetailScreen({
 }: AppointmentDetailScreenProps) {
   const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("bookings");
+  const unreadNotificationCount = useUnreadNotifications();
   const [appointment, setAppointment] = useState<Appointment | null>(
     route?.params?.appointment || null
   );
   const [loading, setLoading] = useState(!route?.params?.appointment);
 
+  // Fetch appointment if only appointmentId is provided
+  useEffect(() => {
+    const appointmentId = route?.params?.appointmentId;
+    if (appointmentId && !appointment) {
+      const fetchAppointment = async () => {
+        try {
+          setLoading(true);
+          const fetchedAppointment =
+            await appointmentsService.getAppointmentById(appointmentId);
+          setAppointment(fetchedAppointment);
+        } catch (error: any) {
+          console.error("Error fetching appointment:", error);
+          Alert.alert("Error", "Failed to load appointment details");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchAppointment();
+    }
+  }, [route?.params?.appointmentId, appointment]);
+
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "bookings") {
@@ -495,6 +518,27 @@ export default function AppointmentDetailScreen({
                   {appointment.salonEmployee.roleTitle}
                 </Text>
               )}
+              {/* Message Stylist Button */}
+              <TouchableOpacity
+                style={styles.messageStylistButton}
+                onPress={() => {
+                  navigation?.navigate("Chat", {
+                    employeeId: appointment.salonEmployeeId,
+                    salonId: appointment.salonId,
+                    appointmentId: appointment.id,
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name="chat"
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.messageStylistButtonText}>
+                  Message Stylist
+                </Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -546,34 +590,63 @@ export default function AppointmentDetailScreen({
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           {appointment.status === AppointmentStatus.COMPLETED && (
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                if (appointment.salonId) {
-                  navigation?.navigate("Explore", {
-                    salonId: appointment.salonId,
-                    serviceId: appointment.serviceId,
-                  });
-                } else {
-                  navigation?.navigate("Explore");
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name="refresh"
-                size={20}
-                color={theme.colors.primary}
-              />
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  { color: theme.colors.primary },
-                ]}
+            <>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => {
+                  if (appointment.salonId) {
+                    navigation?.navigate("Explore", {
+                      salonId: appointment.salonId,
+                      serviceId: appointment.serviceId,
+                    });
+                  } else {
+                    navigation?.navigate("Explore");
+                  }
+                }}
+                activeOpacity={0.7}
               >
-                Rebook Service
-              </Text>
-            </TouchableOpacity>
+                <MaterialIcons
+                  name="refresh"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  Rebook Service
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.colors.primary + '15' }]}
+                onPress={() => {
+                  navigation?.navigate("Review", {
+                    salonId: appointment.salonId,
+                    salonName: appointment.salon?.name || "Salon",
+                    employeeId: appointment.salonEmployeeId,
+                    employeeName: appointment.salonEmployee?.user?.fullName,
+                    appointmentId: appointment.id,
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name="star"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  Write Review
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
           {canCancel && (
             <TouchableOpacity
@@ -634,7 +707,11 @@ export default function AppointmentDetailScreen({
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }
@@ -869,6 +946,22 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  messageStylistButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.sm + 2,
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.primary + "15",
+    borderRadius: 10,
+    gap: theme.spacing.sm,
+  },
+  messageStylistButtonText: {
+    color: theme.colors.primary,
+    fontSize: 14,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },

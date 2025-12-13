@@ -14,13 +14,17 @@ import { Salon } from "../../../services/explore";
 interface SalonCardProps {
   salon: Salon;
   onPress?: () => void;
+  width?: number; // Optional width for flexibility
 }
 
 // Placeholder - using a colored view instead of image
 // In production, use actual salon images from API
 
-export default function SalonCard({ salon, onPress }: SalonCardProps) {
+export default function SalonCard({ salon, onPress, width }: SalonCardProps) {
   const { isDark } = useTheme();
+  
+  // Calculate card width - use provided width or default to grid width
+  const cardWidth = width || (Dimensions.get("window").width - theme.spacing.md * 2 - theme.spacing.sm) / 2;
 
   const dynamicStyles = {
     card: {
@@ -46,7 +50,7 @@ export default function SalonCard({ salon, onPress }: SalonCardProps) {
 
   return (
     <TouchableOpacity
-      style={[styles.card, dynamicStyles.card]}
+      style={[styles.card, dynamicStyles.card, { width: cardWidth }]}
       onPress={onPress}
       activeOpacity={0.8}
     >
@@ -75,18 +79,18 @@ export default function SalonCard({ salon, onPress }: SalonCardProps) {
           </Text>
         )}
         <View style={styles.footer}>
-          {salon.address && (
+          {(salon.address || salon.city || salon.district) && (
             <View style={styles.locationContainer}>
               <MaterialIcons
                 name="location-on"
-                size={14}
+                size={16}
                 color={theme.colors.primary}
               />
               <Text
                 style={[styles.locationText, dynamicStyles.text]}
                 numberOfLines={1}
               >
-                {salon.address}
+                {salon.address || `${salon.city || ""}${salon.city && salon.district ? ", " : ""}${salon.district || ""}`}
               </Text>
             </View>
           )}
@@ -98,24 +102,20 @@ export default function SalonCard({ salon, onPress }: SalonCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    width:
-      (Dimensions.get("window").width -
-        theme.spacing.md * 2 -
-        theme.spacing.sm) /
-      2,
     borderRadius: 16,
     overflow: "hidden",
     backgroundColor: theme.colors.background,
     shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginBottom: theme.spacing.sm,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   imageContainer: {
     width: "100%",
-    height: 120,
+    height: 160,
     position: "relative",
     backgroundColor: theme.colors.backgroundSecondary,
   },
@@ -126,32 +126,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   initialsContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   initials: {
     color: theme.colors.white,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
   },
   content: {
-    padding: theme.spacing.sm,
+    padding: theme.spacing.md,
   },
   title: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: theme.spacing.xs / 2,
+    marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
   },
   description: {
-    fontSize: 11,
-    marginBottom: theme.spacing.xs,
-    lineHeight: 14,
+    fontSize: 12,
+    marginBottom: theme.spacing.sm,
+    lineHeight: 16,
     fontFamily: theme.fonts.regular,
   },
   footer: {
@@ -160,10 +165,10 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 12,
     flex: 1,
     fontFamily: theme.fonts.regular,
   },

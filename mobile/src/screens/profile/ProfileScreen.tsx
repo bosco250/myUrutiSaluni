@@ -13,6 +13,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import BottomNavigation from "../../components/common/BottomNavigation";
 import { useTheme, useAuth } from "../../context";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
@@ -33,8 +34,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { isDark, toggleTheme } = useTheme();
   const { logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("profile");
+  const unreadNotificationCount = useUnreadNotifications();
   const [currentSubScreen, setCurrentSubScreen] =
     useState<ProfileSubScreen>("main");
 
@@ -68,7 +70,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "profile") {
@@ -350,7 +352,11 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabPress={handleTabPress} 
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }

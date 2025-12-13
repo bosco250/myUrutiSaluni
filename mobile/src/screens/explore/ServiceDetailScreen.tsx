@@ -13,11 +13,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import BottomNavigation from "../../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import { exploreService, Service } from "../../services/explore";
 
 interface ServiceDetailScreenProps {
   navigation?: {
-    navigate: (screen: string) => void;
+    navigate: (screen: string, params?: any) => void;
     goBack: () => void;
   };
   route?: {
@@ -35,7 +36,8 @@ export default function ServiceDetailScreen({
   route,
 }: ServiceDetailScreenProps) {
   const { isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<"home" | "bookings" | "explore" | "favorites" | "profile">("explore");
+  const unreadNotificationCount = useUnreadNotifications();
+  const [activeTab, setActiveTab] = useState<"home" | "bookings" | "explore" | "notifications" | "profile">("explore");
   const [selectedTab, setSelectedTab] = useState<TabType>("Details");
   const [service, setService] = useState<Service | null>(
     route?.params?.service || null
@@ -68,7 +70,7 @@ export default function ServiceDetailScreen({
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "explore") {
@@ -354,9 +356,9 @@ export default function ServiceDetailScreen({
       </ScrollView>
 
       {/* Book Now Button */}
-      <View style={[styles.bookButtonContainer, { backgroundColor: dynamicStyles.container.backgroundColor }]}>
+      <View style={[styles.bookButtonContainer, dynamicStyles.card]}>
         <TouchableOpacity
-          style={[styles.bookButton, { backgroundColor: theme.colors.buttonPrimary }]}
+          style={[styles.bookButton, { backgroundColor: theme.colors.primary }]}
           onPress={handleBookNow}
           activeOpacity={0.7}
         >
@@ -366,12 +368,18 @@ export default function ServiceDetailScreen({
             color={theme.colors.white}
             style={styles.bookButtonIcon}
           />
-          <Text style={styles.bookButtonText}>Book Now</Text>
+          <Text style={[styles.bookButtonText, { color: theme.colors.white }]}>
+            Book Now
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabPress={handleTabPress} 
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }
@@ -559,11 +567,10 @@ const styles = StyleSheet.create({
   },
   bookButtonContainer: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.xs,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
-    backgroundColor: theme.colors.background,
     shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
@@ -574,20 +581,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.sm + 2, // 10pt as per DESIGN_MEASURES
+    paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
-    minHeight: 48,
+    borderRadius: 12,
+    minHeight: 52,
     gap: theme.spacing.sm,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   bookButtonIcon: {
     marginRight: theme.spacing.xs,
   },
   bookButtonText: {
-    color: theme.colors.buttonPrimaryText,
     fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.text,
   },
 });
 

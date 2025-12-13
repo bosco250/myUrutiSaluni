@@ -47,4 +47,13 @@ export class ServicesService {
   async remove(id: string): Promise<void> {
     await this.servicesRepository.delete(id);
   }
+
+  async search(query: string): Promise<Service[]> {
+    return this.servicesRepository
+      .createQueryBuilder('service')
+      .leftJoinAndSelect('service.salon', 'salon')
+      .where('service.name ILIKE :query', { query: `%${query}%` })
+      .orWhere('service.description ILIKE :query', { query: `%${query}%` })
+      .getMany();
+  }
 }

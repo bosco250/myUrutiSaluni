@@ -4,7 +4,7 @@ import { LoginScreen, SignUpScreen, ForgotPasswordScreen, OTPVerificationScreen,
 type AuthScreen = 'Login' | 'SignUp' | 'ForgotPassword' | 'OTPVerification' | 'ResetPassword';
 
 interface NavigationContext {
-  navigate: (screen: AuthScreen) => void;
+  navigate: (screen: string) => void;
   goBack: () => void;
 }
 
@@ -15,8 +15,8 @@ interface AuthNavigatorProps {
 export default function AuthNavigator({ onLoginSuccess }: AuthNavigatorProps) {
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>('Login');
 
-  const navigate = useCallback((screen: AuthScreen) => {
-    setCurrentScreen(screen);
+  const navigate = useCallback((screen: string) => {
+    setCurrentScreen(screen as AuthScreen);
   }, []);
 
   const goBack = useCallback(() => {

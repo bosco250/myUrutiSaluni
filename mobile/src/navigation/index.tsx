@@ -9,10 +9,15 @@ import EmployeeListScreen from "../screens/explore/EmployeeListScreen";
 import EmployeeDetailScreen from "../screens/explore/EmployeeDetailScreen";
 import { BookingsScreen, AppointmentDetailScreen, BookingFlowScreen } from "../screens/booking";
 import { ProfileScreen } from "../screens/profile";
+import { SearchScreen, AIFaceScanScreen, AIConsultantScreen, RecommendationDetailScreen, LoyaltyScreen, WalletScreen, OffersScreen, ChatListScreen, ChatScreen, ChatUserSearchScreen } from "../screens/quickActions";
+import ReviewScreen from "../screens/reviews/ReviewScreen";
+import PaymentScreen from "../screens/payment/PaymentScreen";
+import PaymentHistoryScreen from "../screens/payment/PaymentHistoryScreen";
+import WithdrawScreen from "../screens/payment/WithdrawScreen";
 import { ThemeProvider, AuthProvider, useAuth } from "../context";
 import { theme } from "../theme";
 
-type MainScreen = "Home" | "Bookings" | "AppointmentDetail" | "BookingFlow" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "EmployeeList" | "EmployeeDetail" | "Profile" | "Login";
+type MainScreen = "Home" | "Bookings" | "AppointmentDetail" | "BookingFlow" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "EmployeeList" | "EmployeeDetail" | "Profile" | "Login" | "Search" | "AIFaceScan" | "AIConsultant" | "RecommendationDetail" | "Loyalty" | "Wallet" | "Offers" | "ChatList" | "Chat" | "ChatUserSearch" | "Review" | "Payment" | "PaymentHistory" | "Withdraw";
 
 // Inner navigation component that uses auth context
 function NavigationContent() {
@@ -38,16 +43,17 @@ function NavigationContent() {
     setHasShownWelcome(true);
   };
 
-  const handleNavigate = (screen: MainScreen, params?: any) => {
+  const handleNavigate = (screen: string, params?: any) => {
+    const targetScreen = screen as MainScreen;
     // If navigating to a main tab (Home, Bookings, Explore, Profile), reset history
     const mainTabs: MainScreen[] = ["Home", "Bookings", "Explore", "Profile", "Notifications"];
-    if (mainTabs.includes(screen)) {
-      setScreenHistory([screen]);
+    if (mainTabs.includes(targetScreen)) {
+      setScreenHistory([targetScreen]);
     } else {
       // For detail screens, add to history
-      setScreenHistory((prev) => [...prev, screen]);
+      setScreenHistory((prev) => [...prev, targetScreen]);
     }
-    setCurrentScreen(screen);
+    setCurrentScreen(targetScreen);
     setScreenParams(params || {});
   };
 
@@ -105,7 +111,7 @@ function NavigationContent() {
           />
         );
       case "Notifications":
-        return <NotificationsScreen navigation={{ goBack: handleGoBack }} />;
+        return <NotificationsScreen navigation={{ navigate: handleNavigate, goBack: handleGoBack }} />;
       case "Explore":
         return <ExploreScreen navigation={{ navigate: handleNavigate }} />;
       case "AllServices":
@@ -140,6 +146,97 @@ function NavigationContent() {
           <EmployeeDetailScreen
             navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
             route={{ params: screenParams }}
+          />
+        );
+      case "Search":
+        return (
+          <SearchScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "AIFaceScan":
+        return (
+          <AIFaceScanScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+          />
+        );
+      case "AIConsultant":
+        return (
+          <AIConsultantScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "RecommendationDetail":
+        return (
+          <RecommendationDetailScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "Loyalty":
+        return (
+          <LoyaltyScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+          />
+        );
+      case "Wallet":
+        return (
+          <WalletScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+          />
+        );
+      case "Offers":
+        return (
+          <OffersScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+          />
+        );
+      case "ChatList":
+        return (
+          <ChatListScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+          />
+        );
+      case "Chat":
+        return (
+          <ChatScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "ChatUserSearch":
+        return (
+          <ChatUserSearchScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+          />
+        );
+      case "Review":
+        return (
+          <ReviewScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "Payment":
+        return (
+          <PaymentScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "PaymentHistory":
+        return (
+          <PaymentHistoryScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
+            route={{ params: screenParams }}
+          />
+        );
+      case "Withdraw":
+        return (
+          <WithdrawScreen
+            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
           />
         );
       case "Profile":

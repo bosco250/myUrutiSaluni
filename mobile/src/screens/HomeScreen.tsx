@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,22 @@ import {
   TouchableOpacity,
   StatusBar,
   Animated,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { format } from "date-fns";
 import { theme } from "../theme";
-import { useTheme } from "../context";
+import { useTheme, useAuth } from "../context";
 import BottomNavigation from "../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 import QuickActionButton from "../components/common/QuickActionButton";
 import AppointmentCard from "../components/common/AppointmentCard";
+import SalonCard from "./explore/components/SalonCard";
+import AutoSlider from "./explore/components/AutoSlider";
+import { appointmentsService, Appointment } from "../services/appointments";
+import { customersService } from "../services/customers";
+import { exploreService, Salon } from "../services/explore";
 
 // Import logo
 const logo = require("../../assets/Logo.png");
@@ -24,19 +33,29 @@ const profileImage = require("../../assets/Logo.png");
 
 interface HomeScreenProps {
   navigation?: {
-    navigate: (screen: string) => void;
+    navigate: (screen: string, params?: any) => void;
   };
 }
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("home");
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const unreadNotificationCount = useUnreadNotifications();
   const headerAnimatedValue = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Data states
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [topSalons, setTopSalons] = useState<Salon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [salonsLoading, setSalonsLoading] = useState(false);
 
   const dynamicStyles = {
     container: {
@@ -53,13 +72,164 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     },
   };
 
+  // Get user's first name for greeting
+  const getUserFirstName = () => {
+    if (user?.fullName) {
+      const nameParts = user.fullName.split(" ");
+      return nameParts[0] || "there";
+    }
+    return "there";
+  };
+
+  // Fetch customer ID and appointments
+  const fetchAppointments = async () => {
+    if (!user?.id) {
+      setAppointmentsLoading(false);
+      return;
+    }
+
+    try {
+      setAppointmentsLoading(true);
+      const userId = String(user.id);
+      const customer = await customersService.getCustomerByUserId(userId);
+
+      if (customer?.id) {
+        const appointments = await appointmentsService.getCustomerAppointments(
+          customer.id
+        );
+
+        // Filter upcoming appointments (scheduledStart in the future or today)
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        // Separate today's appointments and future appointments
+        const todayAppointments: Appointment[] = [];
+        const futureAppointments: Appointment[] = [];
+        
+        appointments.forEach((apt) => {
+          const scheduledStart = new Date(apt.scheduledStart);
+          const scheduledDate = new Date(
+            scheduledStart.getFullYear(),
+            scheduledStart.getMonth(),
+            scheduledStart.getDate()
+          );
+          
+          // Include today's appointments and future appointments
+          if (scheduledDate.getTime() >= today.getTime()) {
+            if (scheduledDate.getTime() === today.getTime()) {
+              todayAppointments.push(apt);
+            } else {
+              futureAppointments.push(apt);
+            }
+          }
+        });
+        
+        // Sort today's appointments by time (earliest first)
+        todayAppointments.sort((a, b) => {
+          return (
+            new Date(a.scheduledStart).getTime() -
+            new Date(b.scheduledStart).getTime()
+          );
+        });
+        
+        // Sort future appointments by time (earliest first)
+        futureAppointments.sort((a, b) => {
+          return (
+            new Date(a.scheduledStart).getTime() -
+            new Date(b.scheduledStart).getTime()
+          );
+        });
+        
+        // Prioritize today's appointments, then future appointments
+        const prioritized = [...todayAppointments, ...futureAppointments].slice(0, 3);
+        
+        setUpcomingAppointments(prioritized);
+      }
+    } catch (error: any) {
+      console.error("Error fetching appointments:", error);
+      setUpcomingAppointments([]);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  // Fetch top-rated salons
+  const fetchTopSalons = async () => {
+    try {
+      setSalonsLoading(true);
+      const salons = await exploreService.getSalons();
+
+      // Filter active salons and sort by rating (if available) or name
+      const activeSalons = salons
+        .filter((salon) => salon.status === "active" || (salon as any).isActive === true)
+        .sort((a, b) => {
+          // Sort by rating if available, otherwise by name
+          const ratingA = (a as any).rating || 0;
+          const ratingB = (b as any).rating || 0;
+          if (ratingA !== ratingB) {
+            return ratingB - ratingA;
+          }
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 5); // Show top 5 salons
+
+      setTopSalons(activeSalons);
+    } catch (error: any) {
+      console.error("Error fetching salons:", error);
+      setTopSalons([]);
+    } finally {
+      setSalonsLoading(false);
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchAppointments(), fetchTopSalons()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [user?.id]);
+
+  // Pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchAppointments(), fetchTopSalons()]);
+    setRefreshing(false);
+  };
+
   const quickActions = [
-    { icon: "search", label: "Search" },
-    { icon: "auto-awesome", label: "AI Pickup" },
-    { icon: "workspace-premium", label: "Loyalty" },
-    { icon: "account-balance-wallet", label: "Wallet" },
-    { icon: "local-offer", label: "Offers" },
-    { icon: "chat", label: "Chats" },
+    {
+      icon: "search",
+      label: "Search",
+      onPress: () => navigation?.navigate("Search"),
+    },
+    {
+      icon: "auto-awesome",
+      label: "AI Pickup",
+      onPress: () => navigation?.navigate("AIFaceScan"),
+    },
+    {
+      icon: "workspace-premium",
+      label: "Loyalty",
+      onPress: () => navigation?.navigate("Loyalty"),
+    },
+    {
+      icon: "account-balance-wallet",
+      label: "Wallet",
+      onPress: () => navigation?.navigate("Wallet"),
+    },
+    {
+      icon: "local-offer",
+      label: "Offers",
+      onPress: () => navigation?.navigate("Offers"),
+    },
+    {
+      icon: "chat",
+      label: "Chats",
+      onPress: () => navigation?.navigate("ChatList"),
+    },
   ];
 
   const handleScroll = (event: any) => {
@@ -103,7 +273,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   });
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab === "profile") {
@@ -112,8 +282,78 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       navigation?.navigate("Explore");
     } else if (tab === "bookings") {
       navigation?.navigate("Bookings");
+    } else if (tab === "notifications") {
+      navigation?.navigate("Notifications");
     }
-    // Other tabs can be handled here when their screens are created
+  };
+
+  // Format appointment date and time - clearer format
+  const formatAppointmentDateTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const appointmentDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+
+      const diffTime = appointmentDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      let dateLabel = "";
+      if (diffDays === 0) {
+        dateLabel = "Today";
+      } else if (diffDays === 1) {
+        dateLabel = "Tomorrow";
+      } else if (diffDays > 1 && diffDays <= 7) {
+        dateLabel = format(date, "EEEE, MMM d"); // Day name, Month and day
+      } else {
+        dateLabel = format(date, "MMM d, yyyy"); // Full date
+      }
+
+      const time = format(date, "h:mm a");
+      return { dateLabel, time };
+    } catch (error) {
+      return { dateLabel: "Date TBD", time: "" };
+    }
+  };
+  
+  // Format created date and time
+  const formatCreatedDateTime = (appointment: Appointment) => {
+    try {
+      const createdDate = (appointment as any).created_at || appointment.createdAt;
+      if (!createdDate) return null;
+      
+      const date = new Date(createdDate);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const createdDateOnly = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
+
+      const diffTime = createdDateOnly.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      let dateLabel = "";
+      if (diffDays === 0) {
+        dateLabel = "Today";
+      } else if (diffDays === 1) {
+        dateLabel = "Yesterday";
+      } else if (diffDays > 1 && diffDays <= 7) {
+        dateLabel = format(date, "EEEE");
+      } else {
+        dateLabel = format(date, "MMM d");
+      }
+
+      const time = format(date, "h:mm a");
+      return { dateLabel, time };
+    } catch (error) {
+      return null;
+    }
   };
 
   return (
@@ -147,19 +387,18 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               <View style={styles.logoGlow} />
               <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
-            <Text style={styles.greeting}>Hello, Sarah!</Text>
+            <Text style={styles.greeting}>
+              Hello, {getUserFirstName()}!
+            </Text>
             <Text style={styles.tagline}>Ready for a new look today?</Text>
           </View>
           <View style={styles.profileContainer}>
             <View style={styles.profileImageGlow} />
-            <Image source={profileImage} style={styles.profileImage} />
             <TouchableOpacity
-              style={styles.notificationBadge}
-              onPress={() => navigation?.navigate("Notifications")}
+              onPress={() => navigation?.navigate("Profile")}
               activeOpacity={0.7}
             >
-              <View style={styles.badgePulse} />
-              <Text style={styles.badgeNumber}>2</Text>
+              <Image source={profileImage} style={styles.profileImage} />
             </TouchableOpacity>
           </View>
         </View>
@@ -175,6 +414,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* Quick Actions Section */}
         <View style={styles.section}>
@@ -193,7 +440,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 <QuickActionButton
                   icon={action.icon}
                   label={action.label}
-                  onPress={() => console.log(`${action.label} pressed`)}
+                  onPress={action.onPress}
                 />
               </View>
             ))}
@@ -214,7 +461,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 Upcoming Appointments
               </Text>
             </View>
-            <TouchableOpacity style={styles.viewAllButton}>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => navigation?.navigate("Bookings")}
+              activeOpacity={0.7}
+            >
               <Text style={styles.viewAllLink}>View All</Text>
               <MaterialIcons
                 name="arrow-forward"
@@ -223,15 +474,71 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               />
             </TouchableOpacity>
           </View>
-          <AppointmentCard
-            service="Hair Styling & Color"
-            salon="Glamour Studio"
-            date="Today"
-            time="2:30 PM"
-            stylist="Maria Johnson"
-            onViewDetails={() => console.log("View details")}
-            onShare={() => console.log("Share")}
-          />
+
+          {appointmentsLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          ) : upcomingAppointments.length > 0 ? (
+            upcomingAppointments.map((appointment) => {
+              const { dateLabel, time } = formatAppointmentDateTime(
+                appointment.scheduledStart
+              );
+              const createdInfo = formatCreatedDateTime(appointment);
+              const serviceName =
+                appointment.service?.name || "Service";
+              const salonName = appointment.salon?.name || "Salon";
+              const stylistName =
+                appointment.salonEmployee?.user?.fullName || "Any Stylist";
+
+              return (
+                <AppointmentCard
+                  key={appointment.id}
+                  service={serviceName}
+                  salon={salonName}
+                  date={dateLabel}
+                  time={time}
+                  stylist={stylistName}
+                  status={appointment.status}
+                  createdDate={createdInfo?.dateLabel}
+                  createdTime={createdInfo?.time}
+                  onViewDetails={() => {
+                    navigation?.navigate("AppointmentDetail", {
+                      appointmentId: appointment.id,
+                      appointment: appointment,
+                    });
+                  }}
+                  onShare={() => {
+                    // TODO: Implement share functionality
+                    console.log("Share appointment");
+                  }}
+                />
+              );
+            })
+          ) : (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons
+                name="event-busy"
+                size={48}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: dynamicStyles.textSecondary.color },
+                ]}
+              >
+                No upcoming appointments
+              </Text>
+              <TouchableOpacity
+                style={styles.bookNowButton}
+                onPress={() => navigation?.navigate("Explore")}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.bookNowText}>Book Now</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Top Rated Salons Section */}
@@ -248,7 +555,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 Top Rated Salons
               </Text>
             </View>
-            <TouchableOpacity style={styles.viewAllButton}>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => navigation?.navigate("Explore")}
+              activeOpacity={0.7}
+            >
               <Text style={styles.viewAllLink}>See All</Text>
               <MaterialIcons
                 name="arrow-forward"
@@ -257,22 +568,62 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               />
             </TouchableOpacity>
           </View>
-          {/* Salon list would go here */}
-          <View style={styles.placeholderSalons}>
-            <Text
-              style={[
-                styles.placeholderText,
-                { color: dynamicStyles.textSecondary.color },
-              ]}
+
+          {salonsLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+          ) : topSalons.length > 0 ? (
+            <AutoSlider
+              onItemPress={(index) => {
+                if (topSalons[index]) {
+                  navigation?.navigate("SalonDetail", {
+                    salonId: topSalons[index].id,
+                    salon: topSalons[index],
+                  });
+                }
+              }}
             >
-              Coming soon...
-            </Text>
-          </View>
+              {topSalons.map((salon) => (
+                <SalonCard
+                  key={salon.id}
+                  salon={salon}
+                  width={280}
+                  onPress={() => {
+                    navigation?.navigate("SalonDetail", {
+                      salonId: salon.id,
+                      salon: salon,
+                    });
+                  }}
+                />
+              ))}
+            </AutoSlider>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons
+                name="store"
+                size={48}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: dynamicStyles.textSecondary.color },
+                ]}
+              >
+                No salons available
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }
@@ -397,40 +748,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  notificationBadge: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#FF3B30",
-    borderWidth: 2,
-    borderColor: theme.colors.textInverse,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    shadowColor: "#FF3B30",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  badgePulse: {
-    position: "absolute",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#FF3B30",
-    opacity: 0.5,
-  },
-  badgeNumber: {
-    color: theme.colors.textInverse,
-    fontSize: 12,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    zIndex: 1,
-  },
   scrollView: {
     flex: 1,
     marginTop: 0,
@@ -493,22 +810,6 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     fontWeight: "600",
   },
-  placeholderSalons: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderStyle: "dashed",
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontStyle: "italic",
-  },
   quickActionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -518,5 +819,46 @@ const styles = StyleSheet.create({
   quickActionWrapper: {
     width: "30%",
     marginBottom: theme.spacing.md,
+  },
+  salonsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: theme.spacing.sm,
+  },
+  loadingContainer: {
+    padding: theme.spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderStyle: "dashed",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    marginTop: theme.spacing.sm,
+    textAlign: "center",
+  },
+  bookNowButton: {
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 8,
+  },
+  bookNowText: {
+    color: theme.colors.textInverse,
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
   },
 });

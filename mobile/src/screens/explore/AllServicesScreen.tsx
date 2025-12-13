@@ -18,6 +18,7 @@ import { useTheme } from "../../context";
 import { exploreService, Service } from "../../services/explore";
 import ServiceCard from "./components/ServiceCard";
 import BottomNavigation from "../../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - theme.spacing.md * 3) / 2;
@@ -46,8 +47,9 @@ export default function AllServicesScreen({
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("explore");
+  const unreadNotificationCount = useUnreadNotifications();
 
   useEffect(() => {
     fetchServices();
@@ -137,7 +139,7 @@ export default function AllServicesScreen({
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "explore") {
@@ -427,7 +429,11 @@ export default function AllServicesScreen({
       )}
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabPress={handleTabPress} 
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }

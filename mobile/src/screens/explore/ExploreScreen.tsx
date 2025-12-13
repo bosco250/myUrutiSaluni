@@ -15,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import BottomNavigation from "../../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import FilterButton from "./components/FilterButton";
 import TrendingCard from "./components/TrendingCard";
 import ServiceCard from "./components/ServiceCard";
@@ -32,8 +33,9 @@ type FilterType = "For You" | "Hair" | "Nails" | "Facials" | "Oil";
 
 export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const { isDark } = useTheme();
+  const unreadNotificationCount = useUnreadNotifications();
   const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "favorites" | "profile"
+    "home" | "bookings" | "explore" | "notifications" | "profile"
   >("explore");
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("For You");
   const [services, setServices] = useState<Service[]>([]);
@@ -96,7 +98,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "favorites" | "profile"
+    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
   ) => {
     setActiveTab(tab);
     if (tab !== "explore") {
@@ -366,7 +368,11 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
       )}
 
       {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabPress={handleTabPress} 
+        unreadNotificationCount={unreadNotificationCount}
+      />
     </View>
   );
 }

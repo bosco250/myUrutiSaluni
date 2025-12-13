@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
@@ -45,11 +46,21 @@ export default function SecurityLoginScreen({
     },
     card: {
       backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
+      borderColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
     },
     input: {
-      backgroundColor: isDark ? "#3A3A3C" : theme.colors.backgroundSecondary,
+      backgroundColor: isDark ? "#2C2C2E" : theme.colors.backgroundSecondary,
       color: isDark ? "#FFFFFF" : theme.colors.text,
-      borderColor: isDark ? "#48484A" : theme.colors.border,
+      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
+    },
+    headerBorder: {
+      borderBottomColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+    },
+    iconBg: {
+      backgroundColor: isDark ? "#3A3A3C" : theme.colors.gray200,
+    },
+    dangerCard: {
+      backgroundColor: isDark ? "rgba(255, 59, 48, 0.15)" : theme.colors.errorLight,
     },
   };
 
@@ -106,14 +117,15 @@ export default function SecurityLoginScreen({
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, dynamicStyles.headerBorder]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack?.()}
+          activeOpacity={0.7}
         >
           <MaterialIcons
             name="arrow-back"
@@ -121,7 +133,7 @@ export default function SecurityLoginScreen({
             color={dynamicStyles.text.color}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: dynamicStyles.text.color }]}>
+        <Text style={[styles.headerTitle, dynamicStyles.text]}>
           Security & Login
         </Text>
         <View style={styles.placeholder} />
@@ -134,12 +146,14 @@ export default function SecurityLoginScreen({
       >
         {/* Update Password Section */}
         <View style={styles.sectionHeader}>
-          <MaterialIcons
-            name="lock"
-            size={20}
-            color={theme.colors.primary}
-          />
-          <Text style={[styles.sectionHeaderText, { color: dynamicStyles.text.color }]}>
+          <View style={[styles.sectionIconContainer, dynamicStyles.iconBg]}>
+            <MaterialIcons
+              name="lock"
+              size={18}
+              color={theme.colors.primary}
+            />
+          </View>
+          <Text style={[styles.sectionHeaderText, dynamicStyles.text]}>
             Update Password
           </Text>
         </View>
@@ -246,17 +260,19 @@ export default function SecurityLoginScreen({
 
         {/* Danger Zone Section */}
         <View style={styles.sectionHeader}>
-          <MaterialIcons
-            name="security"
-            size={20}
-            color={theme.colors.error}
-          />
-          <Text style={[styles.sectionHeaderText, { color: dynamicStyles.text.color }]}>
+          <View style={[styles.sectionIconContainer, { backgroundColor: theme.colors.error + '20' }]}>
+            <MaterialIcons
+              name="warning"
+              size={18}
+              color={theme.colors.error}
+            />
+          </View>
+          <Text style={[styles.sectionHeaderText, dynamicStyles.text]}>
             Danger Zone
           </Text>
         </View>
 
-        <View style={[styles.dangerCard, dynamicStyles.card]}>
+        <View style={[styles.dangerCard, dynamicStyles.dangerCard]}>
           <Text style={[styles.dangerTitle, { color: dynamicStyles.text.color }]}>
             Delete Account
           </Text>
@@ -333,7 +349,7 @@ export default function SecurityLoginScreen({
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -377,10 +393,17 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.md,
   },
+  sectionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.sm,
+  },
   sectionHeaderText: {
     fontSize: 16,
     fontWeight: "600",
-    marginLeft: theme.spacing.xs,
     fontFamily: theme.fonts.medium,
   },
   sectionCard: {

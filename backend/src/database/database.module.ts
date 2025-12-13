@@ -42,6 +42,10 @@ import { PayrollRun } from '../payroll/entities/payroll-run.entity';
 import { PayrollItem } from '../payroll/entities/payroll-item.entity';
 import { LoyaltyPointTransaction } from '../customers/entities/loyalty-point-transaction.entity';
 import { SalonRewardsConfig } from '../customers/entities/rewards-config.entity';
+import { Conversation } from '../chat/entities/conversation.entity';
+import { Message } from '../chat/entities/message.entity';
+import { Review } from '../reviews/entities/review.entity';
+import { Payment } from '../payments/entities/payment.entity';
 
 @Global()
 @Module({
@@ -95,6 +99,10 @@ import { SalonRewardsConfig } from '../customers/entities/rewards-config.entity'
           PayrollItem,
           LoyaltyPointTransaction,
           SalonRewardsConfig,
+          Conversation,
+          Message,
+          Review,
+          Payment,
         ];
 
         // Use PostgreSQL by default, SQLite only if explicitly set

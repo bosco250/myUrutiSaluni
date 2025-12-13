@@ -5,17 +5,18 @@ import { theme } from '../../theme';
 import { useTheme } from '../../context';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'bookings' | 'explore' | 'favorites' | 'profile';
-  onTabPress: (tab: 'home' | 'bookings' | 'explore' | 'favorites' | 'profile') => void;
+  activeTab: 'home' | 'bookings' | 'explore' | 'notifications' | 'profile';
+  onTabPress: (tab: 'home' | 'bookings' | 'explore' | 'notifications' | 'profile') => void;
+  unreadNotificationCount?: number;
 }
 
-export default function BottomNavigation({ activeTab, onTabPress }: BottomNavigationProps) {
+export default function BottomNavigation({ activeTab, onTabPress, unreadNotificationCount = 0 }: BottomNavigationProps) {
   const { isDark } = useTheme();
   const tabs = [
     { id: 'home' as const, label: 'Home', icon: 'home' },
     { id: 'bookings' as const, label: 'Bookings', icon: 'event' as any },
     { id: 'explore' as const, label: 'Explore', icon: 'explore' },
-    { id: 'favorites' as const, label: 'Favorites', icon: 'favorite' },
+    { id: 'notifications' as const, label: 'Notifications', icon: 'notifications' },
     { id: 'profile' as const, label: 'Profile', icon: 'person' },
   ];
 
@@ -40,6 +41,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
     <View style={[styles.container, dynamicStyles.container]}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
+        const showBadge = tab.id === 'notifications' && unreadNotificationCount > 0;
         return (
           <TouchableOpacity
             key={tab.id}
@@ -47,11 +49,20 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
             onPress={() => onTabPress(tab.id)}
             activeOpacity={0.7}
           >
-            <MaterialIcons
-              name={tab.icon as any}
-              size={24}
-              color={dynamicStyles.iconColor(isActive)}
-            />
+            <View style={styles.iconContainer}>
+              <MaterialIcons
+                name={tab.icon as any}
+                size={24}
+                color={dynamicStyles.iconColor(isActive)}
+              />
+              {showBadge && (
+                <View style={[styles.badge, { borderColor: isDark ? theme.colors.gray900 : theme.colors.background }]}>
+                  <Text style={styles.badgeText}>
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text
               style={[
                 styles.tabLabel,
@@ -98,6 +109,32 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: theme.colors.primary,
     fontFamily: theme.fonts.medium,
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    backgroundColor: '#FF3B30', // Red color for badge
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    zIndex: 10,
+  },
+  badgeText: {
+    color: theme.colors.white,
+    fontSize: 11,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+    lineHeight: 12,
   },
 });
 

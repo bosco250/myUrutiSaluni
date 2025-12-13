@@ -10,6 +10,9 @@ interface AppointmentCardProps {
   date: string;
   time: string;
   stylist: string;
+  status?: string;
+  createdDate?: string;
+  createdTime?: string;
   onViewDetails: () => void;
   onShare: () => void;
 }
@@ -20,6 +23,9 @@ export default function AppointmentCard({
   date,
   time,
   stylist,
+  status,
+  createdDate,
+  createdTime,
   onViewDetails,
   onShare,
 }: AppointmentCardProps) {
@@ -61,13 +67,36 @@ export default function AppointmentCard({
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
           <MaterialIcons name="access-time" size={18} color={theme.colors.primary} />
-          <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>{time}</Text>
+          <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>
+            {date === "Today" ? time : `${date} ${time}`}
+          </Text>
         </View>
         <View style={styles.detailItem}>
           <MaterialIcons name="person" size={18} color={theme.colors.primary} />
           <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>{stylist}</Text>
         </View>
       </View>
+      
+      {(status || (createdDate && createdTime)) && (
+        <View style={styles.additionalInfoRow}>
+          {status && (
+            <View style={styles.statusContainer}>
+              <MaterialIcons name="info-outline" size={16} color={dynamicStyles.textSecondary.color} />
+              <Text style={[styles.additionalInfoText, { color: dynamicStyles.textSecondary.color }]}>
+                {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
+              </Text>
+            </View>
+          )}
+          {createdDate && createdTime && (
+            <View style={styles.createdContainer}>
+              <MaterialIcons name="add-circle-outline" size={16} color={dynamicStyles.textSecondary.color} />
+              <Text style={[styles.additionalInfoText, { color: dynamicStyles.textSecondary.color }]}>
+                Created: {createdDate === "Today" ? createdTime : `${createdDate} ${createdTime}`}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={styles.actionsRow}>
         <TouchableOpacity
@@ -172,6 +201,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  additionalInfoRow: {
+    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  createdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  additionalInfoText: {
+    fontSize: 12,
+    color: theme.colors.textInverse,
+    opacity: 0.8,
+    fontFamily: theme.fonts.regular,
   },
 });
 

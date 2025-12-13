@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   StatusBar,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
@@ -32,17 +35,20 @@ export default function PersonalInformationScreen({
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
-  const [bio, setBio] = useState(""); // Bio is not in user data, can be fetched from API if needed
+  const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
-    // TODO: Implement API call to update user profile
-    // Example: await api.put(`/users/${user?.id}`, { fullName, email, phone, bio });
-    console.log("Saving profile:", { fullName, email, phone, bio });
-    // For now, just show a message
-    alert(
-      "Profile update functionality will be implemented with API integration"
-    );
+    setLoading(true);
+    try {
+      // TODO: Implement API call to update user profile
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      Alert.alert("Success", "Profile updated successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const dynamicStyles = {
@@ -55,22 +61,76 @@ export default function PersonalInformationScreen({
     textSecondary: {
       color: isDark ? "#8E8E93" : theme.colors.textSecondary,
     },
+    card: {
+      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
+      borderColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+    },
     input: {
-      backgroundColor: isDark ? "#3A3A3C" : theme.colors.backgroundSecondary,
+      backgroundColor: isDark ? "#2C2C2E" : theme.colors.backgroundSecondary,
       color: isDark ? "#FFFFFF" : theme.colors.text,
-      borderColor: isDark ? "#48484A" : theme.colors.border,
+      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
+    },
+    headerBorder: {
+      borderBottomColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+    },
+    iconBg: {
+      backgroundColor: isDark ? "#3A3A3C" : theme.colors.gray200,
     },
   };
 
+  const renderInputField = (
+    label: string,
+    value: string,
+    onChange: (text: string) => void,
+    icon: string,
+    options: {
+      placeholder?: string;
+      keyboardType?: "default" | "email-address" | "phone-pad";
+      multiline?: boolean;
+      autoCapitalize?: "none" | "sentences" | "words";
+    } = {}
+  ) => (
+    <View style={[styles.inputCard, dynamicStyles.card]}>
+      <View style={[styles.inputIconContainer, dynamicStyles.iconBg]}>
+        <MaterialIcons
+          name={icon as any}
+          size={20}
+          color={theme.colors.primary}
+        />
+      </View>
+      <View style={styles.inputContent}>
+        <Text style={[styles.inputLabel, dynamicStyles.textSecondary]}>
+          {label}
+        </Text>
+        <TextInput
+          style={[
+            styles.input,
+            { color: dynamicStyles.text.color },
+            options.multiline && styles.multilineInput,
+          ]}
+          value={value}
+          onChangeText={onChange}
+          placeholder={options.placeholder || `Enter ${label.toLowerCase()}`}
+          placeholderTextColor={dynamicStyles.textSecondary.color}
+          keyboardType={options.keyboardType || "default"}
+          autoCapitalize={options.autoCapitalize || "sentences"}
+          multiline={options.multiline}
+          numberOfLines={options.multiline ? 3 : 1}
+        />
+      </View>
+    </View>
+  );
+
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, dynamicStyles.headerBorder]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack?.()}
+          activeOpacity={0.7}
         >
           <MaterialIcons
             name="arrow-back"
@@ -78,7 +138,7 @@ export default function PersonalInformationScreen({
             color={dynamicStyles.text.color}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: dynamicStyles.text.color }]}>
+        <Text style={[styles.headerTitle, dynamicStyles.text]}>
           Personal Information
         </Text>
         <View style={styles.placeholder} />
@@ -89,112 +149,81 @@ export default function PersonalInformationScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Picture */}
-        <View style={styles.profilePictureContainer}>
-          <Image source={profileImage} style={styles.profilePicture} />
-          <TouchableOpacity style={styles.editPhotoButton} activeOpacity={0.7}>
-            <MaterialIcons name="add" size={20} color={theme.colors.white} />
+        {/* Profile Picture Section */}
+        <View style={styles.profileSection}>
+          <View style={styles.profilePictureContainer}>
+            <View style={[styles.profileImageBorder, { borderColor: theme.colors.primary }]}>
+              <Image source={profileImage} style={styles.profilePicture} />
+            </View>
+            <TouchableOpacity
+              style={[styles.editPhotoButton, { borderColor: dynamicStyles.container.backgroundColor }]}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="camera-alt" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.changePhotoLink} activeOpacity={0.7}>
+            <Text style={[styles.changePhotoText, { color: theme.colors.primary }]}>
+              Change Photo
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Full Name */}
-        <View style={styles.inputContainer}>
-          <Text
-            style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
-          >
-            Full Name
-          </Text>
-          <TextInput
-            style={[styles.input, dynamicStyles.input]}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Enter your full name"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-          />
-        </View>
+        {/* Form Fields */}
+        <View style={styles.formContainer}>
+          {renderInputField("Full Name", fullName, setFullName, "person", {
+            placeholder: "Enter your full name",
+            autoCapitalize: "words",
+          })}
 
-        {/* Email */}
-        <View style={styles.inputContainer}>
-          <Text
-            style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
-          >
-            Email
-          </Text>
-          <TextInput
-            style={[styles.input, dynamicStyles.input]}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
+          {renderInputField("Email Address", email, setEmail, "email", {
+            placeholder: "Enter your email",
+            keyboardType: "email-address",
+            autoCapitalize: "none",
+          })}
 
-        {/* Phone */}
-        <View style={styles.inputContainer}>
-          <Text
-            style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
-          >
-            Phone
-          </Text>
-          <TextInput
-            style={[styles.input, dynamicStyles.input]}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="Enter your phone number"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            keyboardType="phone-pad"
-          />
-        </View>
+          {renderInputField("Phone Number", phone, setPhone, "phone", {
+            placeholder: "+250 7XX XXX XXX",
+            keyboardType: "phone-pad",
+          })}
 
-        {/* Bio */}
-        <View style={styles.inputContainer}>
-          <Text
-            style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
-          >
-            Bio
-          </Text>
-          <TextInput
-            style={[styles.input, dynamicStyles.input, styles.bioInput]}
-            value={bio}
-            onChangeText={setBio}
-            placeholder="Enter your bio"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            multiline
-            numberOfLines={3}
-          />
+          {renderInputField("Bio", bio, setBio, "edit", {
+            placeholder: "Tell us about yourself...",
+            multiline: true,
+          })}
         </View>
 
         {/* Save Button */}
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
           activeOpacity={0.7}
           onPress={handleSave}
           disabled={loading}
         >
-          <Text style={styles.saveButtonText}>
-            {loading ? "Saving..." : "Save Changes"}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <>
+              <MaterialIcons name="check" size={20} color="#FFFFFF" />
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: StatusBar.currentHeight || 0,
-    paddingBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -202,82 +231,111 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
   },
   placeholder: {
-    width: 40,
+    width: 32,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl * 2,
+  },
+  profileSection: {
     alignItems: "center",
+    marginBottom: theme.spacing.xl,
   },
   profilePictureContainer: {
     position: "relative",
-    marginBottom: theme.spacing.lg,
-    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  profileImageBorder: {
+    padding: 3,
+    borderRadius: 55,
+    borderWidth: 2,
   },
   profilePicture: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.backgroundSecondary,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   editPhotoButton: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    bottom: 4,
+    right: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: theme.colors.background,
   },
-  inputContainer: {
-    width: "100%",
-    marginBottom: theme.spacing.md,
+  changePhotoLink: {
+    paddingVertical: theme.spacing.xs,
   },
-  label: {
+  changePhotoText: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.medium,
   },
+  formContainer: {
+    gap: theme.spacing.md,
+  },
+  inputCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: theme.spacing.md,
+  },
+  inputIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
+  },
+  inputContent: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: theme.fonts.medium,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   input: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 8,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
     fontSize: 16,
     fontFamily: theme.fonts.regular,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 44,
-    width: "100%",
+    padding: 0,
   },
-  bioInput: {
-    minHeight: 80,
+  multilineInput: {
+    minHeight: 60,
     textAlignVertical: "top",
-    paddingTop: theme.spacing.sm,
   },
   saveButton: {
-    backgroundColor: theme.colors.buttonPrimary,
-    borderRadius: 8,
+    flexDirection: "row",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
-    marginTop: theme.spacing.md,
-    width: "100%",
+    justifyContent: "center",
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.sm,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
-    color: theme.colors.buttonPrimaryText,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,

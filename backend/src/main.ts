@@ -12,7 +12,15 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log'],
+    bodyParser: true,
+    rawBody: false,
   });
+
+  // Increase body size limit for image uploads (10MB)
+  // Must be applied before other middleware
+  const express = require('express');
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   const configService = app.get(ConfigService);
 
@@ -173,4 +181,15 @@ async function bootstrap() {
 bootstrap().catch((error) => {
   console.error('Failed to start application:', error);
   process.exit(1);
+});
+
+// Graceful shutdown handlers
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  process.exit(0);
 });
