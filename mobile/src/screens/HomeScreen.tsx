@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { theme } from "../theme";
@@ -616,6 +617,81 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             </View>
           )}
         </View>
+
+        {/* Membership Association Banner */}
+        <View style={styles.membershipSection}>
+          <LinearGradient
+            colors={[theme.colors.primary + "15", theme.colors.primaryLight + "10"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.membershipBanner}
+          >
+            <View style={styles.membershipIconContainer}>
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.primaryLight]}
+                style={styles.membershipIcon}
+              >
+                <MaterialIcons name="groups" size={32} color="#FFFFFF" />
+              </LinearGradient>
+            </View>
+
+            <Text style={[styles.membershipTitle, dynamicStyles.text]}>
+              Become a Salon Owner
+            </Text>
+            <Text style={[styles.membershipSubtitle, dynamicStyles.textSecondary]}>
+              Apply to start your salon business on our platform and grow your success
+            </Text>
+
+            <View style={styles.membershipBenefits}>
+              <View style={styles.benefitRow}>
+                <MaterialIcons name="check-circle" size={18} color={theme.colors.primary} />
+                <Text style={[styles.benefitText, dynamicStyles.text]}>
+                  Create Your Salon
+                </Text>
+              </View>
+              <View style={styles.benefitRow}>
+                <MaterialIcons name="check-circle" size={18} color={theme.colors.primary} />
+                <Text style={[styles.benefitText, dynamicStyles.text]}>
+                  Manage Bookings
+                </Text>
+              </View>
+              <View style={styles.benefitRow}>
+                <MaterialIcons name="check-circle" size={18} color={theme.colors.primary} />
+                <Text style={[styles.benefitText, dynamicStyles.text]}>
+                  Track Revenue
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.membershipActions}>
+              <TouchableOpacity
+                style={styles.learnMoreButton}
+                onPress={() => navigation?.navigate("MembershipInfo")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.learnMoreText, { color: theme.colors.primary }]}>
+                  Learn More
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.applyNowButton}
+                onPress={() => navigation?.navigate("MembershipInfo")}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={[theme.colors.primary, theme.colors.primaryLight]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.applyNowGradient}
+                >
+                  <Text style={styles.applyNowText}>Apply Now</Text>
+                  <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
@@ -859,6 +935,97 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
     fontSize: 14,
     fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  // Membership Banner Styles
+  membershipSection: {
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+  },
+  membershipBanner: {
+    marginHorizontal: theme.spacing.lg,
+    borderRadius: 20,
+    padding: theme.spacing.xl,
+    alignItems: "center",
+  },
+  membershipIconContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  membershipIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  membershipTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+    textAlign: "center",
+    marginBottom: theme.spacing.xs,
+  },
+  membershipSubtitle: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: theme.spacing.lg,
+  },
+  membershipBenefits: {
+    width: "100%",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  benefitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  benefitText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+  },
+  membershipActions: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+    width: "100%",
+  },
+  learnMoreButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  learnMoreText: {
+    fontSize: 15,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  applyNowButton: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  applyNowGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  applyNowText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
     fontFamily: theme.fonts.medium,
   },
 });
