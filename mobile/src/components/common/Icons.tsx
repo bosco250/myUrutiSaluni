@@ -49,3 +49,9 @@ export function SecurityIcon({ size = 20, color = theme.colors.primary }: IconPr
   );
 }
 
+export function PhoneIcon({ size = 20, color = theme.colors.primary }: IconProps) {
+  return (
+    <MaterialIcons name="phone" size={size} color={color} />
+  );
+}
+

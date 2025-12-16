@@ -1,46 +1,146 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, ActivityIndicator, StyleSheet, BackHandler, Alert } from "react-native";
+import { View, ActivityIndicator, StyleSheet, BackHandler, Alert, Text } from "react-native";
 import AuthNavigator from "./AuthNavigator";
 import WelcomeScreen from "../screens/WelcomeScreen";
-import HomeScreen from "../screens/HomeScreen";
-import NotificationsScreen from "../screens/NotificationsScreen";
-import { ExploreScreen, ServiceDetailScreen, AllServicesScreen, SalonDetailScreen } from "../screens/explore";
-import EmployeeListScreen from "../screens/explore/EmployeeListScreen";
-import EmployeeDetailScreen from "../screens/explore/EmployeeDetailScreen";
-import { BookingsScreen, AppointmentDetailScreen, BookingFlowScreen } from "../screens/booking";
-import { ProfileScreen } from "../screens/profile";
-import { SearchScreen, AIFaceScanScreen, AIConsultantScreen, RecommendationDetailScreen, LoyaltyScreen, WalletScreen, OffersScreen, ChatListScreen, ChatScreen, ChatUserSearchScreen } from "../screens/quickActions";
-import ReviewScreen from "../screens/reviews/ReviewScreen";
-import PaymentScreen from "../screens/payment/PaymentScreen";
-import PaymentHistoryScreen from "../screens/payment/PaymentHistoryScreen";
-import WithdrawScreen from "../screens/payment/WithdrawScreen";
-import { MembershipInfoScreen, MembershipApplicationScreen, ApplicationSuccessScreen } from "../screens/membership";
 import { ThemeProvider, AuthProvider, useAuth } from "../context";
 import { theme } from "../theme";
+import { getDefaultHomeScreen } from "../constants/permissions";
+import { Screen } from "../constants/permissions";
+import { renderScreen } from "./screenRouter";
+import { getNavigationTabsForRole, mapScreenToTab } from "./navigationConfig";
+import BottomNavigation from "../components/common/BottomNavigation";
+import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 
-type MainScreen = "Home" | "Bookings" | "AppointmentDetail" | "BookingFlow" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "EmployeeList" | "EmployeeDetail" | "Profile" | "Login" | "Search" | "AIFaceScan" | "AIConsultant" | "RecommendationDetail" | "Loyalty" | "Wallet" | "Offers" | "ChatList" | "Chat" | "ChatUserSearch" | "Review" | "Payment" | "PaymentHistory" | "Withdraw" | "MembershipInfo" | "MembershipApplication" | "ApplicationSuccess";
+type MainScreen = "Home" | "Bookings" | "AppointmentDetail" | "BookingFlow" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "EmployeeList" | "EmployeeDetail" | "Profile" | "Login" | "Search" | "AIFaceScan" | "AIConsultant" | "RecommendationDetail" | "Loyalty" | "Wallet" | "Offers" | "ChatList" | "Chat" | "ChatUserSearch" | "Review" | "Payment" | "PaymentHistory" | "Withdraw" | "MembershipInfo" | "MembershipApplication" | "ApplicationSuccess" | "StaffDashboard" | "OwnerDashboard" | "AdminDashboard" | "MySchedule" | "Attendance" | "CustomerManagement" | "StaffManagement" | "SalonSettings" | "BusinessAnalytics" | "InventoryManagement" | "SalonManagement" | "UserManagement" | "SystemReports" | "MembershipApprovals" | "Operations" | "Finance" | "MoreMenu" | "Help" | "WorkLog" | "Leaderboard" | "CreateSalon" | "SalonList" | "SalonAppointments" | "OwnerSalonDetail" | "OwnerEmployeeDetail" | "AddEmployee" | "AddService" | "EditSalon";
 
 // Main tabs that are root level screens
 const MAIN_TABS: MainScreen[] = ["Home", "Bookings", "Explore", "Profile", "Notifications"];
 
 // Inner navigation component that uses auth context
 function NavigationContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  interface HistoryItem {
+    name: MainScreen;
+    params: any;
+  }
+
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const unreadNotificationCount = useUnreadNotifications();
   const [showWelcome, setShowWelcome] = useState(true);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<MainScreen>("Home");
   const [screenParams, setScreenParams] = useState<any>({});
-  const [screenHistory, setScreenHistory] = useState<MainScreen[]>(["Home"]);
+  const [screenHistory, setScreenHistory] = useState<HistoryItem[]>([{ name: "Home", params: {} }]);
+  const [activeTab, setActiveTab] = useState<string>("home");
 
   // Skip welcome screen if user is already authenticated
+  // Also set appropriate home screen based on role
   useEffect(() => {
-    if (isAuthenticated && !hasShownWelcome) {
+    // Only run when auth is loaded and user is authenticated
+    if (!isLoading && isAuthenticated && !hasShownWelcome && user) {
       setShowWelcome(false);
       setHasShownWelcome(true);
-      // Ensure we're on Home screen when authenticated
-      setCurrentScreen("Home");
+      
+      // Set role-appropriate home screen
+      const roleHomeScreen = getDefaultHomeScreen(user?.role);
+      let initialScreen: MainScreen = "Home";
+      let initialTab = "home";
+      
+      // Map Screen enum to MainScreen type
+      switch (roleHomeScreen) {
+        case Screen.STAFF_DASHBOARD:
+          initialScreen = "StaffDashboard";
+          initialTab = "dashboard";
+          break;
+        case Screen.OWNER_DASHBOARD:
+          initialScreen = "OwnerDashboard";
+          initialTab = "dashboard";
+          break;
+        case Screen.ADMIN_DASHBOARD:
+          initialScreen = "AdminDashboard";
+          initialTab = "dashboard";
+          break;
+        default:
+          initialScreen = "Home";
+          initialTab = "home";
+      }
+      
+      setCurrentScreen(initialScreen);
+      setScreenHistory([{ name: initialScreen, params: {} }]);
+      setActiveTab(initialTab);
     }
-  }, [isAuthenticated, hasShownWelcome]);
+  }, [isLoading, isAuthenticated, hasShownWelcome, user]);
+
+  // Sync activeTab with current screen based on role
+  // This ensures the correct tab is highlighted when navigating
+  // MOVED OUT of conditional block to fix hook error
+  useEffect(() => {
+    // Only sync if authenticated and not loading, and we have a valid screen
+    if (isAuthenticated && !isLoading && currentScreen && user?.role) {
+      try {
+        // Map current screen to Screen enum
+        let screenEnum: Screen | undefined;
+        switch (currentScreen) {
+          case "Home":
+            screenEnum = Screen.HOME;
+            break;
+          case "Bookings":
+            screenEnum = Screen.BOOKINGS;
+            break;
+          case "Explore":
+            screenEnum = Screen.EXPLORE;
+            break;
+          case "Profile":
+            screenEnum = Screen.PROFILE;
+            break;
+          case "Notifications":
+            screenEnum = Screen.NOTIFICATIONS;
+            break;
+          case "StaffDashboard":
+            screenEnum = Screen.STAFF_DASHBOARD;
+            break;
+          case "OwnerDashboard":
+            screenEnum = Screen.OWNER_DASHBOARD;
+            break;
+          case "AdminDashboard":
+            screenEnum = Screen.ADMIN_DASHBOARD;
+            break;
+          case "MySchedule":
+            screenEnum = Screen.MY_SCHEDULE;
+            break;
+          case "CustomerManagement":
+            screenEnum = Screen.CUSTOMER_MANAGEMENT;
+            break;
+          case "StaffManagement":
+            screenEnum = Screen.STAFF_MANAGEMENT;
+            break;
+          case "BusinessAnalytics":
+            screenEnum = Screen.BUSINESS_ANALYTICS;
+            break;
+          case "SalonManagement":
+            screenEnum = Screen.SALON_MANAGEMENT;
+            break;
+          case "MembershipApprovals":
+            screenEnum = Screen.MEMBERSHIP_APPROVALS;
+            break;
+          case "SalonList":
+          case "OwnerSalonDetail":
+            screenEnum = Screen.SALON_LIST;
+            break;
+        }
+        
+        if (screenEnum) {
+          const tabId = mapScreenToTab(screenEnum, user?.role);
+          if (tabId && tabId !== activeTab) {
+            setActiveTab(tabId);
+          }
+        }
+      } catch (error) {
+        // Silently handle errors to prevent app crash
+        console.error("Error syncing activeTab:", error);
+      }
+    }
+  }, [currentScreen, user?.role, isAuthenticated, isLoading, activeTab]);
+
 
   // Handle Android hardware back button
   const handleBackPress = useCallback(() => {
@@ -60,13 +160,29 @@ function NavigationContent() {
       newHistory.pop();
       const previousScreen = newHistory[newHistory.length - 1];
       setScreenHistory(newHistory);
-      setCurrentScreen(previousScreen);
-      setScreenParams({});
+      setCurrentScreen(previousScreen.name);
+      setScreenParams(previousScreen.params || {});
       return true; // We handled the back press
     }
 
-    // If already on Home screen, show exit confirmation
-    if (currentScreen === "Home") {
+    // If already on role's home screen, show exit confirmation
+    const roleHome = getDefaultHomeScreen(user?.role);
+    let homeScreenName: MainScreen = "Home";
+    switch (roleHome) {
+      case Screen.STAFF_DASHBOARD:
+        homeScreenName = "StaffDashboard";
+        break;
+      case Screen.OWNER_DASHBOARD:
+        homeScreenName = "OwnerDashboard";
+        break;
+      case Screen.ADMIN_DASHBOARD:
+        homeScreenName = "AdminDashboard";
+        break;
+      default:
+        homeScreenName = "Home";
+    }
+
+    if (currentScreen === homeScreenName) {
       Alert.alert(
         "Exit App",
         "Are you sure you want to exit?",
@@ -79,19 +195,19 @@ function NavigationContent() {
       return true; // We handled the back press (showing dialog)
     }
 
-    // If on any main tab but not Home, go to Home
+    // If on any main tab but not home, go to home
     if (MAIN_TABS.includes(currentScreen)) {
-      setCurrentScreen("Home");
-      setScreenHistory(["Home"]);
+      setCurrentScreen(homeScreenName);
+      setScreenHistory([{ name: homeScreenName, params: {} }]);
       setScreenParams({});
       return true;
     }
 
-    // Default: go to Home
-    setCurrentScreen("Home");
-    setScreenHistory(["Home"]);
+    // Default: go to role's home screen
+    setCurrentScreen(homeScreenName);
+    setScreenHistory([{ name: homeScreenName, params: {} }]);
     return true;
-  }, [showWelcome, isAuthenticated, screenHistory, currentScreen]);
+  }, [showWelcome, isAuthenticated, screenHistory, currentScreen, user?.role]);
 
   // Set up BackHandler listener
   useEffect(() => {
@@ -106,12 +222,14 @@ function NavigationContent() {
 
   const handleNavigate = (screen: string, params?: any) => {
     const targetScreen = screen as MainScreen;
-    // If navigating to a main tab (Home, Bookings, Explore, Profile), reset history
+    const historyItem: HistoryItem = { name: targetScreen, params: params || {} };
+    
+    // If navigating to a main tab, reset history
     if (MAIN_TABS.includes(targetScreen)) {
-      setScreenHistory([targetScreen]);
+      setScreenHistory([historyItem]);
     } else {
       // For detail screens, add to history
-      setScreenHistory((prev) => [...prev, targetScreen]);
+      setScreenHistory((prev) => [...prev, historyItem]);
     }
     setCurrentScreen(targetScreen);
     setScreenParams(params || {});
@@ -123,12 +241,89 @@ function NavigationContent() {
       newHistory.pop(); // Remove current screen
       const previousScreen = newHistory[newHistory.length - 1];
       setScreenHistory(newHistory);
-      setCurrentScreen(previousScreen);
-      setScreenParams({});
+      setCurrentScreen(previousScreen.name);
+      setScreenParams(previousScreen.params || {});
     } else {
-      // If no history, go to Home
-      setCurrentScreen("Home");
-      setScreenHistory(["Home"]);
+      // If no history, go to role's home screen
+      const roleHome = getDefaultHomeScreen(user?.role);
+      let homeScreen: MainScreen = "Home";
+      switch (roleHome) {
+        case Screen.STAFF_DASHBOARD:
+          homeScreen = "StaffDashboard";
+          break;
+        case Screen.OWNER_DASHBOARD:
+          homeScreen = "OwnerDashboard";
+          break;
+        case Screen.ADMIN_DASHBOARD:
+          homeScreen = "AdminDashboard";
+          break;
+        default:
+          homeScreen = "Home";
+      }
+      setCurrentScreen(homeScreen);
+      setScreenHistory([{ name: homeScreen, params: {} }]);
+    }
+  };
+
+  // Handle tab press - role aware
+  const handleTabPress = (tabId: string) => {
+    setActiveTab(tabId);
+    
+    // Map tab ID to screen based on role
+    const tabs = getNavigationTabsForRole(user?.role);
+    const tab = tabs.find(t => t.id === tabId);
+    
+    if (tab) {
+      // Map Screen enum to MainScreen string
+      const screenName = tab.screen.toString() as MainScreen;
+      
+      // Specific mappings for role dashboards
+      let targetScreen: MainScreen = screenName as MainScreen;
+      if (tab.screen === Screen.STAFF_DASHBOARD) {
+        targetScreen = "StaffDashboard";
+      } else if (tab.screen === Screen.OWNER_DASHBOARD) {
+        targetScreen = "OwnerDashboard";
+      } else if (tab.screen === Screen.ADMIN_DASHBOARD) {
+        targetScreen = "AdminDashboard";
+      } else if (tab.screen === Screen.HOME) {
+        targetScreen = "Home";
+      } else if (tab.screen === Screen.BOOKINGS) {
+        targetScreen = "Bookings";
+      } else if (tab.screen === Screen.EXPLORE) {
+        targetScreen = "Explore";
+      } else if (tab.screen === Screen.PROFILE) {
+        targetScreen = "Profile";
+      } else if (tab.screen === Screen.NOTIFICATIONS) {
+        targetScreen = "Notifications";
+      } else if (tab.screen === Screen.MY_SCHEDULE) {
+        targetScreen = "MySchedule";
+      } else if (tab.screen === Screen.CUSTOMER_MANAGEMENT) {
+        targetScreen = "CustomerManagement";
+      } else if (tab.screen === Screen.STAFF_MANAGEMENT) {
+        targetScreen = "StaffManagement";
+      } else if (tab.screen === Screen.BUSINESS_ANALYTICS) {
+        targetScreen = "BusinessAnalytics";
+      } else if (tab.screen === Screen.SALON_MANAGEMENT) {
+        targetScreen = "SalonManagement";
+      } else if (tab.screen === Screen.MEMBERSHIP_APPROVALS) {
+        targetScreen = "MembershipApprovals";
+      } else if (tab.screen === Screen.OPERATIONS) {
+        targetScreen = "Operations";
+      } else if (tab.screen === Screen.FINANCE) {
+        targetScreen = "Finance";
+      } else if (tab.screen === Screen.MORE_MENU) {
+        targetScreen = "MoreMenu";
+      } else if (tab.screen === Screen.WORK_LOG) {
+        targetScreen = "WorkLog";
+      } else if (tab.screen === Screen.LEADERBOARD) {
+        targetScreen = "Leaderboard";
+      } else if (tab.screen === Screen.CHAT) {
+        targetScreen = "ChatList";
+      } else if (tab.screen === Screen.SALON_LIST) {
+        targetScreen = "SalonList";
+      }
+      
+      handleNavigate(targetScreen);
     }
   };
 
@@ -148,186 +343,24 @@ function NavigationContent() {
     );
   }
 
-  // After authentication, show main app screens
+  // After authentication, show main app screens using screen router
   if (isAuthenticated) {
-    // Ensure we always show a screen - default to Home if currentScreen is not set
     const screenToShow = currentScreen || "Home";
     
-    switch (screenToShow) {
-      case "Bookings":
-        return <BookingsScreen navigation={{ navigate: handleNavigate, goBack: handleGoBack }} />;
-      case "AppointmentDetail":
-        return (
-          <AppointmentDetailScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "BookingFlow":
-        return (
-          <BookingFlowScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "Notifications":
-        return <NotificationsScreen navigation={{ navigate: handleNavigate, goBack: handleGoBack }} />;
-      case "Explore":
-        return <ExploreScreen navigation={{ navigate: handleNavigate }} />;
-      case "AllServices":
-        return (
-          <AllServicesScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "ServiceDetail":
-        return (
-          <ServiceDetailScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "SalonDetail":
-        return (
-          <SalonDetailScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "EmployeeList":
-        return (
-          <EmployeeListScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "EmployeeDetail":
-        return (
-          <EmployeeDetailScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "Search":
-        return (
-          <SearchScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "AIFaceScan":
-        return (
-          <AIFaceScanScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "AIConsultant":
-        return (
-          <AIConsultantScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "RecommendationDetail":
-        return (
-          <RecommendationDetailScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "Loyalty":
-        return (
-          <LoyaltyScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "Wallet":
-        return (
-          <WalletScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "Offers":
-        return (
-          <OffersScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "ChatList":
-        return (
-          <ChatListScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "Chat":
-        return (
-          <ChatScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "ChatUserSearch":
-        return (
-          <ChatUserSearchScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "Review":
-        return (
-          <ReviewScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "Payment":
-        return (
-          <PaymentScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "PaymentHistory":
-        return (
-          <PaymentHistoryScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "Withdraw":
-        return (
-          <WithdrawScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "MembershipInfo":
-        return (
-          <MembershipInfoScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "MembershipApplication":
-        return (
-          <MembershipApplicationScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "ApplicationSuccess":
-        return (
-          <ApplicationSuccessScreen
-            navigation={{ navigate: handleNavigate }}
-            route={{ params: screenParams }}
-          />
-        );
-      case "Profile":
-        return (
-          <ProfileScreen
-            navigation={{ navigate: handleNavigate, goBack: handleGoBack }}
-          />
-        );
-      case "Home":
-      default:
-        return <HomeScreen navigation={{ navigate: handleNavigate }} />;
-    }
+
+    
+    return (
+      <View style={{ flex: 1 }}>
+        {renderScreen(screenToShow, handleNavigate, handleGoBack, screenParams)}
+        
+        {/* Bottom Navigation */}
+        <BottomNavigation
+          activeTab={activeTab}
+          onTabPress={handleTabPress}
+          unreadNotificationCount={unreadNotificationCount}
+        />
+      </View>
+    );
   }
 
   // Not authenticated - show auth screens

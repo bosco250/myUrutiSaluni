@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import BottomNavigation from "../../components/common/BottomNavigation";
 import {
   appointmentsService,
   Appointment,
@@ -148,12 +147,12 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
+    tabId: string
   ) => {
-    setActiveTab(tab);
-    if (tab !== "bookings") {
+    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
+    if (tabId !== "bookings") {
       const screenName =
-        tab === "home" ? "Home" : tab.charAt(0).toUpperCase() + tab.slice(1);
+        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
       navigation?.navigate(screenName as any);
     }
   };
@@ -852,13 +851,6 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
           )}
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <BottomNavigation
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        unreadNotificationCount={unreadNotificationCount}
-      />
     </View>
   );
 }

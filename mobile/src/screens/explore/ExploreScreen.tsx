@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import BottomNavigation from "../../components/common/BottomNavigation";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import FilterButton from "./components/FilterButton";
 import TrendingCard from "./components/TrendingCard";
@@ -98,12 +97,12 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
+    tabId: string
   ) => {
-    setActiveTab(tab);
-    if (tab !== "explore") {
+    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
+    if (tabId !== "explore") {
       const screenName =
-        tab === "home" ? "Home" : tab.charAt(0).toUpperCase() + tab.slice(1);
+        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
       navigation?.navigate(screenName as any);
     }
   };
@@ -366,13 +365,6 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
           </View>
         </ScrollView>
       )}
-
-      {/* Bottom Navigation */}
-      <BottomNavigation 
-        activeTab={activeTab} 
-        onTabPress={handleTabPress} 
-        unreadNotificationCount={unreadNotificationCount}
-      />
     </View>
   );
 }

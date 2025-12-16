@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { theme } from "../theme";
 import { useTheme, useAuth } from "../context";
-import BottomNavigation from "../components/common/BottomNavigation";
 import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 import QuickActionButton from "../components/common/QuickActionButton";
 import AppointmentCard from "../components/common/AppointmentCard";
@@ -274,16 +273,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   });
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
+    tabId: string
   ) => {
-    setActiveTab(tab);
-    if (tab === "profile") {
+    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
+    if (tabId === "profile") {
       navigation?.navigate("Profile");
-    } else if (tab === "explore") {
+    } else if (tabId === "explore") {
       navigation?.navigate("Explore");
-    } else if (tab === "bookings") {
+    } else if (tabId === "bookings") {
       navigation?.navigate("Bookings");
-    } else if (tab === "notifications") {
+    } else if (tabId === "notifications") {
       navigation?.navigate("Notifications");
     }
   };
@@ -693,13 +692,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           </LinearGradient>
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <BottomNavigation
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        unreadNotificationCount={unreadNotificationCount}
-      />
     </View>
   );
 }

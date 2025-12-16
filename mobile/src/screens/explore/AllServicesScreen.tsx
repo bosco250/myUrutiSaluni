@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,6 @@ import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { exploreService, Service } from "../../services/explore";
 import ServiceCard from "./components/ServiceCard";
-import BottomNavigation from "../../components/common/BottomNavigation";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -139,12 +138,12 @@ export default function AllServicesScreen({
   };
 
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
+    tabId: string
   ) => {
-    setActiveTab(tab);
-    if (tab !== "explore") {
+    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
+    if (tabId !== "explore") {
       const screenName =
-        tab === "home" ? "Home" : tab.charAt(0).toUpperCase() + tab.slice(1);
+        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
       navigation?.navigate(screenName as any);
     }
   };
@@ -427,13 +426,6 @@ export default function AllServicesScreen({
           </View>
         </View>
       )}
-
-      {/* Bottom Navigation */}
-      <BottomNavigation 
-        activeTab={activeTab} 
-        onTabPress={handleTabPress} 
-        unreadNotificationCount={unreadNotificationCount}
-      />
     </View>
   );
 }

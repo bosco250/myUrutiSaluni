@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { Button, Input, SegmentedControl } from "../../components";
-import { MailIcon, LockIcon, PersonIcon } from "../../components/common/Icons";
+import { MailIcon, LockIcon, PersonIcon, PhoneIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
 import { useAuth } from "../../context";
 
@@ -28,6 +28,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const [accountType, setAccountType] = useState<AccountType>("Customer");
   const [formData, setFormData] = useState({
     name: "",
+    phone: "",
     email: "",
     password: "",
   });
@@ -78,6 +79,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
         email: formData.email.trim(),
         password: formData.password,
         fullName: formData.name.trim(),
+        phone: formData.phone.trim() || undefined,
         role: roleMap[accountType],
       });
 
@@ -160,6 +162,17 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
               autoCapitalize="words"
               error={errors.name}
               leftIcon={<PersonIcon size={20} color={theme.colors.primary} />}
+            />
+
+            <Input
+              label="Phone Number (Optional)"
+              placeholder="+250 7XX XXX XXX"
+              value={formData.phone}
+              onChangeText={(value) => updateField("phone", value)}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              error={errors.phone}
+              leftIcon={<PhoneIcon size={20} color={theme.colors.primary} />}
             />
 
             <Input

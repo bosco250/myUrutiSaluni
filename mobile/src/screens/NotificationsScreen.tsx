@@ -15,7 +15,6 @@ import { theme } from "../theme";
 import { useTheme } from "../context";
 import { notificationsService, Notification } from "../services/notifications";
 import { appointmentsService } from "../services/appointments";
-import BottomNavigation from "../components/common/BottomNavigation";
 
 export default function NotificationsScreen({ navigation }: { navigation?: any }) {
   const { isDark } = useTheme();
@@ -431,24 +430,6 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
           })}
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <BottomNavigation
-        activeTab="notifications"
-        onTabPress={(tab) => {
-          const screenMap: Record<string, string> = {
-            home: "Home",
-            bookings: "Bookings",
-            explore: "Explore",
-            notifications: "Notifications",
-            profile: "Profile",
-          };
-          if (tab !== "notifications") {
-            navigation?.navigate(screenMap[tab]);
-          }
-        }}
-        unreadNotificationCount={unreadCount}
-      />
     </View>
   );
 }

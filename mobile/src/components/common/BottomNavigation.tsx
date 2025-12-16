@@ -2,23 +2,29 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useTheme } from '../../context';
+import { useTheme, useAuth } from '../../context';
+import { getNavigationTabsForRole } from '../../navigation/navigationConfig';
 
 interface BottomNavigationProps {
-  activeTab: 'home' | 'bookings' | 'explore' | 'notifications' | 'profile';
-  onTabPress: (tab: 'home' | 'bookings' | 'explore' | 'notifications' | 'profile') => void;
+  activeTab: string;
+  onTabPress: (tabId: string) => void;
   unreadNotificationCount?: number;
 }
 
-export default function BottomNavigation({ activeTab, onTabPress, unreadNotificationCount = 0 }: BottomNavigationProps) {
+/**
+ * Role-aware bottom navigation component
+ * Displays different tabs based on the user's role
+ */
+export default function BottomNavigation({ 
+  activeTab, 
+  onTabPress, 
+  unreadNotificationCount = 0 
+}: BottomNavigationProps) {
   const { isDark } = useTheme();
-  const tabs = [
-    { id: 'home' as const, label: 'Home', icon: 'home' },
-    { id: 'bookings' as const, label: 'Bookings', icon: 'event' as any },
-    { id: 'explore' as const, label: 'Explore', icon: 'explore' },
-    { id: 'notifications' as const, label: 'Notifications', icon: 'notifications' },
-    { id: 'profile' as const, label: 'Profile', icon: 'person' },
-  ];
+  const { user } = useAuth();
+  
+  // Get tabs based on user's role
+  const tabs = getNavigationTabsForRole(user?.role);
 
   const dynamicStyles = {
     container: {
@@ -137,4 +143,3 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
 });
-

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   StatusBar,
   Switch,
+  Modal,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import BottomNavigation from "../../components/common/BottomNavigation";
 import { useTheme, useAuth } from "../../context";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import PersonalInformationScreen from "./PersonalInformationScreen";
@@ -39,6 +39,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const unreadNotificationCount = useUnreadNotifications();
   const [currentSubScreen, setCurrentSubScreen] =
     useState<ProfileSubScreen>("main");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Get user data from auth context
   const userName = user?.fullName || "User";
@@ -57,7 +58,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   const displayRole = formatRole(userRole);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
     try {
       await logout();
       // Navigation will automatically update based on auth state
@@ -69,13 +75,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     }
   };
 
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
   const handleTabPress = (
-    tab: "home" | "bookings" | "explore" | "notifications" | "profile"
+    tabId: string
   ) => {
-    setActiveTab(tab);
-    if (tab !== "profile") {
+    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
+    if (tabId !== "profile") {
       const screenName =
-        tab === "home" ? "Home" : tab.charAt(0).toUpperCase() + tab.slice(1);
+        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
       navigation?.navigate(screenName as any);
     }
   };
@@ -349,14 +359,46 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
         </TouchableOpacity>
+
+        {/* Bottom spacing */}
+        <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <BottomNavigation 
-        activeTab={activeTab} 
-        onTabPress={handleTabPress} 
-        unreadNotificationCount={unreadNotificationCount}
-      />
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelLogout}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, dynamicStyles.sectionCard]}>
+            <View style={styles.modalIconContainer}>
+              <MaterialIcons name="exit-to-app" size={40} color={theme.colors.error} />
+            </View>
+            <Text style={[styles.modalTitle, dynamicStyles.text]}>Log Out</Text>
+            <Text style={[styles.modalMessage, dynamicStyles.textSecondary]}>
+              Are you sure you want to log out of your account?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={cancelLogout}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={confirmLogout}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.confirmButtonText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -550,5 +592,79 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 59, 48, 0.1)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 340,
+    borderRadius: 20,
+    padding: theme.spacing.xl,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255, 59, 48, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.md,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    marginBottom: theme.spacing.sm,
+  },
+  modalMessage: {
+    fontSize: 15,
+    textAlign: "center",
+    fontFamily: theme.fonts.regular,
+    marginBottom: theme.spacing.xl,
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    width: "100%",
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.text,
+    fontFamily: theme.fonts.medium,
+  },
+  confirmButton: {
+    backgroundColor: theme.colors.error,
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    fontFamily: theme.fonts.medium,
   },
 });

@@ -120,6 +120,33 @@ class AppointmentsService {
   }
 
   /**
+   * Get all appointments for a salon (for salon owners)
+   * Backend automatically filters by user's salon based on authentication
+   */
+  async getSalonAppointments(): Promise<Appointment[]> {
+    try {
+      const response = await api.get<any>('/appointments');
+      
+      let appointments: Appointment[] = [];
+      
+      if (response) {
+        if (Array.isArray(response)) {
+          appointments = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          appointments = response.data;
+        }
+      }
+      
+      return appointments;
+    } catch (error: any) {
+      if (error.status === 403 || error.status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Get available time slots for an employee on a specific date
    */
   async getEmployeeTimeSlots(
