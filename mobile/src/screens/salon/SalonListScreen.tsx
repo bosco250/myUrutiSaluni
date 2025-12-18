@@ -10,7 +10,6 @@ import {
   StatusBar,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService, SalonDetails } from '../../services/salon';
@@ -109,12 +108,9 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
     >
       {/* Salon Image/Logo */}
       <View style={styles.salonImageContainer}>
-        <LinearGradient
-          colors={[theme.colors.primary, theme.colors.secondary]}
-          style={styles.salonImagePlaceholder}
-        >
+        <View style={styles.salonImagePlaceholder}>
           <MaterialIcons name="store" size={32} color={theme.colors.white} />
-        </LinearGradient>
+        </View>
       </View>
 
       {/* Salon Info */}
@@ -157,12 +153,9 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <LinearGradient
-        colors={[theme.colors.primary + '20', theme.colors.secondary + '20']}
-        style={styles.emptyIconContainer}
-      >
+      <View style={styles.emptyIconContainer}>
         <MaterialIcons name="store" size={48} color={theme.colors.primary} />
-      </LinearGradient>
+      </View>
       <Text style={[styles.emptyTitle, dynamicStyles.text]}>No Salons Yet</Text>
       <Text style={[styles.emptySubtitle, dynamicStyles.textSecondary]}>
         Create your first salon to start managing your business
@@ -172,15 +165,10 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
         onPress={() => navigation.navigate('CreateSalon')}
         activeOpacity={0.8}
       >
-        <LinearGradient
-          colors={[theme.colors.primary, theme.colors.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.createFirstButtonGradient}
-        >
+        <View style={styles.createFirstButtonInner}>
           <MaterialIcons name="add" size={20} color={theme.colors.white} />
           <Text style={styles.createFirstButtonText}>Create Your First Salon</Text>
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -260,12 +248,9 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
           onPress={() => navigation.navigate('CreateSalon')}
           activeOpacity={0.8}
         >
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.secondary]}
-            style={styles.fabGradient}
-          >
+          <View style={styles.fabInner}>
             <MaterialIcons name="add" size={28} color={theme.colors.white} />
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       )}
     </View>
@@ -330,6 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.primary,
   },
   salonInfo: {
     flex: 1,
@@ -420,6 +406,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.primary + '20',
   },
   emptyTitle: {
     fontSize: 20,
@@ -438,11 +425,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  createFirstButtonGradient: {
+  createFirstButtonInner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
   },
   createFirstButtonText: {
     color: theme.colors.white,
@@ -493,12 +482,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  fabGradient: {
+  fabInner: {
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.primary,
   },
 });
 

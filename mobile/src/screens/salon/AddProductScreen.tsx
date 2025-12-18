@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,10 @@ import {
   Platform,
   Alert,
   Switch,
-  ActivityIndicator,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
-import { MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { Input, Button } from '../../components';
@@ -48,28 +48,34 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
   const [loading, setLoading] = useState(false);
   const [currentStock, setCurrentStock] = useState(product?.stockLevel || 0);
 
+  // Dynamic styles based on theme (dark/light mode)
+  // Colors matched with OwnerDashboardScreen for consistency
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      backgroundColor: isDark ? '#1C1C1E' : theme.colors.background,
+    },
+    header: {
+      backgroundColor: isDark ? '#1C1C1E' : theme.colors.background,
+      borderBottomColor: isDark ? '#3A3A3C' : theme.colors.borderLight,
     },
     text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
+      color: isDark ? '#FFFFFF' : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+      color: isDark ? '#8E8E93' : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200,
+      backgroundColor: isDark ? '#2C2C2E' : theme.colors.white,
+      borderColor: isDark ? '#3A3A3C' : theme.colors.borderLight,
     },
-    input: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.gray100,
-      color: isDark ? theme.colors.white : theme.colors.text,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.gray300,
+    iconColor: isDark ? '#FFFFFF' : theme.colors.text,
+    divider: {
+      borderTopColor: isDark ? '#3A3A3C' : theme.colors.borderLight,
     },
-    sectionTitle: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    }
+    // Button styles with primary gold color
+    primaryButton: {
+      backgroundColor: theme.colors.primary,
+    },
   };
 
   const handleSubmit = async () => {
@@ -151,12 +157,13 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, dynamicStyles.container]}
     >
-      <View style={[styles.header, { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.gray200 }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <View style={[styles.header, dynamicStyles.header]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={isDark ? theme.colors.white : theme.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={dynamicStyles.iconColor} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
           {isEditing ? 'Edit Product' : 'Add New Product'}
@@ -167,7 +174,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
       <ScrollView contentContainerStyle={styles.content}>
         {/* Product Details Card */}
         <View style={[styles.card, dynamicStyles.card]}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Product Details</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Product Details</Text>
           
           <View style={styles.inputContainer}>
             <Input
@@ -201,7 +208,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
 
         {/* Pricing Card */}
         <View style={[styles.card, dynamicStyles.card]}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Pricing & Tax</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Pricing & Tax</Text>
           
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 8 }}>
@@ -230,7 +237,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
         <View style={[styles.card, dynamicStyles.card]}>
           <View style={styles.switchRow}>
             <View>
-              <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle, { marginBottom: 4 }]}>
+              <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 4 }]}>
                 Track Inventory
               </Text>
               <Text style={[styles.helperText, dynamicStyles.textSecondary]}>
@@ -246,7 +253,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
           </View>
 
           {isEditing && isInventoryItem && (
-            <View style={styles.stockContainer}>
+            <View style={[styles.stockContainer, dynamicStyles.divider]}>
               <View style={styles.stockInfo}>
                 <Text style={[styles.stockLabel, dynamicStyles.textSecondary]}>Current Stock</Text>
                 <Text style={[styles.stockValue, dynamicStyles.text]}>{currentStock}</Text>
@@ -268,6 +275,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
             onPress={handleSubmit}
             disabled={loading}
             loading={loading}
+            style={dynamicStyles.primaryButton}
           />
         </View>
       </ScrollView>
@@ -283,35 +291,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    paddingTop: 60,
     borderBottomWidth: 1,
   },
   backButton: {
-    padding: 4,
+    padding: theme.spacing.xs,
     width: 40,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
   },
   content: {
-    padding: 16,
+    padding: theme.spacing.lg,
     paddingBottom: 40,
   },
   card: {
     borderRadius: 12,
-    padding: 16,
+    padding: theme.spacing.lg,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 16,
+    fontFamily: theme.fonts.medium,
+    marginBottom: theme.spacing.lg,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   row: {
     flexDirection: 'row',
@@ -323,12 +334,12 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 13,
+    fontFamily: theme.fonts.regular,
   },
   stockContainer: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.gray200,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -338,13 +349,15 @@ const styles = StyleSheet.create({
   },
   stockLabel: {
     fontSize: 12,
-    marginBottom: 4,
+    fontFamily: theme.fonts.regular,
+    marginBottom: theme.spacing.xs,
   },
   stockValue: {
     fontSize: 24,
     fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
   },
   footer: {
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
   },
 });

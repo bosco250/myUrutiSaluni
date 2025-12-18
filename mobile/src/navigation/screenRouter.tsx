@@ -25,7 +25,7 @@ import PaymentHistoryScreen from '../screens/payment/PaymentHistoryScreen';
 import WithdrawScreen from '../screens/payment/WithdrawScreen';
 import { MembershipInfoScreen, MembershipApplicationScreen, ApplicationSuccessScreen } from '../screens/membership';
 import { StaffDashboardScreen } from '../screens/staff';
-import { OwnerDashboardScreen, MoreMenuScreen, CreateSalonScreen, SalonAppointmentsScreen } from '../screens/owner';
+import { OwnerDashboardScreen, MoreMenuScreen, CreateSalonScreen, SalonAppointmentsScreen, OperationsScreen } from '../screens/owner';
 import { AdminDashboardScreen } from '../screens/admin';
 import {
   SalonListScreen,
@@ -38,6 +38,7 @@ import {
   EditSalonScreen,
   StockManagementScreen,
 } from '../screens/salon';
+import { SalesScreen, SalesHistoryScreen, CommissionsScreen, SaleDetailScreen } from '../screens/sales';
 import { theme } from '../theme';
 
 /**
@@ -210,7 +211,20 @@ export const renderScreen = (
     case 'UserManagement':
     case 'SystemReports':
     case 'MembershipApprovals':
+    // Operations screen (for salon owners)
     case 'Operations':
+      return <OperationsScreen navigation={navigation} />;
+
+    // Sales screens
+    case 'Sales':
+      return <SalesScreen navigation={navigation} />;
+    case 'SalesHistory':
+      return <SalesHistoryScreen navigation={navigation} route={{ params: screenParams }} />;
+    case 'Commissions':
+      return <CommissionsScreen navigation={navigation} />;
+    case 'SaleDetail':
+      return <SaleDetailScreen navigation={navigation} route={{ params: screenParams }} />;
+
     case 'Finance':
     case 'Help':
     case 'WorkLog':

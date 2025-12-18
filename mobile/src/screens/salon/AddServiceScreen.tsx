@@ -60,7 +60,7 @@ export default function AddServiceScreen({ navigation, route }: AddServiceScreen
       color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200,
     },
     input: {
@@ -156,9 +156,6 @@ export default function AddServiceScreen({ navigation, route }: AddServiceScreen
         {/* SECTION 1: DETAILS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: theme.colors.secondary }]}>
-              <MaterialIcons name="content-cut" size={20} color="#fff" />
-            </View>
             <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Service Details</Text>
           </View>
 
@@ -189,9 +186,6 @@ export default function AddServiceScreen({ navigation, route }: AddServiceScreen
         {/* SECTION 2: PRICING */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: theme.colors.success }]}>
-              <MaterialIcons name="attach-money" size={20} color="#fff" />
-            </View>
             <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Pricing & Time</Text>
           </View>
 

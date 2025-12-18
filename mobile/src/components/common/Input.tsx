@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { theme } from '../../theme';
+import { useTheme } from '../../context';
 import { EyeIcon, EyeOffIcon } from './Icons';
 
 interface InputProps extends TextInputProps {
@@ -27,26 +28,47 @@ export default function Input({
   style,
   ...props
 }: InputProps) {
+  const { isDark } = useTheme();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  // Dynamic styles based on dark/light mode
+  const dynamicStyles = {
+    label: {
+      color: isDark ? '#FFFFFF' : theme.colors.text,
+    },
+    inputContainer: {
+      backgroundColor: isDark ? '#3A3A3C' : theme.colors.backgroundSecondary,
+      borderColor: isDark ? '#48484A' : theme.colors.border,
+    },
+    inputContainerFocused: {
+      backgroundColor: isDark ? '#2C2C2E' : theme.colors.background,
+      borderColor: theme.colors.primary,
+    },
+    input: {
+      color: isDark ? '#FFFFFF' : theme.colors.text,
+    },
+    placeholder: isDark ? '#8E8E93' : theme.colors.textTertiary,
+  };
+
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, dynamicStyles.label]}>{label}</Text>}
       <View
         style={[
           styles.inputContainer,
-          isFocused && styles.inputContainerFocused,
+          dynamicStyles.inputContainer,
+          isFocused && [styles.inputContainerFocused, dynamicStyles.inputContainerFocused],
           error && styles.inputContainerError,
         ]}
       >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput
-          style={[styles.input, style]}
+          style={[styles.input, dynamicStyles.input, style]}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholderTextColor={theme.colors.textTertiary}
+          placeholderTextColor={dynamicStyles.placeholder}
           {...props}
         />
         {secureTextEntry && (
@@ -55,9 +77,9 @@ export default function Input({
             style={styles.eyeIcon}
           >
             {isPasswordVisible ? (
-              <EyeIcon size={20} color={theme.colors.textSecondary} />
+              <EyeIcon size={20} color={isDark ? '#8E8E93' : theme.colors.textSecondary} />
             ) : (
-              <EyeOffIcon size={20} color={theme.colors.textSecondary} />
+              <EyeOffIcon size={20} color={isDark ? '#8E8E93' : theme.colors.textSecondary} />
             )}
           </TouchableOpacity>
         )}
@@ -75,7 +97,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.colors.text,
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.medium,
   },
@@ -83,16 +104,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: theme.colors.border,
     borderRadius: 8,
-    backgroundColor: theme.colors.backgroundSecondary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     minHeight: 44,
   },
   inputContainerFocused: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.background,
+    // Dynamic colors applied inline
   },
   inputContainerError: {
     borderColor: theme.colors.error,
@@ -100,7 +118,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: theme.colors.text,
     fontFamily: theme.fonts.regular,
   },
   eyeIcon: {
@@ -119,4 +136,3 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
 });
-

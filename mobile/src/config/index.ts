@@ -17,7 +17,7 @@ const getApiUrl = () => {
 
   // TODO: Replace with your computer's local IP address
   // You can find it by running: ipconfig (Windows) or ifconfig (Mac/Linux)
-  const LOCAL_IP = "172.31.87.9"; // Your WiFi IP address (from ipconfig Wi-Fi adapter)
+  const LOCAL_IP = "10.205.237.50"; // Your WiFi IP address (from ipconfig Wi-Fi adapter)
   const BACKEND_PORT = "4000"; // Change this if your backend uses a different port
 
   // Uncomment the line that matches your setup:
