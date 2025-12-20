@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import {
   appointmentsService,
   Appointment,
@@ -38,10 +37,6 @@ export default function AppointmentDetailScreen({
   route,
 }: AppointmentDetailScreenProps) {
   const { isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("bookings");
-  const unreadNotificationCount = useUnreadNotifications();
   const [appointment, setAppointment] = useState<Appointment | null>(
     route?.params?.appointment || null
   );
@@ -57,8 +52,8 @@ export default function AppointmentDetailScreen({
           const fetchedAppointment =
             await appointmentsService.getAppointmentById(appointmentId);
           setAppointment(fetchedAppointment);
-        } catch (error: any) {
-          console.error("Error fetching appointment:", error);
+        } catch (err: any) {
+          console.error("Error fetching appointment:", err);
           Alert.alert("Error", "Failed to load appointment details");
         } finally {
           setLoading(false);
@@ -68,16 +63,6 @@ export default function AppointmentDetailScreen({
     }
   }, [route?.params?.appointmentId, appointment]);
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "bookings") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
-    }
-  };
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -128,11 +113,6 @@ export default function AppointmentDetailScreen({
     }
   };
 
-  const handleEmailPress = (email?: string) => {
-    if (email) {
-      Linking.openURL(`mailto:${email}`);
-    }
-  };
 
   const handleCancelAppointment = async () => {
     if (!appointment) return;
@@ -157,7 +137,7 @@ export default function AppointmentDetailScreen({
                   onPress: () => navigation?.goBack(),
                 },
               ]);
-            } catch (error: any) {
+            } catch {
               Alert.alert("Error", "Failed to cancel appointment");
             }
           },

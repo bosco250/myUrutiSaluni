@@ -81,19 +81,19 @@ export interface BusinessMetrics {
     appointments: number;
     newCustomers: number;
   };
-  topServices: Array<{
+  topServices: {
     serviceId: string;
     serviceName: string;
     bookings: number;
     revenue: number;
-  }>;
-  staffPerformance: Array<{
+  }[];
+  staffPerformance: {
     employeeId: string;
     employeeName: string;
     appointments: number;
     revenue: number;
     rating: number;
-  }>;
+  }[];
 }
 
 export interface InventoryItem {
@@ -176,6 +176,38 @@ class SalonService {
   }
 
   /**
+   * Get ALL salons owned by the current user
+   * Returns an array of all salons (supports multiple salon ownership)
+   */
+  async getMySalons(): Promise<SalonDetails[]> {
+    try {
+      const response = await api.get<SalonDetails[]>(`/salons`);
+      return response || [];
+    } catch (error: any) {
+      console.error('Error fetching my salons:', error?.message || error);
+      return [];
+    }
+  }
+
+  /**
+   * Get ALL salons (Admin only)
+   * Supports filtering by status and search term
+   */
+  async getAllSalons(filters?: { status?: string; search?: string }): Promise<SalonDetails[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.search) params.append('search', filters.search);
+      
+      const response = await api.get<SalonDetails[]>(`/salons?${params.toString()}`);
+      return response || [];
+    } catch (error: any) {
+      console.error('Error fetching all salons:', error?.message || error);
+      return [];
+    }
+  }
+
+  /**
    * Update salon details
    */
   async updateSalon(salonId: string, data: Partial<SalonDetails>): Promise<SalonDetails> {
@@ -239,17 +271,37 @@ class SalonService {
   }
 
   /**
-   * Get business analytics/metrics computed from real appointment data
+   * Get the current user's employee record for a specific salon
+   */
+  async getCurrentEmployee(salonId: string): Promise<SalonEmployee | null> {
+    try {
+      const response = await api.get<SalonEmployee>(`/salons/${salonId}/employees/me`);
+      return response;
+    } catch (error: any) {
+      // If 404, it means user is not an employee (might be owner only)
+      if (error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get business analytics/metrics computed from real appointment and sales data
    */
   async getBusinessMetrics(salonId: string): Promise<BusinessMetrics> {
     try {
       // Try dedicated metrics endpoint first
       const response = await api.get<BusinessMetrics>(`/salons/${salonId}/metrics`);
       return response;
-    } catch (error: any) {
+    } catch {
       try {
-        // Fetch appointments for this salon owner (backend filters by user's salon)
-        const appointments = await api.get<any[]>('/appointments');
+        // Fetch appointments for this salon owner
+        const appointments = await api.get<any[]>('/appointments').catch(() => []);
+        
+        // Fetch sales for this salon
+        const salesResponse = await api.get<any>(`/sales?salonId=${salonId}&limit=100`).catch(() => ({ data: [] }));
+        const sales = Array.isArray(salesResponse) ? salesResponse : (salesResponse?.data || []);
         
         // Get date boundaries
         const now = new Date();
@@ -264,17 +316,24 @@ class SalonService {
           ? appointments.filter(apt => apt.salonId === salonId)
           : [];
         
-        // Compute today's metrics
+        // Compute appointment metrics for today
         const todayAppointments = salonAppointments.filter(apt => {
           const aptDate = new Date(apt.scheduledStart);
           return aptDate >= todayStart;
         });
         
-        const todayRevenue = todayAppointments
+        const todayAppointmentRevenue = todayAppointments
           .filter(apt => apt.status === 'completed')
           .reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
         
         const todayCompleted = todayAppointments.filter(apt => apt.status === 'completed').length;
+        
+        // Compute sales revenue for today
+        const todaySales = sales.filter((sale: any) => {
+          const saleDate = new Date(sale.createdAt);
+          return saleDate >= todayStart;
+        });
+        const todaySalesRevenue = todaySales.reduce((sum: number, sale: any) => sum + Number(sale.totalAmount || 0), 0);
         
         // Compute week's metrics
         const weekAppointments = salonAppointments.filter(apt => {
@@ -282,9 +341,15 @@ class SalonService {
           return aptDate >= weekStart;
         });
         
-        const weekRevenue = weekAppointments
+        const weekAppointmentRevenue = weekAppointments
           .filter(apt => apt.status === 'completed')
           .reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
+        
+        const weekSales = sales.filter((sale: any) => {
+          const saleDate = new Date(sale.createdAt);
+          return saleDate >= weekStart;
+        });
+        const weekSalesRevenue = weekSales.reduce((sum: number, sale: any) => sum + Number(sale.totalAmount || 0), 0);
         
         // Compute month's metrics
         const monthAppointments = salonAppointments.filter(apt => {
@@ -292,37 +357,43 @@ class SalonService {
           return aptDate >= monthStart;
         });
         
-        const monthRevenue = monthAppointments
+        const monthAppointmentRevenue = monthAppointments
           .filter(apt => apt.status === 'completed')
           .reduce((sum, apt) => sum + (apt.totalPrice || 0), 0);
         
-        // Count unique new customers (simplified - just count unique customer IDs this month)
+        const monthSales = sales.filter((sale: any) => {
+          const saleDate = new Date(sale.createdAt);
+          return saleDate >= monthStart;
+        });
+        const monthSalesRevenue = monthSales.reduce((sum: number, sale: any) => sum + Number(sale.totalAmount || 0), 0);
+        
+        // Count unique new customers
         const uniqueCustomersToday = new Set(todayAppointments.map(apt => apt.customerId)).size;
         const uniqueCustomersWeek = new Set(weekAppointments.map(apt => apt.customerId)).size;
         const uniqueCustomersMonth = new Set(monthAppointments.map(apt => apt.customerId)).size;
         
+        // Combine appointment revenue + sales revenue
         return {
           today: {
-            revenue: todayRevenue,
+            revenue: todayAppointmentRevenue + todaySalesRevenue,
             appointments: todayAppointments.length,
             completedAppointments: todayCompleted,
             newCustomers: uniqueCustomersToday,
           },
           week: {
-            revenue: weekRevenue,
+            revenue: weekAppointmentRevenue + weekSalesRevenue,
             appointments: weekAppointments.length,
             newCustomers: uniqueCustomersWeek,
           },
           month: {
-            revenue: monthRevenue,
+            revenue: monthAppointmentRevenue + monthSalesRevenue,
             appointments: monthAppointments.length,
             newCustomers: uniqueCustomersMonth,
           },
-          topServices: [], // Would need service data to compute
-          staffPerformance: [], // Would need staff data to compute
+          topServices: [],
+          staffPerformance: [],
         };
-      } catch (fetchError) {
-        console.warn('[SalonService] Failed to fetch appointments, returning empty metrics');
+      } catch {
         // Return zeros if we can't fetch data
         return {
           today: { revenue: 0, appointments: 0, completedAppointments: 0, newCustomers: 0 },

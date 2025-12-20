@@ -38,7 +38,7 @@ export interface Sale {
   createdAt: string;
   updatedAt: string;
   items?: SaleItem[];
-  commissions?: Array<{
+  commissions?: {
     id: string;
     amount: number;
     commissionRate: number;
@@ -48,7 +48,7 @@ export interface Sale {
       id: string;
       user?: { fullName: string };
     };
-  }>;
+  }[];
   customer?: {
     id: string;
     fullName: string;
@@ -64,18 +64,18 @@ export interface SalesAnalytics {
   totalSales: number;
   totalRevenue: number;
   averageOrderValue: number;
-  topServices?: Array<{
+  topServices?: {
     serviceId: string;
     serviceName: string;
     count: number;
     revenue: number;
-  }>;
-  topProducts?: Array<{
+  }[];
+  topProducts?: {
     productId: string;
     productName: string;
     count: number;
     revenue: number;
-  }>;
+  }[];
 }
 
 export interface Commission {
@@ -203,7 +203,7 @@ class SalesService {
         `/sales/analytics/summary?${params.toString()}`
       );
       return response;
-    } catch (error) {
+    } catch {
       // Return default analytics if endpoint not available
       return {
         totalSales: 0,

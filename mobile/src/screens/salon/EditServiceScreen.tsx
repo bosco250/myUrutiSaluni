@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -39,7 +39,7 @@ interface EditServiceScreenProps {
 }
 
 export default function EditServiceScreen({ navigation, route }: EditServiceScreenProps) {
-  const { salonId, service } = route.params;
+  const { service } = route.params;
   const { isDark } = useTheme();
   
   const [formData, setFormData] = useState({

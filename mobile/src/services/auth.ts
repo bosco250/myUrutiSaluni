@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from './api';
 import { tokenStorage } from './tokenStorage';
-import { config } from '../config';
 
 const USER_KEY = '@auth_user';
 
@@ -45,10 +44,11 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
       // Login endpoint doesn't require authentication
+      // isLoginRequest: true tells the API layer to treat 401 as invalid credentials, not session expired
       const response = await api.post<LoginResponse>(
         '/auth/login',
         credentials,
-        { requireAuth: false }
+        { requireAuth: false, isLoginRequest: true }
       );
       
       // Store token and user data (including ID, email, phone, fullName, role)
@@ -63,14 +63,13 @@ class AuthService {
       
       return response;
     } catch (error: any) {
-      // Handle API errors
-      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-        throw new Error('Invalid email or password');
-      }
+      // Re-throw the error with proper message from API layer
+      // The API layer now properly handles 401 for login vs session expiry
       if (error.message?.includes('Network')) {
         throw new Error('Network error. Please check your connection.');
       }
-      throw new Error(error.message || 'Login failed. Please try again.');
+      // Pass through the error message from the API (e.g., "Invalid email or password")
+      throw error;
     }
   }
 
@@ -196,7 +195,7 @@ class AuthService {
       if (userJson) {
         this.user = JSON.parse(userJson);
       }
-    } catch (error) {
+    } catch {
       // Ignore initialization errors
     }
   }

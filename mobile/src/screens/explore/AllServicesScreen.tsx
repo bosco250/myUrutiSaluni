@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -17,10 +17,17 @@ import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { exploreService, Service } from "../../services/explore";
 import ServiceCard from "./components/ServiceCard";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = (SCREEN_WIDTH - theme.spacing.md * 3) / 2;
+// Helper function to safely get screen width
+const getScreenWidth = () => {
+  try {
+    return Dimensions.get("window").width;
+  } catch {
+    return 375; // Fallback width
+  }
+};
+
+const getCardWidth = () => (getScreenWidth() - theme.spacing.md * 3) / 2;
 
 interface AllServicesScreenProps {
   navigation?: {
@@ -43,20 +50,12 @@ export default function AllServicesScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortOption, setSortOption] = useState<SortOption>("name");
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("explore");
-  const unreadNotificationCount = useUnreadNotifications();
 
   useEffect(() => {
     fetchServices();
   }, []);
 
-  useEffect(() => {
-    filterAndSortServices();
-  }, [services, searchQuery, sortOption, selectedCategory]);
 
   const fetchServices = async () => {
     try {
@@ -88,7 +87,7 @@ export default function AllServicesScreen({
     return Array.from(cats).sort();
   }, [services]);
 
-  const filterAndSortServices = () => {
+  const filterAndSortServices = useCallback(() => {
     let filtered = [...services];
 
     // Filter by search query
@@ -128,7 +127,11 @@ export default function AllServicesScreen({
     });
 
     setFilteredServices(filtered);
-  };
+  }, [services, searchQuery, sortOption, selectedCategory]);
+
+  useEffect(() => {
+    filterAndSortServices();
+  }, [filterAndSortServices]);
 
   const handleServicePress = (service: Service) => {
     navigation?.navigate("ServiceDetail", {
@@ -137,16 +140,6 @@ export default function AllServicesScreen({
     });
   };
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
-    }
-  };
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -394,7 +387,7 @@ export default function AllServicesScreen({
             {filteredServices.map((service) => (
               <View
                 key={service.id}
-                style={viewMode === "grid" ? styles.gridItem : undefined}
+                style={viewMode === "grid" ? [styles.gridItem, { width: getCardWidth() }] : undefined}
               >
                 <ServiceCard
                   image={null}
@@ -553,7 +546,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   gridItem: {
-    width: CARD_WIDTH,
     marginBottom: theme.spacing.md,
   },
   listContainer: {

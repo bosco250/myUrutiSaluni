@@ -164,7 +164,7 @@ class StaffService {
   async completeAppointment(
     appointmentId: string,
     notes?: string,
-    products?: Array<{ id: string; quantity: number }>
+    products?: { id: string; quantity: number }[]
   ): Promise<any> {
     const response = await api.patch<any>(`/appointments/${appointmentId}/complete`, {
       notes,

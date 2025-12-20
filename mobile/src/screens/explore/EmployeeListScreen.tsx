@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,9 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
+import { useTheme, useAuth } from "../../context";
 import { exploreService, Employee, Salon } from "../../services/explore";
+import { salonService } from "../../services/salon";
 
 interface EmployeeListScreenProps {
   navigation?: {
@@ -22,8 +22,9 @@ interface EmployeeListScreenProps {
   };
   route?: {
     params?: {
-      salonId: string;
+      salonId?: string;
       salon?: Salon;
+      isOwnerView?: boolean; // Set to true when coming from Staff Management
     };
   };
 }
@@ -33,54 +34,76 @@ export default function EmployeeListScreen({
   route,
 }: EmployeeListScreenProps) {
   const { isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("explore");
-  const unreadNotificationCount = useUnreadNotifications();
+  const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [salonId, setSalonId] = useState<string | null>(
+    route?.params?.salonId || route?.params?.salon?.id || null
+  );
+  const [salonName, setSalonName] = useState<string>(
+    route?.params?.salon?.name || ""
+  );
+  
+  // Check if this is an owner view (from Staff Management menu)
+  const isOwnerView = route?.params?.isOwnerView || 
+    (user?.role === 'salon_owner' && !route?.params?.salonId);
 
-  const salonId = route?.params?.salonId || route?.params?.salon?.id;
-  const salon = route?.params?.salon;
-
-  useEffect(() => {
-    if (salonId) {
-      fetchEmployees();
+  // Calculate card width safely
+  const cardWidth = useMemo(() => {
+    try {
+      return (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.md) / 2;
+    } catch {
+      return 160; // Fallback width
     }
-  }, [salonId]);
+  }, []);
 
-  const fetchEmployees = async () => {
-    if (!salonId) return;
-
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const salonEmployees = await exploreService.getSalonEmployees(salonId);
-      setEmployees(salonEmployees.filter((e) => e.isActive));
-    } catch (error: any) {
+      let currentSalonId = salonId;
+
+      // If no salonId provided and user is an owner, get their salon
+      if (!currentSalonId && user?.id && (user?.role === 'salon_owner' || user?.role === 'salon_employee')) {
+        const salon = await salonService.getSalonByOwnerId(String(user.id));
+        if (salon?.id) {
+          currentSalonId = salon.id;
+          setSalonId(salon.id);
+          setSalonName(salon.name || "My Salon");
+        }
+      }
+
+      if (currentSalonId) {
+        const salonEmployees = await exploreService.getSalonEmployees(currentSalonId);
+        setEmployees(salonEmployees.filter((e) => e.isActive));
+      }
+    } catch {
+      console.error("Error loading employees");
       setEmployees([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, user?.role, salonId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleEmployeePress = (employee: Employee) => {
-    navigation?.navigate("EmployeeDetail", {
+    // Use owner view if it's an owner viewing their staff
+    const detailScreen = isOwnerView ? "OwnerEmployeeDetail" : "EmployeeDetail";
+    navigation?.navigate(detailScreen, {
       employeeId: employee.id,
       salonId: salonId,
       employee,
     });
   };
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
+  const handleAddEmployee = () => {
+    if (salonId) {
+      navigation?.navigate("AddEmployee", { salonId });
     }
   };
+
 
   const getInitials = (name: string) => {
     return name
@@ -124,9 +147,19 @@ export default function EmployeeListScreen({
           />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]} numberOfLines={1}>
-          {salon?.name || "Employees"}
+          {isOwnerView ? "Staff Management" : (salonName || "Employees")}
         </Text>
-        <View style={styles.headerRight} />
+        {isOwnerView ? (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddEmployee}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="person-add" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerRight} />
+        )}
       </View>
 
       {loading ? (
@@ -141,12 +174,24 @@ export default function EmployeeListScreen({
         >
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-              Our Team
+              {isOwnerView ? "Your Team" : "Our Team"}
             </Text>
             <Text style={[styles.sectionSubtitle, dynamicStyles.textSecondary]}>
               {employees.length} {employees.length === 1 ? "employee" : "employees"}
             </Text>
           </View>
+
+          {/* Add Employee Card for Owners */}
+          {isOwnerView && (
+            <TouchableOpacity
+              style={styles.addEmployeeCard}
+              onPress={handleAddEmployee}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="add" size={20} color={theme.colors.primary} />
+              <Text style={styles.addEmployeeText}>Add New Employee</Text>
+            </TouchableOpacity>
+          )}
 
           {employees.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -164,7 +209,7 @@ export default function EmployeeListScreen({
               {employees.map((employee) => (
                 <TouchableOpacity
                   key={employee.id}
-                  style={[styles.employeeCard, dynamicStyles.card]}
+                  style={[styles.employeeCard, dynamicStyles.card, { width: cardWidth }]}
                   onPress={() => handleEmployeePress(employee)}
                   activeOpacity={0.7}
                 >
@@ -220,6 +265,11 @@ const styles = StyleSheet.create({
   backButton: {
     padding: theme.spacing.xs,
   },
+  addButton: {
+    padding: theme.spacing.xs,
+    width: 40,
+    alignItems: "center",
+  },
   headerTitle: {
     flex: 1,
     fontSize: 18,
@@ -263,7 +313,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   employeeCard: {
-    width: (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
     borderRadius: 16,
     padding: theme.spacing.md,
     alignItems: "center",
@@ -323,6 +372,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: theme.spacing.md,
     fontFamily: theme.fonts.regular,
+  },
+  addEmployeeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderStyle: "dashed",
+    gap: theme.spacing.sm,
+  },
+  addEmployeeText: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.primary,
   },
 });
 

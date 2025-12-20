@@ -13,10 +13,12 @@ import { InAppNotificationService } from './services/in-app-notification.service
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { SmtpConfigService } from './config/smtp.config';
 import { AppointmentsModule } from '../appointments/appointments.module';
+import { PushNotificationService } from './services/push-notification.service';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, NotificationPreference, Customer]),
+    TypeOrmModule.forFeature([Notification, NotificationPreference, Customer, User]),
     ScheduleModule.forRoot(),
     forwardRef(() => AppointmentsModule),
   ],
@@ -29,12 +31,14 @@ import { AppointmentsModule } from '../appointments/appointments.module';
     InAppNotificationService,
     NotificationOrchestratorService,
     SmtpConfigService,
+    PushNotificationService,
   ],
   exports: [
     NotificationsService,
     EmailService,
     InAppNotificationService,
     NotificationOrchestratorService,
+    PushNotificationService,
   ],
 })
 export class NotificationsModule {}

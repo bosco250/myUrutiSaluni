@@ -125,7 +125,7 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
   // Load initial data
   useEffect(() => {
     loadData(selectedFilter);
-  }, []);
+  }, [loadData, selectedFilter]);
 
   // Reload when filter changes
   useEffect(() => {
@@ -133,7 +133,7 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
       setLoading(true);
       loadData(selectedFilter);
     }
-  }, [selectedFilter]);
+  }, [selectedFilter, loading, loadData]);
 
   const onRefresh = () => {
     setRefreshing(true);

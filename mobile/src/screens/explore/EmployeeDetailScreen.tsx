@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,10 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Dimensions,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import {
   exploreService,
   Employee,
@@ -39,14 +37,10 @@ export default function EmployeeDetailScreen({
   route,
 }: EmployeeDetailScreenProps) {
   const { isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("explore");
-  const unreadNotificationCount = useUnreadNotifications();
   const [employee, setEmployee] = useState<Employee | null>(
     route?.params?.employee || null
   );
-  const [salon, setSalon] = useState<Salon | null>(null);
+  const [, setSalon] = useState<Salon | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(!route?.params?.employee);
   const [servicesLoading, setServicesLoading] = useState(false);
@@ -55,17 +49,7 @@ export default function EmployeeDetailScreen({
   const employeeId = route?.params?.employeeId;
   const salonId = route?.params?.salonId;
 
-  useEffect(() => {
-    if (employeeId && salonId) {
-      if (!employee) {
-        fetchEmployee();
-      }
-      fetchSalon();
-      fetchEmployeeServices();
-    }
-  }, [employeeId, salonId]);
-
-  const fetchEmployee = async () => {
+  const fetchEmployee = useCallback(async () => {
     if (!employeeId || !salonId) return;
 
     try {
@@ -77,25 +61,25 @@ export default function EmployeeDetailScreen({
       if (fetchedEmployee) {
         setEmployee(fetchedEmployee);
       }
-    } catch (error: any) {
+    } catch {
       // Handle error
     } finally {
       setLoading(false);
     }
-  };
+  }, [employeeId, salonId]);
 
-  const fetchSalon = async () => {
+  const fetchSalon = useCallback(async () => {
     if (!salonId) return;
 
     try {
       const fetchedSalon = await exploreService.getSalonById(salonId);
       setSalon(fetchedSalon);
-    } catch (error: any) {
+    } catch {
       // Handle error
     }
-  };
+  }, [salonId]);
 
-  const fetchEmployeeServices = async () => {
+  const fetchEmployeeServices = useCallback(async () => {
     if (!salonId) return;
 
     try {
@@ -103,23 +87,23 @@ export default function EmployeeDetailScreen({
       const salonServices = await exploreService.getServices(salonId);
       // Filter active services - in a real app, you'd filter by employee
       setServices(salonServices.filter((s) => s.isActive).slice(0, 5));
-    } catch (error: any) {
+    } catch {
       setServices([]);
     } finally {
       setServicesLoading(false);
     }
-  };
+  }, [salonId]);
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
+  useEffect(() => {
+    if (employeeId && salonId) {
+      if (!employee) {
+        fetchEmployee();
+      }
+      fetchSalon();
+      fetchEmployeeServices();
     }
-  };
+  }, [employeeId, salonId, employee, fetchEmployee, fetchSalon, fetchEmployeeServices]);
+
 
   const handleServicePress = (service: Service) => {
     navigation?.navigate("ServiceDetail", {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -24,7 +24,14 @@ export default function SalonCard({ salon, onPress, width }: SalonCardProps) {
   const { isDark } = useTheme();
   
   // Calculate card width - use provided width or default to grid width
-  const cardWidth = width || (Dimensions.get("window").width - theme.spacing.md * 2 - theme.spacing.sm) / 2;
+  const cardWidth = useMemo(() => {
+    if (width) return width;
+    try {
+      return (Dimensions.get("window").width - theme.spacing.md * 2 - theme.spacing.sm) / 2;
+    } catch {
+      return 160; // Fallback width
+    }
+  }, [width]);
 
   const dynamicStyles = {
     card: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   Switch,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { Button } from '../../components';
@@ -75,21 +74,7 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
     }
   };
 
-  useEffect(() => {
-    if (!salonId) {
-      Alert.alert('Error', 'Salon ID missing');
-      navigation.goBack();
-      return;
-    }
-
-    if (initialSalon) {
-      populateForm(initialSalon);
-    } else {
-      loadSalonDetails();
-    }
-  }, [initialSalon, salonId]);
-
-  const populateForm = (salon: any) => {
+  const populateForm = useCallback((salon: any) => {
     // Try to extract hours from settings or businessHours
     let openTime = '08:00';
     let closeTime = '20:00';
@@ -114,19 +99,33 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
       closeTime,
       isOpenSunday: !!salon.businessHours?.sunday?.isOpen,
     });
-  };
+  }, []);
 
-  const loadSalonDetails = async () => {
+  const loadSalonDetails = useCallback(async () => {
     try {
       const salon = await salonService.getSalonDetails(salonId);
       populateForm(salon);
-    } catch (err: any) {
+    } catch {
       Alert.alert('Error', 'Failed to load salon details');
       navigation.goBack();
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, [salonId, navigation, populateForm]);
+
+  useEffect(() => {
+    if (!salonId) {
+      Alert.alert('Error', 'Salon ID missing');
+      navigation.goBack();
+      return;
+    }
+
+    if (initialSalon) {
+      populateForm(initialSalon);
+    } else {
+      loadSalonDetails();
+    }
+  }, [initialSalon, salonId, navigation, populateForm, loadSalonDetails]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};

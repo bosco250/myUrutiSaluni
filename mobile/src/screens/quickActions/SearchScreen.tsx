@@ -229,7 +229,7 @@ export default function SearchScreen({ navigation, route }: SearchScreenProps) {
       
       setLocationSuggestions(locationArray);
       setResults(searchResults);
-    } catch (error: any) {
+    } catch {
       // Fallback empty results
       setResults({ salons: [], services: [] });
       setLocationSuggestions([]);

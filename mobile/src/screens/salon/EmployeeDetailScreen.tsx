@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ interface EmployeeDetailScreenProps {
 }
 
 const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) => {
-  const { employeeId, salonId, employeeName } = route.params;
+  const { employeeId, salonId } = route.params;
   const { isDark } = useTheme();
   
   const [employee, setEmployee] = useState<SalonEmployee | null>(null);
@@ -53,11 +53,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
     },
   };
 
-  useEffect(() => {
-    loadEmployee();
-  }, [employeeId, salonId]);
-
-  const loadEmployee = async () => {
+  const loadEmployee = useCallback(async () => {
     try {
       const employees = await salonService.getEmployees(salonId);
       const found = employees.find(e => e.id === employeeId);
@@ -68,7 +64,11 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
     } finally {
       setLoading(false);
     }
-  };
+  }, [employeeId, salonId]);
+
+  useEffect(() => {
+    loadEmployee();
+  }, [loadEmployee]);
 
   const handleStatusChange = async (newStatus: boolean) => {
     const action = newStatus ? 'activate' : 'suspend';

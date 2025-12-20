@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -117,7 +117,7 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
           } else {
             setStatus("failed");
           }
-        } catch (pollError) {
+        } catch {
           setStatus("failed");
         }
       } else if (paymentResponse.status === "completed") {

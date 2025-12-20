@@ -139,7 +139,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
               // In a real app we might refetch, but here we can just update local state optimistically or refetch
               Alert.alert('Success', 'Stock added successfully');
               setCurrentStock(prev => prev + parseFloat(qty));
-            } catch (err: any) {
+            } catch {
               Alert.alert('Error', 'Failed to add stock');
             } finally {
               setLoading(false);

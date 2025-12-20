@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useTheme, useAuth } from '../../context';
+import { useTheme } from '../../context';
 import {
   appointmentsService,
   Appointment,
@@ -83,7 +83,6 @@ const getSectionOrder = (title: string): number => {
 
 export default function SalonAppointmentsScreen({ navigation }: SalonAppointmentsScreenProps) {
   const { isDark } = useTheme();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -212,7 +211,7 @@ export default function SalonAppointmentsScreen({ navigation }: SalonAppointment
 
   useEffect(() => {
     loadAppointments();
-  }, []);
+  }, [loadAppointments]);
 
   const onRefresh = async () => {
     setRefreshing(true);

@@ -151,37 +151,22 @@ export class InventoryService {
       order: { name: 'ASC' }, // Order by name for consistency
     });
 
-    console.log(
-      `[INVENTORY] getProductsWithStock: Found ${products.length} products for salonId: ${salonId || 'all'}`,
-    );
-
     if (products.length === 0) {
-      console.log(`[INVENTORY] No products found for salonId: ${salonId}`);
       return [];
     }
 
     const productIds = products.map((p) => p.id);
-    console.log(
-      `[INVENTORY] Calculating stock for ${productIds.length} products:`,
-      productIds,
-    );
 
     const stockLevels = await this.getStockLevelsForProducts(productIds);
 
     const productsWithStock = products.map((product) => {
       const stockLevel = stockLevels[product.id] || 0;
-      console.log(
-        `[INVENTORY] Product ${product.name} (${product.id}): stockLevel = ${stockLevel}`,
-      );
       return {
         ...product,
         stockLevel,
       };
     });
 
-    console.log(
-      `[INVENTORY] Returning ${productsWithStock.length} products with stock levels`,
-    );
     return productsWithStock;
   }
 }

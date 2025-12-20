@@ -2,7 +2,6 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../../theme";
-import { useTheme } from "../../../context";
 
 interface TrendingCardProps {
   image: any; // Kept for compatibility but not used
@@ -16,17 +15,7 @@ export default function TrendingCard({
   title,
   onPress,
 }: TrendingCardProps) {
-  const { isDark } = useTheme();
-
-  // Get initials from title for placeholder
-  const getInitials = (text: string) => {
-    return text
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  // const { isDark } = useTheme();
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>

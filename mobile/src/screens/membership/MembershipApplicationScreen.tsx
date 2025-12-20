@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -74,12 +74,7 @@ export default function MembershipApplicationScreen({
 
   const totalSteps = 3;
 
-  // Check if user already has an application on mount
-  useEffect(() => {
-    checkExistingApplication();
-  }, []);
-
-  const checkExistingApplication = async () => {
+  const checkExistingApplication = useCallback(async () => {
     try {
       const response = await api.get("/memberships/applications/my");
       // Response IS the data directly, not response.data
@@ -107,7 +102,12 @@ export default function MembershipApplicationScreen({
     } finally {
       setCheckingExisting(false);
     }
-  };
+  }, [navigation]);
+
+  // Check if user already has an application on mount
+  useEffect(() => {
+    checkExistingApplication();
+  }, [checkExistingApplication]);
 
   const dynamicStyles = {
     container: {
@@ -311,7 +311,7 @@ export default function MembershipApplicationScreen({
             "Location captured but address not found. Please fill in manually."
           );
         }
-      } catch (geocodeError) {
+      } catch {
         // Geocoding failed, just set coordinates
         setFormData(prev => ({
           ...prev,
@@ -323,7 +323,7 @@ export default function MembershipApplicationScreen({
           "Location captured. Please fill in address details manually."
         );
       }
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to get current location. Please try again.");
     } finally {
       setLoadingLocation(false);
@@ -370,7 +370,7 @@ export default function MembershipApplicationScreen({
           "Please fill in address details manually."
         );
       }
-    } catch (error) {
+    } catch {
       // Geocoding failed, just set coordinates
       setFormData(prev => ({
         ...prev,

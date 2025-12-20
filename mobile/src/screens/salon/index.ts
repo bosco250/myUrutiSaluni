@@ -7,6 +7,8 @@ import EditServiceScreen from './EditServiceScreen';
 import AddProductScreen from './AddProductScreen';
 import StockManagementScreen from './StockManagementScreen';
 import EditSalonScreen from './EditSalonScreen';
+import CustomerManagementScreen from './CustomerManagementScreen';
+import CustomerDetailScreen from './CustomerDetailScreen';
 
 export {
   SalonListScreen,
@@ -18,4 +20,6 @@ export {
   AddProductScreen,
   StockManagementScreen,
   EditSalonScreen,
+  CustomerManagementScreen,
+  CustomerDetailScreen,
 };

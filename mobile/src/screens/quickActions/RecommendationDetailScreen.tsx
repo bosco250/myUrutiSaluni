@@ -15,7 +15,14 @@ import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { StyleRecommendation } from "../../services/ai";
 
-const { width, height } = Dimensions.get("window");
+// Helper function to safely get screen height
+const getScreenHeight = () => {
+  try {
+    return Dimensions.get("window").height;
+  } catch {
+    return 667; // Fallback height
+  }
+};
 
 interface RecommendationDetailScreenProps {
   navigation: {
@@ -102,7 +109,7 @@ export default function RecommendationDetailScreen({
         </SafeAreaView>
 
         {/* Large Image Section */}
-        <View style={styles.imageSection}>
+        <View style={[styles.imageSection, { height: getScreenHeight() * 0.5 }]}>
           {recommendation.imageUrl ? (
             <Image
               source={{ uri: recommendation.imageUrl }}
@@ -124,7 +131,7 @@ export default function RecommendationDetailScreen({
         </View>
 
         {/* Content Section */}
-        <View style={[styles.contentSection, dynamicStyles.container]}>
+        <View style={[styles.contentSection, dynamicStyles.container, { minHeight: getScreenHeight() * 0.5 }]}>
           {/* Style Name and Match */}
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
@@ -248,7 +255,6 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     width: "100%",
-    height: height * 0.5,
     backgroundColor: "#2C2C2E",
   },
   largeImage: {
@@ -271,7 +277,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     marginTop: -24,
     backgroundColor: theme.colors.background,
-    minHeight: height * 0.5,
   },
   titleRow: {
     flexDirection: "row",

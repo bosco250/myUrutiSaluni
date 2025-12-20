@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme, useAuth } from "../../context";
+import { useTheme } from "../../context";
 import { api } from "../../services/api";
 
 interface Transaction {
@@ -38,7 +38,6 @@ interface WalletScreenProps {
 
 export default function WalletScreen({ navigation }: WalletScreenProps) {
   const { isDark } = useTheme();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -83,7 +82,7 @@ export default function WalletScreen({ navigation }: WalletScreenProps) {
             amount: Number(t.amount),
             type: isDebit(t.transactionType) ? "debit" : "credit",
           }));
-        } catch (error) {
+        } catch {
           console.log("No transactions found");
         }
       }

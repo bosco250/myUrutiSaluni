@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,8 +39,6 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
   // Membership status: 'checking' | 'none' | 'pending' | 'rejected' | 'approved'
   const [membershipStatus, setMembershipStatus] = useState<'checking' | 'none' | 'pending' | 'rejected' | 'approved'>('checking');
   const [hasSalon, setHasSalon] = useState(true); // Assume true until proven otherwise
-  const [salonId, setSalonId] = useState<string | null>(null);
-  const [salonName, setSalonName] = useState<string>('My Salon');
   const [metrics, setMetrics] = useState<BusinessMetrics | null>(null);
 
   // Dynamic styles for dark mode
@@ -59,11 +57,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
     },
   };
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [user]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       if (!user?.id) return;
@@ -71,7 +65,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
       // Step 1: Check membership status first
       try {
         const membershipResponse = await api.get('/memberships/status');
-        const { isMember, application } = membershipResponse as any;
+        const { application } = membershipResponse as any;
         
         if (!application) {
           // No application exists - user needs to apply for membership
@@ -111,11 +105,27 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
       }
 
       setHasSalon(true);
-      setSalonId(salon.id);
-      setSalonName(salon.name);
 
       // Step 3: Get business metrics
       const businessMetrics = await salonService.getBusinessMetrics(salon.id);
+      
+      // Step 4: Get employee count if staffPerformance is empty
+      if (!businessMetrics.staffPerformance || businessMetrics.staffPerformance.length === 0) {
+        try {
+          const employees = await salonService.getEmployees(salon.id);
+          // Create minimal staff performance entries for counting
+          businessMetrics.staffPerformance = employees.map((emp: any) => ({
+            employeeId: emp.id,
+            employeeName: emp.user?.fullName || 'Employee',
+            appointments: 0,
+            revenue: 0,
+            rating: 0,
+          }));
+        } catch {
+          // Ignore employee fetch errors
+        }
+      }
+      
       setMetrics(businessMetrics);
     } catch (error: any) {
       console.error('[OwnerDashboard] Error loading dashboard data:', error);
@@ -126,7 +136,11 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [user, loadDashboardData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -587,7 +601,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
               <View>
                 <Text style={styles.revenueLabel}>Today's Revenue</Text>
                 <Text style={styles.revenueValue}>
-                  ${metrics?.today.revenue.toFixed(0) || '0'}
+                  RWF {(metrics?.today.revenue || 0).toLocaleString()}
                 </Text>
                 <View style={styles.revenueChangeContainer}>
                   <View style={styles.revenueChangeBadge}>
@@ -755,7 +769,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
                       {service.bookings} bookings
                     </Text>
                   </View>
-                  <Text style={styles.serviceRevenue}>${service.revenue.toFixed(0)}</Text>
+                  <Text style={styles.serviceRevenue}>RWF {service.revenue.toLocaleString()}</Text>
                 </View>
               ))}
             </View>
@@ -789,7 +803,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
                   <View style={styles.staffInfo}>
                     <Text style={[styles.staffName, dynamicStyles.text]}>{staff.employeeName}</Text>
                     <Text style={[styles.staffStats, dynamicStyles.textSecondary]}>
-                      {staff.appointments} appointments • ${staff.revenue.toFixed(0)}
+                      {staff.appointments} appointments • RWF {staff.revenue.toLocaleString()}
                     </Text>
                   </View>
                   <View style={styles.staffRating}>

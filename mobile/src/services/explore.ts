@@ -179,7 +179,7 @@ class ExploreService {
         ...product,
         price: product.unitPrice ?? product.price ?? null,
       }));
-    } catch (error: any) {
+    } catch {
       // Return empty array instead of throwing to prevent UI crashes
       // The UI will show "No products available" message
       return [];
@@ -206,7 +206,7 @@ class ExploreService {
       }
 
       return response;
-    } catch (error: any) {
+    } catch {
       return [];
     }
   }
@@ -221,7 +221,7 @@ class ExploreService {
     try {
       const employees = await this.getSalonEmployees(salonId);
       return employees.find((emp) => emp.id === employeeId) || null;
-    } catch (error: any) {
+    } catch {
       return null;
     }
   }

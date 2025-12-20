@@ -38,7 +38,7 @@ export default function AddServiceScreen({ navigation, route }: AddServiceScreen
       Alert.alert('Error', 'Salon ID is missing');
       navigation.goBack();
     }
-  }, [salonId]);
+  }, [salonId, navigation]);
   
   const [formData, setFormData] = useState({
     name: '',

@@ -15,7 +15,14 @@ import { theme } from "../theme";
 const welcomeImage = require("../../assets/Welcome page.png");
 const logo = require("../../assets/Logo.png");
 
-const { width, height } = Dimensions.get("window");
+// Helper function to safely get screen dimensions
+const getScreenDimensions = () => {
+  try {
+    return Dimensions.get("window");
+  } catch {
+    return { width: 375, height: 667 }; // Fallback dimensions
+  }
+};
 
 interface WelcomeScreenProps {
   navigation?: {
@@ -36,12 +43,12 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
       {/* Background Image */}
       <Image
         source={welcomeImage}
-        style={styles.backgroundImage}
+        style={[styles.backgroundImage, { width: getScreenDimensions().width, height: getScreenDimensions().height }]}
         resizeMode="cover"
       />
       
       {/* Dark Overlay for better text readability */}
-      <View style={styles.overlay} />
+      <View style={[styles.overlay, { width: getScreenDimensions().width, height: getScreenDimensions().height }]} />
 
       {/* Decorative Elements */}
       <View style={styles.decorativeTop} />
@@ -95,14 +102,10 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     position: "absolute",
-    width: width,
-    height: height,
     opacity: 0.4,
   },
   overlay: {
     position: "absolute",
-    width: width,
-    height: height,
     backgroundColor: "rgba(28, 28, 30, 0.8)", // Dark overlay with gradient effect
   },
   decorativeTop: {

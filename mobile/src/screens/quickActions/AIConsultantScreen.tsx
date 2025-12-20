@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
-  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,7 +24,14 @@ import {
 const CACHED_PHOTO_KEY = "@ai_cached_photo_uri";
 const CACHED_ANALYSIS_KEY = "@ai_cached_analysis";
 
-const { width } = Dimensions.get("window");
+// Helper function to safely get screen width
+const getScreenWidth = () => {
+  try {
+    return Dimensions.get("window").width;
+  } catch {
+    return 375; // Fallback width
+  }
+};
 
 // No logo placeholder - we'll use a better UI placeholder
 
@@ -90,7 +96,7 @@ export default function AIConsultantScreen({
     route?.params?.photoUri || null
   );
   const [error, setError] = useState<string | null>(null);
-  const [isCancelled, setIsCancelled] = useState(false);
+  const [, setIsCancelled] = useState(false);
   const cancelRequestRef = useRef<boolean>(false);
 
   const dynamicStyles = {
@@ -194,9 +200,9 @@ export default function AIConsultantScreen({
     };
 
     loadPhotoAndAnalyze();
-  }, [photoUri]);
+  }, [photoUri, analyzePhoto]);
 
-  const analyzePhoto = async (photoToAnalyze?: string) => {
+  const analyzePhoto = useCallback(async (photoToAnalyze?: string) => {
     const photoToUse = photoToAnalyze || photoUri;
     if (!photoToUse) {
       setError("No photo to analyze");
@@ -247,7 +253,7 @@ export default function AIConsultantScreen({
         setLoading(false);
       }
     }
-  };
+  }, [photoUri]);
 
   const handleCancelAnalysis = () => {
     cancelRequestRef.current = true;
@@ -617,7 +623,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   styleCard: {
-    width: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
+    width: (getScreenWidth() - theme.spacing.lg * 2 - theme.spacing.md) / 2,
     backgroundColor: theme.colors.background,
     borderRadius: 12,
     marginBottom: theme.spacing.md,

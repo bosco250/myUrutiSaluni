@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { useAuth } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import {
   exploreService,
   Service,
@@ -62,10 +61,6 @@ export default function BookingFlowScreen({
   const [currentStep, setCurrentStep] = useState<BookingStep>("employee");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("explore");
-  const unreadNotificationCount = useUnreadNotifications();
 
   // Service and Salon data
   const [service, setService] = useState<Service | null>(
@@ -88,7 +83,7 @@ export default function BookingFlowScreen({
 
   // Availability data
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
-  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [, setAvailabilityLoading] = useState(false);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [timeSlotsLoading, setTimeSlotsLoading] = useState(false);
 
@@ -99,60 +94,19 @@ export default function BookingFlowScreen({
   const serviceId = route?.params?.serviceId || route?.params?.service?.id;
 
   // Fetch initial data
-  useEffect(() => {
-    if (serviceId) {
-      fetchInitialData();
+  const fetchEmployees = useCallback(async (salonId: string) => {
+    try {
+      setEmployeesLoading(true);
+      const salonEmployees = await exploreService.getSalonEmployees(salonId);
+      setEmployees(salonEmployees.filter((emp) => emp.isActive));
+    } catch {
+      setError("Failed to load employees");
+    } finally {
+      setEmployeesLoading(false);
     }
-  }, [serviceId]);
+  }, []);
 
-  // Fetch customer ID
-  useEffect(() => {
-    if (user?.id) {
-      fetchCustomerId();
-    }
-  }, [user?.id]);
-
-  // Fetch availability when employee is selected
-  useEffect(() => {
-    // Only fetch if we have a valid employee ID (not "any") and we're on the datetime step
-    if (
-      selectedEmployeeId &&
-      selectedEmployeeId !== "any" &&
-      service &&
-      currentStep === "datetime"
-    ) {
-      fetchAvailability();
-    } else if (
-      isAnyEmployee &&
-      service &&
-      currentStep === "datetime" &&
-      operatingHours
-    ) {
-      // Generate availability from operating hours when "Any Available" is selected
-      fetchAvailability();
-    }
-  }, [selectedEmployeeId, isAnyEmployee, service, currentStep, operatingHours]);
-
-  // Fetch time slots when date is selected
-  useEffect(() => {
-    if (selectedDate && service) {
-      if (isAnyEmployee) {
-        // Generate time slots from salon operating hours (like web version)
-        generateTimeSlotsFromOperatingHours();
-      } else if (selectedEmployeeId) {
-        // Fetch time slots from backend for specific employee
-        fetchTimeSlots();
-      }
-    }
-  }, [
-    selectedDate,
-    selectedEmployeeId,
-    isAnyEmployee,
-    service,
-    operatingHours,
-  ]);
-
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -184,13 +138,13 @@ export default function BookingFlowScreen({
               // Try parsing - handle both regular JSON and escaped JSON strings
               try {
                 hours = JSON.parse(fetchedSalon.settings.operatingHours);
-              } catch (parseError) {
+              } catch {
                 // If first parse fails, try parsing again (in case of double-encoded JSON)
                 try {
                   const unescaped =
                     fetchedSalon.settings.operatingHours.replace(/\\"/g, '"');
                   hours = JSON.parse(unescaped);
-                } catch (secondError) {
+                } catch {
                   // If still fails, try direct parse of the string
                   hours = JSON.parse(fetchedSalon.settings.operatingHours);
                 }
@@ -218,7 +172,7 @@ export default function BookingFlowScreen({
                 }
               }
             }
-          } catch (error) {
+          } catch {
             // If parsing fails, try openingHours as fallback
           }
         }
@@ -246,7 +200,7 @@ export default function BookingFlowScreen({
                 sunday: { isOpen: true, startTime, endTime },
               };
             }
-          } catch (error) {
+          } catch {
             // If parsing fails, operatingHours will remain null
           }
         }
@@ -257,15 +211,15 @@ export default function BookingFlowScreen({
 
         fetchEmployees(salonIdToUse);
       }
-    } catch (error: any) {
-      setError(error.message || "Failed to load booking data");
-      Alert.alert("Error", error.message || "Failed to load booking data");
+    } catch (err: any) {
+      setError(err.message || "Failed to load booking data");
+      Alert.alert("Error", err.message || "Failed to load booking data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [service, serviceId, route?.params?.salonId, fetchEmployees]);
 
-  const fetchCustomerId = async () => {
+  const fetchCustomerId = useCallback(async () => {
     if (!user?.id) return;
     try {
       const userId = String(user.id);
@@ -273,24 +227,12 @@ export default function BookingFlowScreen({
       if (customer && customer.id) {
         setCustomerId(customer.id);
       }
-    } catch (error: any) {
+    } catch {
       // Customer might not exist yet, that's okay
     }
-  };
+  }, [user?.id]);
 
-  const fetchEmployees = async (salonId: string) => {
-    try {
-      setEmployeesLoading(true);
-      const salonEmployees = await exploreService.getSalonEmployees(salonId);
-      setEmployees(salonEmployees.filter((emp) => emp.isActive));
-    } catch (error: any) {
-      setError("Failed to load employees");
-    } finally {
-      setEmployeesLoading(false);
-    }
-  };
-
-  const fetchAvailability = async () => {
+  const fetchAvailability = useCallback(async () => {
     if (!service) return;
 
     try {
@@ -368,15 +310,15 @@ export default function BookingFlowScreen({
         // No valid employee selected
         setAvailability([]);
       }
-    } catch (error: any) {
+    } catch {
       setError("Failed to load availability");
       setAvailability([]);
     } finally {
       setAvailabilityLoading(false);
     }
-  };
+  }, [service, isAnyEmployee, operatingHours, selectedEmployeeId]);
 
-  const fetchTimeSlots = async () => {
+  const fetchTimeSlots = useCallback(async () => {
     if (!selectedDate || !selectedEmployeeId || !service) return;
 
     try {
@@ -392,15 +334,15 @@ export default function BookingFlowScreen({
 
       // Use slots directly from backend - they already respect operating hours
       setTimeSlots(slots);
-    } catch (error: any) {
+    } catch {
       setError("Failed to load time slots");
     } finally {
       setTimeSlotsLoading(false);
     }
-  };
+  }, [selectedDate, selectedEmployeeId, service]);
 
   // Generate time slots from operating hours (same logic as web version)
-  const generateTimeSlotsFromOperatingHours = () => {
+  const generateTimeSlotsFromOperatingHours = useCallback(() => {
     if (!selectedDate || !service || !operatingHours) {
       setTimeSlots([]);
       return;
@@ -498,13 +440,65 @@ export default function BookingFlowScreen({
       }
 
       setTimeSlots(slots);
-    } catch (error: any) {
+    } catch {
       setError("Failed to generate time slots from operating hours");
       setTimeSlots([]);
     } finally {
       setTimeSlotsLoading(false);
     }
-  };
+  }, [selectedDate, service, operatingHours]);
+
+  useEffect(() => {
+    if (serviceId) {
+      fetchInitialData();
+    }
+  }, [serviceId, fetchInitialData]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchCustomerId();
+    }
+  }, [user?.id, fetchCustomerId]);
+
+  useEffect(() => {
+    // Only fetch if we have a valid employee ID (not "any") and we're on the datetime step
+    if (
+      selectedEmployeeId &&
+      selectedEmployeeId !== "any" &&
+      service &&
+      currentStep === "datetime"
+    ) {
+      fetchAvailability();
+    } else if (
+      isAnyEmployee &&
+      service &&
+      currentStep === "datetime" &&
+      operatingHours
+    ) {
+      // Generate availability from operating hours when "Any Available" is selected
+      fetchAvailability();
+    }
+  }, [selectedEmployeeId, isAnyEmployee, service, currentStep, operatingHours, fetchAvailability]);
+
+  useEffect(() => {
+    if (selectedDate && service) {
+      if (isAnyEmployee) {
+        // Generate time slots from salon operating hours (like web version)
+        generateTimeSlotsFromOperatingHours();
+      } else if (selectedEmployeeId) {
+        // Fetch time slots from backend for specific employee
+        fetchTimeSlots();
+      }
+    }
+  }, [
+    selectedDate,
+    selectedEmployeeId,
+    isAnyEmployee,
+    service,
+    operatingHours,
+    generateTimeSlotsFromOperatingHours,
+    fetchTimeSlots,
+  ]);
 
   const handleEmployeeSelect = (employeeId: string) => {
     if (employeeId === "any") {
@@ -571,16 +565,6 @@ export default function BookingFlowScreen({
     }
   };
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
-    }
-  };
 
   const handleConfirmBooking = async () => {
     if (!selectedDate || !selectedSlot || !service || !salon) {

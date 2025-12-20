@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Image,
   Modal,
-  Alert,
 } from "react-native";
 import { Button, Input, Checkbox, SocialButton } from "../../components";
 import { MailIcon, LockIcon } from "../../components/common/Icons";
@@ -19,6 +18,23 @@ import { useAuth } from "../../context";
 // Import logo
 const logo = require("../../../assets/Logo.png");
 
+// Error types for better categorization
+type ErrorType = 
+  | "network" 
+  | "credentials" 
+  | "account_locked" 
+  | "account_inactive"
+  | "rate_limit" 
+  | "server" 
+  | "validation"
+  | "unknown";
+
+interface LoginError {
+  type: ErrorType;
+  message: string;
+  field?: "email" | "password" | "general";
+}
+
 interface LoginScreenProps {
   navigation?: {
     navigate: (screen: string) => void;
@@ -26,16 +42,213 @@ interface LoginScreenProps {
   };
 }
 
+// Error Banner Component for displaying general errors
+const ErrorBanner = ({ 
+  error, 
+  onDismiss 
+}: { 
+  error: LoginError | null; 
+  onDismiss: () => void;
+}) => {
+  if (!error || error.field !== "general") return null;
+
+  const getErrorIcon = (type: ErrorType) => {
+    switch (type) {
+      case "network":
+        return "📡";
+      case "rate_limit":
+        return "⏱️";
+      case "account_locked":
+        return "🔒";
+      case "account_inactive":
+        return "⚠️";
+      case "server":
+        return "🔧";
+      default:
+        return "❌";
+    }
+  };
+
+  const getErrorColor = (type: ErrorType) => {
+    switch (type) {
+      case "network":
+        return "#FFA500"; // Orange for network issues
+      case "rate_limit":
+        return "#FF6B6B"; // Red for rate limiting
+      case "account_locked":
+      case "account_inactive":
+        return "#9B59B6"; // Purple for account issues
+      case "server":
+        return "#3498DB"; // Blue for server issues
+      default:
+        return theme.colors.error;
+    }
+  };
+
+  return (
+    <View style={[styles.errorBanner, { borderLeftColor: getErrorColor(error.type) }]}>
+      <View style={styles.errorBannerContent}>
+        <Text style={styles.errorBannerIcon}>{getErrorIcon(error.type)}</Text>
+        <View style={styles.errorBannerTextContainer}>
+          <Text style={styles.errorBannerTitle}>
+            {error.type === "network" ? "Connection Error" :
+             error.type === "rate_limit" ? "Too Many Attempts" :
+             error.type === "account_locked" ? "Account Locked" :
+             error.type === "account_inactive" ? "Account Inactive" :
+             error.type === "server" ? "Server Error" :
+             "Login Failed"}
+          </Text>
+          <Text style={styles.errorBannerMessage}>{error.message}</Text>
+        </View>
+        <TouchableOpacity onPress={onDismiss} style={styles.errorBannerClose}>
+          <Text style={styles.errorBannerCloseText}>✕</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
-  );
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [generalError, setGeneralError] = useState<LoginError | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Parse and categorize errors from the backend or network
+  const parseError = (error: any): LoginError => {
+    const message = error.message?.toLowerCase() || "";
+    const statusCode = error.statusCode || error.status;
+
+    // Network errors
+    if (
+      message.includes("network") || 
+      message.includes("fetch") ||
+      message.includes("connection") ||
+      message.includes("timeout") ||
+      message.includes("econnrefused")
+    ) {
+      return {
+        type: "network",
+        message: "Unable to connect to the server. Please check your internet connection and try again.",
+        field: "general",
+      };
+    }
+
+    // Rate limiting
+    if (
+      message.includes("too many") || 
+      message.includes("rate limit") ||
+      message.includes("try again later") ||
+      statusCode === 429
+    ) {
+      return {
+        type: "rate_limit",
+        message: "Too many login attempts. Please wait a few minutes before trying again.",
+        field: "general",
+      };
+    }
+
+    // Account locked
+    if (
+      message.includes("locked") || 
+      message.includes("suspended") ||
+      message.includes("blocked")
+    ) {
+      return {
+        type: "account_locked",
+        message: "Your account has been locked. Please contact support for assistance.",
+        field: "general",
+      };
+    }
+
+    // Account inactive
+    if (
+      message.includes("inactive") || 
+      message.includes("disabled") ||
+      message.includes("not activated") ||
+      message.includes("verify your email")
+    ) {
+      return {
+        type: "account_inactive",
+        message: "Your account is not active. Please verify your email or contact support.",
+        field: "general",
+      };
+    }
+
+    // Invalid credentials (401)
+    if (
+      message.includes("invalid") ||
+      message.includes("incorrect") ||
+      message.includes("wrong") ||
+      message.includes("unauthorized") ||
+      message.includes("401") ||
+      statusCode === 401
+    ) {
+      return {
+        type: "credentials",
+        message: "Invalid email or password. Please check your credentials and try again.",
+        field: "general",
+      };
+    }
+
+    // User not found
+    if (
+      message.includes("not found") ||
+      message.includes("no user") ||
+      message.includes("doesn't exist") ||
+      message.includes("does not exist")
+    ) {
+      return {
+        type: "credentials",
+        message: "No account found with this email. Please check your email or sign up.",
+        field: "email",
+      };
+    }
+
+    // Server errors
+    if (
+      message.includes("server") ||
+      message.includes("500") ||
+      message.includes("502") ||
+      message.includes("503") ||
+      statusCode >= 500
+    ) {
+      return {
+        type: "server",
+        message: "Our servers are experiencing issues. Please try again in a few moments.",
+        field: "general",
+      };
+    }
+
+    // Email-specific errors
+    if (message.includes("email")) {
+      return {
+        type: "validation",
+        message: error.message || "Please enter a valid email address.",
+        field: "email",
+      };
+    }
+
+    // Password-specific errors
+    if (message.includes("password")) {
+      return {
+        type: "validation",
+        message: error.message || "Invalid password.",
+        field: "password",
+      };
+    }
+
+    // Unknown/default error
+    return {
+      type: "unknown",
+      message: error.message || "Something went wrong. Please try again.",
+      field: "general",
+    };
+  };
 
   const validate = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -52,15 +265,44 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    setErrors(newErrors);
+    setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const clearErrors = () => {
+    setFieldErrors({});
+    setGeneralError(null);
+  };
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    // Clear email error when user starts typing
+    if (fieldErrors.email) {
+      setFieldErrors(prev => ({ ...prev, email: undefined }));
+    }
+    // Clear general error when user modifies input
+    if (generalError) {
+      setGeneralError(null);
+    }
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    // Clear password error when user starts typing
+    if (fieldErrors.password) {
+      setFieldErrors(prev => ({ ...prev, password: undefined }));
+    }
+    // Clear general error when user modifies input
+    if (generalError) {
+      setGeneralError(null);
+    }
   };
 
   const handleLogin = async () => {
     if (!validate()) return;
 
     setLoading(true);
-    setErrors({});
+    clearErrors();
 
     try {
       // Call login through auth context (which handles storage automatically)
@@ -71,21 +313,19 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       // Show success modal
       setShowSuccessModal(true);
     } catch (error: any) {
-      // Handle errors
-      const errorMessage = error.message || "Login failed. Please try again.";
-
-      // Check if it's a validation error from backend
-      if (
-        errorMessage.toLowerCase().includes("email") ||
-        errorMessage.toLowerCase().includes("password")
-      ) {
-        setErrors({
-          email: errorMessage,
-          password: errorMessage,
-        });
+      console.log("Login error:", error);
+      
+      // Parse and categorize the error
+      const parsedError = parseError(error);
+      
+      // Handle error based on its field
+      if (parsedError.field === "email") {
+        setFieldErrors({ email: parsedError.message });
+      } else if (parsedError.field === "password") {
+        setFieldErrors({ password: parsedError.message });
       } else {
-        // Show alert for other errors
-        Alert.alert("Login Error", errorMessage);
+        // General errors go to the banner
+        setGeneralError(parsedError);
       }
     } finally {
       setLoading(false);
@@ -125,17 +365,20 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               <Text style={styles.subtitle}>Please log in to your account</Text>
             </View>
 
+            {/* Error Banner for general errors */}
+            <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
+
             {/* Form */}
             <View style={styles.form}>
               <Input
                 label="Email or Phone"
                 placeholder="example@email.com"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={handleEmailChange}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
-                error={errors.email}
+                error={fieldErrors.email}
                 leftIcon={<MailIcon size={20} color={theme.colors.primary} />}
               />
 
@@ -143,11 +386,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 label="Password"
                 placeholder="Enter your password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={handlePasswordChange}
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete="password"
-                error={errors.password}
+                error={fieldErrors.password}
                 leftIcon={<LockIcon size={20} color={theme.colors.primary} />}
               />
 
@@ -428,5 +671,49 @@ const styles = StyleSheet.create({
   continueButton: {
     width: "100%",
     backgroundColor: theme.colors.primary,
+  },
+  // Error Banner Styles
+  errorBanner: {
+    backgroundColor: "#FFF5F5",
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    marginBottom: theme.spacing.md,
+    overflow: "hidden",
+  },
+  errorBannerContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: theme.spacing.md,
+  },
+  errorBannerIcon: {
+    fontSize: 24,
+    marginRight: theme.spacing.sm,
+    marginTop: 2,
+  },
+  errorBannerTextContainer: {
+    flex: 1,
+  },
+  errorBannerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.text,
+    fontFamily: theme.fonts.bold,
+    marginBottom: 4,
+  },
+  errorBannerMessage: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    lineHeight: 20,
+  },
+  errorBannerClose: {
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.sm,
+    marginTop: -4,
+  },
+  errorBannerCloseText: {
+    fontSize: 18,
+    color: theme.colors.textSecondary,
+    fontWeight: "300",
   },
 });

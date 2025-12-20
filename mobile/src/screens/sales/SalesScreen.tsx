@@ -17,6 +17,7 @@ import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService, SalonProduct, SalonEmployee } from '../../services/salon';
 import { salesService, CreateSaleDto } from '../../services/sales';
+import { api } from '../../services/api';
 
 interface SalesScreenProps {
   navigation: {
@@ -58,9 +59,11 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [products, setProducts] = useState<SalonProduct[]>([]);
   const [employees, setEmployees] = useState<SalonEmployee[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
   const [searchQuery, setSearchQuery] = useState('');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('cash');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<SalonEmployee | null>(null);
@@ -68,6 +71,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
 
   // Dynamic styles for dark/light mode
   const dynamicStyles = {
@@ -119,6 +123,28 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
         // Load employees
         const employeesData = await salonService.getEmployees(salon.id).catch(() => []);
         setEmployees(employeesData);
+
+        // Load customers for the salon
+        try {
+          setLoadingCustomers(true);
+          const customersResponse = await api.get<any>(`/salons/${salon.id}/customers`);
+          // Handle response format
+          const customersData = Array.isArray(customersResponse) 
+            ? customersResponse 
+            : (customersResponse?.data || []);
+          // Map salon customers to simple customer format
+          const mappedCustomers = customersData.map((sc: any) => ({
+            id: sc.customerId || sc.customer?.id,
+            fullName: sc.customer?.fullName || 'Unknown',
+            phone: sc.customer?.phone,
+          })).filter((c: any) => c.id); // Filter out any without IDs
+          setCustomers(mappedCustomers);
+        } catch (err) {
+          console.log('Could not load customers:', err);
+          setCustomers([]);
+        } finally {
+          setLoadingCustomers(false);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -238,7 +264,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
         items: items,
       };
 
-      const result = await salesService.createSale(saleData);
+      await salesService.createSale(saleData);
 
       setShowCart(false);
       setShowSuccessModal(true);
@@ -658,7 +684,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
         </View>
       </Modal>
 
-      {/* Customer Selection Modal (placeholder - would need customer list) */}
+      {/* Customer Selection Modal */}
       <Modal visible={showCustomerModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.selectionModal, dynamicStyles.modal]}>
@@ -669,20 +695,100 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
               </TouchableOpacity>
             </View>
             <Text style={[styles.selectionHint, dynamicStyles.textSecondary]}>
-              Optional - for loyalty points
+              Optional - for loyalty points & customer tracking
             </Text>
-            <View style={styles.emptySelection}>
-              <MaterialIcons name="person-search" size={48} color={dynamicStyles.textSecondary.color} />
-              <Text style={[styles.emptySelectionText, dynamicStyles.textSecondary]}>
-                Customer selection coming soon
-              </Text>
-              <TouchableOpacity
-                style={[styles.skipBtn, { backgroundColor: theme.colors.primary }]}
-                onPress={() => setShowCustomerModal(false)}
-              >
-                <Text style={{ color: theme.colors.white, fontWeight: '600' }}>Skip</Text>
-              </TouchableOpacity>
+            
+            {/* Customer Search */}
+            <View style={[styles.customerSearchBox, dynamicStyles.input]}>
+              <MaterialIcons name="search" size={20} color={dynamicStyles.textSecondary.color} />
+              <TextInput
+                style={[styles.customerSearchInput, { color: dynamicStyles.text.color }]}
+                placeholder="Search by name or phone..."
+                placeholderTextColor={dynamicStyles.textSecondary.color}
+                value={customerSearchQuery}
+                onChangeText={setCustomerSearchQuery}
+              />
+              {customerSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setCustomerSearchQuery('')}>
+                  <MaterialIcons name="close" size={18} color={dynamicStyles.textSecondary.color} />
+                </TouchableOpacity>
+              )}
             </View>
+
+            {loadingCustomers ? (
+              <View style={styles.emptySelection}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+            ) : (
+              <ScrollView style={styles.selectionList}>
+                {/* Show filtered customers */}
+                {customers
+                  .filter(c => 
+                    !customerSearchQuery || 
+                    c.fullName?.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                    c.phone?.includes(customerSearchQuery)
+                  )
+                  .map((cust) => (
+                    <TouchableOpacity
+                      key={cust.id}
+                      style={[styles.selectionItem, dynamicStyles.card]}
+                      onPress={() => {
+                        setSelectedCustomer(cust);
+                        setShowCustomerModal(false);
+                        setCustomerSearchQuery('');
+                      }}
+                    >
+                      <View style={[styles.selectionIcon, { backgroundColor: theme.colors.success + '15' }]}>
+                        <MaterialIcons name="person" size={22} color={theme.colors.success} />
+                      </View>
+                      <View style={styles.selectionInfo}>
+                        <Text style={[styles.selectionName, dynamicStyles.text]}>
+                          {cust.fullName || 'Unknown'}
+                        </Text>
+                        <Text style={[styles.selectionMeta, dynamicStyles.textSecondary]}>
+                          {cust.phone || 'No phone'}
+                        </Text>
+                      </View>
+                      {selectedCustomer?.id === cust.id && (
+                        <MaterialIcons name="check-circle" size={24} color={theme.colors.success} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                {customers.length === 0 && (
+                  <View style={styles.emptySelection}>
+                    <MaterialIcons name="people-outline" size={48} color={dynamicStyles.textSecondary.color} />
+                    <Text style={[styles.emptySelectionText, dynamicStyles.textSecondary]}>
+                      No customers found
+                    </Text>
+                  </View>
+                )}
+                {customers.length > 0 && 
+                  customers.filter(c => 
+                    !customerSearchQuery || 
+                    c.fullName?.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                    c.phone?.includes(customerSearchQuery)
+                  ).length === 0 && (
+                  <View style={styles.emptySelection}>
+                    <MaterialIcons name="search-off" size={48} color={dynamicStyles.textSecondary.color} />
+                    <Text style={[styles.emptySelectionText, dynamicStyles.textSecondary]}>
+                      No customers match your search
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+
+            {/* Skip button */}
+            <TouchableOpacity
+              style={[styles.skipCustomerBtn, { borderColor: theme.colors.primary }]}
+              onPress={() => {
+                setSelectedCustomer(null);
+                setShowCustomerModal(false);
+                setCustomerSearchQuery('');
+              }}
+            >
+              <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Continue Without Customer</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1087,5 +1193,29 @@ const styles = StyleSheet.create({
   },
   successText: {
     fontSize: 14,
+  },
+  customerSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  customerSearchInput: {
+    flex: 1,
+    marginLeft: theme.spacing.sm,
+    fontSize: 15,
+    paddingVertical: 4,
+  },
+  skipCustomerBtn: {
+    marginHorizontal: theme.spacing.md,
+    marginVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
   },
 });

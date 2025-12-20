@@ -44,7 +44,7 @@ export default function PersonalInformationScreen({
       // TODO: Implement API call to update user profile
       await new Promise((resolve) => setTimeout(resolve, 1000));
       Alert.alert("Success", "Profile updated successfully!");
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Failed to update profile");
     } finally {
       setLoading(false);

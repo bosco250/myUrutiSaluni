@@ -9,11 +9,10 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useTheme } from '../../context';
+import { useTheme, useAuth } from '../../context';
 import { salonService, SalonProduct, StockMovement } from '../../services/salon';
 import { Button, Input } from '../../components';
 
@@ -22,9 +21,9 @@ interface StockManagementScreenProps {
     navigate: (screen: string, params?: any) => void;
     goBack: () => void;
   };
-  route: {
-    params: {
-      salonId: string;
+  route?: {
+    params?: {
+      salonId?: string;
     };
   };
 }
@@ -32,9 +31,10 @@ interface StockManagementScreenProps {
 type TabType = 'levels' | 'history';
 
 export default function StockManagementScreen({ navigation, route }: StockManagementScreenProps) {
-  const { salonId } = route.params;
   const { isDark } = useTheme();
+  const { user } = useAuth();
 
+  const [salonId, setSalonId] = useState<string | null>(route?.params?.salonId || null);
   const [activeTab, setActiveTab] = useState<TabType>('levels');
   const [products, setProducts] = useState<SalonProduct[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -70,9 +70,27 @@ export default function StockManagementScreen({ navigation, route }: StockManage
 
   const loadData = useCallback(async () => {
     try {
+      let currentSalonId = salonId;
+
+      // If no salonId provided, get salon from user
+      if (!currentSalonId && user?.id) {
+        const salon = await salonService.getSalonByOwnerId(String(user.id));
+        if (salon?.id) {
+          currentSalonId = salon.id;
+          setSalonId(salon.id);
+        }
+      }
+
+      if (!currentSalonId) {
+        console.log('No salon ID available');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const [productsData, movementsData] = await Promise.all([
-        salonService.getProducts(salonId).catch(() => []),
-        salonService.getStockMovements(salonId).catch(() => []),
+        salonService.getProducts(currentSalonId).catch(() => []),
+        salonService.getStockMovements(currentSalonId).catch(() => []),
       ]);
       setProducts(productsData);
       setMovements(movementsData);
@@ -83,7 +101,7 @@ export default function StockManagementScreen({ navigation, route }: StockManage
       setLoading(false);
       setRefreshing(false);
     }
-  }, [salonId]);
+  }, [salonId, user?.id]);
 
   useEffect(() => {
     loadData();
@@ -103,7 +121,7 @@ export default function StockManagementScreen({ navigation, route }: StockManage
   };
 
   const handleAdjustmentSubmit = async () => {
-    if (!selectedProduct || !adjustmentQty) return;
+    if (!selectedProduct || !adjustmentQty || !salonId) return;
     
     setActionLoading(true);
     try {
@@ -125,56 +143,87 @@ export default function StockManagementScreen({ navigation, route }: StockManage
     }
   };
 
-  const renderStockLevels = () => (
-    <View style={styles.tabContent}>
-      {/* Table Header */}
-      <View style={[styles.tableHeader, { borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.gray200 }]}>
-        <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { flex: 4 }]}>Product</Text>
-        <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { flex: 2, textAlign: 'center' }]}>Stock</Text>
-        <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { flex: 2, textAlign: 'right' }]}>Action</Text>
-      </View>
+  const renderStockLevels = () => {
+    // Empty state when no products
+    if (products.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <MaterialIcons name="inventory-2" size={64} color={theme.colors.primary + '40'} />
+          <Text style={[styles.emptyTitle, dynamicStyles.text]}>No Products Yet</Text>
+          <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
+            Add your first product to start managing inventory
+          </Text>
+          <TouchableOpacity 
+            style={styles.addProductButton}
+            onPress={() => navigation.navigate('AddProduct', { salonId })}
+          >
+            <MaterialIcons name="add" size={20} color={theme.colors.white} />
+            <Text style={styles.addProductButtonText}>Add Product</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
-      {products.map((item, index) => (
-         <View 
-           key={item.id} 
-           style={[
-             styles.tableRow, 
-             { backgroundColor: index % 2 === 0 ? (isDark ? theme.colors.gray800 : theme.colors.white) : (isDark ? theme.colors.gray900 : '#F9F9F9') }
-           ]}
-         >
-           <View style={{ flex: 4 }}>
-             <Text style={[styles.rowTitle, dynamicStyles.text]} numberOfLines={1}>{item.name}</Text>
-             <Text style={[styles.rowSubtitle, dynamicStyles.textSecondary]}>{item.sku || '-'}</Text>
-           </View>
+    return (
+      <View style={styles.tabContent}>
+        {/* Add Product Button */}
+        <TouchableOpacity 
+          style={styles.addProductRow}
+          onPress={() => navigation.navigate('AddProduct', { salonId })}
+        >
+          <MaterialIcons name="add-circle" size={24} color={theme.colors.primary} />
+          <Text style={[styles.addProductRowText, { color: theme.colors.primary }]}>Add New Product</Text>
+        </TouchableOpacity>
 
-           <View style={{ flex: 2, alignItems: 'center', justifyContent: 'center' }}>
-             <View style={[
-               styles.stockBadge, 
-               { backgroundColor: item.stockLevel <= 5 ? (item.stockLevel === 0 ? theme.colors.error : theme.colors.warning) : theme.colors.success }
-             ]}>
-               <Text style={styles.stockBadgeText}>{item.isInventoryItem ? item.stockLevel : '∞'}</Text>
+        {/* Table Header */}
+        <View style={[styles.tableHeader, { borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.gray200 }]}>
+          <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { flex: 4 }]}>Product</Text>
+          <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { flex: 2, textAlign: 'center' }]}>Stock</Text>
+          <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { flex: 2, textAlign: 'right' }]}>Action</Text>
+        </View>
+
+        {products.map((item, index) => (
+           <View 
+             key={item.id} 
+             style={[
+               styles.tableRow, 
+               { backgroundColor: index % 2 === 0 ? (isDark ? theme.colors.gray800 : theme.colors.white) : (isDark ? theme.colors.gray900 : '#F9F9F9') }
+             ]}
+           >
+             <View style={{ flex: 4 }}>
+               <Text style={[styles.rowTitle, dynamicStyles.text]} numberOfLines={1}>{item.name}</Text>
+               <Text style={[styles.rowSubtitle, dynamicStyles.textSecondary]}>{item.sku || '-'}</Text>
+             </View>
+
+             <View style={{ flex: 2, alignItems: 'center', justifyContent: 'center' }}>
+               <View style={[
+                 styles.stockBadge, 
+                 { backgroundColor: item.stockLevel <= 5 ? (item.stockLevel === 0 ? theme.colors.error : theme.colors.warning) : theme.colors.success }
+               ]}>
+                 <Text style={styles.stockBadgeText}>{item.isInventoryItem ? item.stockLevel : '∞'}</Text>
+               </View>
+             </View>
+
+             <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+               <TouchableOpacity 
+                 onPress={() => openAdjustmentModal(item, 'consumption')}
+                 style={[styles.actionButton, { backgroundColor: theme.colors.error + '20' }]}
+               >
+                 <MaterialIcons name="remove" size={16} color={theme.colors.error} />
+               </TouchableOpacity>
+               <TouchableOpacity 
+                 onPress={() => openAdjustmentModal(item, 'purchase')}
+                 style={[styles.actionButton, { backgroundColor: theme.colors.success + '20' }]}
+               >
+                 <MaterialIcons name="add" size={16} color={theme.colors.success} />
+               </TouchableOpacity>
              </View>
            </View>
-
-           <View style={{ flex: 2, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-             <TouchableOpacity 
-               onPress={() => openAdjustmentModal(item, 'consumption')}
-               style={[styles.actionButton, { backgroundColor: theme.colors.error + '20' }]}
-             >
-               <MaterialIcons name="remove" size={16} color={theme.colors.error} />
-             </TouchableOpacity>
-             <TouchableOpacity 
-               onPress={() => openAdjustmentModal(item, 'purchase')}
-               style={[styles.actionButton, { backgroundColor: theme.colors.success + '20' }]}
-             >
-               <MaterialIcons name="add" size={16} color={theme.colors.success} />
-             </TouchableOpacity>
-           </View>
-         </View>
-      ))}
-      <View style={{ height: 40 }} />
-    </View>
-  );
+        ))}
+        <View style={{ height: 40 }} />
+      </View>
+    );
+  };
 
   const renderHistory = () => (
     <View style={styles.tabContent}>
@@ -407,8 +456,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 60,
   },
-  emptyText: {
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 40,
+  },
+  addProductButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  addProductButtonText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addProductRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  addProductRowText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   historyCard: {
     flexDirection: 'row',

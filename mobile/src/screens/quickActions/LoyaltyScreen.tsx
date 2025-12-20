@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -121,7 +121,7 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
           setLoading(false);
           setError("Customer profile not found");
         }
-      } catch (error: any) {
+      } catch {
         setLoading(false);
         setError("Failed to load customer data");
       }
@@ -131,13 +131,7 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
   }, [user?.id, user?.fullName]);
 
   // Fetch loyalty data when customer ID is available
-  useEffect(() => {
-    if (customerId) {
-      fetchLoyaltyData();
-    }
-  }, [customerId]);
-
-  const fetchLoyaltyData = async () => {
+  const fetchLoyaltyData = useCallback(async () => {
     if (!customerId) return;
 
     try {
@@ -152,7 +146,13 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
+
+  useEffect(() => {
+    if (customerId) {
+      fetchLoyaltyData();
+    }
+  }, [customerId, fetchLoyaltyData]);
 
   const onRefresh = async () => {
     setRefreshing(true);

@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { theme } from "../theme";
 import { useTheme, useAuth } from "../context";
-import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 import QuickActionButton from "../components/common/QuickActionButton";
 import AppointmentCard from "../components/common/AppointmentCard";
 import SalonCard from "./explore/components/SalonCard";
@@ -40,19 +39,14 @@ interface HomeScreenProps {
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("home");
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const unreadNotificationCount = useUnreadNotifications();
   const headerAnimatedValue = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Data states
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [topSalons, setTopSalons] = useState<Salon[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [salonsLoading, setSalonsLoading] = useState(false);
@@ -82,7 +76,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   // Fetch customer ID and appointments
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     if (!user?.id) {
       setAppointmentsLoading(false);
       return;
@@ -151,7 +145,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     } finally {
       setAppointmentsLoading(false);
     }
-  };
+  }, [user?.id]);
 
   // Fetch top-rated salons
   const fetchTopSalons = async () => {
@@ -185,12 +179,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
       await Promise.all([fetchAppointments(), fetchTopSalons()]);
-      setLoading(false);
     };
     loadData();
-  }, [user?.id]);
+  }, [user?.id, fetchAppointments]);
 
   // Pull to refresh
   const onRefresh = async () => {
@@ -272,20 +264,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     outputRange: [1, 0],
   });
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId === "profile") {
-      navigation?.navigate("Profile");
-    } else if (tabId === "explore") {
-      navigation?.navigate("Explore");
-    } else if (tabId === "bookings") {
-      navigation?.navigate("Bookings");
-    } else if (tabId === "notifications") {
-      navigation?.navigate("Notifications");
-    }
-  };
 
   // Format appointment date and time - clearer format
   const formatAppointmentDateTime = (dateString: string) => {
@@ -315,7 +293,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
       const time = format(date, "h:mm a");
       return { dateLabel, time };
-    } catch (error) {
+    } catch {
       return { dateLabel: "Date TBD", time: "" };
     }
   };
@@ -351,7 +329,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
       const time = format(date, "h:mm a");
       return { dateLabel, time };
-    } catch (error) {
+    } catch {
       return null;
     }
   };

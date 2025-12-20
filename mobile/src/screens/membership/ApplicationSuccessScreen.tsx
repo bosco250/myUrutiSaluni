@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -32,7 +32,7 @@ export default function ApplicationSuccessScreen({
   route,
 }: ApplicationSuccessScreenProps) {
   const { isDark } = useTheme();
-  const scaleAnim = new Animated.Value(0);
+  const scaleAnim = useMemo(() => new Animated.Value(0), []);
   const [loading, setLoading] = useState(true);
   const [applicationData, setApplicationData] = useState<any>(null);
 
@@ -61,7 +61,7 @@ export default function ApplicationSuccessScreen({
       friction: 7,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [scaleAnim]);
 
   const fetchApplicationData = async () => {
     try {

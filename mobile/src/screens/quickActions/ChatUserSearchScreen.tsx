@@ -73,18 +73,7 @@ export default function ChatUserSearchScreen({
     },
   };
 
-  useEffect(() => {
-    // Only search when there's a query (at least 2 characters)
-    if (searchQuery && searchQuery.trim().length >= 2) {
-      loadUsers();
-    } else {
-      // Clear results if query is too short or empty
-      setUsers([]);
-      setLoading(false);
-    }
-  }, [searchQuery, selectedRole]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     if (!searchQuery || searchQuery.trim().length < 2) {
       setUsers([]);
       return;
@@ -104,7 +93,18 @@ export default function ChatUserSearchScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedRole]);
+
+  useEffect(() => {
+    // Only search when there's a query (at least 2 characters)
+    if (searchQuery && searchQuery.trim().length >= 2) {
+      loadUsers();
+    } else {
+      // Clear results if query is too short or empty
+      setUsers([]);
+      setLoading(false);
+    }
+  }, [searchQuery, selectedRole, loadUsers]);
 
   const handleUserPress = async (user: ChatUser) => {
     try {

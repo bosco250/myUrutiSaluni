@@ -73,6 +73,41 @@ export class SalonsService {
     return salons;
   }
 
+  async findSalonsForUser(userId: string): Promise<Salon[]> {
+    // Get salons owned by user
+    const ownedSalons = await this.salonsRepository.find({
+      where: { ownerId: userId },
+      relations: ['owner'],
+    });
+
+    // Get salons where user is an employee
+    const employeeRecords = await this.salonEmployeesRepository.find({
+      where: { userId },
+      relations: ['salon', 'salon.owner'],
+    });
+
+    const employmentSalons = employeeRecords
+      .map((emp) => emp.salon)
+      .filter((salon) => !!salon);
+
+    // Merge and deduplicate
+    const allSalonsMap = new Map<string, Salon>();
+    ownedSalons.forEach((s) => allSalonsMap.set(s.id, s));
+    employmentSalons.forEach((s) => allSalonsMap.set(s.id, s));
+
+    const allSalons = Array.from(allSalonsMap.values());
+
+    // Add employee count to each salon
+    for (const salon of allSalons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+
+    return allSalons;
+  }
+
   async findOne(id: string): Promise<Salon> {
     const salon = await this.salonsRepository.findOne({
       where: { id },

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  Dimensions,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import FilterButton from "./components/FilterButton";
 import TrendingCard from "./components/TrendingCard";
 import ServiceCard from "./components/ServiceCard";
@@ -32,10 +30,6 @@ type FilterType = "For You" | "Hair" | "Nails" | "Facials" | "Oil";
 
 export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const { isDark } = useTheme();
-  const unreadNotificationCount = useUnreadNotifications();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("explore");
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("For You");
   const [services, setServices] = useState<Service[]>([]);
   const [trendingServices, setTrendingServices] = useState<Service[]>([]);
@@ -96,16 +90,6 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     });
   };
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
-    }
-  };
 
   const handleSearch = () => {
     // TODO: Navigate to search screen
@@ -484,11 +468,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   salonCardWrapper: {
-    width:
-      (Dimensions.get("window").width -
-        theme.spacing.xs * 2 -
-        theme.spacing.sm) /
-      2,
     marginBottom: theme.spacing.md,
   },
   viewAllButtonBottom: {

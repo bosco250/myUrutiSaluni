@@ -14,7 +14,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../theme";
 import { useTheme } from "../context";
 import { notificationsService, Notification } from "../services/notifications";
-import { appointmentsService } from "../services/appointments";
 
 export default function NotificationsScreen({ navigation }: { navigation?: any }) {
   const { isDark } = useTheme();
@@ -123,7 +122,7 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
           year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
         });
       }
-    } catch (error) {
+    } catch {
       return "Recently";
     }
   };

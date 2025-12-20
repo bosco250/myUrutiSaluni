@@ -30,8 +30,7 @@ interface MenuItem {
   description?: string;
   screen: string;
   badge?: number | string;
-  iconBgColor?: string;
-  iconColor?: string;
+  iconColor: string;
 }
 
 export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
@@ -40,25 +39,50 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   const unreadNotificationCount = useUnreadNotifications();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // Dynamic styles for dark/light mode (matching OperationsScreen pattern)
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? '#1C1C1E' : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
-      color: isDark ? '#FFFFFF' : theme.colors.text,
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? '#8E8E93' : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? '#2C2C2E' : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    header: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     divider: {
-      backgroundColor: isDark ? '#3A3A3C' : theme.colors.borderLight,
+      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    // Button styles matching OperationsScreen
+    primaryButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    outlineButtonBorder: {
+      borderColor: isDark ? theme.colors.gray600 : theme.colors.border,
+    },
+    outlineButtonText: {
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
   };
 
+  // Helper to generate light background from color
+  const getLightBg = (color: string) => `${color}15`; // 15% opacity
+
+  // ... (rest of the component body is unchanged until styles)
+
+  // ...
+
+// ...
+
   // Menu sections with items
+  // Using theme colors for consistency
   const menuSections = [
     {
       title: 'My Account',
@@ -69,8 +93,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Profile',
           description: 'Manage your personal info',
           screen: 'Profile',
-          iconBgColor: '#E3F2FD',
-          iconColor: '#2196F3',
+          iconColor: theme.colors.secondary,
         },
         {
           id: 'notifications',
@@ -79,8 +102,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           description: 'Alerts & updates',
           screen: 'Notifications',
           badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
-          iconBgColor: '#FFF3E0',
-          iconColor: '#FF9800',
+          iconColor: theme.colors.warning,
         },
       ] as MenuItem[],
     },
@@ -93,8 +115,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Quick Sale',
           description: 'New sale / POS',
           screen: 'Sales',
-          iconBgColor: '#E8F5E9',
-          iconColor: '#4CAF50',
+          iconColor: theme.colors.success,
         },
         {
           id: 'sales-history',
@@ -102,8 +123,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Sales History',
           description: 'View transactions',
           screen: 'SalesHistory',
-          iconBgColor: '#E3F2FD',
-          iconColor: '#2196F3',
+          iconColor: theme.colors.secondary,
         },
         {
           id: 'commissions',
@@ -111,7 +131,6 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Commissions',
           description: 'Employee earnings',
           screen: 'Commissions',
-          iconBgColor: `${theme.colors.primary}20`,
           iconColor: theme.colors.primary,
         },
         {
@@ -120,8 +139,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Business Analytics',
           description: 'Reports & insights',
           screen: 'BusinessAnalytics',
-          iconBgColor: '#FFF3E0',
-          iconColor: '#FF9800',
+          iconColor: theme.colors.warning,
         },
         {
           id: 'staff',
@@ -129,17 +147,15 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Staff Management',
           description: 'Manage your team',
           screen: 'StaffManagement',
-          iconBgColor: '#E1F5FE',
-          iconColor: '#03A9F4',
+          iconColor: theme.colors.secondary,
         },
         {
           id: 'inventory',
           icon: 'inventory-2',
-          label: 'Inventory',
+          label: 'Inventory & Stock',
           description: 'Manage products & stock',
-          screen: 'InventoryManagement',
-          iconBgColor: '#F3E5F5',
-          iconColor: '#9C27B0',
+          screen: 'StockManagement',
+          iconColor: theme.colors.secondaryDark,
         },
         {
           id: 'customers',
@@ -147,8 +163,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Customer Management',
           description: 'View & manage customers',
           screen: 'CustomerManagement',
-          iconBgColor: '#E0F7FA',
-          iconColor: '#00BCD4',
+          iconColor: theme.colors.secondaryLight,
         },
         {
           id: 'schedule',
@@ -156,8 +171,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'My Schedule',
           description: 'Your appointments',
           screen: 'MySchedule',
-          iconBgColor: '#FCE4EC',
-          iconColor: '#E91E63',
+          iconColor: theme.colors.error,
         },
       ] as MenuItem[],
     },
@@ -170,7 +184,6 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Salon Settings',
           description: 'Business hours, info & more',
           screen: 'SalonSettings',
-          iconBgColor: `${theme.colors.primary}20`,
           iconColor: theme.colors.primary,
         },
         {
@@ -179,8 +192,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Explore Salons',
           description: 'Browse other salons',
           screen: 'Explore',
-          iconBgColor: '#E8EAF6',
-          iconColor: '#3F51B5',
+          iconColor: theme.colors.secondary,
         },
       ] as MenuItem[],
     },
@@ -193,8 +205,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Messages',
           description: 'Chat with customers',
           screen: 'ChatList',
-          iconBgColor: '#E1F5FE',
-          iconColor: '#03A9F4',
+          iconColor: theme.colors.secondary,
         },
         {
           id: 'help',
@@ -202,8 +213,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           label: 'Help & Support',
           description: 'FAQs & contact us',
           screen: 'Help',
-          iconBgColor: '#ECEFF1',
-          iconColor: '#607D8B',
+          iconColor: theme.colors.textSecondary,
         },
       ] as MenuItem[],
     },
@@ -235,11 +245,11 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   const renderMenuItem = (item: MenuItem) => (
     <TouchableOpacity
       key={item.id}
-      style={[styles.menuItem, dynamicStyles.card]}
+      style={[styles.menuItem, dynamicStyles.card, { borderWidth: 0 }]}
       onPress={() => handleMenuPress(item.screen)}
       activeOpacity={0.7}
     >
-      <View style={[styles.menuIconContainer, { backgroundColor: item.iconBgColor }]}>
+      <View style={[styles.menuIconContainer, { backgroundColor: getLightBg(item.iconColor) }]}>
         <MaterialIcons name={item.icon as any} size={22} color={item.iconColor} />
       </View>
       <View style={styles.menuItemContent}>
@@ -271,8 +281,8 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Profile */}
-        <View style={styles.header}>
+        {/* Header */}
+        <View style={[styles.header, dynamicStyles.header]}>
           <Text style={[styles.headerTitle, dynamicStyles.text]}>More</Text>
         </View>
 
@@ -317,11 +327,11 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
 
         {/* Logout Button */}
         <TouchableOpacity
-          style={[styles.logoutButton, dynamicStyles.card]}
+          style={[styles.logoutButton, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor }]}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <View style={[styles.menuIconContainer, { backgroundColor: '#FFEBEE' }]}>
+          <View style={[styles.menuIconContainer, { backgroundColor: getLightBg(theme.colors.error) }]}>
             <MaterialIcons name="exit-to-app" size={22} color={theme.colors.error} />
           </View>
           <Text style={styles.logoutText}>Log Out</Text>
@@ -354,11 +364,16 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  dynamicStyles.outlineButtonBorder,
+                  { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary },
+                ]}
                 onPress={cancelLogout}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, dynamicStyles.outlineButtonText]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.confirmButton]}
@@ -378,18 +393,18 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingTop: StatusBar.currentHeight || 0,
+    paddingHorizontal: theme.spacing.lg,
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
+    paddingTop: 60,
     paddingBottom: theme.spacing.md,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
   },
@@ -398,17 +413,10 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   profileImageContainer: {
     marginRight: theme.spacing.md,
@@ -444,19 +452,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
   },
   sectionCard: {
-    marginHorizontal: theme.spacing.lg,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
     overflow: 'hidden',
   },
 
@@ -518,12 +518,10 @@ const styles = StyleSheet.create({
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.sm,
     padding: theme.spacing.md,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   logoutText: {
     fontSize: 16,
@@ -540,10 +538,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     marginTop: theme.spacing.lg,
   },
+
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.lg,
@@ -564,7 +563,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    backgroundColor: `${theme.colors.error}1A`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
@@ -595,14 +594,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: theme.colors.backgroundSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.text,
     fontFamily: theme.fonts.medium,
   },
   confirmButton: {

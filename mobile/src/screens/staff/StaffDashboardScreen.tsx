@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useAuth } from '../../context';
 import { useTheme } from '../../context';
-import { staffService, ClockStatus, TodayStats, ScheduleItem } from '../../services/staff';
+import { ClockStatus, TodayStats, ScheduleItem } from '../../services/staff';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 
 // Import assets
@@ -37,7 +37,7 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
   const [clockStatus, setClockStatus] = useState<ClockStatus | null>(null);
   const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [employeeLevel, setEmployeeLevel] = useState(3);
+  const [employeeLevel] = useState(3);
 
   const dynamicStyles = {
     container: {
@@ -256,8 +256,12 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
           <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
           
           <View style={styles.quickActionsGrid}>
-            {/* Clocked In Card */}
-            <View style={[styles.quickActionCard, dynamicStyles.card]}>
+            {/* Clocked In Card - Click to go to Attendance */}
+            <TouchableOpacity 
+              style={[styles.quickActionCard, dynamicStyles.card]}
+              onPress={() => navigation.navigate('Attendance')}
+              activeOpacity={0.7}
+            >
               <View style={styles.quickActionHeader}>
                 <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E9' }]}>
                   <MaterialIcons name="access-time" size={24} color="#4CAF50" />
@@ -272,7 +276,7 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
               <Text style={[styles.quickActionValue, dynamicStyles.text]}>
                 {clockStatus?.clockInTime || '--:--'}
               </Text>
-            </View>
+            </TouchableOpacity>
 
             {/* Wallet Balance Card */}
             <View style={[styles.quickActionCard, dynamicStyles.card]}>

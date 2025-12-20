@@ -24,9 +24,9 @@ import PaymentScreen from '../screens/payment/PaymentScreen';
 import PaymentHistoryScreen from '../screens/payment/PaymentHistoryScreen';
 import WithdrawScreen from '../screens/payment/WithdrawScreen';
 import { MembershipInfoScreen, MembershipApplicationScreen, ApplicationSuccessScreen } from '../screens/membership';
-import { StaffDashboardScreen } from '../screens/staff';
+import { StaffDashboardScreen, MyScheduleScreen, AttendanceScreen } from '../screens/staff';
 import { OwnerDashboardScreen, MoreMenuScreen, CreateSalonScreen, SalonAppointmentsScreen, OperationsScreen } from '../screens/owner';
-import { AdminDashboardScreen } from '../screens/admin';
+import { AdminDashboardScreen, SalonManagementScreen } from '../screens/admin';
 import {
   SalonListScreen,
   SalonDetailScreen as OwnerSalonDetailScreen,
@@ -37,8 +37,12 @@ import {
   EditServiceScreen,
   EditSalonScreen,
   StockManagementScreen,
+  CustomerManagementScreen,
+  CustomerDetailScreen,
 } from '../screens/salon';
 import { SalesScreen, SalesHistoryScreen, CommissionsScreen, SaleDetailScreen } from '../screens/sales';
+import { BusinessAnalyticsScreen } from '../screens/analytics';
+import { SalonSettingsScreen } from '../screens/settings';
 import { theme } from '../theme';
 
 /**
@@ -197,23 +201,58 @@ export const renderScreen = (
     case 'EditSalon':
       return <EditSalonScreen navigation={navigation} route={{ params: screenParams }} />;
 
-    // Placeholder screens for features under development
-    case 'MySchedule':
-    case 'Attendance':
-    case 'CustomerManagement':
-    case 'StaffManagement':
-    case 'SalonSettings':
-    case 'BusinessAnalytics':
+    // Stock/Inventory Management screen
     case 'StockManagement':
+    case 'InventoryManagement':
       return <StockManagementScreen navigation={navigation} route={{ params: screenParams }} />;
-    // case 'InventoryManagement': // Replaced by StockManagement
-    case 'SalonManagement':
-    case 'UserManagement':
-    case 'SystemReports':
-    case 'MembershipApprovals':
+
+    // Staff Management - routes to employee list for owner's salon
+    case 'StaffManagement':
+      return <EmployeeListScreen navigation={navigation} route={{ params: screenParams }} />;
+
+    // Customer Management screen
+    case 'CustomerManagement':
+      return <CustomerManagementScreen navigation={navigation} route={{ params: screenParams }} />;
+
+    // Customer Detail screen
+    case 'CustomerDetail':
+      return <CustomerDetailScreen navigation={navigation} route={{ params: screenParams }} />;
+
     // Operations screen (for salon owners)
     case 'Operations':
       return <OperationsScreen navigation={navigation} />;
+
+    case 'MySchedule':
+      return <MyScheduleScreen navigation={navigation} />;
+
+    case 'Attendance':
+      return <AttendanceScreen navigation={navigation} />;
+
+    // Business Analytics screen
+    case 'BusinessAnalytics':
+      return <BusinessAnalyticsScreen navigation={navigation} route={{ params: screenParams }} />;
+
+    // Salon Settings screen
+    case 'SalonSettings':
+      return <SalonSettingsScreen navigation={navigation} />;
+
+    // Placeholder screens for features under development
+    // Salon Management screens
+    case 'SalonManagement':
+      return <SalonManagementScreen navigation={{ navigate: handleNavigate }} />;
+
+    case 'UserManagement':
+    case 'SystemReports':
+    case 'MembershipApprovals':
+      return (
+        <View style={styles.placeholderContainer}>
+          <Text style={styles.placeholderTitle}>{screenName}</Text>
+          <Text style={styles.placeholderText}>Coming Soon</Text>
+          <Text style={styles.placeholderSubtext}>
+            This feature is currently under development.
+          </Text>
+        </View>
+      );
 
     // Sales screens
     case 'Sales':

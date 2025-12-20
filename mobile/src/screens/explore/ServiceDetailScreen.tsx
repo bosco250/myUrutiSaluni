@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import { exploreService, Service } from "../../services/explore";
 
 interface ServiceDetailScreenProps {
@@ -35,8 +34,6 @@ export default function ServiceDetailScreen({
   route,
 }: ServiceDetailScreenProps) {
   const { isDark } = useTheme();
-  const unreadNotificationCount = useUnreadNotifications();
-  const [activeTab, setActiveTab] = useState<"home" | "bookings" | "explore" | "notifications" | "profile">("explore");
   const [selectedTab, setSelectedTab] = useState<TabType>("Details");
   const [service, setService] = useState<Service | null>(
     route?.params?.service || null
@@ -46,13 +43,7 @@ export default function ServiceDetailScreen({
 
   const serviceId = route?.params?.serviceId || route?.params?.service?.id;
 
-  useEffect(() => {
-    if (serviceId && !service) {
-      fetchService();
-    }
-  }, [serviceId]);
-
-  const fetchService = async () => {
+  const fetchService = useCallback(async () => {
     if (!serviceId) return;
 
     try {
@@ -66,18 +57,14 @@ export default function ServiceDetailScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, [serviceId, navigation]);
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
+  useEffect(() => {
+    if (serviceId && !service) {
+      fetchService();
     }
-  };
+  }, [serviceId, service, fetchService]);
+
 
   const handleFavorite = () => {
     setIsFavorite(!isFavorite);
@@ -138,15 +125,6 @@ export default function ServiceDetailScreen({
   // Format price
   const formattedPrice = `Starting at $${Number(service.basePrice).toFixed(2)}`;
 
-  // Get initials from service name for placeholder
-  const getInitials = (text: string) => {
-    return text
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   return (
     <View style={[styles.container, dynamicStyles.container]}>

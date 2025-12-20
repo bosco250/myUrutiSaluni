@@ -23,9 +23,10 @@ export class LoggingInterceptor implements NestInterceptor {
         next: () => {
           const response = context.switchToHttp().getResponse();
           const delay = Date.now() - now;
-          this.logger.log(
-            `${method} ${url} ${response.statusCode} - ${delay}ms`,
-          );
+          // Silencing successful requests to clean up logs
+          // this.logger.log(
+          //   `${method} ${url} ${response.statusCode} - ${delay}ms`,
+          // );
         },
         error: (error) => {
           const delay = Date.now() - now;

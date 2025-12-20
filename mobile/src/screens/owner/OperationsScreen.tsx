@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
-import { salonService, SalonDetails, SalonProduct } from '../../services/salon';
+import { salonService, SalonProduct } from '../../services/salon';
 
 interface OperationsScreenProps {
   navigation: {

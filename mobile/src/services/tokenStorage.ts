@@ -21,7 +21,7 @@ class TokenStorage {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       this.token = token;
       return token;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -45,7 +45,7 @@ class TokenStorage {
     try {
       await AsyncStorage.removeItem(TOKEN_KEY);
       this.token = null;
-    } catch (error) {
+    } catch {
       // Ignore errors on clear
     }
   }

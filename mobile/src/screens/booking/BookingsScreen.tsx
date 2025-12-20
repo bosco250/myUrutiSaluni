@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import {
 } from "../../services/appointments";
 import { customersService } from "../../services/customers";
 import { useAuth } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 
 interface BookingsScreenProps {
   navigation?: {
@@ -33,10 +32,6 @@ type FilterTab = "all" | "upcoming" | "confirmed" | "completed" | "cancelled";
 export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("bookings");
-  const unreadNotificationCount = useUnreadNotifications();
 
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -73,12 +68,12 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
               } else {
                 setLoading(false);
               }
-            } catch (retryError) {
+            } catch {
               setLoading(false);
             }
           }, 500);
         }
-      } catch (error: any) {
+      } catch {
         setLoading(false);
       }
     };
@@ -87,13 +82,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   }, [user?.id]);
 
   // Fetch appointments when customer ID is available
-  useEffect(() => {
-    if (customerId) {
-      fetchAppointments();
-    }
-  }, [customerId]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     if (!customerId) {
       setAppointments([]);
       setLoading(false);
@@ -133,12 +122,18 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
         return dateB.getTime() - dateA.getTime();
       });
       setAppointments(sorted);
-    } catch (error: any) {
+    } catch {
       setAppointments([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
+
+  useEffect(() => {
+    if (customerId) {
+      fetchAppointments();
+    }
+  }, [customerId, fetchAppointments]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -146,16 +141,6 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
     setRefreshing(false);
   };
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "bookings") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
-    }
-  };
 
   const handlePreviousMonth = () => {
     setCurrentDate(

@@ -131,7 +131,7 @@ export class SalonsController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      return this.salonsService.findByOwnerId(user.id);
+      return this.salonsService.findSalonsForUser(user.id);
     }
 
     // Admins and district leaders can see all salons
@@ -139,6 +139,36 @@ export class SalonsController {
   }
 
   // ==================== Specific Routes (MUST come before :id route) ====================
+  
+  @Get(':id/employees/me')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({ summary: 'Get current user employee record for a salon' })
+  async getMyEmployeeRecord(
+    @Param('id', ParseUUIDPipe) salonId: string,
+    @CurrentUser() user: any,
+  ) {
+    // Check if user has access to this salon (owner or employee)
+    await this.checkSalonAccess(salonId, user);
+    
+    // Find employee record
+    const employee = await this.salonsService.findEmployeeByUserId(user.id, salonId);
+    
+    if (!employee) {
+       // If owner but not employee record, return null or appropriate response
+       // Owners might not be in employees table
+       if (user.role === UserRole.SALON_OWNER) {
+         return null; 
+       }
+       throw new NotFoundException('Employee record not found for this salon');
+    }
+    
+    return employee;
+  }
 
   @Get(':id/employees')
   @Roles(

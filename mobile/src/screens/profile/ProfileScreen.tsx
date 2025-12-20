@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
@@ -33,10 +32,6 @@ type ProfileSubScreen = "main" | "personal" | "notifications" | "security";
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { isDark, toggleTheme } = useTheme();
   const { logout, user } = useAuth();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("profile");
-  const unreadNotificationCount = useUnreadNotifications();
   const [currentSubScreen, setCurrentSubScreen] =
     useState<ProfileSubScreen>("main");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -45,7 +40,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const userName = user?.fullName || "User";
   const userEmail = user?.email || "";
   const userRole = user?.role || "";
-  const userPhone = user?.phone || "";
 
   // Format role for display (e.g., "salon_employee" -> "Salon Employee")
   const formatRole = (role: string): string => {
@@ -77,17 +71,6 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   const cancelLogout = () => {
     setShowLogoutModal(false);
-  };
-
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "profile") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
-    }
   };
 
   const handleNavigateToSubScreen = (screen: ProfileSubScreen) => {

@@ -7,6 +7,7 @@ const API_BASE_URL = config.apiUrl;
 interface RequestOptions {
   headers?: Record<string, string>;
   requireAuth?: boolean;
+  isLoginRequest?: boolean; // Set to true for login endpoints to get proper credential error messages
 }
 
 class ApiService {
@@ -34,20 +35,43 @@ class ApiService {
 
   /**
    * Handle API response
+   * @param response - The fetch Response object
+   * @param isLoginRequest - Whether this is a login request (401 = invalid credentials, not session expired)
    */
-  private async handleResponse<T>(response: Response): Promise<T> {
+  private async handleResponse<T>(response: Response, isLoginRequest: boolean = false): Promise<T> {
     if (!response.ok) {
-      // Handle 401 Unauthorized - token expired or invalid
+      // Handle 401 Unauthorized
       if (response.status === 401) {
+        // For login requests, 401 means invalid credentials
+        if (isLoginRequest) {
+          // Try to get the actual error message from the response
+          let errorMessage = 'Invalid email or password';
+          try {
+            const errorData = await response.json();
+            if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+          } catch {
+            // Use default message if response is not JSON
+          }
+          
+          const error = new Error(errorMessage);
+          (error as any).status = 401;
+          (error as any).isLoginError = true;
+          throw error;
+        }
+        
+        // For other requests, 401 means token expired or invalid
         // Clear stored token
         try {
           await tokenStorage.clearToken();
-        } catch (error) {
+        } catch {
           // Ignore errors on clear
         }
         
         const error = new Error('Session expired. Please login again.');
         (error as any).status = 401;
+        (error as any).isSessionExpired = true;
         throw error;
       }
       
@@ -107,7 +131,7 @@ class ApiService {
    * POST request
    */
   async post<T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> {
-    const { requireAuth = true } = options;
+    const { requireAuth = true, isLoginRequest = false } = options;
     const headers = await this.getHeaders(requireAuth);
 
     try {
@@ -120,7 +144,7 @@ class ApiService {
         body: JSON.stringify(data),
       });
 
-      return this.handleResponse<T>(response);
+      return this.handleResponse<T>(response, isLoginRequest);
     } catch (error: any) {
       if (error.message?.includes('Network')) {
         throw new Error('Network error. Please check your connection.');

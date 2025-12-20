@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,10 @@ import {
   ActivityIndicator,
   Switch,
 } from 'react-native';
-import { MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
-import { Input, Button } from '../../components';
 import { salonService } from '../../services/salon';
 import { userService, User } from '../../services/user';
 
@@ -66,7 +65,7 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
   const [commissionRate, setCommissionRate] = useState('');
   const [baseSalary, setBaseSalary] = useState('');
   const [payFrequency, setPayFrequency] = useState<PayFrequency>('MONTHLY');
-  const [hourlyRate, setHourlyRate] = useState('');
+  const [hourlyRate] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -81,7 +80,7 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
       color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      backgroundColor: isDark ? 'transparent' : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200,
     },
     input: {
@@ -94,16 +93,7 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
     }
   };
 
-  useEffect(() => {
-    if (!salonId) {
-      Alert.alert('Error', 'Invalid Salon ID');
-      navigation.goBack();
-      return;
-    }
-    fetchUsers();
-  }, [salonId]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setFetchingUsers(true);
     try {
       const fetchedUsers = await userService.getUsers();
@@ -113,7 +103,16 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
     } finally {
       setFetchingUsers(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!salonId) {
+      Alert.alert('Error', 'Invalid Salon ID');
+      navigation.goBack();
+      return;
+    }
+    fetchUsers();
+  }, [salonId, navigation, fetchUsers]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -251,12 +250,7 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
         
         {/* SECTION 1: USER SELECTION */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <MaterialIcons name="person-add" size={20} color="#fff" />
-            </View>
-            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Select Employee</Text>
-          </View>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Select Employee</Text>
           
           <View style={[styles.card, dynamicStyles.card]}>
             {selectedUser ? (
@@ -318,12 +312,7 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
 
         {/* SECTION 2: PROFESSIONAL INFO */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: theme.colors.secondary }]}>
-              <MaterialIcons name="work" size={20} color="#fff" />
-            </View>
-            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Professional Info</Text>
-          </View>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Professional Info</Text>
           
           <View style={[styles.card, dynamicStyles.card]}>
             <Text style={[styles.label, dynamicStyles.textSecondary]}>Professional Title *</Text>
@@ -356,12 +345,7 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
 
         {/* SECTION 3: EMPLOYMENT & COMPENSATION */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIcon, { backgroundColor: theme.colors.success }]}>
-              <MaterialIcons name="attach-money" size={20} color="#fff" />
-            </View>
-            <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Compensation</Text>
-          </View>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Compensation</Text>
           
           <View style={[styles.card, dynamicStyles.card]}>
             <View style={styles.row}>
@@ -478,58 +462,234 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 40 : 20, flexDirection: 'row', alignItems: 'center' },
-  backButton: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  title: { fontSize: 24, fontWeight: 'bold' },
-  content: { padding: 20, paddingTop: 0, paddingBottom: 50 },
+  container: { 
+    flex: 1 
+  },
+  header: { 
+    padding: 20, 
+    paddingTop: Platform.OS === 'android' ? 50 : 60, 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  backButton: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 16 
+  },
+  title: { 
+    fontSize: 22, 
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+  },
+  content: { 
+    padding: 20, 
+    paddingTop: 10, 
+    paddingBottom: 100 
+  },
   
-  section: { marginBottom: 25 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  sectionIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: '700' },
+  // Section Styles
+  section: { 
+    marginBottom: 28 
+  },
+  sectionTitle: { 
+    fontSize: 17, 
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    marginBottom: 14,
+  },
   
-  card: { borderRadius: 16, padding: 16, borderWidth: 1, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  // Card Styles
+  card: { 
+    borderRadius: 16, 
+    padding: 18, 
+    borderWidth: 1,
+  },
   
-  // Search
-  searchBox: { flexDirection: 'row', alignItems: 'center', height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 16 },
-  resultsList: { marginTop: 10, maxHeight: 200 },
-  resultItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  miniAvatar: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  miniAvatarText: { fontWeight: 'bold', color: '#555' },
+  // Search Box
+  searchBox: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    height: 52, 
+    borderWidth: 1, 
+    borderRadius: 14, 
+    paddingHorizontal: 14 
+  },
+  searchInput: { 
+    flex: 1, 
+    marginLeft: 12, 
+    fontSize: 16,
+    fontFamily: theme.fonts.regular,
+  },
+  resultsList: { 
+    marginTop: 12, 
+    maxHeight: 220 
+  },
+  resultItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12, 
+    borderBottomWidth: 1, 
+    borderBottomColor: 'rgba(128, 128, 128, 0.15)' 
+  },
+  miniAvatar: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  miniAvatarText: { 
+    fontWeight: 'bold', 
+    color: '#555',
+    fontSize: 14,
+    fontFamily: theme.fonts.bold,
+  },
   
   // Selected User
-  selectedUserRow: { flexDirection: 'row', alignItems: 'center', padding: 5 },
-  avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  userName: { fontSize: 16, fontWeight: 'bold' },
-  userEmail: { fontSize: 14, color: '#888' },
+  selectedUserRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 4 
+  },
+  avatar: { 
+    width: 52, 
+    height: 52, 
+    borderRadius: 26, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  avatarText: { 
+    color: '#fff', 
+    fontSize: 20, 
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+  },
+  userName: { 
+    fontSize: 16, 
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+  },
+  userEmail: { 
+    fontSize: 14, 
+    color: '#888',
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
 
   // Chips
-  chipsScroll: { marginTop: 5 },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, marginRight: 8, marginVertical: 4 },
-  chipText: { fontSize: 13, fontWeight: '600' },
+  chipsScroll: { 
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  chip: { 
+    paddingHorizontal: 18, 
+    paddingVertical: 10, 
+    borderRadius: 24, 
+    borderWidth: 1.5, 
+    marginRight: 10, 
+    marginVertical: 4 
+  },
+  chipText: { 
+    fontSize: 13, 
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+  },
 
   // Inputs
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase' },
-  input: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, fontSize: 16 },
-  dateButton: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  label: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    marginBottom: 8, 
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: theme.fonts.medium,
+  },
+  input: { 
+    height: 52, 
+    borderWidth: 1, 
+    borderRadius: 14, 
+    paddingHorizontal: 16, 
+    fontSize: 16,
+    fontFamily: theme.fonts.regular,
+  },
+  dateButton: { 
+    height: 52, 
+    borderWidth: 1, 
+    borderRadius: 14, 
+    paddingHorizontal: 16, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
   
   // Salary Cards
-  salaryTypesContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  salaryTypeCard: { flex: 1, padding: 10, borderWidth: 1, borderRadius: 12, alignItems: 'center', position: 'relative', overflow: 'hidden' },
-  salaryIconContainer: { marginBottom: 5 },
-  salaryTypeLabel: { fontSize: 12, fontWeight: '700', marginBottom: 2, textAlign: 'center' },
-  salaryTypeDesc: { fontSize: 10, textAlign: 'center', paddingHorizontal: 2 },
-  checkIcon: { position: 'absolute', top: 5, right: 5 },
+  salaryTypesContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    gap: 10 
+  },
+  salaryTypeCard: { 
+    flex: 1, 
+    padding: 12, 
+    borderWidth: 1.5, 
+    borderRadius: 14, 
+    alignItems: 'center', 
+    position: 'relative', 
+    overflow: 'hidden' 
+  },
+  salaryIconContainer: { 
+    marginBottom: 6 
+  },
+  salaryTypeLabel: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    marginBottom: 3, 
+    textAlign: 'center',
+    fontFamily: theme.fonts.bold,
+  },
+  salaryTypeDesc: { 
+    fontSize: 11, 
+    textAlign: 'center', 
+    paddingHorizontal: 2,
+    fontFamily: theme.fonts.regular,
+  },
+  checkIcon: { 
+    position: 'absolute', 
+    top: 6, 
+    right: 6 
+  },
 
   // Helpers
-  row: { flexDirection: 'row' },
-  errorText: { color: theme.colors.error, fontSize: 12, marginTop: 5 },
+  row: { 
+    flexDirection: 'row' 
+  },
+  errorText: { 
+    color: theme.colors.error, 
+    fontSize: 12, 
+    marginTop: 6,
+    fontFamily: theme.fonts.regular,
+  },
 
-  // Submit
+  // Submit Button
+  submitButton: { 
+    borderRadius: 14, 
+    paddingVertical: 16, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  submitText: { 
+    color: '#fff', 
+    fontSize: 17, 
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+  },
+
+  // Unused but kept for backwards compatibility
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  sectionIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   submitBtnContainer: { marginTop: 20 },
-  submitButton: { borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', elevation: 4 },
-  submitText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 }); 

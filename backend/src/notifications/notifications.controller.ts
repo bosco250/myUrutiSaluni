@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
+import { PushNotificationService } from './services/push-notification.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -26,7 +27,10 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly pushNotificationService: PushNotificationService,
+  ) {}
 
   @Post('send')
   @Roles(
@@ -244,5 +248,25 @@ export class NotificationsController {
       body.channel,
       body.enabled,
     );
+  }
+
+  @Post('push-token')
+  @ApiOperation({ summary: 'Register Expo push token for current user' })
+  async registerPushToken(
+    @CurrentUser() user: any,
+    @Body() body: { expoPushToken: string },
+  ) {
+    const success = await this.pushNotificationService.registerPushToken(
+      user.id,
+      body.expoPushToken,
+    );
+    return { success };
+  }
+
+  @Delete('push-token')
+  @ApiOperation({ summary: 'Remove push token for current user (e.g., on logout)' })
+  async removePushToken(@CurrentUser() user: any) {
+    const success = await this.pushNotificationService.removePushToken(user.id);
+    return { success };
   }
 }

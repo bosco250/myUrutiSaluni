@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
 import { MaterialIcons, FontAwesome, Feather } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import ServiceCard from "./components/ServiceCard";
 import { exploreService, Salon, Service, Product, Employee } from "../../services/explore";
 
@@ -38,10 +37,6 @@ export default function SalonDetailScreen({
   route,
 }: SalonDetailScreenProps) {
   const { isDark } = useTheme();
-  const unreadNotificationCount = useUnreadNotifications();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "bookings" | "explore" | "notifications" | "profile"
-  >("explore");
   const [selectedTab, setSelectedTab] = useState<TabType>("Overview");
   const [salon, setSalon] = useState<Salon | null>(route?.params?.salon || null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -55,18 +50,16 @@ export default function SalonDetailScreen({
 
   const salonId = route?.params?.salonId || route?.params?.salon?.id;
 
-  useEffect(() => {
-    if (salonId && !salon) {
-      fetchSalon();
+  // Calculate card width safely
+  const cardWidth = useMemo(() => {
+    try {
+      return (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.sm) / 2;
+    } catch {
+      return 160; // Fallback width
     }
-    if (salonId) {
-      fetchServices();
-      fetchProducts();
-      fetchEmployees();
-    }
-  }, [salonId]);
+  }, []);
 
-  const fetchSalon = async () => {
+  const fetchSalon = useCallback(async () => {
     if (!salonId) return;
 
     try {
@@ -81,23 +74,23 @@ export default function SalonDetailScreen({
     } finally {
       setLoading(false);
     }
-  };
+  }, [salonId, navigation]);
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     if (!salonId) return;
 
     try {
       setServicesLoading(true);
       const salonServices = await exploreService.getServices(salonId);
       setServices(salonServices.filter((s) => s.isActive));
-    } catch (error: any) {
-      console.error("Error fetching services:", error);
+    } catch {
+      console.error("Error fetching services");
     } finally {
       setServicesLoading(false);
     }
-  };
+  }, [salonId]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     if (!salonId) return;
 
     try {
@@ -108,25 +101,26 @@ export default function SalonDetailScreen({
         (p) => p && p.id && p.name
       );
       setProducts(validProducts);
-    } catch (error: any) {
+    } catch {
       // Set empty array on error to show "No products available" message
       setProducts([]);
       // Don't show alert for products as it's not critical
     } finally {
       setProductsLoading(false);
     }
-  };
+  }, [salonId]);
 
-  const handleTabPress = (
-    tabId: string
-  ) => {
-    setActiveTab(tabId as "home" | "bookings" | "explore" | "notifications" | "profile");
-    if (tabId !== "explore") {
-      const screenName =
-        tabId === "home" ? "Home" : tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      navigation?.navigate(screenName as any);
+  useEffect(() => {
+    if (salonId && !salon) {
+      fetchSalon();
     }
-  };
+    if (salonId) {
+      fetchServices();
+      fetchProducts();
+      fetchEmployees();
+    }
+  }, [salonId, salon, fetchSalon, fetchServices, fetchProducts, fetchEmployees]);
+
 
   const handleServicePress = (service: Service) => {
     navigation?.navigate("ServiceDetail", {
@@ -135,19 +129,19 @@ export default function SalonDetailScreen({
     });
   };
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     if (!salonId) return;
 
     try {
       setEmployeesLoading(true);
       const salonEmployees = await exploreService.getSalonEmployees(salonId);
       setEmployees(salonEmployees.filter((e) => e.isActive));
-    } catch (error: any) {
+    } catch {
       setEmployees([]);
     } finally {
       setEmployeesLoading(false);
     }
-  };
+  }, [salonId]);
 
   const handleEmployeePress = (employee: Employee) => {
     navigation?.navigate("EmployeeDetail", {
@@ -170,11 +164,6 @@ export default function SalonDetailScreen({
     }
   };
 
-  const handleEmailPress = () => {
-    if (salon?.email) {
-      Linking.openURL(`mailto:${salon.email}`);
-    }
-  };
 
   const handleWebsitePress = () => {
     if (salon?.website) {
@@ -212,7 +201,7 @@ export default function SalonDetailScreen({
             try {
               // Try parsing as-is first
               hours = JSON.parse(hoursStr);
-            } catch (firstError) {
+            } catch {
               // If that fails, try unescaping double-encoded JSON
               try {
                 const unescaped = hoursStr
@@ -220,12 +209,12 @@ export default function SalonDetailScreen({
                   .replace(/\\n/g, '')
                   .replace(/\\t/g, '');
                 hours = JSON.parse(unescaped);
-              } catch (secondError) {
+              } catch {
                 // If still fails, try removing outer quotes if present
                 try {
                   const cleaned = hoursStr.replace(/^["']|["']$/g, '');
                   hours = JSON.parse(cleaned);
-                } catch (thirdError) {
+                } catch {
                   // Last attempt: try parsing after removing all escape characters
                   const fullyUnescaped = hoursStr
                     .replace(/\\/g, '')
@@ -257,7 +246,7 @@ export default function SalonDetailScreen({
             }
           }
         }
-      } catch (error) {
+      } catch {
         // Silently fail and try fallback - don't log to avoid console spam
         // The error is expected for malformed data
       }
@@ -286,7 +275,7 @@ export default function SalonDetailScreen({
         }
         // If it's not in the expected format, return as string
         return openingHoursStr;
-      } catch (error) {
+      } catch {
         // Silently fail - don't log to avoid console spam
       }
     }
@@ -1038,7 +1027,7 @@ export default function SalonDetailScreen({
               ) : (
                 <View style={styles.servicesGrid}>
                   {services.map((service) => (
-                    <View key={service.id} style={styles.serviceCardWrapper}>
+                    <View key={service.id} style={[styles.serviceCardWrapper, { width: cardWidth }]}>
                       <ServiceCard
                         image={null}
                         title={service.name}
@@ -1074,7 +1063,7 @@ export default function SalonDetailScreen({
               ) : (
                 <View style={styles.productsGrid}>
                   {products.map((product) => (
-                    <View key={product.id} style={[styles.productCard, dynamicStyles.card]}>
+                    <View key={product.id} style={[styles.productCard, dynamicStyles.card, { width: cardWidth }]}>
                       <View style={[styles.productImage, { backgroundColor: theme.colors.primaryLight }]}>
                         <Text style={styles.productInitials}>
                           {getInitials(product.name)}
@@ -1576,7 +1565,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   serviceCardWrapper: {
-    width: (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.sm) / 2,
     marginBottom: theme.spacing.md,
   },
   productsContent: {
@@ -1589,7 +1577,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   productCard: {
-    width: (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.sm) / 2,
     borderRadius: 12,
     overflow: "hidden",
     borderWidth: 1,

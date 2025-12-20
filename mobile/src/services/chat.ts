@@ -172,7 +172,7 @@ class ChatService {
           try {
             const messages = await this.getMessages(conv.id, 1, 1);
             lastMessage = messages.messages[0];
-          } catch (error) {
+          } catch {
             // Ignore error, just don't include last message
           }
         }
@@ -340,7 +340,7 @@ class ChatService {
   async searchUsersForChat(
     query?: string,
     role?: string,
-  ): Promise<Array<{
+  ): Promise<{
     id: string;
     userId: string;
     name: string;
@@ -350,13 +350,13 @@ class ChatService {
     salonId?: string;
     salonName?: string;
     isActive?: boolean;
-  }>> {
+  }[]> {
     const queryParams = new URLSearchParams();
     if (query) queryParams.append('query', query);
     if (role) queryParams.append('role', role);
     
     const endpoint = `/chat/search-users${queryParams.toString() ? `?${queryParams}` : ''}`;
-    return api.get<Array<{
+    return api.get<{
       id: string;
       userId: string;
       name: string;
@@ -366,7 +366,7 @@ class ChatService {
       salonId?: string;
       salonName?: string;
       isActive?: boolean;
-    }>>(endpoint);
+    }[]>(endpoint);
   }
 }
 

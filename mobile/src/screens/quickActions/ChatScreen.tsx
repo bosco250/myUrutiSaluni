@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -86,6 +86,93 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
     },
   };
 
+  const loadMessages = useCallback(async (convId: string) => {
+    try {
+      const result = await chatService.getMessages(convId, 1, 100);
+      setMessages(result.messages);
+    } catch (err: any) {
+      setError(err.message || "Failed to load messages");
+    }
+  }, []);
+
+  const handleMessageReceived = useCallback((message: Message) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id ? { ...m, status: "delivered" as const } : m
+      )
+    );
+  }, []);
+
+  const handleMessageSent = useCallback((message: Message) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id ? { ...m, status: "sent" as const } : m
+      )
+    );
+  }, []);
+
+  const handleTypingStarted = useCallback(() => {
+    setIsTyping(true);
+  }, []);
+
+  const handleTypingStopped = useCallback(() => {
+    setIsTyping(false);
+  }, []);
+
+  const handleNewMessage = useCallback((message: Message) => {
+    setMessages((prev) => {
+      // Avoid duplicates
+      if (prev.some((m) => m.id === message.id)) {
+        return prev;
+      }
+      return [...prev, message];
+    });
+
+    // Mark as read if it's not from current user
+    const isCurrentUser = user?.role === "customer" || user?.role === "CUSTOMER"
+      ? message.isFromCustomer
+      : !message.isFromCustomer;
+
+    if (!isCurrentUser && conversationId) {
+      chatService.markAsRead(conversationId);
+    }
+  }, [conversationId, user?.role]);
+
+  const initializeConversation = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { employeeId, salonId, appointmentId } = route?.params || {};
+      const conv = await chatService.getOrCreateConversation(
+        employeeId,
+        salonId,
+        appointmentId,
+      );
+      setConversation(conv);
+      await loadMessages(conv.id);
+      chatService.joinConversation(conv.id);
+      await chatService.markAsRead(conv.id);
+    } catch (err: any) {
+      setError(err.message || "Failed to initialize conversation");
+    } finally {
+      setLoading(false);
+    }
+  }, [route?.params, loadMessages]);
+
+  const loadConversation = useCallback(async () => {
+    try {
+      setLoading(true);
+      const conv = await chatService.getConversation(conversationId!);
+      setConversation(conv);
+      await loadMessages(conversationId!);
+      chatService.joinConversation(conversationId!);
+      await chatService.markAsRead(conversationId!);
+    } catch (err: any) {
+      setError(err.message || "Failed to load conversation");
+    } finally {
+      setLoading(false);
+    }
+  }, [conversationId, loadMessages]);
+
   useEffect(() => {
     if (!conversationId) {
       // Create or get conversation
@@ -116,7 +203,7 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
         socket.off("typing:stopped", handleTypingStopped);
       }
     };
-  }, [conversationId]);
+  }, [conversationId, initializeConversation, loadConversation, handleNewMessage, handleMessageReceived, handleMessageSent, handleTypingStarted, handleTypingStopped]);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -140,93 +227,6 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
       keyboardDidShowListener.remove();
     };
   }, []);
-
-  const initializeConversation = async () => {
-    try {
-      setLoading(true);
-      const { employeeId, salonId, appointmentId } = route?.params || {};
-      const conv = await chatService.getOrCreateConversation(
-        employeeId,
-        salonId,
-        appointmentId,
-      );
-      setConversation(conv);
-      await loadMessages(conv.id);
-      chatService.joinConversation(conv.id);
-      await chatService.markAsRead(conv.id);
-    } catch (err: any) {
-      setError(err.message || "Failed to initialize conversation");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadConversation = async () => {
-    try {
-      setLoading(true);
-      const conv = await chatService.getConversation(conversationId!);
-      setConversation(conv);
-      await loadMessages(conversationId!);
-      chatService.joinConversation(conversationId!);
-      await chatService.markAsRead(conversationId!);
-    } catch (err: any) {
-      setError(err.message || "Failed to load conversation");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMessages = async (convId: string) => {
-    try {
-      const result = await chatService.getMessages(convId, 1, 100);
-      setMessages(result.messages);
-    } catch (err: any) {
-      setError(err.message || "Failed to load messages");
-    }
-  };
-
-  const handleNewMessage = (message: Message) => {
-    setMessages((prev) => {
-      // Avoid duplicates
-      if (prev.some((m) => m.id === message.id)) {
-        return prev;
-      }
-      return [...prev, message];
-    });
-
-    // Mark as read if it's not from current user
-    const isCurrentUser = user?.role === "customer" || user?.role === "CUSTOMER"
-      ? message.isFromCustomer
-      : !message.isFromCustomer;
-
-    if (!isCurrentUser && conversationId) {
-      chatService.markAsRead(conversationId);
-    }
-  };
-
-  const handleMessageReceived = (message: Message) => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === message.id ? { ...m, status: "delivered" as const } : m
-      )
-    );
-  };
-
-  const handleMessageSent = (message: Message) => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === message.id ? { ...m, status: "sent" as const } : m
-      )
-    );
-  };
-
-  const handleTypingStarted = () => {
-    setIsTyping(true);
-  };
-
-  const handleTypingStopped = () => {
-    setIsTyping(false);
-  };
 
   const handleSend = async () => {
     if (!inputText.trim() || !conversation?.id || sending) return;

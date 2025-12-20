@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useTheme, useAuth } from '../../context';
-import { salonService } from '../../services/salon';
+import { useTheme } from '../../context';
 import { salesService, Commission } from '../../services/sales';
 
 interface CommissionsScreenProps {
@@ -25,7 +24,6 @@ interface CommissionsScreenProps {
 
 export default function CommissionsScreen({ navigation }: CommissionsScreenProps) {
   const { isDark } = useTheme();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

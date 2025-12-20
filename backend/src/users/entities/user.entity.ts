@@ -53,6 +53,9 @@ export class User {
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 
+  @Column({ name: 'expo_push_token', nullable: true, length: 255 })
+  expoPushToken: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

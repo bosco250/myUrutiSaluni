@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import { paymentsService, Payment, PaymentStatus } from "../../services/payments";
+import { paymentsService, Payment } from "../../services/payments";
 
 interface PaymentHistoryScreenProps {
   navigation: {

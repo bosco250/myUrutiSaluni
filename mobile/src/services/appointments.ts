@@ -122,10 +122,16 @@ class AppointmentsService {
   /**
    * Get all appointments for a salon (for salon owners)
    * Backend automatically filters by user's salon based on authentication
+   * Supports filtering by "my appointments" for employees
    */
-  async getSalonAppointments(): Promise<Appointment[]> {
+  async getSalonAppointments(filters?: { myAppointments?: boolean; salonId?: string }): Promise<Appointment[]> {
     try {
-      const response = await api.get<any>('/appointments');
+      const params = new URLSearchParams();
+      if (filters?.myAppointments) params.append('myAppointments', 'true');
+      if (filters?.salonId) params.append('salonId', filters.salonId);
+
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const response = await api.get<any>(`/appointments${queryString}`);
       
       let appointments: Appointment[] = [];
       

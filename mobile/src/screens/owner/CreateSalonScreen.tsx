@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -103,7 +103,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     registrationNumber: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [locationPermission, setLocationPermission] = useState(false);
+  const [, setLocationPermission] = useState(false);
   const [mapRegion, setMapRegion] = useState({
     latitude: -1.9403,
     longitude: 29.8739,
@@ -139,17 +139,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     },
   };
 
-  useEffect(() => {
-    requestLocationPermission();
-  }, []);
-
-  useEffect(() => {
-    if (mode === 'edit' && editingSalon) {
-      prefillForm();
-    }
-  }, [mode, editingSalon]);
-
-  const prefillForm = () => {
+  const prefillForm = useCallback(() => {
     if (!editingSalon) return;
 
     setFormData({
@@ -194,27 +184,37 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     } else if (editingSalon.settings?.workingHours) {
         setWorkingHours(editingSalon.settings.workingHours);
     }
-  };
+  }, [editingSalon]);
 
-  const requestLocationPermission = async () => {
+  const requestLocationPermission = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     setLocationPermission(status === 'granted');
     if (status === 'granted' && mode !== 'edit') {
       getCurrentLocation();
     }
-  };
+  }, [mode, getCurrentLocation]);
 
-  const getCurrentLocation = async () => {
+  useEffect(() => {
+    requestLocationPermission();
+  }, [requestLocationPermission]);
+
+  useEffect(() => {
+    if (mode === 'edit' && editingSalon) {
+      prefillForm();
+    }
+  }, [mode, editingSalon, prefillForm]);
+
+  const getCurrentLocation = useCallback(async () => {
     try {
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
       setFormData(prev => ({ ...prev, latitude, longitude }));
       setMapRegion(prev => ({ ...prev, latitude, longitude }));
       await reverseGeocodeLocation(latitude, longitude);
-    } catch (error) {
-      console.error('Error getting location:', error);
+    } catch {
+      console.error('Error getting location');
     }
-  };
+  }, []);
 
   const reverseGeocodeLocation = async (latitude: number, longitude: number) => {
     try {
@@ -247,8 +247,8 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           district: '',
         }));
       }
-    } catch (error) {
-      console.error('[CreateSalon] Reverse geocoding error:', error);
+    } catch {
+      console.error('[CreateSalon] Reverse geocoding error');
     }
   };
 
@@ -385,7 +385,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           );
       }
     } catch (error: any) {
-      console.error('[CreateSalon] Error:', error);
+      console.error('[CreateSalon] Error:', error?.message || 'Unknown error');
       let errorMessage = 'Failed to submit. Please try again.';
       if (error?.response?.data?.message) {
         errorMessage = Array.isArray(error.response.data.message)

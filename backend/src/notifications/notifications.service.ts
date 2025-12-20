@@ -12,6 +12,7 @@ import { NotificationPreference } from './entities/notification-preference.entit
 import { Customer } from '../customers/entities/customer.entity';
 import { EmailService } from './services/email.service';
 import { SmsService } from './services/sms.service';
+import { PushNotificationService } from './services/push-notification.service';
 import { InAppNotificationService } from './services/in-app-notification.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
 import { AppointmentsService } from '../appointments/appointments.service';
@@ -30,6 +31,7 @@ export class NotificationsService {
     private customersRepository: Repository<Customer>,
     private emailService: EmailService,
     private smsService: SmsService,
+    private pushService: PushNotificationService,
     @Inject(forwardRef(() => InAppNotificationService))
     private inAppService: InAppNotificationService,
     @Inject(forwardRef(() => NotificationOrchestratorService))
@@ -131,8 +133,30 @@ export class NotificationsService {
           }
           break;
         case NotificationChannel.PUSH:
+          if (notification.userId) {
+            success = await this.pushService.sendPushNotificationToUser(
+              notification.userId,
+              notification.title,
+              notification.body,
+              notification.metadata || {},
+              {
+                priority: 'high',
+                channelId: this.pushService.getChannelIdForType(
+                  notification.type,
+                ),
+              },
+            );
+          } else {
+            // TODO: Handle customer push notifications (requires saving push token for customers/devices)
+            this.logger.warn(
+              `Push notification for customer ${notification.customerId} not yet supported`,
+            );
+            success = false;
+          }
+          break;
         case NotificationChannel.IN_APP:
-          // TODO: Implement push notifications
+          // In-app notifications are "read" when fetched, so "sending" them just means they persist in DB
+          // which is already done.
           success = true;
           break;
       }

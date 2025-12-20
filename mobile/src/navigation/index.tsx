@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, ActivityIndicator, StyleSheet, BackHandler, Alert, Text } from "react-native";
+import {
+  View,
+  ActivityIndicator,
+  StyleSheet,
+  BackHandler,
+  Alert,
+} from "react-native";
 import AuthNavigator from "./AuthNavigator";
 import WelcomeScreen from "../screens/WelcomeScreen";
-import { ThemeProvider, AuthProvider, useAuth } from "../context";
+import NetworkErrorScreen from "../screens/NetworkErrorScreen";
+import {
+  ThemeProvider,
+  AuthProvider,
+  useAuth,
+  NetworkProvider,
+  useNetwork,
+  PushNotificationProvider,
+} from "../context";
 import { theme } from "../theme";
 import { getDefaultHomeScreen } from "../constants/permissions";
 import { Screen } from "../constants/permissions";
@@ -11,25 +25,100 @@ import { getNavigationTabsForRole, mapScreenToTab } from "./navigationConfig";
 import BottomNavigation from "../components/common/BottomNavigation";
 import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 
-type MainScreen = "Home" | "Bookings" | "AppointmentDetail" | "BookingFlow" | "Notifications" | "Explore" | "ServiceDetail" | "AllServices" | "SalonDetail" | "EmployeeList" | "EmployeeDetail" | "Profile" | "Login" | "Search" | "AIFaceScan" | "AIConsultant" | "RecommendationDetail" | "Loyalty" | "Wallet" | "Offers" | "ChatList" | "Chat" | "ChatUserSearch" | "Review" | "Payment" | "PaymentHistory" | "Withdraw" | "MembershipInfo" | "MembershipApplication" | "ApplicationSuccess" | "StaffDashboard" | "OwnerDashboard" | "AdminDashboard" | "MySchedule" | "Attendance" | "CustomerManagement" | "StaffManagement" | "SalonSettings" | "BusinessAnalytics" | "InventoryManagement" | "SalonManagement" | "UserManagement" | "SystemReports" | "MembershipApprovals" | "Operations" | "Finance" | "MoreMenu" | "Help" | "WorkLog" | "Leaderboard" | "CreateSalon" | "SalonList" | "SalonAppointments" | "OwnerSalonDetail" | "OwnerEmployeeDetail" | "AddEmployee" | "AddService" | "EditSalon";
+type MainScreen =
+  | "Home"
+  | "Bookings"
+  | "AppointmentDetail"
+  | "BookingFlow"
+  | "Notifications"
+  | "Explore"
+  | "ServiceDetail"
+  | "AllServices"
+  | "SalonDetail"
+  | "EmployeeList"
+  | "EmployeeDetail"
+  | "Profile"
+  | "Login"
+  | "Search"
+  | "AIFaceScan"
+  | "AIConsultant"
+  | "RecommendationDetail"
+  | "Loyalty"
+  | "Wallet"
+  | "Offers"
+  | "ChatList"
+  | "Chat"
+  | "ChatUserSearch"
+  | "Review"
+  | "Payment"
+  | "PaymentHistory"
+  | "Withdraw"
+  | "MembershipInfo"
+  | "MembershipApplication"
+  | "ApplicationSuccess"
+  | "StaffDashboard"
+  | "OwnerDashboard"
+  | "AdminDashboard"
+  | "MySchedule"
+  | "Attendance"
+  | "CustomerManagement"
+  | "StaffManagement"
+  | "SalonSettings"
+  | "BusinessAnalytics"
+  | "InventoryManagement"
+  | "StockManagement"
+  | "SalonManagement"
+  | "UserManagement"
+  | "SystemReports"
+  | "MembershipApprovals"
+  | "Operations"
+  | "Finance"
+  | "MoreMenu"
+  | "Help"
+  | "WorkLog"
+  | "Leaderboard"
+  | "CreateSalon"
+  | "SalonList"
+  | "SalonAppointments"
+  | "OwnerSalonDetail"
+  | "OwnerEmployeeDetail"
+  | "AddEmployee"
+  | "AddService"
+  | "EditSalon";
 
 // Main tabs that are root level screens
-const MAIN_TABS: MainScreen[] = ["Home", "Bookings", "Explore", "Profile", "Notifications"];
+const MAIN_TABS: MainScreen[] = [
+  "Home",
+  "Bookings",
+  "Explore",
+  "Profile",
+  "Notifications",
+];
+
+// Props interface for NavigationContent
+interface NavigationContentProps {
+  onNavigationReady?: (
+    navigate: (screen: string, params?: any) => void
+  ) => void;
+}
 
 // Inner navigation component that uses auth context
-function NavigationContent() {
+function NavigationContent({ onNavigationReady }: NavigationContentProps) {
   interface HistoryItem {
     name: MainScreen;
     params: any;
   }
 
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { isConnected, isChecking, checkConnection } = useNetwork();
   const unreadNotificationCount = useUnreadNotifications();
   const [showWelcome, setShowWelcome] = useState(true);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<MainScreen>("Home");
   const [screenParams, setScreenParams] = useState<any>({});
-  const [screenHistory, setScreenHistory] = useState<HistoryItem[]>([{ name: "Home", params: {} }]);
+  const [screenHistory, setScreenHistory] = useState<HistoryItem[]>([
+    { name: "Home", params: {} },
+  ]);
   const [activeTab, setActiveTab] = useState<string>("home");
 
   // Skip welcome screen if user is already authenticated
@@ -39,12 +128,12 @@ function NavigationContent() {
     if (!isLoading && isAuthenticated && !hasShownWelcome && user) {
       setShowWelcome(false);
       setHasShownWelcome(true);
-      
+
       // Set role-appropriate home screen
       const roleHomeScreen = getDefaultHomeScreen(user?.role);
       let initialScreen: MainScreen = "Home";
       let initialTab = "home";
-      
+
       // Map Screen enum to MainScreen type
       switch (roleHomeScreen) {
         case Screen.STAFF_DASHBOARD:
@@ -63,7 +152,7 @@ function NavigationContent() {
           initialScreen = "Home";
           initialTab = "home";
       }
-      
+
       setCurrentScreen(initialScreen);
       setScreenHistory([{ name: initialScreen, params: {} }]);
       setActiveTab(initialTab);
@@ -127,7 +216,7 @@ function NavigationContent() {
             screenEnum = Screen.SALON_LIST;
             break;
         }
-        
+
         if (screenEnum) {
           const tabId = mapScreenToTab(screenEnum, user?.role);
           if (tabId && tabId !== activeTab) {
@@ -140,7 +229,6 @@ function NavigationContent() {
       }
     }
   }, [currentScreen, user?.role, isAuthenticated, isLoading, activeTab]);
-
 
   // Handle Android hardware back button
   const handleBackPress = useCallback(() => {
@@ -188,7 +276,11 @@ function NavigationContent() {
         "Are you sure you want to exit?",
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Exit", style: "destructive", onPress: () => BackHandler.exitApp() }
+          {
+            text: "Exit",
+            style: "destructive",
+            onPress: () => BackHandler.exitApp(),
+          },
         ],
         { cancelable: true }
       );
@@ -211,7 +303,10 @@ function NavigationContent() {
 
   // Set up BackHandler listener
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", handleBackPress);
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleBackPress
+    );
     return () => backHandler.remove();
   }, [handleBackPress]);
 
@@ -220,10 +315,13 @@ function NavigationContent() {
     setHasShownWelcome(true);
   };
 
-  const handleNavigate = (screen: string, params?: any) => {
+  const handleNavigate = useCallback((screen: string, params?: any) => {
     const targetScreen = screen as MainScreen;
-    const historyItem: HistoryItem = { name: targetScreen, params: params || {} };
-    
+    const historyItem: HistoryItem = {
+      name: targetScreen,
+      params: params || {},
+    };
+
     // If navigating to a main tab, reset history
     if (MAIN_TABS.includes(targetScreen)) {
       setScreenHistory([historyItem]);
@@ -233,7 +331,14 @@ function NavigationContent() {
     }
     setCurrentScreen(targetScreen);
     setScreenParams(params || {});
-  };
+  }, []);
+
+  // Expose navigate function to parent via callback
+  useEffect(() => {
+    if (onNavigationReady) {
+      onNavigationReady(handleNavigate);
+    }
+  }, [onNavigationReady, handleNavigate]);
 
   const handleGoBack = () => {
     if (screenHistory.length > 1) {
@@ -268,15 +373,15 @@ function NavigationContent() {
   // Handle tab press - role aware
   const handleTabPress = (tabId: string) => {
     setActiveTab(tabId);
-    
+
     // Map tab ID to screen based on role
     const tabs = getNavigationTabsForRole(user?.role);
-    const tab = tabs.find(t => t.id === tabId);
-    
+    const tab = tabs.find((t) => t.id === tabId);
+
     if (tab) {
       // Map Screen enum to MainScreen string
       const screenName = tab.screen.toString() as MainScreen;
-      
+
       // Specific mappings for role dashboards
       let targetScreen: MainScreen = screenName as MainScreen;
       if (tab.screen === Screen.STAFF_DASHBOARD) {
@@ -322,7 +427,7 @@ function NavigationContent() {
       } else if (tab.screen === Screen.SALON_LIST) {
         targetScreen = "SalonList";
       }
-      
+
       handleNavigate(targetScreen);
     }
   };
@@ -336,23 +441,26 @@ function NavigationContent() {
     );
   }
 
+  // Show network error screen when not connected
+  if (!isConnected && !isLoading) {
+    return (
+      <NetworkErrorScreen onRetry={checkConnection} isRetrying={isChecking} />
+    );
+  }
+
   // Show welcome screen only once and only if not authenticated
   if (showWelcome && !isAuthenticated) {
-    return (
-      <WelcomeScreen navigation={{ navigate: handleWelcomeComplete }} />
-    );
+    return <WelcomeScreen navigation={{ navigate: handleWelcomeComplete }} />;
   }
 
   // After authentication, show main app screens using screen router
   if (isAuthenticated) {
     const screenToShow = currentScreen || "Home";
-    
 
-    
     return (
       <View style={{ flex: 1 }}>
         {renderScreen(screenToShow, handleNavigate, handleGoBack, screenParams)}
-        
+
         {/* Bottom Navigation */}
         <BottomNavigation
           activeTab={activeTab}
@@ -367,14 +475,40 @@ function NavigationContent() {
   return <AuthNavigator />;
 }
 
+// Wrapper component with push notifications that has access to navigation
+function NavigationWithPushNotifications() {
+  // We need to use a ref to pass the navigation function to PushNotificationProvider
+  const navigationRef = React.useRef<
+    ((screen: string, params?: any) => void) | null
+  >(null);
+
+  const handleNotificationTap = useCallback((screen: string, params: any) => {
+    if (navigationRef.current) {
+      navigationRef.current(screen, params);
+    }
+  }, []);
+
+  return (
+    <PushNotificationProvider onNotificationTap={handleNotificationTap}>
+      <NavigationContent
+        onNavigationReady={(navigate) => {
+          navigationRef.current = navigate;
+        }}
+      />
+    </PushNotificationProvider>
+  );
+}
+
 // Main navigation component with providers
 export default function Navigation() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <NavigationContent />
-      </ThemeProvider>
-    </AuthProvider>
+    <NetworkProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <NavigationWithPushNotifications />
+        </ThemeProvider>
+      </AuthProvider>
+    </NetworkProvider>
   );
 }
 

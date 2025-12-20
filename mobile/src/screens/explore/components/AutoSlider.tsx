@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -12,10 +12,18 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../../theme";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = 280;
 const CARD_SPACING = theme.spacing.md;
 const SLIDE_INTERVAL = 4000; // 4 seconds per slide for better UX
+
+// Helper function to safely get screen width
+const getScreenWidth = () => {
+  try {
+    return Dimensions.get("window").width;
+  } catch {
+    return 375; // Fallback width
+  }
+};
 
 interface AutoSliderProps {
   children: React.ReactNode[];
@@ -33,8 +41,17 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const isPausedRef = useRef(false);
 
+  // Memoize screen width to avoid recalculating on every render
+  const screenWidth = useMemo(() => getScreenWidth(), []);
+
+  // Calculate padding horizontal once
+  const paddingHorizontal = useMemo(
+    () => (screenWidth - CARD_WIDTH) / 2,
+    [screenWidth]
+  );
+
   // Calculate total width and offsets
-  const totalWidth = children.length * itemWidth;
+  // const totalWidth = children.length * itemWidth;
 
   // Initialize scroll position to second item
   useEffect(() => {
@@ -65,12 +82,12 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
       }).start(() => {
         setCurrentIndex((prevIndex) => {
           const nextIndex = (prevIndex + 1) % children.length;
-          
+
           scrollViewRef.current?.scrollTo({
             x: nextIndex * itemWidth,
             animated: true,
           });
-          
+
           // Fade in
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -78,7 +95,7 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }).start();
-          
+
           return nextIndex;
         });
       });
@@ -102,19 +119,19 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
         clearTimeout(pauseTimeoutRef.current);
       }
     };
-  }, [children.length, itemWidth]);
+  }, [children.length, itemWidth, fadeAnim]);
 
   // Handle manual scroll
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / itemWidth);
-    
+
     // Update animated value for indicators
     scrollX.setValue(offsetX);
 
     if (index !== currentIndex) {
       setCurrentIndex(index);
-      
+
       // Pause auto-scroll when user manually scrolls
       isPausedRef.current = true;
       if (intervalRef.current) {
@@ -123,7 +140,7 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
       if (pauseTimeoutRef.current) {
         clearTimeout(pauseTimeoutRef.current);
       }
-      
+
       // Resume auto-scroll after 5 seconds of no interaction
       pauseTimeoutRef.current = setTimeout(() => {
         isPausedRef.current = false;
@@ -160,40 +177,6 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
     }
   };
 
-  // Pagination dots animation
-  const paginationDots = children.map((_, index) => {
-    const inputRange = [
-      (index - 1) * itemWidth,
-      index * itemWidth,
-      (index + 1) * itemWidth,
-    ];
-
-    const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.8, 1.2, 0.8],
-      extrapolate: "clamp",
-    });
-
-    const opacity = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.4, 1, 0.4],
-      extrapolate: "clamp",
-    });
-
-    return (
-      <Animated.View
-        key={index}
-        style={[
-          styles.paginationDot,
-          {
-            transform: [{ scale }],
-            opacity,
-          },
-        ]}
-      />
-    );
-  });
-
   if (children.length === 0) {
     return null;
   }
@@ -228,10 +211,7 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 },
-          ]}
+          contentContainerStyle={[styles.scrollContent, { paddingHorizontal }]}
           style={styles.scrollView}
         >
           {children.map((child, index) => {
@@ -299,7 +279,10 @@ export default function AutoSlider({ children, onItemPress }: AutoSliderProps) {
           styles.decorativeRight,
           {
             opacity: scrollX.interpolate({
-              inputRange: [(children.length - 2) * itemWidth, (children.length - 1) * itemWidth],
+              inputRange: [
+                (children.length - 2) * itemWidth,
+                (children.length - 1) * itemWidth,
+              ],
               outputRange: [0.2, 0.5],
               extrapolate: "clamp",
             }),
@@ -387,4 +370,3 @@ const styles = StyleSheet.create({
     opacity: 0.2,
   },
 });
-

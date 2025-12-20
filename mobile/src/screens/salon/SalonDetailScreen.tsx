@@ -53,15 +53,7 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
   const salonName = route.params?.salonName;
   const { isDark } = useTheme();
 
-  useEffect(() => {
-    if (!salonId) {
-      Alert.alert('Error', 'Salon ID is missing');
-      navigation.goBack();
-    }
-  }, [salonId]);
-
-  if (!salonId) return null;
-  
+  // All hooks MUST be called unconditionally before any returns
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [salon, setSalon] = useState<SalonDetails | null>(null);
   const [employees, setEmployees] = useState<SalonEmployee[]>([]);
@@ -70,7 +62,7 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   const dynamicStyles = {
@@ -93,6 +85,8 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
   };
 
   const loadData = useCallback(async () => {
+    if (!salonId) return;
+    
     try {
       const [salonData, employeesData, servicesData, productsData, appointmentsData] = await Promise.all([
         salonService.getSalonDetails(salonId),
@@ -107,7 +101,7 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
       setServices(servicesData);
       setProducts(productsData);
       setAppointments(appointmentsData.slice(0, 5)); // Only first 5
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error loading salon details:', err);
       Alert.alert('Error', 'Failed to load salon details');
     } finally {
@@ -117,42 +111,26 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
   }, [salonId]);
 
   useEffect(() => {
+    if (!salonId) {
+      Alert.alert('Error', 'Salon ID is missing');
+      navigation.goBack();
+      return;
+    }
     loadData();
-  }, [loadData]);
+  }, [salonId, loadData, navigation]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
   }, [loadData]);
 
+  // No early return here since hooks are already called and loading state is handled below
+  // if (!salonId) return null;
+
   const handleEditSalon = () => {
     navigation.navigate('CreateSalon', { mode: 'edit', salon });
   };
 
-  const handleDeleteSalon = () => {
-    Alert.alert(
-      'Delete Salon',
-      'Are you sure you want to delete this salon? This action cannot be undone and will remove all associated data.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(true);
-              await salonService.deleteSalon(salonId);
-              Alert.alert('Success', 'Salon has been deleted successfully');
-              navigation.goBack();
-            } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to delete salon');
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -660,7 +638,7 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
             <View style={[styles.headerBadge, { backgroundColor: getStatusColor(salon.status) + '20' }]}>
               <View style={[styles.headerBadgeDot, { backgroundColor: getStatusColor(salon.status) }]} />
               <Text style={[styles.headerBadgeText, { color: getStatusColor(salon.status) }]}>
-                {salon.status === 'active' ? 'Active' : salon.status === 'pending_approval' ? 'Pending' : 'Inactive'}
+                {salon.status === 'active' ? 'Active' : salon.status === 'pending_approval' ? 'Pending Approval' : 'Inactive'}
               </Text>
             </View>
           )}
