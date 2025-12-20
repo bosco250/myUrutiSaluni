@@ -24,7 +24,7 @@ import PaymentScreen from '../screens/payment/PaymentScreen';
 import PaymentHistoryScreen from '../screens/payment/PaymentHistoryScreen';
 import WithdrawScreen from '../screens/payment/WithdrawScreen';
 import { MembershipInfoScreen, MembershipApplicationScreen, ApplicationSuccessScreen } from '../screens/membership';
-import { StaffDashboardScreen, MyScheduleScreen, AttendanceScreen } from '../screens/staff';
+import { StaffDashboardScreen, MyScheduleScreen, AttendanceScreen, CreateAppointmentScreen } from '../screens/staff';
 import { OwnerDashboardScreen, MoreMenuScreen, CreateSalonScreen, SalonAppointmentsScreen, OperationsScreen } from '../screens/owner';
 import { AdminDashboardScreen, SalonManagementScreen } from '../screens/admin';
 import {
@@ -40,9 +40,17 @@ import {
   CustomerManagementScreen,
   CustomerDetailScreen,
 } from '../screens/salon';
-import { SalesScreen, SalesHistoryScreen, CommissionsScreen, SaleDetailScreen } from '../screens/sales';
+import { SalesScreen, SalesHistoryScreen, CommissionsScreen, CommissionDetailScreen, SaleDetailScreen } from '../screens/sales';
 import { BusinessAnalyticsScreen } from '../screens/analytics';
 import { SalonSettingsScreen } from '../screens/settings';
+import { FinanceScreen, LoanRepaymentScreen } from '../screens/finance';
+import { 
+  FinancialReportsScreen,
+  ProfitLossReportScreen,
+  ExpenseBreakdownScreen,
+  RevenueByServiceScreen,
+} from '../screens/reports';
+import { WorkLogScreen } from '../screens/workLog';
 import { theme } from '../theme';
 
 /**
@@ -225,6 +233,9 @@ export const renderScreen = (
     case 'MySchedule':
       return <MyScheduleScreen navigation={navigation} />;
 
+    case 'CreateAppointment':
+      return <CreateAppointmentScreen navigation={navigation} />;
+
     case 'Attendance':
       return <AttendanceScreen navigation={navigation} />;
 
@@ -261,12 +272,44 @@ export const renderScreen = (
       return <SalesHistoryScreen navigation={navigation} route={{ params: screenParams }} />;
     case 'Commissions':
       return <CommissionsScreen navigation={navigation} />;
+    
+    case 'CommissionDetail':
+      return <CommissionDetailScreen navigation={navigation} route={{ params: screenParams }} />;
     case 'SaleDetail':
       return <SaleDetailScreen navigation={navigation} route={{ params: screenParams }} />;
 
     case 'Finance':
+      return <FinanceScreen navigation={navigation} />;
+
+    case 'LoanRepayment':
+      return <LoanRepaymentScreen navigation={navigation} route={{ params: screenParams }} />;
+
+    case 'FinancialReports':
+      return <FinancialReportsScreen navigation={navigation} />;
+
+    case 'ProfitLossReport':
+      return <ProfitLossReportScreen navigation={navigation} route={{ params: screenParams }} />;
+
+    case 'ExpenseBreakdown':
+      return <ExpenseBreakdownScreen navigation={navigation} route={{ params: screenParams }} />;
+
+    case 'RevenueByService':
+      return <RevenueByServiceScreen navigation={navigation} route={{ params: screenParams }} />;
+
     case 'Help':
+      return (
+        <View style={styles.placeholderContainer}>
+          <Text style={styles.placeholderTitle}>{screenName}</Text>
+          <Text style={styles.placeholderText}>Coming Soon</Text>
+          <Text style={styles.placeholderSubtext}>
+            This feature is currently under development.
+          </Text>
+        </View>
+      );
+
     case 'WorkLog':
+      return <WorkLogScreen navigation={navigation} />;
+
     case 'Leaderboard':
       return (
         <View style={styles.placeholderContainer}>

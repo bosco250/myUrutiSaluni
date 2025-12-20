@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsObject,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MessageType } from '../entities/message.entity';
 
@@ -23,4 +29,3 @@ export class CreateMessageDto {
   @IsOptional()
   metadata?: Record<string, any>;
 }
-

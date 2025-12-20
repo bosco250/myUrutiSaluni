@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -27,9 +27,7 @@ interface AuthenticatedSocket extends Socket {
   },
   namespace: '/chat',
 })
-export class ChatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -138,7 +136,9 @@ export class ChatGateway
 
       // Emit to recipient if online
       if (recipientKey) {
-        this.server.to(`user:${recipientKey}`).emit('message:received', message);
+        this.server
+          .to(`user:${recipientKey}`)
+          .emit('message:received', message);
       }
 
       // Emit to conversation room
@@ -175,7 +175,9 @@ export class ChatGateway
       // Mark as read
       await this.chatService.markAsRead(data.conversationId, currentUser);
 
-      client.emit('conversation:joined', { conversationId: data.conversationId });
+      client.emit('conversation:joined', {
+        conversationId: data.conversationId,
+      });
     } catch (error) {
       this.logger.error(`Error joining conversation: ${error.message}`);
       client.emit('conversation:error', { error: error.message });
@@ -225,7 +227,9 @@ export class ChatGateway
    * Broadcast message to conversation (called from service)
    */
   broadcastMessage(conversationId: string, message: any) {
-    this.server.to(`conversation:${conversationId}`).emit('message:new', message);
+    this.server
+      .to(`conversation:${conversationId}`)
+      .emit('message:new', message);
   }
 
   /**
@@ -235,4 +239,3 @@ export class ChatGateway
     return this.connectedUsers.has(userId);
   }
 }
-

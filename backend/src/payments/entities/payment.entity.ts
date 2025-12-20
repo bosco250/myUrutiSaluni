@@ -60,12 +60,15 @@ export class Payment {
   @Column({ name: 'phone_number', nullable: true })
   phoneNumber?: string;
 
-  @ManyToOne(() => Customer, { eager: true })
+  @ManyToOne(() => Customer, { eager: true, nullable: true })
   @JoinColumn({ name: 'customer_id' })
-  customer: Customer;
+  customer?: Customer;
 
-  @Column({ name: 'customer_id' })
-  customerId: string;
+  @Column({ name: 'customer_id', nullable: true })
+  customerId?: string;
+
+  @Column({ name: 'user_id', nullable: true })
+  userId?: string;
 
   @ManyToOne(() => Appointment, { nullable: true })
   @JoinColumn({ name: 'appointment_id' })

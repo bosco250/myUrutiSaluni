@@ -12,7 +12,7 @@ import {
 import { Button, Input, SegmentedControl } from "../../components";
 import { MailIcon, LockIcon, PersonIcon, PhoneIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
-import { useAuth } from "../../context";
+import { useAuth, useTheme } from "../../context";
 
 interface SignUpScreenProps {
   navigation?: {
@@ -25,6 +25,27 @@ type AccountType = "Customer" | "Employee" | "Owner";
 
 export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const { register } = useAuth();
+  const { isDark } = useTheme();
+
+  // Dynamic styles for dark/light mode support
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    text: {
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+    },
+    inputBackground: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+    },
+    border: {
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
+    },
+  };
+
   const [accountType, setAccountType] = useState<AccountType>("Customer");
   const [formData, setFormData] = useState({
     name: "",
@@ -122,7 +143,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, dynamicStyles.container]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
@@ -135,13 +156,13 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
             style={styles.backButton}
             onPress={() => navigation?.goBack()}
           >
-            <Text style={styles.backButtonText}>←</Text>
+            <Text style={[styles.backButtonText, dynamicStyles.text]}>←</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join Isimbi to start your journey</Text>
+            <Text style={[styles.title, dynamicStyles.text]}>Create Account</Text>
+            <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>Join Isimbi to start your journey</Text>
           </View>
 
           {/* Form */}
@@ -208,7 +229,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
 
             {/* Terms and Privacy */}
             <View style={styles.termsContainer}>
-              <Text style={styles.termsText}>
+              <Text style={[styles.termsText, dynamicStyles.textSecondary]}>
                 By signing up, you agree to our{" "}
                 <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
                 <Text style={styles.termsLink}>Privacy Policy</Text>
@@ -217,7 +238,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
 
             {/* Sign In Link */}
             <View style={styles.signInContainer}>
-              <Text style={styles.signInText}>Already have an account? </Text>
+              <Text style={[styles.signInText, dynamicStyles.textSecondary]}>Already have an account? </Text>
               <TouchableOpacity onPress={() => navigation?.navigate("Login")}>
                 <Text style={styles.signInLink}>Sign In</Text>
               </TouchableOpacity>
@@ -232,7 +253,6 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -249,7 +269,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 24,
-    color: theme.colors.text,
     fontFamily: theme.fonts.bold,
   },
   header: {
@@ -258,13 +277,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: theme.colors.text,
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
   },
   subtitle: {
     fontSize: 16,
-    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
   },
   form: {
@@ -279,7 +296,6 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 18,
     fontFamily: theme.fonts.regular,
@@ -294,7 +310,6 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   signInText: {
-    color: theme.colors.textSecondary,
     fontSize: 14,
     fontFamily: theme.fonts.regular,
   },

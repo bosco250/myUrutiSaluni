@@ -33,4 +33,3 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}
-

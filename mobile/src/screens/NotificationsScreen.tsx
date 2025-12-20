@@ -218,6 +218,10 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
           salonId: salonId,
         });
       }
+      // Handle commission notifications - go to Commissions screen
+      else if (notification.type?.startsWith('commission_') || notification.type === 'commission_earned' || notification.type === 'commission_paid') {
+        navigation?.navigate('Commissions');
+      }
       // Handle payment/sale notifications - go to PaymentHistory
       else if (notification.type?.startsWith('payment_') || notification.type?.startsWith('sale_') || notification.type === 'payment') {
         const paymentId = metadata.paymentId || (notification as any).paymentId;

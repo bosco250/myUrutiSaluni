@@ -61,19 +61,27 @@ export interface Sale {
 }
 
 export interface SalesAnalytics {
-  totalSales: number;
-  totalRevenue: number;
-  averageOrderValue: number;
-  topServices?: {
-    serviceId: string;
-    serviceName: string;
+  summary: {
+    totalRevenue: number;
+    totalSales: number;
+    averageSale: number;
+  };
+  paymentMethods: Record<string, number>;
+  dailyRevenue: { date: string; revenue: number }[];
+  monthlyRevenue: { month: string; revenue: number }[];
+  topServices: {
+    name: string;
     count: number;
     revenue: number;
   }[];
-  topProducts?: {
-    productId: string;
-    productName: string;
+  topProducts: {
+    name: string;
     count: number;
+    revenue: number;
+  }[];
+  topEmployees: {
+    name: string;
+    sales: number;
     revenue: number;
   }[];
 }
@@ -198,21 +206,10 @@ class SalesService {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
 
-    try {
-      const response = await api.get<SalesAnalytics>(
-        `/sales/analytics/summary?${params.toString()}`
-      );
-      return response;
-    } catch {
-      // Return default analytics if endpoint not available
-      return {
-        totalSales: 0,
-        totalRevenue: 0,
-        averageOrderValue: 0,
-        topServices: [],
-        topProducts: [],
-      };
-    }
+    const response = await api.get<SalesAnalytics>(
+      `/sales/analytics/summary?${params.toString()}`
+    );
+    return response;
   }
 
   /**

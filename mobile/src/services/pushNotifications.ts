@@ -250,8 +250,8 @@ class PushNotificationsService {
     }
 
     // Commission notifications
-    if (type.startsWith('commission_')) {
-      return { screen: 'Wallet', params: {} };
+    if (type.startsWith('commission_') || type === 'commission_earned' || type === 'commission_paid') {
+      return { screen: 'Commissions', params: {} };
     }
 
     // Loyalty notifications

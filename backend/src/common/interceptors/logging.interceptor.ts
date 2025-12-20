@@ -21,9 +21,9 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => {
-          const response = context.switchToHttp().getResponse();
-          const delay = Date.now() - now;
           // Silencing successful requests to clean up logs
+          // const response = context.switchToHttp().getResponse();
+          // const delay = Date.now() - now;
           // this.logger.log(
           //   `${method} ${url} ${response.statusCode} - ${delay}ms`,
           // );

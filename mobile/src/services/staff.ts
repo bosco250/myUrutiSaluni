@@ -144,9 +144,15 @@ class StaffService {
 
   /**
    * Get employee by user ID
+   * Returns all employee records for a user (user can work at multiple salons)
    */
   async getEmployeeByUserId(userId: string): Promise<any> {
-    const response = await api.get<any>(`/salon-employees/user/${userId}`);
+    const response = await api.get<any>(`/salons/employees/by-user/${userId}`);
+    // Backend returns an array, but we want to maintain backward compatibility
+    // If it's an array with one item, return the item; if multiple, return array
+    if (Array.isArray(response)) {
+      return response.length === 1 ? response[0] : response;
+    }
     return response;
   }
 

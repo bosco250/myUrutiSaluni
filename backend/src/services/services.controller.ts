@@ -78,14 +78,27 @@ export class ServicesController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
-      if (salonId && !salonIds.includes(salonId)) {
+      // Get salons owned by user
+      const ownedSalons = await this.salonsService.findByOwnerId(user.id);
+      const ownedSalonIds = ownedSalons.map((s) => s.id);
+
+      // Get salons where user works as employee
+      const employeeRecords = await this.salonsService.findAllEmployeesByUserId(
+        user.id,
+      );
+      const employeeSalonIds = employeeRecords.map((emp) => emp.salonId);
+
+      // Combine both lists
+      const accessibleSalonIds = [
+        ...new Set([...ownedSalonIds, ...employeeSalonIds]),
+      ];
+
+      if (salonId && !accessibleSalonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access services for your own salon',
+          'You can only access services for salons you own or work at',
         );
       }
-      return this.servicesService.findBySalonIds(salonIds);
+      return this.servicesService.findBySalonIds(accessibleSalonIds);
     }
     // Customers and admins can see all or filter by salonId
     return this.servicesService.findAll(salonId);
@@ -110,10 +123,26 @@ export class ServicesController {
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       const salon = await this.salonsService.findOne(service.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only access services for your own salon',
+
+      // Salon owners can access services for their own salons
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only access services for your own salon',
+          );
+        }
+      }
+      // Employees can access services for salons they work at
+      else if (user.role === UserRole.SALON_EMPLOYEE) {
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          service.salonId,
         );
+        if (!isEmployee) {
+          throw new ForbiddenException(
+            'You can only access services for salons you work at',
+          );
+        }
       }
     }
 
@@ -141,10 +170,26 @@ export class ServicesController {
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       const salon = await this.salonsService.findOne(service.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only update services for your own salon',
+
+      // Salon owners can update services for their own salons
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only update services for your own salon',
+          );
+        }
+      }
+      // Employees can update services for salons they work at
+      else if (user.role === UserRole.SALON_EMPLOYEE) {
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          service.salonId,
         );
+        if (!isEmployee) {
+          throw new ForbiddenException(
+            'You can only update services for salons you work at',
+          );
+        }
       }
     }
 

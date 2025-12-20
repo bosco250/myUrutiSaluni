@@ -34,13 +34,19 @@ export class PushNotificationService {
   /**
    * Register or update a user's push token
    */
-  async registerPushToken(userId: string, expoPushToken: string): Promise<boolean> {
+  async registerPushToken(
+    userId: string,
+    expoPushToken: string,
+  ): Promise<boolean> {
     try {
       await this.usersRepository.update(userId, { expoPushToken });
       this.logger.log(`✅ Push token registered for user ${userId}`);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to register push token for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to register push token for user ${userId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -104,7 +110,10 @@ export class PushNotificationService {
         this.logger.log(`📱 Push notification sent: ${title}`);
         return true;
       } else {
-        this.logger.error(`Push notification failed:`, ticket?.message || result);
+        this.logger.error(
+          `Push notification failed:`,
+          ticket?.message || result,
+        );
         return false;
       }
     } catch (error) {
@@ -129,7 +138,9 @@ export class PushNotificationService {
   ): Promise<boolean> {
     const token = await this.getUserPushToken(userId);
     if (!token) {
-      this.logger.log(`No push token for user ${userId}, skipping push notification`);
+      this.logger.log(
+        `No push token for user ${userId}, skipping push notification`,
+      );
       return false;
     }
 
@@ -196,7 +207,10 @@ export class PushNotificationService {
         `📱 Batch push notifications: ${success} sent, ${failed} failed`,
       );
 
-      return { success, failed: failed + (userIds.length - validTokens.length) };
+      return {
+        success,
+        failed: failed + (userIds.length - validTokens.length),
+      };
     } catch (error) {
       this.logger.error(`Error sending batch push notifications:`, error);
       return { success: 0, failed: userIds.length };
@@ -210,10 +224,18 @@ export class PushNotificationService {
     if (type.startsWith('appointment_')) {
       return 'appointments';
     }
-    if (type.startsWith('payment_') || type.startsWith('sale_') || type.startsWith('commission_')) {
+    if (
+      type.startsWith('payment_') ||
+      type.startsWith('sale_') ||
+      type.startsWith('commission_')
+    ) {
       return 'payments';
     }
-    if (type.startsWith('points_') || type === 'reward_available' || type === 'vip_status_achieved') {
+    if (
+      type.startsWith('points_') ||
+      type === 'reward_available' ||
+      type === 'vip_status_achieved'
+    ) {
       return 'promotions';
     }
     return 'default';
@@ -228,7 +250,10 @@ export class PushNotificationService {
       this.logger.log(`Push token removed for user ${userId}`);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to remove push token for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to remove push token for user ${userId}:`,
+        error,
+      );
       return false;
     }
   }

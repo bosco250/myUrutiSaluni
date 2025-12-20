@@ -40,13 +40,21 @@ const PAYMENT_METHODS: { method: PaymentMethod; label: string; icon: string; col
 
 export default function PaymentScreen({ navigation, route }: PaymentScreenProps) {
   const { isDark } = useTheme();
-  const { amount = 0, type = "appointment", appointmentId, salonId, description } = route?.params || {};
+  const { amount: initialAmount = 0, type = "appointment", appointmentId, salonId, description } = route?.params || {};
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [status, setStatus] = useState<"input" | "processing" | "success" | "failed">("input");
+  
+  // For wallet top-up: allow user to enter amount
+  const isTopUp = type === "wallet_topup";
+  const [topUpAmount, setTopUpAmount] = useState<string>(initialAmount > 0 ? String(initialAmount) : "");
+  const amount = isTopUp ? (Number(topUpAmount) || 0) : initialAmount;
+  
+  // Preset amounts for quick top-up
+  const PRESET_AMOUNTS = [5000, 10000, 20000, 50000, 100000];
 
   const dynamicStyles = {
     container: {
@@ -234,20 +242,66 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Amount Display */}
-        <View style={styles.amountSection}>
-          <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
-            Amount to Pay
-          </Text>
-          <Text style={[styles.amountValue, dynamicStyles.text]}>
-            {paymentsService.formatAmount(amount)}
-          </Text>
-          {description && (
-            <Text style={[styles.amountDescription, dynamicStyles.textSecondary]}>
-              {description}
+        {/* Amount Display / Input */}
+        {isTopUp ? (
+          <View style={styles.amountSection}>
+            <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
+              Enter Amount to Top Up
             </Text>
-          )}
-        </View>
+            <View style={[styles.amountInputContainer, dynamicStyles.input]}>
+              <Text style={[styles.currencyPrefix, dynamicStyles.text]}>RWF</Text>
+              <TextInput
+                style={[styles.amountInput, { color: dynamicStyles.text.color }]}
+                placeholder="0"
+                placeholderTextColor={theme.colors.textTertiary}
+                value={topUpAmount}
+                onChangeText={(text) => setTopUpAmount(text.replace(/[^0-9]/g, ""))}
+                keyboardType="number-pad"
+                maxLength={9}
+              />
+            </View>
+            
+            {/* Preset Amount Buttons */}
+            <View style={styles.presetAmountsContainer}>
+              {PRESET_AMOUNTS.map((preset) => (
+                <TouchableOpacity
+                  key={preset}
+                  style={[
+                    styles.presetButton,
+                    dynamicStyles.card,
+                    Number(topUpAmount) === preset && styles.presetButtonActive,
+                  ]}
+                  onPress={() => setTopUpAmount(String(preset))}
+                >
+                  <Text style={[
+                    styles.presetButtonText,
+                    Number(topUpAmount) === preset ? styles.presetButtonTextActive : dynamicStyles.textSecondary
+                  ]}>
+                    {preset.toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <Text style={[styles.minAmountHint, dynamicStyles.textSecondary]}>
+              Minimum top-up: 1,000 RWF
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.amountSection}>
+            <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
+              Amount to Pay
+            </Text>
+            <Text style={[styles.amountValue, dynamicStyles.text]}>
+              {paymentsService.formatAmount(amount)}
+            </Text>
+            {description && (
+              <Text style={[styles.amountDescription, dynamicStyles.textSecondary]}>
+                {description}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Payment Methods */}
         <View style={styles.methodsSection}>
@@ -307,12 +361,12 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
         <TouchableOpacity
           style={[
             styles.payButton,
-            (!selectedMethod || (selectedMethod === "mtn_momo" && !phoneNumber)) &&
+            (!selectedMethod || (selectedMethod === "mtn_momo" && !phoneNumber) || (isTopUp && amount < 1000)) &&
               styles.payButtonDisabled,
           ]}
           onPress={handlePayment}
           activeOpacity={0.7}
-          disabled={!selectedMethod || loading || (selectedMethod === "mtn_momo" && !phoneNumber)}
+          disabled={!selectedMethod || loading || (selectedMethod === "mtn_momo" && !phoneNumber) || (isTopUp && amount < 1000)}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -320,7 +374,7 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
             <>
               <MaterialIcons name="lock" size={20} color="#FFFFFF" />
               <Text style={styles.payButtonText}>
-                Pay {paymentsService.formatAmount(amount)}
+                {isTopUp ? `Top Up ${paymentsService.formatAmount(amount)}` : `Pay ${paymentsService.formatAmount(amount)}`}
               </Text>
             </>
           )}
@@ -388,6 +442,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: theme.fonts.regular,
     marginTop: theme.spacing.xs,
+  },
+  amountInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: theme.spacing.md,
+    height: 64,
+    marginBottom: theme.spacing.md,
+  },
+  currencyPrefix: {
+    fontSize: 20,
+    fontFamily: theme.fonts.bold,
+    fontWeight: "600",
+    marginRight: theme.spacing.sm,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 32,
+    fontFamily: theme.fonts.bold,
+    fontWeight: "700",
+  },
+  presetAmountsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  presetButton: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  presetButtonActive: {
+    borderColor: theme.colors.primary,
+    borderWidth: 2,
+    backgroundColor: `${theme.colors.primary}10`,
+  },
+  presetButtonText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+  },
+  presetButtonTextActive: {
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  minAmountHint: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
   },
   methodsSection: {
     marginBottom: theme.spacing.lg,

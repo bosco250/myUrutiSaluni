@@ -8,75 +8,30 @@ import {
   RefreshControl,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useTheme, useAuth } from '../../context';
-import { appointmentsService, Appointment, AppointmentStatus } from '../../services/appointments';
+import { useTheme } from '../../context';
+import {
+  appointmentsService,
+  Appointment,
+  AppointmentStatus,
+} from '../../services/appointments';
 
-// Simple calendar strip component since we need to avoid external deps if possible
-// or use a simple implementation
-const CalendarStrip = ({ selectedDate, onSelectDate }: { selectedDate: Date; onSelectDate: (date: Date) => void }) => {
-  const { isDark } = useTheme();
-  // 7 days window centered on current or selected
-  // Let's just show next 7 days starting from today for simplicity, or a sliding window
-  
-  // Generating generic week view
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i); // Start from today
-    return d;
-  });
-
-  return (
-    <ScrollView 
-      horizontal 
-      showsHorizontalScrollIndicator={false} 
-      style={styles.calendarStrip}
-      contentContainerStyle={styles.calendarContent}
-    >
-      {weekDates.map((date) => {
-        const isSelected = date.toDateString() === selectedDate.toDateString();
-        const isToday = date.toDateString() === new Date().toDateString();
-        
-        return (
-          <TouchableOpacity
-            key={date.toISOString()}
-            style={[
-              styles.dateCard,
-              isSelected && { backgroundColor: theme.colors.primary },
-              // !isSelected && isDark && { backgroundColor: theme.colors.gray800 },
-            ]}
-            onPress={() => onSelectDate(date)}
-          >
-            <Text style={[
-              styles.dayName, 
-              isSelected ? { color: 'white' } : { color: isDark ? theme.colors.gray400 : theme.colors.gray500 }
-            ]}>
-              {date.toLocaleDateString('en-US', { weekday: 'short' })}
-            </Text>
-            <Text style={[
-              styles.dayNumber,
-              isSelected ? { color: 'white' } : { color: isDark ? 'white' : theme.colors.text }
-            ]}>
-              {date.getDate()}
-            </Text>
-            {isToday && (
-              <View style={[styles.todayDot, isSelected ? { backgroundColor: 'white' } : { backgroundColor: theme.colors.primary }]} />
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
-  );
-};
+interface GroupedAppointments {
+  date: string;
+  dateLabel: string;
+  appointments: Appointment[];
+}
 
 export default function MyScheduleScreen({ navigation }: any) {
   const { isDark } = useTheme();
-  const { user } = useAuth();
-  
-  const [selectedDate, setSelectedDate] = useState(new Date());
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [groupedAppointments, setGroupedAppointments] = useState<
+    GroupedAppointments[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -92,39 +47,118 @@ export default function MyScheduleScreen({ navigation }: any) {
     },
     card: {
       backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    header: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
   };
 
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateLabel = (dateString: string): string => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset time for comparison
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (dateOnly.getTime() === todayOnly.getTime()) {
+      return 'Today';
+    } else if (dateOnly.getTime() === tomorrowOnly.getTime()) {
+      return 'Tomorrow';
+    } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+      });
+    }
+  };
+
+  const groupAppointmentsByDate = useCallback((
+    appointmentsList: Appointment[]
+  ): GroupedAppointments[] => {
+    const grouped: Record<string, Appointment[]> = {};
+
+    appointmentsList.forEach((apt) => {
+      const aptDate = new Date(apt.scheduledStart);
+      const dateKey = formatDate(aptDate);
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(apt);
+    });
+
+    // Convert to array and sort by date
+    const groupedArray: GroupedAppointments[] = Object.keys(grouped)
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+      .map((dateKey) => ({
+        date: dateKey,
+        dateLabel: getDateLabel(dateKey),
+        appointments: grouped[dateKey].sort(
+          (a, b) =>
+            new Date(a.scheduledStart).getTime() -
+            new Date(b.scheduledStart).getTime()
+        ),
+      }));
+
+    return groupedArray;
+  }, []);
+
   const loadAppointments = useCallback(async () => {
     try {
-      // Determine if we should filter for "my" appointments
-      // If user is employee, we likely only want their appointments
-      // If owner, they might want to see all
-      const isEmployee = user?.role === 'salon_employee';
-      
-      // Fetch appointments
+      setLoading(true);
+
+      // Fetch all appointments assigned to the employee
       const allAppointments = await appointmentsService.getSalonAppointments({
-        myAppointments: isEmployee
-      });
-      
-      // Filter for selected date
-      const filtered = allAppointments.filter(apt => {
-        const aptDate = new Date(apt.scheduledStart);
-        return aptDate.toDateString() === selectedDate.toDateString();
+        myAppointments: true,
       });
 
-      // Sort by time
-      filtered.sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime());
+      // Filter out cancelled and no_show appointments
+      const activeAppointments = allAppointments.filter(
+        (apt) =>
+          apt.status !== AppointmentStatus.CANCELLED &&
+          apt.status !== AppointmentStatus.NO_SHOW
+      );
 
-      setAppointments(filtered);
-    } catch (error) {
+      // Sort all appointments by scheduled start time
+      activeAppointments.sort(
+        (a, b) =>
+          new Date(a.scheduledStart).getTime() -
+          new Date(b.scheduledStart).getTime()
+      );
+
+      setAppointments(activeAppointments);
+      setGroupedAppointments(groupAppointmentsByDate(activeAppointments));
+    } catch (error: any) {
       console.error('Error loading appointments:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to load appointments. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedDate, user?.role]);
+  }, [groupAppointmentsByDate]);
 
   useEffect(() => {
     loadAppointments();
@@ -135,46 +169,176 @@ export default function MyScheduleScreen({ navigation }: any) {
     loadAppointments();
   };
 
-  const getStatusColor = (status: AppointmentStatus) => {
-    return appointmentsService.getStatusColor(status);
+  const getStatusColor = (status: AppointmentStatus): string => {
+    switch (status) {
+      case AppointmentStatus.CONFIRMED:
+        return isDark ? theme.colors.success : '#4CAF50';
+      case AppointmentStatus.BOOKED:
+        return isDark ? theme.colors.info : '#2196F3';
+      case AppointmentStatus.PENDING:
+        return isDark ? theme.colors.warning : '#FF9800';
+      case AppointmentStatus.IN_PROGRESS:
+        return isDark ? theme.colors.secondary : '#9C27B0';
+      case AppointmentStatus.COMPLETED:
+        return isDark ? theme.colors.gray500 : '#607D8B';
+      default:
+        return theme.colors.textSecondary;
+    }
+  };
+
+  const getStatusBgColor = (status: AppointmentStatus): string => {
+    const color = getStatusColor(status);
+    return isDark ? `${color}20` : `${color}15`;
   };
 
   const renderAppointmentCard = (appointment: Appointment) => {
-    const startTime = new Date(appointment.scheduledStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const endTime = new Date(appointment.scheduledEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+    const startTime = new Date(appointment.scheduledStart).toLocaleTimeString(
+      [],
+      { hour: '2-digit', minute: '2-digit', hour12: true }
+    );
+    const endTime = new Date(appointment.scheduledEnd).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const isPast = new Date(appointment.scheduledStart) < new Date();
+    const isUpcoming = !isPast && appointment.status !== AppointmentStatus.COMPLETED;
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         key={appointment.id}
-        style={[styles.appointmentCard, dynamicStyles.card]}
-        onPress={() => navigation.navigate('AppointmentDetail', { appointmentId: appointment.id })}
+        style={[
+          styles.appointmentCard,
+          dynamicStyles.card,
+          isPast && styles.pastAppointment,
+        ]}
+        onPress={() =>
+          navigation.navigate('AppointmentDetail', {
+            appointmentId: appointment.id,
+          })
+        }
+        activeOpacity={0.7}
       >
-        <View style={styles.timeColumn}>
-          <Text style={[styles.timeText, dynamicStyles.text]}>{startTime}</Text>
-          <Text style={[styles.durationText, dynamicStyles.textSecondary]}>{endTime}</Text>
+        <View
+          style={[
+            styles.timeColumn,
+            {
+              backgroundColor: isDark
+                ? `${getStatusColor(appointment.status)}15`
+                : `${getStatusColor(appointment.status)}10`,
+            },
+          ]}
+        >
+          <MaterialIcons
+            name="schedule"
+            size={18}
+            color={getStatusColor(appointment.status)}
+            style={{ marginBottom: 4 }}
+          />
+          <Text
+            style={[
+              styles.timeText,
+              { color: getStatusColor(appointment.status) },
+            ]}
+          >
+            {startTime}
+          </Text>
+          <Text style={[styles.durationText, dynamicStyles.textSecondary]}>
+            {endTime}
+          </Text>
         </View>
-        
-        <View style={[styles.appointmentContent, { borderLeftColor: getStatusColor(appointment.status) }]}>
+
+        <View style={styles.appointmentContent}>
           <View style={styles.headerRow}>
-            <Text style={[styles.customerName, dynamicStyles.text]}>
-              {appointment.customer?.user?.fullName || 'Unknown Customer'}
-            </Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(appointment.status) + '20' }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(appointment.status) }]}>
-                {appointment.status}
+            <View style={styles.customerInfo}>
+              <MaterialIcons
+                name="person"
+                size={16}
+                color={dynamicStyles.textSecondary.color}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={[styles.customerName, dynamicStyles.text]}
+                numberOfLines={1}
+              >
+                {appointment.customer?.user?.fullName || 'Unknown Customer'}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusBgColor(appointment.status) },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: getStatusColor(appointment.status) },
+                ]}
+              >
+                {appointment.status.replace('_', ' ').toUpperCase()}
               </Text>
             </View>
           </View>
-          
-          <Text style={[styles.serviceName, dynamicStyles.textSecondary]}>
-            {appointment.service?.name || 'Service'}
-          </Text>
-          
+
+          <View style={styles.serviceRow}>
+            <MaterialIcons
+              name="content-cut"
+              size={16}
+              color={dynamicStyles.textSecondary.color}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[styles.serviceName, dynamicStyles.textSecondary]}
+              numberOfLines={1}
+            >
+              {appointment.service?.name || 'Service'}
+            </Text>
+          </View>
+
+          {appointment.salon && (
+            <View style={styles.salonRow}>
+              <MaterialIcons
+                name="store"
+                size={14}
+                color={dynamicStyles.textSecondary.color}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={[styles.salonName, dynamicStyles.textSecondary]}
+                numberOfLines={1}
+              >
+                {appointment.salon.name}
+              </Text>
+            </View>
+          )}
+
           {appointment.notes && (
             <View style={styles.notesContainer}>
-              <MaterialIcons name="notes" size={14} color={dynamicStyles.textSecondary.color} />
-              <Text style={[styles.notesText, dynamicStyles.textSecondary]} numberOfLines={1}>
+              <MaterialIcons
+                name="notes"
+                size={14}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <Text
+                style={[styles.notesText, dynamicStyles.textSecondary]}
+                numberOfLines={2}
+              >
                 {appointment.notes}
+              </Text>
+            </View>
+          )}
+
+          {isUpcoming && (
+            <View style={styles.upcomingBadge}>
+              <MaterialIcons
+                name="arrow-upward"
+                size={12}
+                color={theme.colors.primary}
+              />
+              <Text style={[styles.upcomingText, { color: theme.colors.primary }]}>
+                Upcoming
               </Text>
             </View>
           )}
@@ -183,50 +347,155 @@ export default function MyScheduleScreen({ navigation }: any) {
     );
   };
 
+  const renderDateSection = (group: GroupedAppointments) => {
+    const isToday = group.dateLabel === 'Today';
+    const dateObj = new Date(group.date);
+    const dayNumber = dateObj.getDate();
+    const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+
+    return (
+      <View key={group.date} style={styles.dateSection}>
+        <View style={styles.dateHeader}>
+          <View style={styles.dateHeaderLeft}>
+            {isToday && (
+              <View
+                style={[
+                  styles.todayIndicator,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              />
+            )}
+            <View style={styles.dateInfo}>
+              <Text style={[styles.dateLabel, dynamicStyles.text]}>
+                {group.dateLabel}
+              </Text>
+              <Text style={[styles.dateSubLabel, dynamicStyles.textSecondary]}>
+                {monthName} {dayNumber}
+              </Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.appointmentCountBadge,
+              {
+                backgroundColor: isDark
+                  ? `${theme.colors.primary}20`
+                  : `${theme.colors.primary}15`,
+              },
+            ]}
+          >
+            <Text
+              style={[styles.appointmentCount, { color: theme.colors.primary }]}
+            >
+              {group.appointments.length}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.appointmentsList}>
+          {group.appointments.map(renderAppointmentCard)}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>My Schedule</Text>
-        <TouchableOpacity style={styles.actionButton} onPress={onRefresh}>
-          <MaterialIcons name="refresh" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
 
-      {/* Calendar Strip */}
-      <View style={styles.calendarContainer}>
-        <CalendarStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+      {/* Header */}
+      <View style={[styles.header, dynamicStyles.header]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons
+            name="arrow-back"
+            size={24}
+            color={dynamicStyles.text.color}
+          />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={[styles.headerTitle, dynamicStyles.text]}>
+            My Schedule
+          </Text>
+          <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>
+            {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={onRefresh}
+          activeOpacity={0.7}
+        >
+          <MaterialIcons
+            name="refresh"
+            size={24}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
       </View>
-      
-      <View style={styles.divider} />
 
       {/* Schedule List */}
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
+        }
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
-        ) : appointments.length > 0 ? (
-          appointments.map(renderAppointmentCard)
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, dynamicStyles.textSecondary]}>
+              Loading appointments...
+            </Text>
+          </View>
+        ) : groupedAppointments.length > 0 ? (
+          groupedAppointments.map(renderDateSection)
         ) : (
           <View style={styles.emptyState}>
-            <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}>
-              <MaterialIcons name="event-busy" size={40} color={theme.colors.gray400} />
+            <View
+              style={[
+                styles.emptyIconContainer,
+                {
+                  backgroundColor: isDark
+                    ? theme.colors.gray800
+                    : theme.colors.gray100,
+                },
+              ]}
+            >
+              <MaterialIcons
+                name="event-busy"
+                size={48}
+                color={theme.colors.textSecondary}
+              />
             </View>
-            <Text style={[styles.emptyTitle, dynamicStyles.text]}>No Appointments</Text>
+            <Text style={[styles.emptyTitle, dynamicStyles.text]}>
+              No Appointments
+            </Text>
             <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-              You don't have any appointments scheduled for {selectedDate.toDateString() === new Date().toDateString() ? 'today' : 'this day'}.
+              You don't have any appointments scheduled yet. Check back later or
+              contact your manager.
             </Text>
           </View>
         )}
       </ScrollView>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        onPress={() => navigation.navigate('CreateAppointment')}
+        activeOpacity={0.8}
+      >
+        <MaterialIcons name="add" size={28} color={theme.colors.white} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -238,66 +507,36 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 12 : 50,
-    paddingBottom: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: (StatusBar.currentHeight || 0) + theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
+    borderBottomWidth: 1,
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
   },
-  actionButton: {
-    padding: 8,
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
-  
-  // Calendar Strip
-  calendarContainer: {
-    height: 90,
-    paddingVertical: 10,
-  },
-  calendarStrip: {
-    paddingHorizontal: 12,
-  },
-  calendarContent: {
-    paddingRight: 24,
-  },
-  dateCard: {
-    width: 60,
-    height: 70,
-    borderRadius: 12,
-    alignItems: 'center',
+  refreshButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
-    marginHorizontal: 4,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'transparent', // can use for selection
-  },
-  dayName: {
-    fontSize: 12,
-    marginBottom: 4,
-    fontFamily: theme.fonts.medium,
-    fontWeight: '500',
-  },
-  dayNumber: {
-    fontSize: 18,
-    fontFamily: theme.fonts.bold,
-    fontWeight: 'bold',
-  },
-  todayDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0', // Light gray
-    opacity: 0.5,
+    alignItems: 'center',
   },
 
   // Content
@@ -305,109 +544,226 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingBottom: theme.spacing.xl,
   },
-  
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+  },
+
+  // Date Section
+  dateSection: {
+    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  dateHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  todayIndicator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginRight: theme.spacing.sm,
+  },
+  dateInfo: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+  },
+  dateSubLabel: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
+  appointmentCountBadge: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  appointmentCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+  },
+  appointmentsList: {
+    gap: theme.spacing.sm,
+  },
+
   // Appointment Card
   appointmentCard: {
     flexDirection: 'row',
     borderRadius: 16,
-    marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    padding: 0,
-    minHeight: 100,
+    marginBottom: theme.spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  pastAppointment: {
+    opacity: 0.7,
   },
   timeColumn: {
-    width: 80,
+    width: 90,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    padding: theme.spacing.md,
     borderRightWidth: 1,
-    borderRightColor: '#EEEEEE', // Ultra light
-    backgroundColor: 'rgba(0,0,0,0.02)',
   },
   timeText: {
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   durationText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: theme.fonts.regular,
   },
   appointmentContent: {
     flex: 1,
-    padding: 12,
-    justifyContent: 'center',
-    borderLeftWidth: 4,
+    padding: theme.spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    marginBottom: theme.spacing.sm,
+  },
+  customerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: theme.spacing.sm,
   },
   customerName: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: theme.fonts.bold,
+    fontFamily: theme.fonts.medium,
     flex: 1,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
     borderRadius: 8,
-    marginLeft: 8,
   },
   statusText: {
     fontSize: 10,
     fontWeight: '700',
+    fontFamily: theme.fonts.medium,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
   },
   serviceName: {
     fontSize: 14,
-    marginBottom: 8,
     fontFamily: theme.fonts.medium,
+    flex: 1,
+  },
+  salonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  salonName: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    flex: 1,
   },
   notesContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'flex-start',
+    marginTop: theme.spacing.xs,
+    gap: 6,
   },
   notesText: {
     fontSize: 12,
+    fontFamily: theme.fonts.regular,
     fontStyle: 'italic',
     flex: 1,
+    lineHeight: 16,
+  },
+  upcomingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: `${theme.colors.primary}15`,
+    gap: 4,
+  },
+  upcomingText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
 
   // Empty State
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: theme.spacing.xl,
   },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
-    paddingHorizontal: 32,
     lineHeight: 20,
     fontFamily: theme.fonts.regular,
+  },
+  fab: {
+    position: 'absolute',
+    right: theme.spacing.md,
+    bottom: theme.spacing.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

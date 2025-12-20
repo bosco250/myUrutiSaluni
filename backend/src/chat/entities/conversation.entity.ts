@@ -87,4 +87,3 @@ export class Conversation {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

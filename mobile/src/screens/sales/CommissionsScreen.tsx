@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useTheme } from '../../context';
+import { useTheme, useAuth } from '../../context';
 import { salesService, Commission } from '../../services/sales';
+import { UserRole } from '../../constants/roles';
 
 interface CommissionsScreenProps {
   navigation: {
@@ -24,6 +25,8 @@ interface CommissionsScreenProps {
 
 export default function CommissionsScreen({ navigation }: CommissionsScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
+  const isEmployee = user?.role === UserRole.SALON_EMPLOYEE || user?.role === 'salon_employee';
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -139,7 +142,7 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, dynamicStyles.text]}>Commissions</Text>
           <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>
-            Track employee earnings
+            {isEmployee ? 'Your earnings' : 'Track employee earnings'}
           </Text>
         </View>
       </View>
@@ -219,7 +222,12 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
           </View>
         ) : (
           commissions.map((commission) => (
-            <View key={commission.id} style={[styles.commissionCard, dynamicStyles.card]}>
+            <TouchableOpacity
+              key={commission.id}
+              style={[styles.commissionCard, dynamicStyles.card]}
+              onPress={() => navigation.navigate('CommissionDetail', { commissionId: commission.id, commission })}
+              activeOpacity={0.7}
+            >
               <View style={styles.commissionHeader}>
                 <View
                   style={[
@@ -238,12 +246,29 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
                   />
                 </View>
                 <View style={styles.commissionInfo}>
-                  <Text style={[styles.employeeName, dynamicStyles.text]}>
-                    {commission.salonEmployee?.user?.fullName || 'Employee'}
-                  </Text>
+                  {!isEmployee && (
+                    <Text style={[styles.employeeName, dynamicStyles.text]}>
+                      {commission.salonEmployee?.user?.fullName || 'Employee'}
+                    </Text>
+                  )}
                   <Text style={[styles.commissionDate, dynamicStyles.textSecondary]}>
                     {formatDate(commission.createdAt)}
                   </Text>
+                  {commission.metadata?.source && (
+                    <View style={[styles.sourceBadge, {
+                      backgroundColor: commission.metadata.source === 'sale' 
+                        ? (isDark ? `${theme.colors.info}20` : '#E3F2FD')
+                        : (isDark ? `${theme.colors.success}20` : '#E8F5E9')
+                    }]}>
+                      <Text style={[styles.sourceBadgeText, {
+                        color: commission.metadata.source === 'sale' 
+                          ? (isDark ? theme.colors.info : '#2196F3')
+                          : (isDark ? theme.colors.success : '#4CAF50')
+                      }]}>
+                        {commission.metadata.source === 'sale' ? 'Sale' : 'Appointment'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <View style={styles.amountContainer}>
                   <Text style={[styles.commissionAmount, { color: theme.colors.primary }]}>
@@ -268,7 +293,7 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
                 </View>
               )}
 
-              {!commission.paid && (
+              {!commission.paid && !isEmployee && (
                 <TouchableOpacity
                   style={[styles.markPaidButton, { backgroundColor: theme.colors.success }]}
                   onPress={() => handleMarkPaid(commission)}
@@ -290,7 +315,7 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
                   Paid on {formatDate(commission.paidAt)}
                 </Text>
               )}
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>
@@ -469,5 +494,17 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
+  },
+  sourceBadge: {
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  sourceBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
 });

@@ -81,10 +81,26 @@ export class AppointmentsController {
       const salon = await this.salonsService.findOne(
         createAppointmentDto.salonId,
       );
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only create appointments for your own salon',
+
+      // Salon owners can create appointments for their own salons
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only create appointments for your own salon',
+          );
+        }
+      }
+      // Employees can create appointments for salons they work at
+      else if (user.role === UserRole.SALON_EMPLOYEE) {
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          createAppointmentDto.salonId,
         );
+        if (!isEmployee) {
+          throw new ForbiddenException(
+            'You can only create appointments for salons you work at',
+          );
+        }
       }
     }
 

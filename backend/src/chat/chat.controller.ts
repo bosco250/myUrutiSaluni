@@ -84,7 +84,8 @@ export class ChatController {
       // Multi-tenant: Auto-detect salonId from employee if not provided
       let empSalonId = salonId;
       if (!empSalonId) {
-        const employee = await this.chatService.salonsService.findEmployeeByUserId(empId);
+        const employee =
+          await this.chatService.salonsService.findEmployeeByUserId(empId);
         if (employee) {
           empSalonId = employee.salonId;
         }
@@ -168,4 +169,3 @@ export class ChatController {
     return this.chatService.searchUsersForChat(query, role);
   }
 }
-

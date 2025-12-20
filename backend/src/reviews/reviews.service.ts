@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from './entities/review.entity';
@@ -43,11 +48,15 @@ export class ReviewsService {
         },
       });
       if (existingReview) {
-        throw new BadRequestException('You have already reviewed this appointment');
+        throw new BadRequestException(
+          'You have already reviewed this appointment',
+        );
       }
 
       // Verify it's a completed appointment
-      const appointment = await this.appointmentsService.findOne(createReviewDto.appointmentId);
+      const appointment = await this.appointmentsService.findOne(
+        createReviewDto.appointmentId,
+      );
       if (appointment.status !== 'completed') {
         throw new BadRequestException('Can only review completed appointments');
       }
@@ -91,7 +100,8 @@ export class ReviewsService {
     limit?: number;
     offset?: number;
   }): Promise<{ reviews: Review[]; total: number; averageRating: number }> {
-    const query = this.reviewsRepository.createQueryBuilder('review')
+    const query = this.reviewsRepository
+      .createQueryBuilder('review')
       .leftJoinAndSelect('review.customer', 'customer')
       .leftJoinAndSelect('customer.user', 'customerUser')
       .leftJoinAndSelect('review.salon', 'salon')
@@ -104,21 +114,27 @@ export class ReviewsService {
     }
 
     if (filters?.employeeId) {
-      query.andWhere('review.employeeId = :employeeId', { employeeId: filters.employeeId });
+      query.andWhere('review.employeeId = :employeeId', {
+        employeeId: filters.employeeId,
+      });
     }
 
     if (filters?.customerId) {
-      query.andWhere('review.customerId = :customerId', { customerId: filters.customerId });
+      query.andWhere('review.customerId = :customerId', {
+        customerId: filters.customerId,
+      });
     }
 
     if (filters?.minRating) {
-      query.andWhere('review.rating >= :minRating', { minRating: filters.minRating });
+      query.andWhere('review.rating >= :minRating', {
+        minRating: filters.minRating,
+      });
     }
 
     query.orderBy('review.createdAt', 'DESC');
 
     const total = await query.getCount();
-    
+
     if (filters?.limit) {
       query.limit(filters.limit);
     }
@@ -132,7 +148,9 @@ export class ReviewsService {
     const avgResult = await this.reviewsRepository
       .createQueryBuilder('review')
       .select('AVG(review.rating)', 'avg')
-      .where(filters?.salonId ? 'review.salonId = :salonId' : '1=1', { salonId: filters?.salonId })
+      .where(filters?.salonId ? 'review.salonId = :salonId' : '1=1', {
+        salonId: filters?.salonId,
+      })
       .andWhere('review.isPublished = :isPublished', { isPublished: true })
       .getRawOne();
 
@@ -146,7 +164,13 @@ export class ReviewsService {
   async findOne(id: string): Promise<Review> {
     const review = await this.reviewsRepository.findOne({
       where: { id },
-      relations: ['customer', 'customer.user', 'salon', 'employee', 'employee.user'],
+      relations: [
+        'customer',
+        'customer.user',
+        'salon',
+        'employee',
+        'employee.user',
+      ],
     });
 
     if (!review) {
@@ -169,7 +193,11 @@ export class ReviewsService {
     });
   }
 
-  async update(id: string, updateReviewDto: UpdateReviewDto, user: User): Promise<Review> {
+  async update(
+    id: string,
+    updateReviewDto: UpdateReviewDto,
+    user: User,
+  ): Promise<Review> {
     const review = await this.findOne(id);
     const customer = await this.customersService.findByUserId(user.id);
 
@@ -178,9 +206,12 @@ export class ReviewsService {
     }
 
     // Only allow updating within 24 hours
-    const hoursSinceCreation = (Date.now() - review.createdAt.getTime()) / (1000 * 60 * 60);
+    const hoursSinceCreation =
+      (Date.now() - review.createdAt.getTime()) / (1000 * 60 * 60);
     if (hoursSinceCreation > 24) {
-      throw new BadRequestException('Reviews can only be edited within 24 hours');
+      throw new BadRequestException(
+        'Reviews can only be edited within 24 hours',
+      );
     }
 
     Object.assign(review, updateReviewDto);
@@ -225,18 +256,24 @@ export class ReviewsService {
         averageRating: 0,
         totalReviews: 0,
         ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        aspectAverages: { service: 0, punctuality: 0, cleanliness: 0, value: 0 },
+        aspectAverages: {
+          service: 0,
+          punctuality: 0,
+          cleanliness: 0,
+          value: 0,
+        },
       };
     }
 
-    const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
+    const averageRating =
+      reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews;
 
     const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    reviews.forEach(r => {
+    reviews.forEach((r) => {
       ratingDistribution[r.rating] = (ratingDistribution[r.rating] || 0) + 1;
     });
 
-    const reviewsWithAspects = reviews.filter(r => r.aspects);
+    const reviewsWithAspects = reviews.filter((r) => r.aspects);
     const aspectAverages = {
       service: 0,
       punctuality: 0,
@@ -245,10 +282,26 @@ export class ReviewsService {
     };
 
     if (reviewsWithAspects.length > 0) {
-      aspectAverages.service = reviewsWithAspects.reduce((sum, r) => sum + (r.aspects?.service || 0), 0) / reviewsWithAspects.length;
-      aspectAverages.punctuality = reviewsWithAspects.reduce((sum, r) => sum + (r.aspects?.punctuality || 0), 0) / reviewsWithAspects.length;
-      aspectAverages.cleanliness = reviewsWithAspects.reduce((sum, r) => sum + (r.aspects?.cleanliness || 0), 0) / reviewsWithAspects.length;
-      aspectAverages.value = reviewsWithAspects.reduce((sum, r) => sum + (r.aspects?.value || 0), 0) / reviewsWithAspects.length;
+      aspectAverages.service =
+        reviewsWithAspects.reduce(
+          (sum, r) => sum + (r.aspects?.service || 0),
+          0,
+        ) / reviewsWithAspects.length;
+      aspectAverages.punctuality =
+        reviewsWithAspects.reduce(
+          (sum, r) => sum + (r.aspects?.punctuality || 0),
+          0,
+        ) / reviewsWithAspects.length;
+      aspectAverages.cleanliness =
+        reviewsWithAspects.reduce(
+          (sum, r) => sum + (r.aspects?.cleanliness || 0),
+          0,
+        ) / reviewsWithAspects.length;
+      aspectAverages.value =
+        reviewsWithAspects.reduce(
+          (sum, r) => sum + (r.aspects?.value || 0),
+          0,
+        ) / reviewsWithAspects.length;
     }
 
     return {
@@ -260,7 +313,8 @@ export class ReviewsService {
   }
 
   private async updateSalonRating(salonId: string): Promise<void> {
-    const stats = await this.getSalonStats(salonId);
+    // Get salon stats (currently unused but may be needed for future implementation)
+    await this.getSalonStats(salonId);
     // Update salon's average rating in salon entity if it has that field
     // This would require modifying the Salon entity to have an averageRating field
   }

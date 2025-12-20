@@ -4,6 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
+import { json, urlencoded } from 'express';
+import * as os from 'os';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -18,9 +20,8 @@ async function bootstrap() {
 
   // Increase body size limit for image uploads (10MB)
   // Must be applied before other middleware
-  const express = require('express');
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ limit: '10mb', extended: true }));
 
   const configService = app.get(ConfigService);
 
@@ -147,7 +148,6 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   // Get local network IP for mobile device access
-  const os = require('os');
   const networkInterfaces = os.networkInterfaces();
   let localIp = 'localhost';
   for (const interfaceName in networkInterfaces) {

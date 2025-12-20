@@ -20,4 +20,3 @@ import { WalletsModule } from '../wallets/wallets.module';
   exports: [PaymentsService, MtnMomoService],
 })
 export class PaymentsModule {}
-

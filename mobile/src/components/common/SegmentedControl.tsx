@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { theme } from '../../theme';
+import { useTheme } from '../../context';
 
 interface SegmentedControlProps {
   options: string[];
@@ -13,14 +14,29 @@ export default function SegmentedControl({
   selectedIndex,
   onSelect,
 }: SegmentedControlProps) {
+  const { isDark } = useTheme();
+
+  // Dynamic styles for dark/light mode support
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+    },
+    segmentActive: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    segmentText: {
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+    },
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, dynamicStyles.container]}>
       {options.map((option, index) => (
         <TouchableOpacity
           key={index}
           style={[
             styles.segment,
-            index === selectedIndex && styles.segmentActive,
+            index === selectedIndex && [styles.segmentActive, dynamicStyles.segmentActive],
             index === 0 && styles.segmentFirst,
             index === options.length - 1 && styles.segmentLast,
           ]}
@@ -30,6 +46,7 @@ export default function SegmentedControl({
           <Text
             style={[
               styles.segmentText,
+              dynamicStyles.segmentText,
               index === selectedIndex && styles.segmentTextActive,
             ]}
           >

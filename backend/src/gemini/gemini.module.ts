@@ -9,4 +9,3 @@ import { ImageSearchService } from './image-search.service';
   exports: [GeminiService, ImageSearchService],
 })
 export class GeminiModule {}
-

@@ -122,23 +122,20 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
     }
   }, [user?.id, salonId, getDateRange]);
 
-  // Load initial data
+  // Load data when component mounts or filter changes
   useEffect(() => {
-    loadData(selectedFilter);
+    const fetchData = async () => {
+      setLoading(true);
+      await loadData(selectedFilter);
+    };
+    fetchData();
   }, [loadData, selectedFilter]);
 
-  // Reload when filter changes
-  useEffect(() => {
-    if (!loading) {
-      setLoading(true);
-      loadData(selectedFilter);
-    }
-  }, [selectedFilter, loading, loadData]);
-
-  const onRefresh = () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadData(selectedFilter);
-  };
+    await loadData(selectedFilter);
+    setRefreshing(false);
+  }, [loadData, selectedFilter]);
 
   // Calculate stats
   const stats = useMemo(() => {

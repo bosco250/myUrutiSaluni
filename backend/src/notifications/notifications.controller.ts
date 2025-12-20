@@ -264,7 +264,9 @@ export class NotificationsController {
   }
 
   @Delete('push-token')
-  @ApiOperation({ summary: 'Remove push token for current user (e.g., on logout)' })
+  @ApiOperation({
+    summary: 'Remove push token for current user (e.g., on logout)',
+  })
   async removePushToken(@CurrentUser() user: any) {
     const success = await this.pushNotificationService.removePushToken(user.id);
     return { success };

@@ -55,7 +55,7 @@ export class ChatService {
     }
 
     const type = createDto.type || ConversationType.CUSTOMER_EMPLOYEE;
-    let employeeId = createDto.employeeId;
+    const employeeId = createDto.employeeId;
     let salonId = createDto.salonId;
 
     // Multi-tenant: Ensure salonId is automatically set when employeeId is provided
@@ -63,9 +63,13 @@ export class ChatService {
       const employee = await this.salonsService.findEmployeeById(employeeId);
       if (employee && employee.salon) {
         salonId = employee.salon.id;
-        this.logger.log(`Auto-set salonId ${salonId} for employee ${employeeId}`);
+        this.logger.log(
+          `Auto-set salonId ${salonId} for employee ${employeeId}`,
+        );
       } else {
-        throw new NotFoundException(`Employee ${employeeId} not found or has no salon`);
+        throw new NotFoundException(
+          `Employee ${employeeId} not found or has no salon`,
+        );
       }
     }
 
@@ -97,7 +101,9 @@ export class ChatService {
         type,
       });
       conversation = await this.conversationRepository.save(conversation);
-      this.logger.log(`Created new conversation: ${conversation.id} (salon: ${salonId})`);
+      this.logger.log(
+        `Created new conversation: ${conversation.id} (salon: ${salonId})`,
+      );
     }
 
     return conversation;
@@ -188,9 +194,12 @@ export class ChatService {
       const employee = await this.salonsService.findEmployeeByUserId(
         currentUser.id || currentUser.userId,
       );
-      
+
       // For salon owners, check if they own the salon
-      if (currentUser.role === 'salon_owner' || currentUser.role === 'SALON_OWNER') {
+      if (
+        currentUser.role === 'salon_owner' ||
+        currentUser.role === 'SALON_OWNER'
+      ) {
         const salon = await this.salonsService.findOne(conversation.salonId);
         if (salon && salon.ownerId !== (currentUser.id || currentUser.userId)) {
           throw new ForbiddenException(
@@ -302,11 +311,11 @@ export class ChatService {
   /**
    * Mark messages as read
    */
-  async markAsRead(
-    conversationId: string,
-    currentUser: any,
-  ): Promise<void> {
-    const conversation = await this.getConversation(conversationId, currentUser);
+  async markAsRead(conversationId: string, currentUser: any): Promise<void> {
+    const conversation = await this.getConversation(
+      conversationId,
+      currentUser,
+    );
 
     const isFromCustomer =
       currentUser.role === 'customer' || currentUser.role === 'CUSTOMER';
@@ -360,7 +369,10 @@ export class ChatService {
     } else {
       // Employee
       const conversations = await this.conversationRepository.find({
-        where: { employeeId: currentUser.id || currentUser.userId, isArchived: false },
+        where: {
+          employeeId: currentUser.id || currentUser.userId,
+          isArchived: false,
+        },
       });
 
       return conversations.reduce(
@@ -376,17 +388,19 @@ export class ChatService {
   async searchUsersForChat(
     query?: string,
     role?: string,
-  ): Promise<Array<{
-    id: string;
-    userId: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    role: string;
-    salonId?: string;
-    salonName?: string;
-    isActive?: boolean;
-  }>> {
+  ): Promise<
+    Array<{
+      id: string;
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      role: string;
+      salonId?: string;
+      salonName?: string;
+      isActive?: boolean;
+    }>
+  > {
     // Require a search query (at least 2 characters)
     if (!query || query.trim().length < 2) {
       return [];
@@ -408,23 +422,23 @@ export class ChatService {
 
     // Get all salons with employees
     const allSalons = await this.salonsService.findAll();
-    
+
     for (const salon of allSalons) {
       // Get employees for this salon
       const employees = await this.salonsService.getSalonEmployees(salon.id);
-      
+
       for (const employee of employees) {
         if (!employee.isActive) continue;
-        
+
         const user = employee.user;
         if (!user) continue;
 
         // Filter by query (required)
         const matches =
-          (user.fullName?.toLowerCase().includes(searchLower)) ||
-          (user.email?.toLowerCase().includes(searchLower)) ||
-          (user.phone?.includes(query.trim()));
-        
+          user.fullName?.toLowerCase().includes(searchLower) ||
+          user.email?.toLowerCase().includes(searchLower) ||
+          user.phone?.includes(query.trim());
+
         if (!matches) continue;
 
         // Filter by role if provided
@@ -446,14 +460,14 @@ export class ChatService {
       // Add salon owner
       if (salon.owner) {
         const owner = salon.owner;
-        
+
         // Filter by query (required)
         const matches =
-          (salon.name?.toLowerCase().includes(searchLower)) ||
-          (owner.fullName?.toLowerCase().includes(searchLower)) ||
-          (owner.email?.toLowerCase().includes(searchLower)) ||
-          (owner.phone?.includes(query.trim()));
-        
+          salon.name?.toLowerCase().includes(searchLower) ||
+          owner.fullName?.toLowerCase().includes(searchLower) ||
+          owner.email?.toLowerCase().includes(searchLower) ||
+          owner.phone?.includes(query.trim());
+
         if (!matches) continue;
 
         // Filter by role if provided
@@ -474,15 +488,19 @@ export class ChatService {
     }
 
     // Remove duplicates (same userId and role)
-    const uniqueResults = results.reduce((acc, current) => {
-      const existing = acc.find((r) => r.userId === current.userId && r.role === current.role);
-      if (!existing) {
-        acc.push(current);
-      }
-      return acc;
-    }, [] as typeof results);
+    const uniqueResults = results.reduce(
+      (acc, current) => {
+        const existing = acc.find(
+          (r) => r.userId === current.userId && r.role === current.role,
+        );
+        if (!existing) {
+          acc.push(current);
+        }
+        return acc;
+      },
+      [] as typeof results,
+    );
 
     return uniqueResults;
   }
 }
-

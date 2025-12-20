@@ -13,7 +13,7 @@ import {
 import { Button, Input, Checkbox, SocialButton } from "../../components";
 import { MailIcon, LockIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
-import { useAuth } from "../../context";
+import { useAuth, useTheme } from "../../context";
 
 // Import logo
 const logo = require("../../../assets/Logo.png");
@@ -45,10 +45,12 @@ interface LoginScreenProps {
 // Error Banner Component for displaying general errors
 const ErrorBanner = ({ 
   error, 
-  onDismiss 
+  onDismiss,
+  isDark 
 }: { 
   error: LoginError | null; 
   onDismiss: () => void;
+  isDark: boolean;
 }) => {
   if (!error || error.field !== "general") return null;
 
@@ -86,7 +88,7 @@ const ErrorBanner = ({
   };
 
   return (
-    <View style={[styles.errorBanner, { borderLeftColor: getErrorColor(error.type) }]}>
+    <View style={[styles.errorBanner, { borderLeftColor: getErrorColor(error.type), backgroundColor: isDark ? theme.colors.gray800 : theme.colors.errorLight }]}>
       <View style={styles.errorBannerContent}>
         <Text style={styles.errorBannerIcon}>{getErrorIcon(error.type)}</Text>
         <View style={styles.errorBannerTextContainer}>
@@ -110,6 +112,32 @@ const ErrorBanner = ({
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { login } = useAuth();
+  const { isDark } = useTheme();
+
+  // Dynamic styles for dark/light mode support
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    text: {
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+    },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.background,
+    },
+    errorBanner: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.errorLight,
+    },
+    successIconCircle: {
+      backgroundColor: isDark ? theme.colors.successDark : theme.colors.successLight,
+    },
+    dividerLine: {
+      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.border,
+    },
+  };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -346,7 +374,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   return (
     <>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, dynamicStyles.container]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
@@ -361,12 +389,12 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Please log in to your account</Text>
+              <Text style={[styles.title, dynamicStyles.text]}>Welcome Back</Text>
+              <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>Please log in to your account</Text>
             </View>
 
             {/* Error Banner for general errors */}
-            <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} />
+            <ErrorBanner error={generalError} onDismiss={() => setGeneralError(null)} isDark={isDark} />
 
             {/* Form */}
             <View style={styles.form}>
@@ -420,9 +448,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
               {/* Social Login Divider */}
               <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-                <View style={styles.dividerLine} />
+                <View style={[styles.dividerLine, dynamicStyles.dividerLine]} />
+                <Text style={[styles.dividerText, dynamicStyles.textSecondary]}>OR CONTINUE WITH</Text>
+                <View style={[styles.dividerLine, dynamicStyles.dividerLine]} />
               </View>
 
               {/* Social Login Buttons */}
@@ -442,7 +470,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
               {/* Sign Up Link */}
               <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>Don't have an account? </Text>
+                <Text style={[styles.signUpText, dynamicStyles.textSecondary]}>Don't have an account? </Text>
                 <TouchableOpacity
                   onPress={() => navigation?.navigate("SignUp")}
                 >
@@ -461,8 +489,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         animationType="fade"
         onRequestClose={() => setShowSuccessModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, dynamicStyles.card]}>
             {/* Close Button */}
             <TouchableOpacity
               style={styles.closeButton}
@@ -473,16 +501,16 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
             {/* Success Icon */}
             <View style={styles.successIconContainer}>
-              <View style={styles.successIconCircle}>
+              <View style={[styles.successIconCircle, dynamicStyles.successIconCircle]}>
                 <Text style={styles.successCheckmark}>✓</Text>
               </View>
             </View>
 
             {/* Success Title */}
-            <Text style={styles.successTitle}>Login Successful!</Text>
+            <Text style={[styles.successTitle, dynamicStyles.text]}>Login Successful!</Text>
 
             {/* Success Message */}
-            <Text style={styles.successMessage}>
+            <Text style={[styles.successMessage, dynamicStyles.textSecondary]}>
               Welcome back! You have successfully logged in to your account.
             </Text>
 
@@ -505,7 +533,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -531,13 +558,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: theme.colors.text,
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
   },
   subtitle: {
     fontSize: 16,
-    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
   },
   form: {
@@ -565,12 +590,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
   },
   dividerText: {
     marginHorizontal: theme.spacing.md,
     fontSize: 12,
-    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     letterSpacing: 0.5,
   },
@@ -590,7 +613,6 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   signUpText: {
-    color: theme.colors.textSecondary,
     fontSize: 14,
     fontFamily: theme.fonts.regular,
   },
@@ -603,19 +625,17 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.lg,
   },
   modalContent: {
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: theme.spacing.xl,
     width: "100%",
     maxWidth: 400,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -629,7 +649,6 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 24,
-    color: theme.colors.textSecondary,
     fontWeight: "300",
   },
   successIconContainer: {
@@ -640,26 +659,23 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#E6F7EA",
     alignItems: "center",
     justifyContent: "center",
   },
   successCheckmark: {
     fontSize: 48,
-    color: "#34C759",
+    color: theme.colors.success,
     fontWeight: "bold",
   },
   successTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: theme.colors.text,
     marginBottom: theme.spacing.md,
     fontFamily: theme.fonts.bold,
     textAlign: "center",
   },
   successMessage: {
     fontSize: 16,
-    color: theme.colors.textSecondary,
     textAlign: "center",
     marginBottom: theme.spacing.xl,
     lineHeight: 24,
@@ -674,7 +690,6 @@ const styles = StyleSheet.create({
   },
   // Error Banner Styles
   errorBanner: {
-    backgroundColor: "#FFF5F5",
     borderRadius: 12,
     borderLeftWidth: 4,
     marginBottom: theme.spacing.md,
@@ -696,13 +711,11 @@ const styles = StyleSheet.create({
   errorBannerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.text,
     fontFamily: theme.fonts.bold,
     marginBottom: 4,
   },
   errorBannerMessage: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     lineHeight: 20,
   },
@@ -713,7 +726,6 @@ const styles = StyleSheet.create({
   },
   errorBannerCloseText: {
     fontSize: 18,
-    color: theme.colors.textSecondary,
     fontWeight: "300",
   },
 });

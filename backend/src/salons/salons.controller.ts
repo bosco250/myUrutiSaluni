@@ -139,7 +139,36 @@ export class SalonsController {
   }
 
   // ==================== Specific Routes (MUST come before :id route) ====================
-  
+
+  @Get('employees/by-user/:userId')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({ summary: 'Get all employee records for a user by user ID' })
+  async getEmployeeRecordsByUserId(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() user: any,
+  ) {
+    // Users can only view their own employee records unless they're admin
+    if (
+      user.role !== UserRole.SUPER_ADMIN &&
+      user.role !== UserRole.ASSOCIATION_ADMIN &&
+      user.role !== UserRole.DISTRICT_LEADER &&
+      user.id !== userId
+    ) {
+      throw new ForbiddenException(
+        'You can only view your own employee records',
+      );
+    }
+
+    const employees = await this.salonsService.findAllEmployeesByUserId(userId);
+    return employees || [];
+  }
+
   @Get(':id/employees/me')
   @Roles(
     UserRole.SUPER_ADMIN,
@@ -154,19 +183,22 @@ export class SalonsController {
   ) {
     // Check if user has access to this salon (owner or employee)
     await this.checkSalonAccess(salonId, user);
-    
+
     // Find employee record
-    const employee = await this.salonsService.findEmployeeByUserId(user.id, salonId);
-    
+    const employee = await this.salonsService.findEmployeeByUserId(
+      user.id,
+      salonId,
+    );
+
     if (!employee) {
-       // If owner but not employee record, return null or appropriate response
-       // Owners might not be in employees table
-       if (user.role === UserRole.SALON_OWNER) {
-         return null; 
-       }
-       throw new NotFoundException('Employee record not found for this salon');
+      // If owner but not employee record, return null or appropriate response
+      // Owners might not be in employees table
+      if (user.role === UserRole.SALON_OWNER) {
+        return null;
+      }
+      throw new NotFoundException('Employee record not found for this salon');
     }
-    
+
     return employee;
   }
 

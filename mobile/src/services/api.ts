@@ -233,4 +233,6 @@ class ApiService {
 
 export const api = new ApiService();
 
+export const getApiBaseUrl = () => API_BASE_URL;
+
 

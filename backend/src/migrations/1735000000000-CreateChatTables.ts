@@ -259,4 +259,3 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
     await queryRunner.dropTable('conversations', true);
   }
 }
-

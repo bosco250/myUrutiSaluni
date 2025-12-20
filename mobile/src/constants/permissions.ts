@@ -33,6 +33,7 @@ export enum Screen {
   MY_SCHEDULE = 'MY_SCHEDULE',
   ATTENDANCE = 'ATTENDANCE',
   CUSTOMER_MANAGEMENT = 'CUSTOMER_MANAGEMENT',
+  COMMISSIONS = 'COMMISSIONS',
   
   // Salon owner screens
   OWNER_DASHBOARD = 'OWNER_DASHBOARD',
@@ -183,6 +184,7 @@ export const ROLE_PERMISSIONS = {
       Screen.NOTIFICATIONS,
       Screen.CHAT,
       Screen.CUSTOMER_MANAGEMENT,
+      Screen.COMMISSIONS,
     ],
     actions: [
       Action.CLOCK_IN_OUT,

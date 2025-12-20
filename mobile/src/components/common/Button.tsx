@@ -8,6 +8,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { theme } from '../../theme';
+import { useTheme } from '../../context';
 
 interface ButtonProps {
   title: string;
@@ -28,25 +29,47 @@ export default function Button({
   style,
   textStyle,
 }: ButtonProps) {
+  const { isDark } = useTheme();
+
+  // Dynamic styles for dark/light mode support
+  const dynamicStyles = {
+    primaryButton: {
+      backgroundColor: isDark ? theme.colors.white : theme.colors.buttonPrimary,
+    },
+    primaryText: {
+      color: isDark ? theme.colors.black : theme.colors.textInverse,
+    },
+    secondaryButton: {
+      backgroundColor: isDark ? theme.colors.secondaryLight : theme.colors.secondary,
+    },
+    outlineButton: {
+      backgroundColor: isDark ? theme.colors.gray800 : 'transparent',
+      borderColor: isDark ? theme.colors.gray600 : theme.colors.primary,
+    },
+    outlineText: {
+      color: isDark ? theme.colors.white : theme.colors.primary,
+    },
+  };
+
   const getButtonStyle = () => {
     switch (variant) {
       case 'secondary':
-        return styles.secondaryButton;
+        return [styles.secondaryButton, dynamicStyles.secondaryButton];
       case 'outline':
-        return styles.outlineButton;
+        return [styles.outlineButton, dynamicStyles.outlineButton];
       default:
-        return styles.primaryButton;
+        return [styles.primaryButton, dynamicStyles.primaryButton];
     }
   };
 
   const getTextStyle = () => {
     switch (variant) {
       case 'outline':
-        return styles.outlineText;
+        return [styles.outlineText, dynamicStyles.outlineText];
       case 'secondary':
         return styles.secondaryText;
       default:
-        return styles.primaryText;
+        return [styles.primaryText, dynamicStyles.primaryText];
     }
   };
 
@@ -59,7 +82,9 @@ export default function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' ? theme.colors.primary : theme.colors.textInverse}
+          color={variant === 'outline' 
+            ? (isDark ? theme.colors.white : theme.colors.primary) 
+            : (isDark ? theme.colors.black : theme.colors.textInverse)}
         />
       ) : (
         <Text style={[getTextStyle(), textStyle]}>{title}</Text>

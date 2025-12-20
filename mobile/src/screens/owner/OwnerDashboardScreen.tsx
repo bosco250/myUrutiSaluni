@@ -44,16 +44,17 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
   // Dynamic styles for dark mode
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? '#1C1C1E' : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
-      color: isDark ? '#FFFFFF' : theme.colors.text,
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? '#8E8E93' : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? '#2C2C2E' : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
   };
 
@@ -633,7 +634,9 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
               onPress={() => navigation.navigate('Bookings')}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: `${theme.colors.primary}15` }]}>
+              <View style={[styles.quickActionIcon, { 
+                backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
+              }]}>
                 <MaterialIcons name="request-quote" size={24} color={theme.colors.primary} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Loans</Text>
@@ -644,7 +647,9 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
               onPress={() => navigation.navigate('Bookings')}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: `${theme.colors.primary}15` }]}>
+              <View style={[styles.quickActionIcon, { 
+                backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
+              }]}>
                 <MaterialIcons name="event" size={24} color={theme.colors.primary} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Appointments</Text>
@@ -655,7 +660,9 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
               onPress={() => navigation.navigate('Wallet')}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: `${theme.colors.primary}15` }]}>
+              <View style={[styles.quickActionIcon, { 
+                backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
+              }]}>
                 <MaterialIcons name="support-agent" size={24} color={theme.colors.primary} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Airtel Agent</Text>
@@ -670,11 +677,17 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
             {/* Bookings Today Card */}
             <View style={[styles.overviewCard, dynamicStyles.card]}>
               <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { backgroundColor: `${theme.colors.primary}15` }]}>
+                <View style={[styles.overviewIconContainer, { 
+                  backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
+                }]}>
                   <MaterialIcons name="event-available" size={20} color={theme.colors.primary} />
                 </View>
-                <View style={styles.changeBadgePositive}>
-                  <Text style={styles.changeBadgeText}>+12%</Text>
+                <View style={[styles.changeBadgePositive, {
+                  backgroundColor: isDark ? `${theme.colors.success}20` : '#E8F5E9'
+                }]}>
+                  <Text style={[styles.changeBadgeText, {
+                    color: isDark ? theme.colors.success : '#4CAF50'
+                  }]}>+12%</Text>
                 </View>
               </View>
               <Text style={[styles.overviewValue, dynamicStyles.text]}>
@@ -688,11 +701,21 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
             {/* Staff Members Card */}
             <View style={[styles.overviewCard, dynamicStyles.card]}>
               <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { backgroundColor: '#E3F2FD' }]}>
-                  <MaterialIcons name="people" size={20} color="#2196F3" />
+                <View style={[styles.overviewIconContainer, { 
+                  backgroundColor: isDark ? `${theme.colors.primary}20` : '#E3F2FD' 
+                }]}>
+                  <MaterialIcons 
+                    name="people" 
+                    size={20} 
+                    color={isDark ? theme.colors.primary : '#2196F3'} 
+                  />
                 </View>
-                <View style={styles.statusBadgeActive}>
-                  <Text style={styles.statusBadgeText}>ACTIVE</Text>
+                <View style={[styles.statusBadgeActive, {
+                  backgroundColor: isDark ? `${theme.colors.primary}20` : '#E3F2FD'
+                }]}>
+                  <Text style={[styles.statusBadgeText, {
+                    color: isDark ? theme.colors.primary : '#2196F3'
+                  }]}>ACTIVE</Text>
                 </View>
               </View>
               <Text style={[styles.overviewValue, dynamicStyles.text]}>
@@ -706,11 +729,21 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
             {/* Customer Satisfaction Card */}
             <View style={[styles.overviewCard, dynamicStyles.card]}>
               <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { backgroundColor: '#FFF3E0' }]}>
-                  <MaterialIcons name="star" size={20} color="#FF9800" />
+                <View style={[styles.overviewIconContainer, { 
+                  backgroundColor: isDark ? `${theme.colors.warning}20` : '#FFF3E0' 
+                }]}>
+                  <MaterialIcons 
+                    name="star" 
+                    size={20} 
+                    color={isDark ? theme.colors.warning : '#FF9800'} 
+                  />
                 </View>
-                <View style={styles.statusBadgeExcellent}>
-                  <Text style={styles.statusBadgeTextGreen}>EXCELLENT</Text>
+                <View style={[styles.statusBadgeExcellent, {
+                  backgroundColor: isDark ? `${theme.colors.success}20` : '#E8F5E9'
+                }]}>
+                  <Text style={[styles.statusBadgeTextGreen, {
+                    color: isDark ? theme.colors.success : '#4CAF50'
+                  }]}>EXCELLENT</Text>
                 </View>
               </View>
               <Text style={[styles.overviewValue, dynamicStyles.text]}>4.8</Text>
@@ -722,11 +755,21 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
             {/* New Customers Card */}
             <View style={[styles.overviewCard, dynamicStyles.card]}>
               <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { backgroundColor: '#F3E5F5' }]}>
-                  <MaterialIcons name="person-add" size={20} color="#9C27B0" />
+                <View style={[styles.overviewIconContainer, { 
+                  backgroundColor: isDark ? `${theme.colors.secondary}20` : '#F3E5F5' 
+                }]}>
+                  <MaterialIcons 
+                    name="person-add" 
+                    size={20} 
+                    color={isDark ? theme.colors.secondary : '#9C27B0'} 
+                  />
                 </View>
-                <View style={styles.changeBadgePositive}>
-                  <Text style={styles.changeBadgeText}>+8</Text>
+                <View style={[styles.changeBadgePositive, {
+                  backgroundColor: isDark ? `${theme.colors.success}20` : '#E8F5E9'
+                }]}>
+                  <Text style={[styles.changeBadgeText, {
+                    color: isDark ? theme.colors.success : '#4CAF50'
+                  }]}>+8</Text>
                 </View>
               </View>
               <Text style={[styles.overviewValue, dynamicStyles.text]}>
@@ -760,8 +803,12 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
                     index < metrics.topServices.slice(0, 4).length - 1 && styles.serviceRowBorder
                   ]}
                 >
-                  <View style={styles.serviceRank}>
-                    <Text style={styles.rankNumber}>{index + 1}</Text>
+                  <View style={[styles.serviceRank, {
+                    backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15`
+                  }]}>
+                    <Text style={[styles.rankNumber, {
+                      color: theme.colors.primary
+                    }]}>{index + 1}</Text>
                   </View>
                   <View style={styles.serviceInfo}>
                     <Text style={[styles.serviceName, dynamicStyles.text]}>{service.serviceName}</Text>
@@ -797,7 +844,9 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
                     index < metrics.staffPerformance.slice(0, 3).length - 1 && styles.serviceRowBorder
                   ]}
                 >
-                  <View style={styles.staffAvatar}>
+                  <View style={[styles.staffAvatar, {
+                    backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15`
+                  }]}>
                     <MaterialIcons name="person" size={20} color={theme.colors.primary} />
                   </View>
                   <View style={styles.staffInfo}>
@@ -991,7 +1040,6 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.sm,
@@ -1002,7 +1050,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   quickActionIcon: {
     width: 48,
@@ -1027,7 +1074,6 @@ const styles = StyleSheet.create({
   },
   overviewCard: {
     width: '48.5%',
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: theme.spacing.md,
     shadowColor: '#000',
@@ -1036,7 +1082,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   overviewCardHeader: {
     flexDirection: 'row',
@@ -1064,7 +1109,6 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
   changeBadgePositive: {
-    backgroundColor: '#E8F5E9',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1072,11 +1116,9 @@ const styles = StyleSheet.create({
   changeBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4CAF50',
     fontFamily: theme.fonts.medium,
   },
   statusBadgeActive: {
-    backgroundColor: '#E3F2FD',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1084,11 +1126,9 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#2196F3',
     fontFamily: theme.fonts.bold,
   },
   statusBadgeExcellent: {
-    backgroundColor: '#E8F5E9',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1096,13 +1136,11 @@ const styles = StyleSheet.create({
   statusBadgeTextGreen: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#4CAF50',
     fontFamily: theme.fonts.bold,
   },
 
   // List Cards
   listCard: {
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: theme.spacing.md,
     shadowColor: '#000',
@@ -1111,7 +1149,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   serviceRow: {
     flexDirection: 'row',
@@ -1120,13 +1157,11 @@ const styles = StyleSheet.create({
   },
   serviceRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
   },
   serviceRank: {
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: `${theme.colors.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
@@ -1134,7 +1169,6 @@ const styles = StyleSheet.create({
   rankNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.primary,
     fontFamily: theme.fonts.medium,
   },
   serviceInfo: {
@@ -1169,7 +1203,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${theme.colors.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
@@ -1192,7 +1225,6 @@ const styles = StyleSheet.create({
   staffRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8E1',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1201,7 +1233,6 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F57C00',
     fontFamily: theme.fonts.medium,
   },
 
@@ -1253,7 +1284,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   stepsTitle: {
     fontSize: 18,
@@ -1318,7 +1348,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   helpContent: {
     flex: 1,

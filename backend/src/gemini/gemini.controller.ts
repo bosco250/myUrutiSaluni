@@ -8,7 +8,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GeminiService } from './gemini.service';
 import 'multer';
@@ -21,7 +27,9 @@ export class GeminiController {
   constructor(private readonly geminiService: GeminiService) {}
 
   @Post('analyze-face')
-  @ApiOperation({ summary: 'Analyze face image and get hairstyle recommendations' })
+  @ApiOperation({
+    summary: 'Analyze face image and get hairstyle recommendations',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -42,7 +50,7 @@ export class GeminiController {
 
     // Convert file buffer to base64
     const imageBase64 = file.buffer.toString('base64');
-    
+
     return this.geminiService.analyzeFace(imageBase64);
   }
 
@@ -54,11 +62,10 @@ export class GeminiController {
     }
 
     // Remove data URL prefix if present (data:image/jpeg;base64,...)
-    const base64Data = body.image.includes(',') 
-      ? body.image.split(',')[1] 
+    const base64Data = body.image.includes(',')
+      ? body.image.split(',')[1]
       : body.image;
 
     return this.geminiService.analyzeFace(base64Data);
   }
 }
-

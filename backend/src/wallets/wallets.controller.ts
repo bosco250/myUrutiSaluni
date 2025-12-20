@@ -44,7 +44,7 @@ export class WalletsController {
     }
 
     const wallet = await this.walletsService.getOrCreateWallet(user.id);
-    
+
     if (Number(wallet.balance) < body.amount) {
       throw new BadRequestException('Insufficient balance');
     }
@@ -87,4 +87,3 @@ export class WalletsController {
     );
   }
 }
-

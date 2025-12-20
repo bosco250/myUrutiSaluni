@@ -1,9 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ConversationType } from '../entities/conversation.entity';
 
 export class CreateConversationDto {
-  @ApiProperty({ description: 'Employee ID (required for customer-employee chat)' })
+  @ApiProperty({
+    description: 'Employee ID (required for customer-employee chat)',
+  })
   @IsString()
   @IsOptional()
   employeeId?: string;
@@ -13,14 +15,18 @@ export class CreateConversationDto {
   @IsOptional()
   salonId?: string;
 
-  @ApiPropertyOptional({ description: 'Appointment ID (optional, links conversation to appointment)' })
+  @ApiPropertyOptional({
+    description: 'Appointment ID (optional, links conversation to appointment)',
+  })
   @IsString()
   @IsOptional()
   appointmentId?: string;
 
-  @ApiPropertyOptional({ enum: ConversationType, default: ConversationType.CUSTOMER_EMPLOYEE })
+  @ApiPropertyOptional({
+    enum: ConversationType,
+    default: ConversationType.CUSTOMER_EMPLOYEE,
+  })
   @IsEnum(ConversationType)
   @IsOptional()
   type?: ConversationType;
 }
-

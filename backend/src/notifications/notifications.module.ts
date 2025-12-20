@@ -18,7 +18,12 @@ import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, NotificationPreference, Customer, User]),
+    TypeOrmModule.forFeature([
+      Notification,
+      NotificationPreference,
+      Customer,
+      User,
+    ]),
     ScheduleModule.forRoot(),
     forwardRef(() => AppointmentsModule),
   ],

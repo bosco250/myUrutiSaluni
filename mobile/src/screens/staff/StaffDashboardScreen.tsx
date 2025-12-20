@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,18 +9,26 @@ import {
   ActivityIndicator,
   Image,
   StatusBar,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../../theme';
-import { useAuth } from '../../context';
-import { useTheme } from '../../context';
-import { ClockStatus, TodayStats, ScheduleItem } from '../../services/staff';
-import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
+  Alert,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialIcons } from "@expo/vector-icons";
+import { theme } from "../../theme";
+import { useAuth } from "../../context";
+import { useTheme } from "../../context";
+import {
+  staffService,
+  ClockStatus,
+  TodayStats,
+  ScheduleItem,
+} from "../../services/staff";
+import { appointmentsService, Appointment } from "../../services/appointments";
+import { salesService } from "../../services/sales";
+import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 
 // Import assets
-const logo = require('../../../assets/Logo.png');
-const profileImage = require('../../../assets/Logo.png');
+const logo = require("../../../assets/Logo.png");
+const profileImage = require("../../../assets/Logo.png");
 
 interface StaffDashboardScreenProps {
   navigation: {
@@ -28,7 +36,9 @@ interface StaffDashboardScreenProps {
   };
 }
 
-export default function StaffDashboardScreen({ navigation }: StaffDashboardScreenProps) {
+export default function StaffDashboardScreen({
+  navigation,
+}: StaffDashboardScreenProps) {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const unreadNotificationCount = useUnreadNotifications();
@@ -38,97 +48,250 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
   const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [employeeLevel] = useState(3);
+  const [employeeRecords, setEmployeeRecords] = useState<any[]>([]);
 
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? '#1C1C1E' : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
-      color: isDark ? '#FFFFFF' : theme.colors.text,
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? '#8E8E93' : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? '#2C2C2E' : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
   };
 
   useEffect(() => {
-    loadDashboardData();
+    if (user?.id) {
+      loadDashboardData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const loadDashboardData = async () => {
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const calculateHoursWorked = (clockIn: string, clockOut?: string): number => {
+    if (!clockIn) return 0;
+    const start = new Date(clockIn);
+    const end = clockOut ? new Date(clockOut) : new Date();
+    const diffMs = end.getTime() - start.getTime();
+    return Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10; // Round to 1 decimal
+  };
+
+  const loadDashboardData = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      
-      // Load mock data for demo
-      setClockStatus({
-        isClockedIn: true,
-        clockInTime: '08:30 AM',
+
+      // Get all employee records for this user
+      let employeeRecordsList: any[] = [];
+      try {
+        const employeeRecord = await staffService.getEmployeeByUserId(
+          String(user.id)
+        );
+        if (Array.isArray(employeeRecord)) {
+          employeeRecordsList = employeeRecord;
+        } else if (employeeRecord) {
+          employeeRecordsList = [employeeRecord];
+        }
+      } catch (error) {
+        console.error("Error fetching employee records:", error);
+      }
+
+      setEmployeeRecords(employeeRecordsList);
+
+      // Get current attendance status
+      let currentAttendance = null;
+      let clockStatusData: ClockStatus = {
+        isClockedIn: false,
+        clockInTime: null,
         clockOutTime: null,
-        totalHoursToday: 4.5,
+        totalHoursToday: 0,
+      };
+
+      if (employeeRecordsList.length > 0) {
+        // Try to get current attendance for the first employee record
+        try {
+          currentAttendance = await staffService.getCurrentAttendance(
+            employeeRecordsList[0].id
+          );
+          if (currentAttendance) {
+            clockStatusData = {
+              isClockedIn: true,
+              clockInTime: formatTime(currentAttendance.clockIn),
+              clockOutTime: currentAttendance.clockOut
+                ? formatTime(currentAttendance.clockOut)
+                : null,
+              totalHoursToday: calculateHoursWorked(
+                currentAttendance.clockIn,
+                currentAttendance.clockOut
+              ),
+            };
+          }
+        } catch {
+          // No active attendance is normal - employee might not be clocked in yet
+          // Silently handle this case without logging
+        }
+      }
+
+      setClockStatus(clockStatusData);
+
+      // Get today's appointments
+      const today = new Date();
+      const todayStr = formatDate(today);
+      let allAppointments: Appointment[] = [];
+
+      // Get appointments for the current user (backend filters by myAppointments=true)
+      try {
+        const appointments = await appointmentsService.getSalonAppointments({
+          myAppointments: true,
+        });
+        allAppointments = appointments;
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+      }
+
+      // Remove duplicates
+      const uniqueAppointments = Array.from(
+        new Map(allAppointments.map((apt) => [apt.id, apt])).values()
+      );
+
+      const todayAppointments = uniqueAppointments.filter((apt) => {
+        const aptDate = new Date(apt.scheduledStart);
+        const aptDateStr = formatDate(aptDate);
+        return (
+          aptDateStr === todayStr &&
+          apt.status !== "cancelled" &&
+          apt.status !== "no_show"
+        );
       });
 
-      setTodayStats({
-        appointmentsCount: 8,
-        completedCount: 5,
-        upcomingCount: 3,
-        earnings: 285,
-        customerCount: 12,
+      // Sort by scheduled start time
+      todayAppointments.sort((a, b) => {
+        return (
+          new Date(a.scheduledStart).getTime() -
+          new Date(b.scheduledStart).getTime()
+        );
       });
 
-      setSchedule([
-        {
-          id: '1',
-          serviceName: 'Hair Cut & Style',
-          customerName: 'Sarah Johnson',
-          startTime: '9:00 AM',
-          endTime: '10:30 AM',
-          status: 'confirmed',
-          price: 65,
-        },
-        {
-          id: '2',
-          serviceName: 'Hair Coloring',
-          customerName: 'Emma Wilson',
-          startTime: '11:00 AM',
-          endTime: '1:00 PM',
-          status: 'confirmed',
-          price: 120,
-        },
-        {
-          id: '3',
-          serviceName: 'Blow Dry',
-          customerName: 'Michelle Brown',
-          startTime: '2:00 PM',
-          endTime: '2:45 PM',
-          status: 'pending',
-          price: 35,
-        },
-      ]);
+      // Format schedule items
+      const scheduleItems: ScheduleItem[] = todayAppointments.map((apt) => ({
+        id: apt.id,
+        serviceName: apt.service?.name || "Service",
+        customerName: apt.customer?.user?.fullName || "Customer",
+        startTime: formatTime(apt.scheduledStart),
+        endTime: formatTime(apt.scheduledEnd),
+        status: apt.status || "pending",
+        price: apt.serviceAmount || apt.service?.basePrice || 0,
+      }));
 
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
+      setSchedule(scheduleItems);
+
+      // Calculate stats
+      const now = new Date();
+      const completedAppointments = todayAppointments.filter(
+        (apt) => apt.status === "completed"
+      );
+      const upcomingAppointments = todayAppointments.filter((apt) => {
+        const aptStart = new Date(apt.scheduledStart);
+        return aptStart > now && apt.status !== "completed";
+      });
+
+      // Get unique customer count
+      const uniqueCustomers = new Set(
+        todayAppointments
+          .map((apt) => apt.customerId)
+          .filter((id) => id !== undefined && id !== null)
+      );
+
+      // Calculate earnings from commissions for today
+      let todayEarnings = 0;
+      try {
+        const allEmployeeIds = employeeRecordsList.map((emp) => emp.id);
+        for (const empId of allEmployeeIds) {
+          try {
+            const commissions = await salesService.getCommissions({
+              salonEmployeeId: empId,
+            });
+            // Filter commissions created today
+            const todayCommissions = commissions.filter((comm) => {
+              const commDate = new Date(comm.createdAt);
+              const commDateStr = formatDate(commDate);
+              return commDateStr === todayStr;
+            });
+            todayEarnings += todayCommissions.reduce(
+              (sum, comm) => sum + Number(comm.amount || 0),
+              0
+            );
+          } catch (error) {
+            console.error(
+              `Error fetching commissions for employee ${empId}:`,
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error calculating earnings:", error);
+      }
+
+      const stats: TodayStats = {
+        appointmentsCount: todayAppointments.length,
+        completedCount: completedAppointments.length,
+        upcomingCount: upcomingAppointments.length,
+        earnings: todayEarnings,
+        customerCount: uniqueCustomers.size,
+      };
+
+      setTodayStats(stats);
+    } catch (error: any) {
+      console.error("Error loading dashboard:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to load dashboard data. Please try again.",
+        [{ text: "OK" }]
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadDashboardData();
     setRefreshing(false);
-  };
+  }, [loadDashboardData]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'confirmed':
-        return '#4CAF50';
-      case 'pending':
-        return '#FF9800';
-      case 'completed':
-        return '#2196F3';
+      case "confirmed":
+        return isDark ? theme.colors.success : "#4CAF50";
+      case "pending":
+        return isDark ? theme.colors.warning : "#FF9800";
+      case "completed":
+        return isDark ? theme.colors.info : "#2196F3";
       default:
         return theme.colors.textSecondary;
     }
@@ -136,20 +299,23 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
 
   const getStatusBgColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'confirmed':
-        return '#E8F5E9';
-      case 'pending':
-        return '#FFF3E0';
-      case 'completed':
-        return '#E3F2FD';
+      case "confirmed":
+        return isDark ? `${theme.colors.success}20` : "#E8F5E9";
+      case "pending":
+        return isDark ? `${theme.colors.warning}20` : "#FFF3E0";
+      case "completed":
+        return isDark ? `${theme.colors.info}20` : "#E3F2FD";
       default:
-        return theme.colors.backgroundSecondary;
+        return isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary;
     }
   };
 
   // Get user position/role formatted
   const getUserPosition = () => {
-    return 'Hair Stylist';
+    if (employeeRecords.length > 0 && employeeRecords[0].roleTitle) {
+      return employeeRecords[0].roleTitle;
+    }
+    return "Employee";
   };
 
   if (loading) {
@@ -162,7 +328,7 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
 
   return (
     <View style={[styles.container, dynamicStyles.container]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -187,14 +353,20 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
             <Image source={logo} style={styles.logo} resizeMode="contain" />
             <TouchableOpacity
               style={styles.notificationButton}
-              onPress={() => navigation.navigate('Notifications')}
+              onPress={() => navigation.navigate("Notifications")}
               activeOpacity={0.7}
             >
-              <MaterialIcons name="notifications-none" size={26} color="#FFFFFF" />
+              <MaterialIcons
+                name="notifications-none"
+                size={26}
+                color="#FFFFFF"
+              />
               {unreadNotificationCount > 0 && (
                 <View style={styles.notificationBadge}>
                   <Text style={styles.notificationBadgeText}>
-                    {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                    {unreadNotificationCount > 9
+                      ? "9+"
+                      : unreadNotificationCount}
                   </Text>
                 </View>
               )}
@@ -204,13 +376,15 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
           {/* Profile Section */}
           <View style={styles.profileSection}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Profile')}
+              onPress={() => navigation.navigate("Profile")}
               activeOpacity={0.7}
             >
               <Image source={profileImage} style={styles.profileImage} />
             </TouchableOpacity>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.fullName || 'Employee'}</Text>
+              <Text style={styles.profileName}>
+                {user?.fullName || "Employee"}
+              </Text>
               <Text style={styles.profileRole}>
                 {getUserPosition()} • Level {employeeLevel}
               </Text>
@@ -220,98 +394,259 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
           {/* Stats Cards */}
           <View style={styles.statsRow}>
             <View style={[styles.statCard, dynamicStyles.card]}>
-              <View style={[styles.statIconContainer, { backgroundColor: '#E3F2FD' }]}>
-                <MaterialIcons name="schedule" size={18} color="#2196F3" />
+              <View
+                style={[
+                  styles.statIconContainer,
+                  {
+                    backgroundColor: isDark
+                      ? `${theme.colors.info}20`
+                      : "#E3F2FD",
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="schedule"
+                  size={18}
+                  color={isDark ? theme.colors.info : "#2196F3"}
+                />
               </View>
               <Text style={[styles.statValue, dynamicStyles.text]}>
                 {todayStats?.appointmentsCount || 0}
               </Text>
-              <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>TODAY'S{'\n'}TASKS</Text>
+              <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>
+                TODAY'S{"\n"}TASKS
+              </Text>
             </View>
 
             <View style={[styles.statCard, dynamicStyles.card]}>
-              <View style={[styles.statIconContainer, { backgroundColor: '#E8F5E9' }]}>
-                <MaterialIcons name="people" size={18} color="#4CAF50" />
+              <View
+                style={[
+                  styles.statIconContainer,
+                  {
+                    backgroundColor: isDark
+                      ? `${theme.colors.success}20`
+                      : "#E8F5E9",
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="people"
+                  size={18}
+                  color={isDark ? theme.colors.success : "#4CAF50"}
+                />
               </View>
               <Text style={[styles.statValue, dynamicStyles.text]}>
                 {todayStats?.customerCount || 0}
               </Text>
-              <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>CUSTOMERS</Text>
+              <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>
+                CUSTOMERS
+              </Text>
             </View>
 
             <View style={[styles.statCard, dynamicStyles.card]}>
-              <View style={[styles.statIconContainer, { backgroundColor: '#FFF3E0' }]}>
-                <MaterialIcons name="attach-money" size={18} color="#FF9800" />
+              <View
+                style={[
+                  styles.statIconContainer,
+                  {
+                    backgroundColor: isDark
+                      ? `${theme.colors.warning}20`
+                      : "#FFF3E0",
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="attach-money"
+                  size={18}
+                  color={isDark ? theme.colors.warning : "#FF9800"}
+                />
               </View>
               <Text style={[styles.statValue, dynamicStyles.text]}>
                 ${todayStats?.earnings || 0}
               </Text>
-              <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>EARNINGS</Text>
+              <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>
+                EARNINGS
+              </Text>
             </View>
           </View>
         </LinearGradient>
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
-          
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+            Quick Actions
+          </Text>
+
           <View style={styles.quickActionsGrid}>
             {/* Clocked In Card - Click to go to Attendance */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.quickActionCard, dynamicStyles.card]}
-              onPress={() => navigation.navigate('Attendance')}
+              onPress={() => navigation.navigate("Attendance")}
               activeOpacity={0.7}
             >
               <View style={styles.quickActionHeader}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E9' }]}>
-                  <MaterialIcons name="access-time" size={24} color="#4CAF50" />
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    {
+                      backgroundColor: isDark
+                        ? `${theme.colors.success}20`
+                        : "#E8F5E9",
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="access-time"
+                    size={24}
+                    color={isDark ? theme.colors.success : "#4CAF50"}
+                  />
                 </View>
                 {clockStatus?.isClockedIn && (
-                  <View style={styles.onTimeBadge}>
-                    <Text style={styles.onTimeBadgeText}>On Time</Text>
+                  <View
+                    style={[
+                      styles.onTimeBadge,
+                      {
+                        backgroundColor: isDark
+                          ? `${theme.colors.success}20`
+                          : "#E8F5E9",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.onTimeBadgeText,
+                        {
+                          color: isDark ? theme.colors.success : "#4CAF50",
+                        },
+                      ]}
+                    >
+                      On Time
+                    </Text>
                   </View>
                 )}
               </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.textSecondary]}>Clocked In</Text>
+              <Text
+                style={[styles.quickActionLabel, dynamicStyles.textSecondary]}
+              >
+                Clocked In
+              </Text>
               <Text style={[styles.quickActionValue, dynamicStyles.text]}>
-                {clockStatus?.clockInTime || '--:--'}
+                {clockStatus?.clockInTime || "--:--"}
               </Text>
             </TouchableOpacity>
 
-            {/* Wallet Balance Card */}
-            <View style={[styles.quickActionCard, dynamicStyles.card]}>
+            {/* Commissions Card */}
+            <TouchableOpacity
+              style={[styles.quickActionCard, dynamicStyles.card]}
+              onPress={() => navigation.navigate("Commissions")}
+              activeOpacity={0.7}
+            >
               <View style={styles.quickActionHeader}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#E3F2FD' }]}>
-                  <MaterialIcons name="account-balance-wallet" size={24} color="#2196F3" />
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    {
+                      backgroundColor: isDark
+                        ? `${theme.colors.primary}20`
+                        : `${theme.colors.primary}15`,
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="payments"
+                    size={24}
+                    color={theme.colors.primary}
+                  />
                 </View>
               </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.textSecondary]}>Wallet Balance</Text>
-              <Text style={[styles.quickActionValue, dynamicStyles.text]}>$1,285.50</Text>
-            </View>
+              <Text
+                style={[styles.quickActionLabel, dynamicStyles.textSecondary]}
+              >
+                Commissions
+              </Text>
+              <Text style={[styles.quickActionValue, dynamicStyles.text]}>
+                View Earnings
+              </Text>
+            </TouchableOpacity>
 
             {/* Goal Setting Card */}
             <View style={[styles.quickActionCard, dynamicStyles.card]}>
               <View style={styles.quickActionHeader}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#F3E5F5' }]}>
-                  <MaterialIcons name="track-changes" size={24} color="#9C27B0" />
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    {
+                      backgroundColor: isDark
+                        ? `${theme.colors.secondary}20`
+                        : "#F3E5F5",
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="track-changes"
+                    size={24}
+                    color={isDark ? theme.colors.secondary : "#9C27B0"}
+                  />
                 </View>
-                <View style={[styles.activeBadge]}>
-                  <Text style={styles.activeBadgeText}>Active</Text>
+                <View
+                  style={[
+                    styles.activeBadge,
+                    {
+                      backgroundColor: isDark
+                        ? `${theme.colors.success}20`
+                        : "#E8F5E9",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.activeBadgeText,
+                      {
+                        color: isDark ? theme.colors.success : "#4CAF50",
+                      },
+                    ]}
+                  >
+                    Active
+                  </Text>
                 </View>
               </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.textSecondary]}>Goal Setting</Text>
-              <Text style={[styles.quickActionValue, dynamicStyles.text]}>2 Targets</Text>
+              <Text
+                style={[styles.quickActionLabel, dynamicStyles.textSecondary]}
+              >
+                Goal Setting
+              </Text>
+              <Text style={[styles.quickActionValue, dynamicStyles.text]}>
+                2 Targets
+              </Text>
             </View>
 
             {/* Training Card */}
             <View style={[styles.quickActionCard, dynamicStyles.card]}>
               <View style={styles.quickActionHeader}>
-                <View style={[styles.quickActionIcon, { backgroundColor: '#FFF3E0' }]}>
-                  <MaterialIcons name="play-circle-outline" size={24} color="#FF9800" />
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    {
+                      backgroundColor: isDark
+                        ? `${theme.colors.warning}20`
+                        : "#FFF3E0",
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="play-circle-outline"
+                    size={24}
+                    color={isDark ? theme.colors.warning : "#FF9800"}
+                  />
                 </View>
               </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.textSecondary]}>Training</Text>
-              <Text style={[styles.quickActionValue, dynamicStyles.text]}>2 Pending</Text>
+              <Text
+                style={[styles.quickActionLabel, dynamicStyles.textSecondary]}
+              >
+                Training
+              </Text>
+              <Text style={[styles.quickActionValue, dynamicStyles.text]}>
+                2 Pending
+              </Text>
             </View>
           </View>
         </View>
@@ -319,9 +654,11 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
         {/* Today's Schedule */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Today's Schedule</Text>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+              Today's Schedule
+            </Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('MySchedule')}
+              onPress={() => navigation.navigate("MySchedule")}
               activeOpacity={0.7}
             >
               <Text style={styles.viewAllLink}>View Calendar</Text>
@@ -330,7 +667,11 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
 
           {schedule.length === 0 ? (
             <View style={[styles.emptyCard, dynamicStyles.card]}>
-              <MaterialIcons name="event-available" size={48} color={theme.colors.textSecondary} />
+              <MaterialIcons
+                name="event-available"
+                size={48}
+                color={theme.colors.textSecondary}
+              />
               <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
                 No appointments scheduled for today
               </Text>
@@ -340,35 +681,73 @@ export default function StaffDashboardScreen({ navigation }: StaffDashboardScree
               <TouchableOpacity
                 key={item.id}
                 style={[styles.scheduleCard, dynamicStyles.card]}
-                onPress={() => navigation.navigate('AppointmentDetail', { appointmentId: item.id })}
+                onPress={() =>
+                  navigation.navigate("AppointmentDetail", {
+                    appointmentId: item.id,
+                  })
+                }
                 activeOpacity={0.7}
               >
                 <View style={styles.scheduleCardLeft}>
-                  <View style={styles.customerAvatar}>
-                    <MaterialIcons name="person" size={24} color={theme.colors.primary} />
+                  <View
+                    style={[
+                      styles.customerAvatar,
+                      {
+                        backgroundColor: isDark
+                          ? `${theme.colors.primary}20`
+                          : `${theme.colors.primary}15`,
+                      },
+                    ]}
+                  >
+                    <MaterialIcons
+                      name="person"
+                      size={24}
+                      color={theme.colors.primary}
+                    />
                   </View>
                   <View style={styles.scheduleInfo}>
                     <View style={styles.scheduleMainRow}>
                       <Text style={[styles.serviceName, dynamicStyles.text]}>
                         {item.serviceName}
                       </Text>
-                      <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(item.status) }]}>
-                        <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: getStatusBgColor(item.status) },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            { color: getStatusColor(item.status) },
+                          ]}
+                        >
+                          {item.status.charAt(0).toUpperCase() +
+                            item.status.slice(1)}
                         </Text>
                       </View>
                     </View>
-                    <Text style={[styles.customerName, dynamicStyles.textSecondary]}>
+                    <Text
+                      style={[styles.customerName, dynamicStyles.textSecondary]}
+                    >
                       {item.customerName}
                     </Text>
                     <View style={styles.scheduleDetails}>
                       <View style={styles.scheduleTime}>
-                        <MaterialIcons name="schedule" size={14} color={theme.colors.textSecondary} />
-                        <Text style={[styles.timeText, dynamicStyles.textSecondary]}>
+                        <MaterialIcons
+                          name="schedule"
+                          size={14}
+                          color={theme.colors.textSecondary}
+                        />
+                        <Text
+                          style={[styles.timeText, dynamicStyles.textSecondary]}
+                        >
                           {item.startTime} - {item.endTime}
                         </Text>
                       </View>
-                      <Text style={styles.priceText}>${item.price}</Text>
+                      <Text style={[styles.priceText, dynamicStyles.text]}>
+                        ${item.price}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -391,8 +770,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollContent: {
     paddingBottom: theme.spacing.xl,
@@ -407,9 +786,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: theme.spacing.md,
   },
   logo: {
@@ -417,30 +796,30 @@ const styles = StyleSheet.create({
     height: 32,
   },
   notificationButton: {
-    position: 'relative',
+    position: "relative",
     padding: theme.spacing.xs,
   },
   notificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     right: 0,
     backgroundColor: theme.colors.error,
     borderRadius: 10,
     minWidth: 18,
     height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationBadgeText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 
   // Profile Section
   profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: theme.spacing.xl,
   },
   profileImage: {
@@ -448,7 +827,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: "rgba(255,255,255,0.5)",
     marginRight: theme.spacing.md,
   },
   profileInfo: {
@@ -456,61 +835,59 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     fontFamily: theme.fonts.bold,
     marginBottom: 2,
   },
   profileRole: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
+    color: "rgba(255,255,255,0.85)",
     fontFamily: theme.fonts.regular,
   },
 
   // Stats Row
   statsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginTop: theme.spacing.md,
     marginHorizontal: -theme.spacing.xs,
-    position: 'absolute',
+    position: "absolute",
     bottom: -30,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
   },
   statCard: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   statIconContainer: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: theme.spacing.sm,
   },
   statValue: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 10,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: theme.fonts.regular,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
 
@@ -520,14 +897,14 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xl,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
     marginBottom: theme.spacing.md,
   },
@@ -539,35 +916,33 @@ const styles = StyleSheet.create({
 
   // Quick Actions Grid
   quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: theme.spacing.sm,
   },
   quickActionCard: {
-    width: '48.5%',
-    backgroundColor: theme.colors.background,
+    width: "48.5%",
     borderRadius: 16,
     padding: theme.spacing.md,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   quickActionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: theme.spacing.sm,
   },
   quickActionIcon: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   quickActionLabel: {
     fontSize: 13,
@@ -575,74 +950,67 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   quickActionValue: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   onTimeBadge: {
-    backgroundColor: '#E8F5E9',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: 12,
   },
   onTimeBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#4CAF50',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   activeBadge: {
-    backgroundColor: '#E8F5E9',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
     borderRadius: 12,
   },
   activeBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#4CAF50',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
 
   // Schedule Card
   scheduleCard: {
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
   },
   scheduleCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   customerAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: `${theme.colors.primary}15`,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: theme.spacing.md,
   },
   scheduleInfo: {
     flex: 1,
   },
   scheduleMainRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
   },
   serviceName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
     flex: 1,
   },
@@ -653,7 +1021,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   customerName: {
@@ -662,13 +1030,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   scheduleDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   scheduleTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   timeText: {
@@ -677,24 +1045,21 @@ const styles = StyleSheet.create({
   },
   priceText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.text,
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
 
   // Empty State
   emptyCard: {
-    backgroundColor: theme.colors.background,
     borderRadius: 16,
     padding: theme.spacing.xl,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
   },
   emptyText: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: theme.spacing.sm,
     fontFamily: theme.fonts.regular,
   },
