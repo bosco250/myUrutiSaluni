@@ -182,19 +182,11 @@ export class AppointmentsController {
   ) {
     // Salon employees can get their assigned appointments (where they are preferred employee)
     if (user.role === UserRole.SALON_EMPLOYEE && myAppointments === 'true') {
-      // Find all employee records for this user (they might work for multiple salons)
-      const allSalons = await this.salonsService.findByOwnerId(user.id);
-      const allSalonIds = allSalons.map((s) => s.id);
-
-      // Get all employee records for this user across all salons
-      const employeeRecords = [];
-      for (const salonId of allSalonIds) {
-        const emp = await this.salonsService.findEmployeeByUserId(
-          user.id,
-          salonId,
-        );
-        if (emp) employeeRecords.push(emp);
-      }
+      // Get all employee records for this user (they might work for multiple salons)
+      // FIX: Use findAllEmployeesByUserId instead of findByOwnerId (which is for owners, not employees)
+      const employeeRecords = await this.salonsService.findAllEmployeesByUserId(
+        user.id,
+      );
 
       if (employeeRecords.length === 0) {
         return []; // Return empty if not an employee

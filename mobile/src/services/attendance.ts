@@ -44,9 +44,19 @@ class AttendanceService {
   /**
    * Get attendance logs for an employee
    */
-  async getAttendanceHistory(employeeId: string): Promise<AttendanceLog[]> {
+  async getAttendanceHistory(
+    employeeId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AttendanceLog[]> {
     try {
-      const response = await api.get<AttendanceLog[]>(`/attendance?employeeId=${employeeId}`);
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      
+      const queryString = params.toString();
+      const url = `/attendance/employee/${employeeId}${queryString ? `?${queryString}` : ''}`;
+      const response = await api.get<AttendanceLog[]>(url);
       return response || [];
     } catch (error) {
       console.error('Error fetching attendance history:', error);

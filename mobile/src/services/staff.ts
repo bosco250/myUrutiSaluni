@@ -1,10 +1,12 @@
 import { api } from './api';
+import { AttendanceLog as BackendAttendanceLog } from './attendance';
 
 /**
  * Salon Staff Service
  * Handles operations for salon employees (clock in/out, schedule, attendance)
  */
 
+// Legacy interface for backward compatibility (deprecated - use BackendAttendanceLog)
 export interface AttendanceLog {
   id: string;
   employeeId: string;
@@ -84,14 +86,15 @@ class StaffService {
 
   /**
    * Get current attendance status (if clocked in)
+   * Returns the backend AttendanceLog structure with recordedAt and type
    */
-  async getCurrentAttendance(employeeId: string): Promise<AttendanceLog | null> {
+  async getCurrentAttendance(employeeId: string): Promise<BackendAttendanceLog | null> {
     try {
-      const response = await api.get<AttendanceLog>(`/attendance/current/${employeeId}`);
+      const response = await api.get<BackendAttendanceLog>(`/attendance/current/${employeeId}`);
       return response;
     } catch (error: any) {
-      // If no active attendance, return null
-      if (error.message?.includes('404')) {
+      // If no active attendance (404), return null
+      if (error.response?.status === 404 || error.message?.includes('404')) {
         return null;
       }
       throw error;

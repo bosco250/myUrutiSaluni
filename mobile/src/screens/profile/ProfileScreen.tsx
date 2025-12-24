@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
+import { api } from "../../services/api";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
@@ -35,6 +36,37 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [currentSubScreen, setCurrentSubScreen] =
     useState<ProfileSubScreen>("main");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [hasExistingApplication, setHasExistingApplication] = useState(false);
+
+  // Check if user is an employee
+  const isEmployee = user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE";
+
+  // Check if employee already has a membership application
+  const checkMembershipStatus = useCallback(async () => {
+    if (!isEmployee) return;
+    
+    try {
+      const response = await api.get("/memberships/applications/my");
+      // If we get a response with an id, user has an existing application
+      if (response && (response as any).id) {
+        setHasExistingApplication(true);
+      }
+    } catch (error: any) {
+      // 404 means no application exists, which is fine
+      if (error.response?.status !== 404) {
+        console.log("Error checking membership:", error.message);
+      }
+      setHasExistingApplication(false);
+    }
+  }, [isEmployee]);
+
+  useEffect(() => {
+    checkMembershipStatus();
+  }, [checkMembershipStatus]);
+
+  // Show "Become an Owner" only for employees without existing application
+  const showBecomeOwnerSection = isEmployee && !hasExistingApplication;
+
 
   // Get user data from auth context
   const userName = user?.fullName || "User";
@@ -323,6 +355,33 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Become an Owner Section - Only for Employees without existing application */}
+        {showBecomeOwnerSection && (
+          <View style={[styles.sectionCard, styles.ownerCard]}>
+            <View style={styles.ownerCardHeader}>
+              <View style={styles.ownerIconContainer}>
+                <MaterialIcons name="business" size={28} color={theme.colors.primary} />
+              </View>
+              <View style={styles.ownerTextContainer}>
+                <Text style={[styles.ownerTitle, dynamicStyles.text]}>
+                  Become a Salon Owner
+                </Text>
+                <Text style={[styles.ownerDescription, dynamicStyles.textSecondary]}>
+                  Ready to start your own salon business? Apply for membership and unlock owner benefits.
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.ownerApplyButton}
+              activeOpacity={0.8}
+              onPress={() => navigation?.navigate("MembershipApplication")}
+            >
+              <Text style={styles.ownerApplyButtonText}>Apply Now</Text>
+              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Log Out Button with Artistic Styling */}
         <TouchableOpacity
@@ -648,6 +707,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+    fontFamily: theme.fonts.medium,
+  },
+  // Become an Owner styles
+  ownerCard: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary + "30",
+    backgroundColor: theme.colors.primary + "08",
+  },
+  ownerCardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: theme.spacing.md,
+  },
+  ownerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary + "15",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
+  },
+  ownerTextContainer: {
+    flex: 1,
+  },
+  ownerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    marginBottom: theme.spacing.xs,
+  },
+  ownerDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: theme.fonts.regular,
+  },
+  ownerApplyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: 10,
+    gap: 8,
+  },
+  ownerApplyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
 });

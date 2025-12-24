@@ -720,6 +720,54 @@ export class SalesService {
     return this.enrichSalesWithDetails(data, total, page, limit);
   }
 
+  async findByEmployeeId(
+    employeeId: string,
+    page: number = 1,
+    limit: number = 10,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<PaginatedResult<SaleWithDetails>> {
+    const skip = (page - 1) * limit;
+
+    // Query sales where at least one item is assigned to this employee
+    const queryBuilder = this.salesRepository
+      .createQueryBuilder('sale')
+      .leftJoinAndSelect('sale.customer', 'customer')
+      .leftJoinAndSelect('sale.createdBy', 'createdBy')
+      .leftJoinAndSelect('sale.salon', 'salon')
+      .leftJoinAndSelect('sale.items', 'items')
+      .leftJoinAndSelect('items.service', 'service')
+      .leftJoinAndSelect('items.product', 'product')
+      .leftJoinAndSelect('items.salonEmployee', 'salonEmployee')
+      .leftJoinAndSelect('salonEmployee.user', 'employeeUser')
+      .where('items.salonEmployeeId = :employeeId', { employeeId });
+
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setUTCHours(0, 0, 0, 0);
+      queryBuilder.andWhere('sale.createdAt >= :startDate', {
+        startDate: start,
+      });
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setUTCHours(23, 59, 59, 999);
+      queryBuilder.andWhere('sale.createdAt <= :endDate', { endDate: end });
+    }
+
+    queryBuilder.orderBy('sale.createdAt', 'DESC');
+    queryBuilder.skip(skip);
+    queryBuilder.take(limit);
+
+    // Use distinct to avoid duplicate sales when employee has multiple items
+    queryBuilder.distinct(true);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return this.enrichSalesWithDetails(data, total, page, limit);
+  }
+
   private async enrichSalesWithDetails(
     sales: Sale[],
     total: number,

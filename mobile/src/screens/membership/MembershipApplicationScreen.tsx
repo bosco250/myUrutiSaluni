@@ -743,7 +743,7 @@ export default function MembershipApplicationScreen({
           />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          Salon Owner Application
+          Membership Application
         </Text>
         <View style={styles.placeholder} />
       </View>

@@ -10,6 +10,7 @@ import {
   Image,
   StatusBar,
   Alert,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -24,7 +25,9 @@ import {
 } from "../../services/staff";
 import { appointmentsService, Appointment } from "../../services/appointments";
 import { salesService } from "../../services/sales";
+import { attendanceService, AttendanceType } from "../../services/attendance";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Import assets
 const logo = require("../../../assets/Logo.png");
@@ -124,7 +127,7 @@ export default function StaffDashboardScreen({
       setEmployeeRecords(employeeRecordsList);
 
       // Get current attendance status
-      let currentAttendance = null;
+      let currentAttendance: any = null;
       let clockStatusData: ClockStatus = {
         isClockedIn: false,
         clockInTime: null,
@@ -133,23 +136,62 @@ export default function StaffDashboardScreen({
       };
 
       if (employeeRecordsList.length > 0) {
-        // Try to get current attendance for the first employee record
+        const employeeId = employeeRecordsList[0].id;
+
+        // Get current attendance status (if clocked in)
         try {
-          currentAttendance = await staffService.getCurrentAttendance(
-            employeeRecordsList[0].id
-          );
-          if (currentAttendance) {
-            clockStatusData = {
-              isClockedIn: true,
-              clockInTime: formatTime(currentAttendance.clockIn),
-              clockOutTime: currentAttendance.clockOut
-                ? formatTime(currentAttendance.clockOut)
-                : null,
-              totalHoursToday: calculateHoursWorked(
-                currentAttendance.clockIn,
-                currentAttendance.clockOut
-              ),
-            };
+          currentAttendance =
+            await staffService.getCurrentAttendance(employeeId);
+
+          if (
+            currentAttendance &&
+            currentAttendance.type === AttendanceType.CLOCK_IN
+          ) {
+            // Get today's attendance logs to find clock out time
+            const today = new Date();
+            const dayStart = new Date(today);
+            dayStart.setHours(0, 0, 0, 0);
+            const dayEnd = new Date(today);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            try {
+              const todayLogs = await attendanceService.getAttendanceHistory(
+                employeeId,
+                dayStart.toISOString(),
+                dayEnd.toISOString()
+              );
+
+              const clockOutLog = todayLogs.find(
+                (log) =>
+                  log.type === AttendanceType.CLOCK_OUT &&
+                  new Date(log.recordedAt) >
+                    new Date(currentAttendance.recordedAt)
+              );
+
+              const clockInTime = currentAttendance.recordedAt;
+              const clockOutTime = clockOutLog?.recordedAt;
+
+              clockStatusData = {
+                isClockedIn: true,
+                clockInTime: formatTime(clockInTime),
+                clockOutTime: clockOutTime ? formatTime(clockOutTime) : null,
+                totalHoursToday: calculateHoursWorked(
+                  clockInTime,
+                  clockOutTime
+                ),
+              };
+            } catch {
+              // If we can't get today's logs, just use the current attendance
+              clockStatusData = {
+                isClockedIn: true,
+                clockInTime: formatTime(currentAttendance.recordedAt),
+                clockOutTime: null,
+                totalHoursToday: calculateHoursWorked(
+                  currentAttendance.recordedAt,
+                  undefined
+                ),
+              };
+            }
           }
         } catch {
           // No active attendance is normal - employee might not be clocked in yet
@@ -228,21 +270,28 @@ export default function StaffDashboardScreen({
       );
 
       // Calculate earnings from commissions for today
+      // Use backend date filtering for accurate results
+      // Backend expects YYYY-MM-DD format, not ISO string
       let todayEarnings = 0;
       try {
         const allEmployeeIds = employeeRecordsList.map((emp) => emp.id);
+
+        // Use the same todayStr that was already formatted (YYYY-MM-DD format)
+        // This matches what the backend parseDateFilter expects
+        const startDateStr = todayStr; // Already in YYYY-MM-DD format
+        const endDateStr = todayStr; // Same day for start and end
+
         for (const empId of allEmployeeIds) {
           try {
+            // Use backend date filtering to get commissions for today
+            // Backend parseDateFilter expects YYYY-MM-DD format
             const commissions = await salesService.getCommissions({
               salonEmployeeId: empId,
+              startDate: startDateStr,
+              endDate: endDateStr,
             });
-            // Filter commissions created today
-            const todayCommissions = commissions.filter((comm) => {
-              const commDate = new Date(comm.createdAt);
-              const commDateStr = formatDate(commDate);
-              return commDateStr === todayStr;
-            });
-            todayEarnings += todayCommissions.reduce(
+            // Sum all commissions (already filtered by backend)
+            todayEarnings += commissions.reduce(
               (sum, comm) => sum + Number(comm.amount || 0),
               0
             );
@@ -320,14 +369,20 @@ export default function StaffDashboardScreen({
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
+      <SafeAreaView
+        style={[styles.loadingContainer, dynamicStyles.container]}
+        edges={["top"]}
+      >
         <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={["top"]}
+    >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScrollView
@@ -338,6 +393,7 @@ export default function StaffDashboardScreen({
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
           />
         }
       >
@@ -351,14 +407,16 @@ export default function StaffDashboardScreen({
           {/* Top Bar */}
           <View style={styles.topBar}>
             <Image source={logo} style={styles.logo} resizeMode="contain" />
-            <TouchableOpacity
-              style={styles.notificationButton}
+            <Pressable
+              style={({ pressed }) => [
+                styles.notificationButton,
+                pressed && { opacity: 0.7 },
+              ]}
               onPress={() => navigation.navigate("Notifications")}
-              activeOpacity={0.7}
             >
               <MaterialIcons
                 name="notifications-none"
-                size={26}
+                size={theme.sizes.icon.md}
                 color="#FFFFFF"
               />
               {unreadNotificationCount > 0 && (
@@ -370,7 +428,7 @@ export default function StaffDashboardScreen({
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Profile Section */}
@@ -406,7 +464,7 @@ export default function StaffDashboardScreen({
               >
                 <MaterialIcons
                   name="schedule"
-                  size={18}
+                  size={theme.sizes.icon.sm}
                   color={isDark ? theme.colors.info : "#2196F3"}
                 />
               </View>
@@ -431,7 +489,7 @@ export default function StaffDashboardScreen({
               >
                 <MaterialIcons
                   name="people"
-                  size={18}
+                  size={theme.sizes.icon.sm}
                   color={isDark ? theme.colors.success : "#4CAF50"}
                 />
               </View>
@@ -456,7 +514,7 @@ export default function StaffDashboardScreen({
               >
                 <MaterialIcons
                   name="attach-money"
-                  size={18}
+                  size={theme.sizes.icon.sm}
                   color={isDark ? theme.colors.warning : "#FF9800"}
                 />
               </View>
@@ -471,17 +529,20 @@ export default function StaffDashboardScreen({
         </LinearGradient>
 
         {/* Quick Actions */}
-        <View style={styles.section}>
+        <View style={styles.firstSection}>
           <Text style={[styles.sectionTitle, dynamicStyles.text]}>
             Quick Actions
           </Text>
 
           <View style={styles.quickActionsGrid}>
             {/* Clocked In Card - Click to go to Attendance */}
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.quickActionCard,
+                dynamicStyles.card,
+                pressed && { opacity: 0.7 },
+              ]}
               onPress={() => navigation.navigate("Attendance")}
-              activeOpacity={0.7}
             >
               <View style={styles.quickActionHeader}>
                 <View
@@ -496,7 +557,7 @@ export default function StaffDashboardScreen({
                 >
                   <MaterialIcons
                     name="access-time"
-                    size={24}
+                    size={theme.sizes.icon.md}
                     color={isDark ? theme.colors.success : "#4CAF50"}
                   />
                 </View>
@@ -532,13 +593,16 @@ export default function StaffDashboardScreen({
               <Text style={[styles.quickActionValue, dynamicStyles.text]}>
                 {clockStatus?.clockInTime || "--:--"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Commissions Card */}
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.quickActionCard,
+                dynamicStyles.card,
+                pressed && { opacity: 0.7 },
+              ]}
               onPress={() => navigation.navigate("Commissions")}
-              activeOpacity={0.7}
             >
               <View style={styles.quickActionHeader}>
                 <View
@@ -553,7 +617,7 @@ export default function StaffDashboardScreen({
                 >
                   <MaterialIcons
                     name="payments"
-                    size={24}
+                    size={theme.sizes.icon.md}
                     color={theme.colors.primary}
                   />
                 </View>
@@ -566,7 +630,7 @@ export default function StaffDashboardScreen({
               <Text style={[styles.quickActionValue, dynamicStyles.text]}>
                 View Earnings
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Goal Setting Card */}
             <View style={[styles.quickActionCard, dynamicStyles.card]}>
@@ -583,7 +647,7 @@ export default function StaffDashboardScreen({
                 >
                   <MaterialIcons
                     name="track-changes"
-                    size={24}
+                    size={theme.sizes.icon.md}
                     color={isDark ? theme.colors.secondary : "#9C27B0"}
                   />
                 </View>
@@ -634,7 +698,7 @@ export default function StaffDashboardScreen({
                 >
                   <MaterialIcons
                     name="play-circle-outline"
-                    size={24}
+                    size={theme.sizes.icon.md}
                     color={isDark ? theme.colors.warning : "#FF9800"}
                   />
                 </View>
@@ -657,19 +721,19 @@ export default function StaffDashboardScreen({
             <Text style={[styles.sectionTitle, dynamicStyles.text]}>
               Today's Schedule
             </Text>
-            <TouchableOpacity
+            <Pressable
               onPress={() => navigation.navigate("MySchedule")}
-              activeOpacity={0.7}
+              style={({ pressed }) => pressed && { opacity: 0.7 }}
             >
               <Text style={styles.viewAllLink}>View Calendar</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {schedule.length === 0 ? (
             <View style={[styles.emptyCard, dynamicStyles.card]}>
               <MaterialIcons
                 name="event-available"
-                size={48}
+                size={theme.sizes.icon.xl}
                 color={theme.colors.textSecondary}
               />
               <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
@@ -678,15 +742,18 @@ export default function StaffDashboardScreen({
             </View>
           ) : (
             schedule.map((item) => (
-              <TouchableOpacity
+              <Pressable
                 key={item.id}
-                style={[styles.scheduleCard, dynamicStyles.card]}
+                style={({ pressed }) => [
+                  styles.scheduleCard,
+                  dynamicStyles.card,
+                  pressed && { opacity: 0.7 },
+                ]}
                 onPress={() =>
                   navigation.navigate("AppointmentDetail", {
                     appointmentId: item.id,
                   })
                 }
-                activeOpacity={0.7}
               >
                 <View style={styles.scheduleCardLeft}>
                   <View
@@ -701,7 +768,7 @@ export default function StaffDashboardScreen({
                   >
                     <MaterialIcons
                       name="person"
-                      size={24}
+                      size={theme.sizes.icon.md}
                       color={theme.colors.primary}
                     />
                   </View>
@@ -736,7 +803,7 @@ export default function StaffDashboardScreen({
                       <View style={styles.scheduleTime}>
                         <MaterialIcons
                           name="schedule"
-                          size={14}
+                          size={theme.sizes.icon.xs}
                           color={theme.colors.textSecondary}
                         />
                         <Text
@@ -751,15 +818,15 @@ export default function StaffDashboardScreen({
                     </View>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             ))
           )}
         </View>
 
-        {/* Bottom spacing */}
-        <View style={{ height: 100 }} />
+        {/* Bottom spacing for safe area */}
+        <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -774,22 +841,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scrollContent: {
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.componentSpacing.screenPaddingLarge,
   },
 
   // Header
   header: {
-    paddingTop: (StatusBar.currentHeight || 0) + theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl + 40,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingTop: theme.componentSpacing.screenPadding,
+    paddingHorizontal: theme.componentSpacing.screenPadding,
+    paddingBottom: theme.componentSpacing.screenPaddingLarge + 40,
+    borderBottomLeftRadius: theme.sizes.radius.xl,
+    borderBottomRightRadius: theme.sizes.radius.xl,
   },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: theme.spacing.md,
+    minHeight: theme.touchTargets.comfortable,
   },
   logo: {
     width: 90,
@@ -797,35 +865,45 @@ const styles = StyleSheet.create({
   },
   notificationButton: {
     position: "relative",
-    padding: theme.spacing.xs,
+    width: theme.touchTargets.comfortable,
+    height: theme.touchTargets.comfortable,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: theme.sizes.radius.md,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   notificationBadge: {
     position: "absolute",
-    top: 0,
-    right: 0,
+    top: -4,
+    right: -4,
     backgroundColor: theme.colors.error,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    borderRadius: theme.sizes.badge.md / 2,
+    minWidth: theme.sizes.badge.md,
+    height: theme.sizes.badge.md,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.primaryLight,
+    paddingHorizontal: 4,
   },
   notificationBadgeText: {
-    color: "#FFFFFF",
+    color: theme.colors.white,
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: "700",
+    fontFamily: theme.fontFamilies.bold,
+    lineHeight: 12,
   },
 
   // Profile Section
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.componentSpacing.sectionGap,
   },
   profileImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: theme.sizes.avatar.lg,
+    height: theme.sizes.avatar.lg,
+    borderRadius: theme.sizes.avatar.lg / 2,
     borderWidth: 3,
     borderColor: "rgba(255,255,255,0.5)",
     marginRight: theme.spacing.md,
@@ -834,16 +912,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 22,
-    fontWeight: "bold",
+    ...theme.typography.h2,
     color: "#FFFFFF",
-    fontFamily: theme.fonts.bold,
-    marginBottom: 2,
+    fontFamily: theme.fontFamilies.bold,
+    marginBottom: theme.spacing.xs / 2,
   },
   profileRole: {
-    fontSize: 14,
+    ...theme.typography.bodySmall,
     color: "rgba(255,255,255,0.85)",
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fontFamilies.regular,
   },
 
   // Stats Row
@@ -852,49 +929,51 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     marginHorizontal: -theme.spacing.xs,
     position: "absolute",
-    bottom: -30,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
+    bottom: -60, // Increased from -30 to give more space
+    left: theme.componentSpacing.screenPadding,
+    right: theme.componentSpacing.screenPadding,
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: theme.spacing.md,
+    borderRadius: theme.sizes.radius.lg,
+    padding: theme.componentSpacing.cardPadding,
     marginHorizontal: theme.spacing.xs,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: theme.sizes.elevation.md,
     borderWidth: 1,
   },
   statIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: theme.sizes.icon.lg,
+    height: theme.sizes.icon.lg,
+    borderRadius: theme.sizes.radius.md,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: theme.spacing.sm,
   },
   statValue: {
-    fontSize: 22,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    marginBottom: 2,
+    ...theme.typography.h3,
+    fontFamily: theme.fontFamilies.bold,
+    marginBottom: theme.spacing.xs / 2,
   },
   statLabel: {
-    fontSize: 10,
+    ...theme.typography.overline,
     textAlign: "center",
-    fontFamily: theme.fonts.regular,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontFamily: theme.fontFamilies.regular,
   },
 
   // Section
   section: {
-    paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xl,
+    paddingHorizontal: theme.componentSpacing.screenPadding,
+    marginTop: theme.componentSpacing.sectionGap,
+  },
+  // First section after header needs extra top margin for stats cards
+  firstSection: {
+    paddingHorizontal: theme.componentSpacing.screenPadding,
+    marginTop: theme.componentSpacing.sectionGap + 40, // Extra space for stats cards
   },
   sectionHeader: {
     flexDirection: "row",
@@ -903,15 +982,14 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.h3,
+    fontFamily: theme.fontFamilies.semibold,
     marginBottom: theme.spacing.md,
   },
   viewAllLink: {
-    fontSize: 14,
+    ...theme.typography.bodySmall,
     color: theme.colors.primary,
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fontFamilies.medium,
   },
 
   // Quick Actions Grid
@@ -922,14 +1000,15 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     width: "48.5%",
-    borderRadius: 16,
-    padding: theme.spacing.md,
-    shadowColor: "#000",
+    borderRadius: theme.sizes.radius.lg,
+    padding: theme.componentSpacing.cardPadding,
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: theme.sizes.elevation.sm,
     borderWidth: 1,
+    minHeight: theme.touchTargets.comfortable * 2,
   },
   quickActionHeader: {
     flexDirection: "row",
@@ -938,63 +1017,63 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   quickActionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: theme.touchTargets.comfortable,
+    height: theme.touchTargets.comfortable,
+    borderRadius: theme.sizes.radius.md,
     justifyContent: "center",
     alignItems: "center",
   },
   quickActionLabel: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginBottom: 4,
+    ...theme.typography.bodySmall,
+    fontFamily: theme.fontFamilies.regular,
+    marginBottom: theme.spacing.xs / 2,
   },
   quickActionValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.bodyMedium,
+    fontFamily: theme.fontFamilies.semibold,
   },
   onTimeBadge: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.xs / 2,
+    borderRadius: theme.sizes.radius.md,
   },
   onTimeBadgeText: {
-    fontSize: 11,
+    ...theme.typography.caption,
+    fontFamily: theme.fontFamilies.semibold,
     fontWeight: "600",
-    fontFamily: theme.fonts.medium,
   },
   activeBadge: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.xs / 2,
+    borderRadius: theme.sizes.radius.md,
   },
   activeBadgeText: {
-    fontSize: 11,
+    ...theme.typography.caption,
+    fontFamily: theme.fontFamilies.semibold,
     fontWeight: "600",
-    fontFamily: theme.fonts.medium,
   },
 
   // Schedule Card
   scheduleCard: {
-    borderRadius: 16,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    shadowColor: "#000",
+    borderRadius: theme.sizes.radius.lg,
+    padding: theme.componentSpacing.cardPadding,
+    marginBottom: theme.componentSpacing.listItemGap,
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: theme.sizes.elevation.sm,
     borderWidth: 1,
+    minHeight: theme.touchTargets.comfortable * 2,
   },
   scheduleCardLeft: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   customerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: theme.sizes.avatar.md,
+    height: theme.sizes.avatar.md,
+    borderRadius: theme.sizes.avatar.md / 2,
     justifyContent: "center",
     alignItems: "center",
     marginRight: theme.spacing.md,
@@ -1006,61 +1085,65 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs / 2,
   },
   serviceName: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.h4,
+    fontFamily: theme.fontFamilies.semibold,
     flex: 1,
   },
   statusBadge: {
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.xs / 2,
+    borderRadius: theme.sizes.radius.sm,
   },
   statusText: {
-    fontSize: 12,
+    ...theme.typography.caption,
+    fontFamily: theme.fontFamilies.semibold,
     fontWeight: "600",
-    fontFamily: theme.fonts.medium,
   },
   customerName: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
+    ...theme.typography.bodySmall,
+    fontFamily: theme.fontFamilies.regular,
     marginBottom: theme.spacing.xs,
   },
   scheduleDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: theme.spacing.xs,
   },
   scheduleTime: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: theme.spacing.xs,
   },
   timeText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
+    ...theme.typography.bodySmall,
+    fontFamily: theme.fontFamilies.regular,
   },
   priceText: {
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.bodyMedium,
+    fontFamily: theme.fontFamilies.semibold,
   },
 
   // Empty State
   emptyCard: {
-    borderRadius: 16,
-    padding: theme.spacing.xl,
+    borderRadius: theme.sizes.radius.lg,
+    padding: theme.componentSpacing.screenPaddingLarge,
     alignItems: "center",
     borderWidth: 1,
     borderStyle: "dashed",
+    minHeight: 200,
+    justifyContent: "center",
   },
   emptyText: {
-    fontSize: 14,
+    ...theme.typography.bodySmall,
     textAlign: "center",
-    marginTop: theme.spacing.sm,
-    fontFamily: theme.fonts.regular,
+    marginTop: theme.spacing.md,
+    fontFamily: theme.fontFamilies.regular,
+  },
+  bottomSpacing: {
+    height: theme.componentSpacing.screenPaddingLarge * 2,
   },
 });

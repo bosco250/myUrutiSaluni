@@ -44,7 +44,7 @@ export class MembershipsController {
   ) {}
 
   @Post('apply')
-  @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER)
+  @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
   @ApiOperation({ summary: 'Apply for membership' })
   async apply(
     @Body() createDto: CreateMembershipApplicationDto,
@@ -61,14 +61,14 @@ export class MembershipsController {
   }
 
   @Get('applications/my')
-  @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER)
+  @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
   @ApiOperation({ summary: 'Get my membership application' })
   async getMyApplication(@CurrentUser() user: any) {
     return this.membershipsService.findByApplicantId(user.id);
   }
 
   @Get('status')
-  @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER)
+  @Roles(UserRole.CUSTOMER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
   @ApiOperation({ summary: 'Check membership status' })
   async checkStatus(@CurrentUser() user: any) {
     return this.membershipsService.checkMembershipStatus(user.id);

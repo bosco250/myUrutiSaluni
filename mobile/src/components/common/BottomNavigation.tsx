@@ -58,7 +58,7 @@ export default function BottomNavigation({
             <View style={styles.iconContainer}>
               <MaterialIcons
                 name={tab.icon as any}
-                size={24}
+                size={theme.sizes.icon.md}
                 color={dynamicStyles.iconColor(isActive)}
               />
               {showBadge && (
@@ -88,58 +88,65 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingVertical: theme.spacing.sm,
+    borderTopWidth: theme.sizes.divider.thin,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm + 4, // Extra padding for safe area
     paddingHorizontal: theme.spacing.xs,
     justifyContent: 'space-around',
     alignItems: 'center',
     shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: theme.sizes.elevation.md,
   },
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
     paddingVertical: theme.spacing.xs,
+    minHeight: theme.touchTargets.comfortable, // Ensure proper touch target
   },
   tabLabel: {
-    fontSize: 12,
+    ...theme.typography.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fontFamilies.regular,
   },
   tabLabelActive: {
+    ...theme.typography.caption,
     color: theme.colors.primary,
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fontFamilies.medium,
+    fontWeight: '600',
   },
   iconContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    width: theme.sizes.icon.md,
+    height: theme.sizes.icon.md,
   },
   badge: {
     position: 'absolute',
     top: -6,
-    right: -8,
-    backgroundColor: '#FF3B30', // Red color for badge
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 6,
+    right: -10,
+    backgroundColor: theme.colors.error,
+    borderRadius: theme.sizes.badge.md / 2,
+    minWidth: theme.sizes.badge.md,
+    height: theme.sizes.badge.md,
+    paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
+    borderColor: theme.colors.background,
     zIndex: 10,
   },
   badgeText: {
     color: theme.colors.white,
-    fontSize: 11,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: theme.fontFamilies.bold,
     lineHeight: 12,
   },
 });

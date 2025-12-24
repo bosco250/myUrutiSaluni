@@ -96,6 +96,9 @@ export interface Commission {
   paymentMethod?: string;
   paymentReference?: string;
   createdAt: string;
+  metadata?: {
+    source?: 'sale' | 'appointment';
+  };
   salonEmployee?: {
     id: string;
     salonId?: string;
@@ -210,6 +213,43 @@ class SalesService {
       `/sales/analytics/summary?${params.toString()}`
     );
     return response;
+  }
+
+  /**
+   * Get sales for a specific employee
+   */
+  async getEmployeeSales(
+    employeeId: string,
+    page: number = 1,
+    limit: number = 50,
+    startDate?: string,
+    endDate?: string
+  ): Promise<{ data: Sale[]; total: number; page: number; limit: number }> {
+    const params = new URLSearchParams();
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    try {
+      const response = await api.get<any>(`/sales/employee/${employeeId}?${params.toString()}`);
+      
+      // Handle paginated response
+      if (response?.data && Array.isArray(response.data)) {
+        return {
+          data: response.data,
+          total: response.total || response.data.length,
+          page: response.page || page,
+          limit: response.limit || limit,
+        };
+      }
+      
+      // Fallback
+      return { data: [], total: 0, page, limit };
+    } catch (error) {
+      console.error('Error fetching employee sales:', error);
+      return { data: [], total: 0, page, limit };
+    }
   }
 
   /**

@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  Pressable,
 } from 'react-native';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
@@ -13,9 +13,11 @@ import { useTheme } from '../../context';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  size?: 'small' | 'medium' | 'large';
   loading?: boolean;
   disabled?: boolean;
+  fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
@@ -24,12 +26,36 @@ export default function Button({
   title,
   onPress,
   variant = 'primary',
+  size = 'medium',
   loading = false,
   disabled = false,
+  fullWidth = false,
   style,
   textStyle,
 }: ButtonProps) {
   const { isDark } = useTheme();
+
+  // Size-based styles
+  const sizeStyles = {
+    small: {
+      paddingVertical: theme.componentSpacing.buttonVertical - 4,
+      paddingHorizontal: theme.componentSpacing.buttonHorizontal - 8,
+      minHeight: theme.touchTargets.minimum - 4,
+      fontSize: theme.typography.button.fontSize - 2,
+    },
+    medium: {
+      paddingVertical: theme.componentSpacing.buttonVertical,
+      paddingHorizontal: theme.componentSpacing.buttonHorizontal,
+      minHeight: theme.touchTargets.comfortable,
+      fontSize: theme.typography.button.fontSize,
+    },
+    large: {
+      paddingVertical: theme.componentSpacing.buttonVertical + 4,
+      paddingHorizontal: theme.componentSpacing.buttonHorizontal + 8,
+      minHeight: theme.touchTargets.large,
+      fontSize: theme.typography.button.fontSize + 2,
+    },
+  };
 
   // Dynamic styles for dark/light mode support
   const dynamicStyles = {
@@ -49,100 +75,133 @@ export default function Button({
     outlineText: {
       color: isDark ? theme.colors.white : theme.colors.primary,
     },
+    ghostButton: {
+      backgroundColor: 'transparent',
+    },
+    ghostText: {
+      color: isDark ? theme.colors.white : theme.colors.primary,
+    },
   };
 
   const getButtonStyle = () => {
+    const baseStyle = [sizeStyles[size]];
     switch (variant) {
       case 'secondary':
-        return [styles.secondaryButton, dynamicStyles.secondaryButton];
+        return [...baseStyle, styles.secondaryButton, dynamicStyles.secondaryButton];
       case 'outline':
-        return [styles.outlineButton, dynamicStyles.outlineButton];
+        return [...baseStyle, styles.outlineButton, dynamicStyles.outlineButton];
+      case 'ghost':
+        return [...baseStyle, styles.ghostButton, dynamicStyles.ghostButton];
       default:
-        return [styles.primaryButton, dynamicStyles.primaryButton];
+        return [...baseStyle, styles.primaryButton, dynamicStyles.primaryButton];
     }
   };
 
   const getTextStyle = () => {
+    const baseTextStyle = {
+      ...theme.typography.button,
+      fontSize: sizeStyles[size].fontSize,
+    };
     switch (variant) {
       case 'outline':
-        return [styles.outlineText, dynamicStyles.outlineText];
+        return [baseTextStyle, styles.outlineText, dynamicStyles.outlineText];
       case 'secondary':
-        return styles.secondaryText;
+        return [baseTextStyle, styles.secondaryText];
+      case 'ghost':
+        return [baseTextStyle, styles.ghostText, dynamicStyles.ghostText];
       default:
-        return [styles.primaryText, dynamicStyles.primaryText];
+        return [baseTextStyle, styles.primaryText, dynamicStyles.primaryText];
     }
   };
 
   return (
-    <TouchableOpacity
-      style={[getButtonStyle(), disabled && styles.disabled, style]}
+    <Pressable
+      style={({ pressed }) => [
+        getButtonStyle(),
+        fullWidth && styles.fullWidth,
+        disabled && styles.disabled,
+        pressed && !disabled && styles.pressed,
+        style,
+      ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading }}
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' 
+          size="small"
+          color={variant === 'outline' || variant === 'ghost'
             ? (isDark ? theme.colors.white : theme.colors.primary) 
             : (isDark ? theme.colors.black : theme.colors.textInverse)}
         />
       ) : (
         <Text style={[getTextStyle(), textStyle]}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: theme.colors.buttonPrimary,
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
+    borderRadius: theme.sizes.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    flexDirection: 'row',
   },
   secondaryButton: {
     backgroundColor: theme.colors.secondary,
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
+    borderRadius: theme.sizes.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    flexDirection: 'row',
   },
   outlineButton: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
+    borderRadius: theme.sizes.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    flexDirection: 'row',
+  },
+  ghostButton: {
+    backgroundColor: 'transparent',
+    borderRadius: theme.sizes.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   primaryText: {
     color: theme.colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.button,
+    fontFamily: theme.fontFamilies.semibold,
   },
   secondaryText: {
     color: theme.colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.button,
+    fontFamily: theme.fontFamilies.semibold,
   },
   outlineText: {
     color: theme.colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    ...theme.typography.button,
+    fontFamily: theme.fontFamilies.semibold,
+  },
+  ghostText: {
+    color: theme.colors.primary,
+    ...theme.typography.button,
+    fontFamily: theme.fontFamilies.semibold,
   },
   disabled: {
     opacity: 0.5,
+  },
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  fullWidth: {
+    width: '100%',
   },
 });
 

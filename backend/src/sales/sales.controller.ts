@@ -166,6 +166,61 @@ export class SalesController {
     return this.salesService.findByCustomerId(customerId, pageNum, limitNum);
   }
 
+  @Get('employee/:employeeId')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @ApiOperation({ summary: 'Get sales for a specific employee' })
+  async findByEmployee(
+    @Param('employeeId') employeeId: string,
+    @Query('page') page: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Query('startDate') startDate: string | undefined,
+    @Query('endDate') endDate: string | undefined,
+    @CurrentUser() user: any,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+
+    const startDateFilter = this.parseDateFilter(startDate, false);
+    const endDateFilter = this.parseDateFilter(endDate, true);
+
+    // Security: Verify employee can only access their own sales
+    if (user.role === UserRole.SALON_EMPLOYEE) {
+      const employee = await this.salonsService.findEmployeeByUserId(user.id);
+      if (!employee || employee.id !== employeeId) {
+        throw new ForbiddenException(
+          'You can only access your own sales records',
+        );
+      }
+    }
+    // Salon owners can access sales for their employees
+    else if (user.role === UserRole.SALON_OWNER) {
+      const employee = await this.salonsService.findEmployeeById(employeeId);
+      if (!employee) {
+        throw new ForbiddenException('Employee not found');
+      }
+      const salon = await this.salonsService.findOne(employee.salonId);
+      if (!salon || salon.ownerId !== user.id) {
+        throw new ForbiddenException(
+          'You can only access sales for your salon employees',
+        );
+      }
+    }
+
+    return this.salesService.findByEmployeeId(
+      employeeId,
+      pageNum,
+      limitNum,
+      startDateFilter,
+      endDateFilter,
+    );
+  }
+
   @Get(':id')
   @Roles(
     UserRole.SUPER_ADMIN,

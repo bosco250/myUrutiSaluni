@@ -76,7 +76,7 @@ type MainScreen =
   | "MoreMenu"
   | "Help"
   | "WorkLog"
-  | "Leaderboard"
+  | "Tasks"
   | "CreateSalon"
   | "SalonList"
   | "SalonAppointments"
@@ -420,8 +420,6 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
         targetScreen = "MoreMenu";
       } else if (tab.screen === Screen.WORK_LOG) {
         targetScreen = "WorkLog";
-      } else if (tab.screen === Screen.LEADERBOARD) {
-        targetScreen = "Leaderboard";
       } else if (tab.screen === Screen.CHAT) {
         targetScreen = "ChatList";
       } else if (tab.screen === Screen.SALON_LIST) {

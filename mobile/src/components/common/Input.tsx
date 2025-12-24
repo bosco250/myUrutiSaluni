@@ -92,36 +92,39 @@ export default function Input({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.sm + 2,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...theme.typography.label,
     marginBottom: theme.spacing.xs,
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fontFamilies.medium,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    minHeight: 44,
+    borderWidth: 1.5,
+    borderRadius: theme.sizes.radius.md,
+    paddingHorizontal: theme.componentSpacing.inputHorizontal,
+    paddingVertical: theme.componentSpacing.inputVertical,
+    minHeight: theme.touchTargets.comfortable,
   },
   inputContainerFocused: {
-    // Dynamic colors applied inline
+    borderWidth: 2,
   },
   inputContainerError: {
     borderColor: theme.colors.error,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
+    ...theme.typography.body,
+    fontFamily: theme.fontFamilies.regular,
   },
   eyeIcon: {
     padding: theme.spacing.xs,
+    minWidth: theme.touchTargets.minimum,
+    minHeight: theme.touchTargets.minimum,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   leftIcon: {
     marginRight: theme.spacing.sm,
@@ -131,8 +134,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: theme.colors.error,
-    fontSize: 12,
+    ...theme.typography.caption,
     marginTop: theme.spacing.xs,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fontFamilies.regular,
   },
 });

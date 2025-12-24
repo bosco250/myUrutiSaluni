@@ -1,138 +1,73 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useAuth } from '../../context';
-import { appointmentsService, Appointment, AppointmentStatus } from '../../services/appointments';
+import {
+  workLogService,
+  WorkLogDay,
+  WorkLogSummary,
+} from '../../services/workLog';
+import { staffService } from '../../services/staff';
+
+const { width } = Dimensions.get('window');
 
 interface CalendarDay {
   day: string;
   date: number;
   fullDate: Date;
+  dateString: string;
 }
 
-interface TimelineItem {
-  id: string;
-  time: string;
-  title: string | null;
-  subtitle?: string;
-  duration?: string;
-  type?: string;
-  status?: string;
-  dotColor: string;
-  appointment?: Appointment;
+interface StatCard {
+  label: string;
+  value: string;
+  icon: string;
+  color: string;
 }
 
-// Helper to get day abbreviation
+// Helper functions
 const getDayAbbrev = (date: Date): string => {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   return days[date.getDay()];
 };
 
-// Helper to get month name
 const getMonthName = (date: Date): string => {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return months[date.getMonth()];
 };
 
-// Helper to format time to 12-hour format
 const formatTime = (dateString: string): string => {
   const date = new Date(dateString);
-  let hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 };
 
-// Helper to calculate duration string
-const calculateDuration = (start: string, end: string): string => {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const diffMs = endDate.getTime() - startDate.getTime();
-  const diffMins = Math.round(diffMs / 60000);
-  const hours = Math.floor(diffMins / 60);
-  const mins = diffMins % 60;
-  
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
   if (hours > 0 && mins > 0) {
     return `${hours}h ${mins}m`;
   } else if (hours > 0) {
-    return `${hours}h 00m`;
+    return `${hours}h`;
   } else {
     return `${mins}m`;
   }
 };
 
-// Map appointment status to timeline dot color
-const getStatusColor = (status: AppointmentStatus): string => {
-  switch (status) {
-    case AppointmentStatus.COMPLETED:
-      return '#34C759'; // Green
-    case AppointmentStatus.IN_PROGRESS:
-      return '#5856D6'; // Purple
-    case AppointmentStatus.CONFIRMED:
-    case AppointmentStatus.BOOKED:
-      return '#2196F3'; // Blue
-    case AppointmentStatus.CANCELLED:
-    case AppointmentStatus.NO_SHOW:
-      return '#FF3B30'; // Red
-    case AppointmentStatus.PENDING:
-    default:
-      return '#C7C7CC'; // Gray
-  }
-};
-
-// Map status to display text
-const getStatusText = (status: AppointmentStatus): string => {
-  switch (status) {
-    case AppointmentStatus.COMPLETED:
-      return 'Completed';
-    case AppointmentStatus.IN_PROGRESS:
-      return 'In Progress';
-    case AppointmentStatus.CONFIRMED:
-      return 'Confirmed';
-    case AppointmentStatus.BOOKED:
-      return 'Booked';
-    case AppointmentStatus.CANCELLED:
-      return 'Cancelled';
-    case AppointmentStatus.NO_SHOW:
-      return 'No Show';
-    case AppointmentStatus.PENDING:
-    default:
-      return 'Scheduled';
-  }
-};
-
-// Generate calendar days centered around today
-const generateCalendarDays = (): CalendarDay[] => {
-  const today = new Date();
-  const days: CalendarDay[] = [];
-  
-  // Show 3 days before and 3 days after today (7 days total)
-  for (let i = -3; i <= 3; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    days.push({
-      day: getDayAbbrev(date),
-      date: date.getDate(),
-      fullDate: date,
-    });
-  }
-  
-  return days;
-};
-
-// Check if two dates are the same day
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
     date1.getFullYear() === date2.getFullYear() &&
@@ -141,174 +76,251 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
   );
 };
 
+const generateCalendarDays = (): CalendarDay[] => {
+  const today = new Date();
+  const days: CalendarDay[] = [];
+
+  // Show 3 days before and 3 days after today (7 days total)
+  for (let i = -3; i <= 3; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    days.push({
+      day: getDayAbbrev(date),
+      date: date.getDate(),
+      fullDate: date,
+      dateString: `${year}-${month}-${day}`,
+    });
+  }
+
+  return days;
+};
+
 export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [workLogDay, setWorkLogDay] = useState<WorkLogDay | null>(null);
+  const [workLogSummary, setWorkLogSummary] = useState<WorkLogSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
 
   // Initialize calendar days
   useEffect(() => {
     setCalendarDays(generateCalendarDays());
   }, []);
 
-  // Note: Employee ID is fetched by the appointments service using myAppointments: true
-  // No need to store it separately
+  // Get employee ID
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      if (user?.id) {
+        try {
+          const employee = await staffService.getEmployeeByUserId(String(user.id));
+          if (employee) {
+            const employeeData = Array.isArray(employee) ? employee[0] : employee;
+            setEmployeeId(employeeData.id);
+          }
+        } catch (err) {
+          console.error('Error fetching employee ID:', err);
+        }
+      }
+    };
+    fetchEmployeeId();
+  }, [user?.id]);
 
-  // Fetch appointments
-  const fetchAppointments = useCallback(async () => {
+  // Fetch work log data
+  const fetchWorkLogData = useCallback(async () => {
+    if (!employeeId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setError(null);
-      const data = await appointmentsService.getSalonAppointments({ myAppointments: true });
-      setAppointments(data);
+      const dateString = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+
+      // Fetch work log for selected date
+      const dayLog = await workLogService.getWorkLogForDate(employeeId, dateString);
+      setWorkLogDay(dayLog);
+
+      // Fetch summary for current view mode
+      const summary = await workLogService.getWorkLogSummary(
+        employeeId,
+        viewMode === 'day' ? 'week' : viewMode
+      );
+      setWorkLogSummary(summary);
     } catch (err: any) {
-      console.error('Error fetching appointments:', err);
-      setError('Failed to load appointments');
+      console.error('Error fetching work log:', err);
+      setError('Failed to load work log');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [employeeId, selectedDate, viewMode]);
 
-  // Fetch appointments on mount and when employee changes
   useEffect(() => {
-    if (user?.id) {
-      fetchAppointments();
+    if (employeeId) {
+      fetchWorkLogData();
     }
-  }, [user?.id, fetchAppointments]);
+  }, [employeeId, selectedDate, viewMode, fetchWorkLogData]);
 
-  // Filter and transform appointments for selected date
-  useEffect(() => {
-    if (!appointments.length) {
-      setTimelineItems([]);
-      return;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchWorkLogData();
+  };
+
+  // Calculate statistics for selected day
+  const getStats = (): StatCard[] => {
+    if (!workLogDay) {
+      return [
+        { label: 'Hours', value: '0', icon: 'access-time', color: theme.colors.primary },
+        { label: 'Services', value: '0', icon: 'work', color: theme.colors.secondary },
+        { label: 'Earnings', value: '0', icon: 'attach-money', color: theme.colors.success },
+      ];
     }
 
-    const filtered = appointments.filter((apt) => {
-      const aptDate = new Date(apt.scheduledStart);
-      return isSameDay(aptDate, selectedDate);
-    });
-
-    // Sort by start time
-    filtered.sort((a, b) => 
-      new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime()
-    );
-
-    // Transform to timeline items
-    const items: TimelineItem[] = filtered.map((apt) => ({
-      id: apt.id,
-      time: formatTime(apt.scheduledStart),
-      title: apt.service?.name || 'Service',
-      subtitle: apt.customer?.user?.fullName || 'Customer',
-      duration: calculateDuration(apt.scheduledStart, apt.scheduledEnd),
-      type: 'Service',
-      status: getStatusText(apt.status),
-      dotColor: getStatusColor(apt.status),
-      appointment: apt,
-    }));
-
-    setTimelineItems(items);
-  }, [appointments, selectedDate]);
-
-  // Calculate stats
-  const getStats = () => {
-    const serviceCount = timelineItems.filter(item => item.type === 'Service').length;
-    
-    let totalMinutes = 0;
-    timelineItems.forEach((item) => {
-      if (item.appointment) {
-        const start = new Date(item.appointment.scheduledStart);
-        const end = new Date(item.appointment.scheduledEnd);
-        totalMinutes += (end.getTime() - start.getTime()) / 60000;
-      }
-    });
-    
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = Math.round(totalMinutes % 60);
-    const hoursText = mins > 0 ? `${hours}.${Math.round(mins / 6)}` : `${hours}`;
-    
-    return {
-      serviceCount,
-      hoursText,
-    };
+    return [
+      {
+        label: 'Hours',
+        value: workLogDay.totalHours.toFixed(1),
+        icon: 'access-time',
+        color: theme.colors.primary,
+      },
+      {
+        label: 'Services',
+        value: workLogDay.completedAppointments.length.toString(),
+        icon: 'work',
+        color: theme.colors.secondary,
+      },
+      {
+        label: 'Earnings',
+        value: `RWF ${workLogDay.earnings.toLocaleString()}`,
+        icon: 'attach-money',
+        color: theme.colors.success,
+      },
+    ];
   };
 
   const stats = getStats();
-
-  // Pull to refresh
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchAppointments();
-  };
-
-  // Get current month/year for header
-  const getMonthYearLabel = (): string => {
-    return `${getMonthName(selectedDate)} ${selectedDate.getFullYear()}`;
-  };
 
   const renderCalendarDay = (item: CalendarDay) => {
     const isActive = isSameDay(item.fullDate, selectedDate);
     
     return (
-      <TouchableOpacity 
-        key={item.fullDate.toISOString()} 
+      <TouchableOpacity
+        key={item.dateString}
         style={[styles.calendarDay, isActive && styles.activeCalendarDay]}
         onPress={() => setSelectedDate(item.fullDate)}
       >
-        <Text style={[styles.dayName, isActive && styles.activeDayText]}>{item.day}</Text>
-        <Text style={[styles.dayDate, isActive && styles.activeDayText]}>{item.date}</Text>
+        <Text style={[styles.dayName, isActive && styles.activeDayText]}>
+          {item.day}
+        </Text>
+        <Text style={[styles.dayDate, isActive && styles.activeDayText]}>
+          {item.date}
+        </Text>
       </TouchableOpacity>
     );
   };
 
-  const renderTimelineItem = (item: TimelineItem, index: number) => {
-    const isLast = index === timelineItems.length - 1;
+  const renderStatCard = (stat: StatCard) => (
+    <View key={stat.label} style={styles.statCard}>
+      <View style={[styles.statIconContainer, { backgroundColor: `${stat.color}15` }]}>
+        <MaterialIcons name={stat.icon as any} size={24} color={stat.color} />
+      </View>
+      <Text style={styles.statValue}>{stat.value}</Text>
+      <Text style={styles.statLabel}>{stat.label}</Text>
+    </View>
+  );
+
+  const renderTimelineEntry = (entry: any, index: number) => {
+    const isLast = index === workLogDay!.entries.length - 1;
+    const isAppointment = entry.type === 'appointment';
+    const isAttendance = entry.type === 'attendance';
     
+    let dotColor = theme.colors.primary;
+    if (isAppointment) {
+      if (entry.status === 'completed') {
+        dotColor = theme.colors.success;
+      } else if (entry.status === 'in_progress') {
+        dotColor = theme.colors.secondary;
+      } else {
+        dotColor = theme.colors.warning;
+      }
+    } else if (isAttendance) {
+      dotColor = theme.colors.info;
+    }
+
     return (
-      <View key={item.id} style={styles.timelineItem}>
-        {/* Timeline Line & Dot */}
+      <View key={entry.id} style={styles.timelineItem}>
         <View style={styles.timelineLeft}>
-          <View style={[styles.timelineDot, { backgroundColor: item.dotColor }]} />
+          <View style={[styles.timelineDot, { backgroundColor: dotColor }]} />
           {!isLast && <View style={styles.timelineLine} />}
         </View>
 
-        {/* Content */}
         <View style={styles.timelineContent}>
-          <Text style={styles.timeText}>{item.time}</Text>
+          <Text style={styles.timeText}>{formatTime(entry.timestamp)}</Text>
           
-          {item.title && (
-            <TouchableOpacity 
-              style={styles.card}
-              onPress={() => {
-                if (item.appointment) {
-                  navigation?.navigate('AppointmentDetail', {
-                    appointmentId: item.appointment.id,
-                    appointment: item.appointment,
-                  });
-                }
-              }}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
+          <TouchableOpacity
+            style={styles.entryCard}
+            onPress={() => {
+              if (entry.appointment) {
+                navigation?.navigate('AppointmentDetail', {
+                  appointmentId: entry.appointment.id,
+                  appointment: entry.appointment,
+                });
+              }
+            }}
+            disabled={!entry.appointment}
+          >
+            <View style={styles.entryHeader}>
+              <Text style={styles.entryTitle}>{entry.title}</Text>
+              {entry.duration && (
                 <View style={styles.durationBadge}>
-                  <Text style={styles.durationText}>{item.duration}</Text>
+                  <Text style={styles.durationText}>
+                    {formatDuration(entry.duration)}
+                  </Text>
                 </View>
+              )}
+            </View>
+            
+            {entry.description && (
+              <Text style={styles.entryDescription}>{entry.description}</Text>
+            )}
+            
+            {entry.earnings && entry.earnings > 0 && (
+              <View style={styles.earningsContainer}>
+                <MaterialIcons name="attach-money" size={16} color={theme.colors.success} />
+                <Text style={styles.earningsText}>
+                  RWF {entry.earnings.toLocaleString()}
+                </Text>
               </View>
-              
-              <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-              
-              <View style={styles.cardFooter}>
-                <View style={styles.tagContainer}>
-                  <Text style={styles.tagText}>{item.type}</Text>
-                </View>
-                <Text style={styles.statusText}>{item.status}</Text>
+            )}
+
+            {entry.status && (
+              <View style={styles.statusContainer}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    {
+                      backgroundColor:
+                        entry.status === 'completed'
+                          ? theme.colors.success
+                          : entry.status === 'in_progress'
+                          ? theme.colors.secondary
+                          : theme.colors.warning,
+                    },
+                  ]}
+                />
+                <Text style={styles.statusText}>{entry.status}</Text>
               </View>
-            </TouchableOpacity>
-          )}
+            )}
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -316,16 +328,24 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="calendar-outline" size={64} color={theme.colors.textTertiary} />
-      <Text style={styles.emptyTitle}>No Appointments</Text>
-      <Text style={styles.emptySubtitle}>You don't have any appointments scheduled for this day.</Text>
+      <MaterialIcons name="work-outline" size={64} color={theme.colors.textTertiary} />
+      <Text style={styles.emptyTitle}>No Work Log</Text>
+      <Text style={styles.emptySubtitle}>
+        {workLogDay?.status === 'not_worked'
+          ? "You didn't work on this day."
+          : 'No activities recorded for this day.'}
+      </Text>
     </View>
   );
 
+  const getMonthYearLabel = (): string => {
+    return `${getMonthName(selectedDate)} ${selectedDate.getFullYear()}`;
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -336,13 +356,23 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
           />
         }
       >
-        
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Work Log</Text>
-          <TouchableOpacity style={styles.datePickerButton}>
-            <Ionicons name="calendar-outline" size={16} color={theme.colors.text} />
-            <Text style={styles.datePickerText}>{getMonthYearLabel()}</Text>
+          <View>
+            <Text style={styles.headerTitle}>Work Log</Text>
+            <Text style={styles.headerSubtitle}>{getMonthYearLabel()}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.viewModeButton}
+            onPress={() => {
+              const modes: ('day' | 'week' | 'month')[] = ['day', 'week', 'month'];
+              const currentIndex = modes.indexOf(viewMode);
+              const nextIndex = (currentIndex + 1) % modes.length;
+              setViewMode(modes[nextIndex]);
+            }}
+          >
+            <Text style={styles.viewModeText}>{viewMode.toUpperCase()}</Text>
+            <MaterialIcons name="swap-vert" size={16} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -353,43 +383,125 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
           </View>
         </View>
 
+        {/* Statistics Cards */}
+        {workLogDay && (
+          <View style={styles.statsContainer}>
+            {stats.map(renderStatCard)}
+          </View>
+        )}
+
+        {/* Clock In/Out Status */}
+        {workLogDay && workLogDay.clockIn && (
+          <View style={styles.clockStatusCard}>
+            <View style={styles.clockStatusRow}>
+              <View style={styles.clockStatusItem}>
+                <MaterialIcons
+                  name="login"
+                  size={20}
+                  color={theme.colors.success}
+                />
+                <Text style={styles.clockStatusLabel}>Clock In</Text>
+                <Text style={styles.clockStatusTime}>
+                  {formatTime(workLogDay.clockIn)}
+                </Text>
+              </View>
+              {workLogDay.clockOut ? (
+                <View style={styles.clockStatusItem}>
+                  <MaterialIcons
+                    name="logout"
+                    size={20}
+                    color={theme.colors.error}
+                  />
+                  <Text style={styles.clockStatusLabel}>Clock Out</Text>
+                  <Text style={styles.clockStatusTime}>
+                    {formatTime(workLogDay.clockOut)}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.clockStatusItem}>
+                  <View style={styles.workingIndicator} />
+                  <Text style={styles.clockStatusLabel}>Status</Text>
+                  <Text style={[styles.clockStatusTime, { color: theme.colors.warning }]}>
+                    Working...
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Timeline Section Header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Timeline</Text>
-          <Text style={styles.sectionStats}>
-            {stats.serviceCount} Service{stats.serviceCount !== 1 ? 's' : ''} • {stats.hoursText} Hour{stats.hoursText !== '1' ? 's' : ''}
-          </Text>
+          {workLogDay && (
+            <Text style={styles.sectionStats}>
+              {workLogDay.entries.length} {workLogDay.entries.length === 1 ? 'Entry' : 'Entries'}
+            </Text>
+          )}
         </View>
 
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading appointments...</Text>
+            <Text style={styles.loadingText}>Loading work log...</Text>
           </View>
         )}
 
         {/* Error State */}
         {!loading && error && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color={theme.colors.error} />
+            <MaterialIcons name="error-outline" size={48} color={theme.colors.error} />
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchAppointments}>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchWorkLogData}>
               <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Timeline List */}
-        {!loading && !error && (
+        {!loading && !error && workLogDay && (
           <View style={styles.timelineList}>
-            {timelineItems.length > 0 
-              ? timelineItems.map(renderTimelineItem)
-              : renderEmptyState()
-            }
+            {workLogDay.entries.length > 0 ? (
+              workLogDay.entries.map(renderTimelineEntry)
+            ) : (
+              renderEmptyState()
+            )}
           </View>
         )}
 
+        {/* Summary Section (for week/month view) */}
+        {!loading && !error && workLogSummary && viewMode !== 'day' && (
+          <View style={styles.summarySection}>
+            <Text style={styles.summaryTitle}>
+              {viewMode === 'week' ? 'Weekly' : 'Monthly'} Summary
+            </Text>
+            <View style={styles.summaryGrid}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>{workLogSummary.daysWorked}</Text>
+                <Text style={styles.summaryLabel}>Days Worked</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>
+                  {workLogSummary.totalHours.toFixed(1)}
+                </Text>
+                <Text style={styles.summaryLabel}>Total Hours</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>
+                  {workLogSummary.totalAppointments}
+                </Text>
+                <Text style={styles.summaryLabel}>Appointments</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryValue}>
+                  RWF {workLogSummary.totalEarnings.toLocaleString()}
+                </Text>
+                <Text style={styles.summaryLabel}>Total Earnings</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -398,7 +510,7 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     paddingBottom: 100,
@@ -412,29 +524,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: theme.colors.text,
     letterSpacing: -0.5,
   },
-  datePickerButton: {
+  headerSubtitle: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  viewModeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: 6,
   },
-  datePickerText: {
-    marginLeft: 6,
-    fontSize: 14,
+  viewModeText: {
+    fontSize: 12,
     fontWeight: '600',
     color: theme.colors.text,
   },
@@ -459,6 +569,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 12,
+    minWidth: 50,
   },
   activeCalendarDay: {
     backgroundColor: theme.colors.primary,
@@ -471,7 +582,7 @@ const styles = StyleSheet.create({
   dayName: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
@@ -483,6 +594,79 @@ const styles = StyleSheet.create({
   activeDayText: {
     color: '#FFFFFF',
   },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
+  },
+  clockStatusCard: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  clockStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  clockStatusItem: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  clockStatusLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
+  },
+  clockStatusTime: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  workingIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.warning,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -491,7 +675,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.text,
   },
@@ -505,7 +689,7 @@ const styles = StyleSheet.create({
   timelineItem: {
     flexDirection: 'row',
     marginBottom: 0,
-    minHeight: 120,
+    minHeight: 100,
   },
   timelineLeft: {
     alignItems: 'center',
@@ -528,7 +712,7 @@ const styles = StyleSheet.create({
   timelineLine: {
     flex: 1,
     width: 2,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: theme.colors.borderLight,
     marginTop: 4,
     marginBottom: 4,
   },
@@ -542,9 +726,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginBottom: 10,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+  entryCard: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -552,13 +736,13 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  cardHeader: {
+  entryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  cardTitle: {
+  entryTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text,
@@ -566,43 +750,48 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   durationBadge: {
-    backgroundColor: '#F7F6F4',
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   durationText: {
     fontSize: 12,
-    color: '#A67C52',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
-  cardSubtitle: {
+  entryDescription: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    marginBottom: 16,
+    marginBottom: 12,
     fontWeight: '400',
   },
-  cardFooter: {
+  earningsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
   },
-  tagContainer: {
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  earningsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.success,
   },
-  tagText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   statusText: {
     fontSize: 12,
     color: theme.colors.textSecondary,
     fontWeight: '500',
+    textTransform: 'capitalize',
   },
   loadingContainer: {
     paddingVertical: 60,
@@ -653,6 +842,46 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  summarySection: {
+    marginTop: 32,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 16,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  summaryItem: {
+    flex: 1,
+    minWidth: (width - 52) / 2,
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
 });
 

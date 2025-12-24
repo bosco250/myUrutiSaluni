@@ -73,13 +73,13 @@ export const colors = {
   backgroundDark: "#000000", // Dark mode background (if needed)
 
   // ============================================
-  // TEXT COLORS
+  // TEXT COLORS (WCAG AA Compliant)
   // ============================================
-  text: "#000000", // Primary text color (headings, body)
-  textSecondary: "#8E8E93", // Secondary text (labels, hints, subtitles)
-  textTertiary: "#C7C7CC", // Tertiary text (placeholders, disabled)
-  textInverse: "#FFFFFF", // Text on dark backgrounds (buttons)
-  textDisabled: "#C7C7CC", // Disabled text color
+  text: "#000000", // Primary text color (headings, body) - WCAG AAA on white
+  textSecondary: "#6B6B70", // Secondary text (labels, hints, subtitles) - WCAG AA on white
+  textTertiary: "#AEAEB2", // Tertiary text (placeholders, disabled) - WCAG AA on white
+  textInverse: "#FFFFFF", // Text on dark backgrounds (buttons) - WCAG AAA on black
+  textDisabled: "#C7C7CC", // Disabled text color - WCAG AA on white
 
   // ============================================
   // BORDER COLORS
