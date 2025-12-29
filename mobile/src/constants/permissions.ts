@@ -148,7 +148,6 @@ export const ROLE_PERMISSIONS = {
       Screen.AI_FACE_SCAN,
       Screen.AI_CONSULTANT,
       Screen.LOYALTY,
-      Screen.WALLET,
       Screen.OFFERS,
       Screen.CHAT,
       Screen.MEMBERSHIP_INFO,
@@ -186,6 +185,7 @@ export const ROLE_PERMISSIONS = {
       Screen.CUSTOMER_MANAGEMENT,
       Screen.COMMISSIONS,
       Screen.EXPLORE,
+      Screen.WALLET,
     ],
     actions: [
       Action.CLOCK_IN_OUT,
@@ -231,6 +231,7 @@ export const ROLE_PERMISSIONS = {
       Screen.MY_SCHEDULE,
       Screen.CUSTOMER_MANAGEMENT,
       Screen.EXPLORE,
+      Screen.WALLET,
     ],
     actions: [
       Action.MANAGE_STAFF,

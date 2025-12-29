@@ -10,10 +10,12 @@ import {
   StatusBar,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { api } from '../../services/api';
+import { Loader } from '../../components/common';
 
 interface CustomerDetailScreenProps {
   navigation: {
@@ -169,28 +171,30 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
 
   if (loading) {
     return (
-      <View style={[styles.container, dynamicStyles.container, styles.loadingContainer]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+        <Loader fullscreen message="Loading customer details..." />
+      </SafeAreaView>
     );
   }
 
   if (!customer) {
     return (
-      <View style={[styles.container, dynamicStyles.container, styles.loadingContainer]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <MaterialIcons name="error-outline" size={48} color={theme.colors.error} />
-        <Text style={[styles.errorText, dynamicStyles.text]}>Customer not found</Text>
-        <TouchableOpacity style={styles.backButtonAlt} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.loadingContainer}>
+          <MaterialIcons name="error-outline" size={48} color={theme.colors.error} />
+          <Text style={[styles.errorText, dynamicStyles.text]}>Customer not found</Text>
+          <TouchableOpacity style={styles.backButtonAlt} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -379,7 +383,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

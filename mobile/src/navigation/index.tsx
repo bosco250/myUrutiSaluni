@@ -317,6 +317,13 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
 
   const handleNavigate = useCallback((screen: string, params?: any) => {
     const targetScreen = screen as MainScreen;
+    
+    // Ensure we have a valid screen
+    if (!targetScreen) {
+      console.warn("handleNavigate called with invalid screen:", screen);
+      return;
+    }
+    
     const historyItem: HistoryItem = {
       name: targetScreen,
       params: params || {},
@@ -329,6 +336,8 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       // For detail screens, add to history
       setScreenHistory((prev) => [...prev, historyItem]);
     }
+    
+    // Update current screen - this is critical for rendering the correct screen
     setCurrentScreen(targetScreen);
     setScreenParams(params || {});
   }, []);
@@ -372,62 +381,64 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
 
   // Handle tab press - role aware
   const handleTabPress = (tabId: string) => {
-    setActiveTab(tabId);
-
     // Map tab ID to screen based on role
     const tabs = getNavigationTabsForRole(user?.role);
     const tab = tabs.find((t) => t.id === tabId);
 
-    if (tab) {
-      // Map Screen enum to MainScreen string
-      const screenName = tab.screen.toString() as MainScreen;
-
-      // Specific mappings for role dashboards
-      let targetScreen: MainScreen = screenName as MainScreen;
-      if (tab.screen === Screen.STAFF_DASHBOARD) {
-        targetScreen = "StaffDashboard";
-      } else if (tab.screen === Screen.OWNER_DASHBOARD) {
-        targetScreen = "OwnerDashboard";
-      } else if (tab.screen === Screen.ADMIN_DASHBOARD) {
-        targetScreen = "AdminDashboard";
-      } else if (tab.screen === Screen.HOME) {
-        targetScreen = "Home";
-      } else if (tab.screen === Screen.BOOKINGS) {
-        targetScreen = "Bookings";
-      } else if (tab.screen === Screen.EXPLORE) {
-        targetScreen = "Explore";
-      } else if (tab.screen === Screen.PROFILE) {
-        targetScreen = "Profile";
-      } else if (tab.screen === Screen.NOTIFICATIONS) {
-        targetScreen = "Notifications";
-      } else if (tab.screen === Screen.MY_SCHEDULE) {
-        targetScreen = "MySchedule";
-      } else if (tab.screen === Screen.CUSTOMER_MANAGEMENT) {
-        targetScreen = "CustomerManagement";
-      } else if (tab.screen === Screen.STAFF_MANAGEMENT) {
-        targetScreen = "StaffManagement";
-      } else if (tab.screen === Screen.BUSINESS_ANALYTICS) {
-        targetScreen = "BusinessAnalytics";
-      } else if (tab.screen === Screen.SALON_MANAGEMENT) {
-        targetScreen = "SalonManagement";
-      } else if (tab.screen === Screen.MEMBERSHIP_APPROVALS) {
-        targetScreen = "MembershipApprovals";
-      } else if (tab.screen === Screen.OPERATIONS) {
-        targetScreen = "Operations";
-      } else if (tab.screen === Screen.FINANCE) {
-        targetScreen = "Finance";
-      } else if (tab.screen === Screen.MORE_MENU) {
-        targetScreen = "MoreMenu";
-      } else if (tab.screen === Screen.WORK_LOG) {
-        targetScreen = "WorkLog";
-      } else if (tab.screen === Screen.CHAT) {
-        targetScreen = "ChatList";
-      } else if (tab.screen === Screen.SALON_LIST) {
-        targetScreen = "SalonList";
-      }
-
-      handleNavigate(targetScreen);
+    if (!tab) {
+      console.warn(`Tab with id "${tabId}" not found for role "${user?.role}"`);
+      return;
     }
+
+    // Map Screen enum to MainScreen string - use explicit mapping to avoid enum toString() issues
+    let targetScreen: MainScreen = "Home"; // Default fallback
+    
+    if (tab.screen === Screen.STAFF_DASHBOARD) {
+      targetScreen = "StaffDashboard";
+    } else if (tab.screen === Screen.OWNER_DASHBOARD) {
+      targetScreen = "OwnerDashboard";
+    } else if (tab.screen === Screen.ADMIN_DASHBOARD) {
+      targetScreen = "AdminDashboard";
+    } else if (tab.screen === Screen.HOME) {
+      targetScreen = "Home";
+    } else if (tab.screen === Screen.BOOKINGS) {
+      targetScreen = "Bookings";
+    } else if (tab.screen === Screen.EXPLORE) {
+      targetScreen = "Explore";
+    } else if (tab.screen === Screen.PROFILE) {
+      targetScreen = "Profile";
+    } else if (tab.screen === Screen.NOTIFICATIONS) {
+      targetScreen = "Notifications";
+    } else if (tab.screen === Screen.MY_SCHEDULE) {
+      targetScreen = "MySchedule";
+    } else if (tab.screen === Screen.CUSTOMER_MANAGEMENT) {
+      targetScreen = "CustomerManagement";
+    } else if (tab.screen === Screen.STAFF_MANAGEMENT) {
+      targetScreen = "StaffManagement";
+    } else if (tab.screen === Screen.BUSINESS_ANALYTICS) {
+      targetScreen = "BusinessAnalytics";
+    } else if (tab.screen === Screen.SALON_MANAGEMENT) {
+      targetScreen = "SalonManagement";
+    } else if (tab.screen === Screen.MEMBERSHIP_APPROVALS) {
+      targetScreen = "MembershipApprovals";
+    } else if (tab.screen === Screen.OPERATIONS) {
+      targetScreen = "Operations";
+    } else if (tab.screen === Screen.FINANCE) {
+      targetScreen = "Finance";
+    } else if (tab.screen === Screen.MORE_MENU) {
+      targetScreen = "MoreMenu";
+    } else if (tab.screen === Screen.WORK_LOG) {
+      targetScreen = "WorkLog";
+    } else if (tab.screen === Screen.CHAT) {
+      targetScreen = "ChatList";
+    } else if (tab.screen === Screen.SALON_LIST) {
+      targetScreen = "SalonList";
+    }
+
+    // Navigate first to ensure screen is updated, then update active tab
+    // This ensures currentScreen is set before activeTab sync runs
+    handleNavigate(targetScreen);
+    setActiveTab(tabId);
   };
 
   // Show loading state while checking authentication

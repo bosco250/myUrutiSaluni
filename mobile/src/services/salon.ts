@@ -53,14 +53,31 @@ export interface SalonEmployee {
   userId: string;
   salonId: string;
   position?: string;
+  roleTitle?: string;
+  skills?: string[];
   commissionRate?: number;
+  baseSalary?: number;
+  salaryType?: 'COMMISSION_ONLY' | 'SALARY_ONLY' | 'SALARY_PLUS_COMMISSION';
+  payFrequency?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+  hourlyRate?: number;
+  overtimeRate?: number;
+  employmentType?: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
   isActive: boolean;
   hireDate?: string;
+  terminationDate?: string;
+  terminationReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
   user?: {
     id: string;
     fullName: string;
     email: string;
     phone: string;
+  };
+  salon?: {
+    id: string;
+    name: string;
+    address?: string;
   };
 }
 

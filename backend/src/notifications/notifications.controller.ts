@@ -271,4 +271,37 @@ export class NotificationsController {
     const success = await this.pushNotificationService.removePushToken(user.id);
     return { success };
   }
+
+  @Post('test-push')
+  @ApiOperation({ summary: 'Send a test push notification to current user' })
+  async sendTestPushNotification(@CurrentUser() user: any) {
+    const success =
+      await this.pushNotificationService.sendPushNotificationToUser(
+        user.id,
+        '🧪 Test Push Notification',
+        'This is a test notification. If you see this, push notifications are working correctly!',
+        {
+          type: 'test',
+          timestamp: new Date().toISOString(),
+        },
+        {
+          priority: 'high',
+          channelId: 'default',
+        },
+      );
+
+    if (success) {
+      return {
+        success: true,
+        message:
+          'Test push notification sent successfully! Check your mobile device.',
+      };
+    } else {
+      return {
+        success: false,
+        message:
+          'Failed to send test push notification. Make sure you have a push token registered.',
+      };
+    }
+  }
 }

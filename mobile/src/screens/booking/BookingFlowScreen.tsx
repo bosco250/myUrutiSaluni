@@ -44,13 +44,25 @@ interface BookingFlowScreenProps {
   };
 }
 
-type BookingStep = "employee" | "datetime" | "confirm";
+type BookingStep = "service" | "employee" | "datetime" | "confirm";
 
-const STEPS: { key: BookingStep; label: string; icon: string }[] = [
-  { key: "employee", label: "Stylist", icon: "person" },
-  { key: "datetime", label: "Date & Time", icon: "calendar-today" },
-  { key: "confirm", label: "Review", icon: "check-circle" },
-];
+// Dynamic steps based on context:
+// - Skip service step if service is pre-selected
+// - Skip employee step if employee is pre-selected (booking from favorites)
+const getSteps = (hasService: boolean, hasEmployee: boolean): { key: BookingStep; label: string; icon: string }[] => {
+  const steps: { key: BookingStep; label: string; icon: string }[] = [];
+  if (!hasService) {
+    steps.push({ key: "service", label: "Service", icon: "spa" });
+  }
+  if (!hasEmployee) {
+    steps.push({ key: "employee", label: "Stylist", icon: "person" });
+  }
+  steps.push(
+    { key: "datetime", label: "Date & Time", icon: "calendar-today" },
+    { key: "confirm", label: "Review", icon: "check-circle" }
+  );
+  return steps;
+};
 
 export default function BookingFlowScreen({
   navigation,
@@ -58,7 +70,24 @@ export default function BookingFlowScreen({
 }: BookingFlowScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState<BookingStep>("employee");
+  
+  // Determine if we have a pre-selected service
+  const hasPreSelectedService = !!(route?.params?.serviceId || route?.params?.service);
+  
+  // Determine if we have a pre-selected employee (booking from favorites)
+  const hasPreSelectedEmployee = !!route?.params?.employeeId;
+  
+  // Dynamic steps based on what's pre-selected
+  const STEPS = getSteps(hasPreSelectedService, hasPreSelectedEmployee);
+  
+  // Determine initial step based on what's pre-selected
+  const getInitialStep = (): BookingStep => {
+    if (!hasPreSelectedService) return "service";
+    if (!hasPreSelectedEmployee) return "employee";
+    return "datetime";
+  };
+  
+  const [currentStep, setCurrentStep] = useState<BookingStep>(getInitialStep());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -70,6 +99,10 @@ export default function BookingFlowScreen({
   const [operatingHours, setOperatingHours] = useState<any>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
+  
+  // Services list for when booking from favorites (no service pre-selected)
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
 
   // Booking state
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(
@@ -103,6 +136,19 @@ export default function BookingFlowScreen({
       setError("Failed to load employees");
     } finally {
       setEmployeesLoading(false);
+    }
+  }, []);
+
+  // Fetch services for the salon (used when booking from favorites)
+  const fetchServices = useCallback(async (salonId: string) => {
+    try {
+      setServicesLoading(true);
+      const salonServices = await exploreService.getServices(salonId);
+      setServices(salonServices.filter((s: Service) => s.isActive !== false));
+    } catch {
+      setError("Failed to load services");
+    } finally {
+      setServicesLoading(false);
     }
   }, []);
 
@@ -271,7 +317,7 @@ export default function BookingFlowScreen({
             const slotCount = Math.floor((endMinutes - startMinutes) / 30);
 
             days.push({
-              date: d.toISOString().split("T")[0],
+              date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
               status: "available" as const,
               totalSlots: slotCount,
               availableSlots: slotCount,
@@ -279,7 +325,7 @@ export default function BookingFlowScreen({
           } else {
             // Day is closed
             days.push({
-              date: d.toISOString().split("T")[0],
+              date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
               status: "unavailable" as const,
               totalSlots: 0,
               availableSlots: 0,
@@ -294,8 +340,9 @@ export default function BookingFlowScreen({
         const endDate = new Date();
         endDate.setDate(today.getDate() + 30);
 
-        const startDateStr = today.toISOString().split("T")[0];
-        const endDateStr = endDate.toISOString().split("T")[0];
+        // CRITICAL: Use local date format, NOT toISOString() which converts to UTC
+        const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
 
         const availabilityData =
           await appointmentsService.getEmployeeAvailability(
@@ -319,90 +366,27 @@ export default function BookingFlowScreen({
   }, [service, isAnyEmployee, operatingHours, selectedEmployeeId]);
 
   const fetchTimeSlots = useCallback(async () => {
-    // CRITICAL: Only fetch if we have a SPECIFIC employee (not "any")
     if (!selectedDate || !selectedEmployeeId || selectedEmployeeId === "any" || !service) {
-      console.log("[BookingFlow] fetchTimeSlots skipped:", {
-        hasDate: !!selectedDate,
-        employeeId: selectedEmployeeId,
-        isAny: selectedEmployeeId === "any",
-        hasService: !!service,
-      });
       return;
     }
 
     try {
       setTimeSlotsLoading(true);
-      const dateStr = selectedDate.toISOString().split("T")[0];
-      console.log(`[BookingFlow] Fetching time slots for employee ${selectedEmployeeId}, date ${dateStr}, service ${service.id}, duration ${service.durationMinutes}`);
+      const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
       
-      // DIAGNOSTIC: Try to verify if appointments exist for this employee/date
-      // This helps identify if the issue is backend not finding appointments
-      try {
-        // Import staffService properly
-        const { staffService } = await import("../../services/staff");
-        if (staffService && typeof staffService.getAppointmentsByDate === 'function') {
-          const existingAppointments = await staffService.getAppointmentsByDate(selectedEmployeeId, dateStr);
-          const appointmentCount = Array.isArray(existingAppointments) ? existingAppointments.length : 0;
-          
-          console.log(`[BookingFlow] DIAGNOSTIC: Found ${appointmentCount} appointments for employee ${selectedEmployeeId} on ${dateStr}`);
-          
-          if (appointmentCount > 0 && Array.isArray(existingAppointments)) {
-            console.log(`[BookingFlow] DIAGNOSTIC: Appointments details:`, existingAppointments.map((apt: any) => ({
-              id: apt.id,
-              start: apt.scheduledStart,
-              end: apt.scheduledEnd,
-              status: apt.status,
-              salonEmployeeId: apt.salonEmployeeId,
-              preferredEmployeeId: apt.metadata?.preferredEmployeeId,
-              employeeIdMatch: apt.salonEmployeeId === selectedEmployeeId || apt.metadata?.preferredEmployeeId === selectedEmployeeId,
-            })));
-            
-            const matchingAppointments = existingAppointments.filter((apt: any) => 
-              apt.salonEmployeeId === selectedEmployeeId || 
-              apt.metadata?.preferredEmployeeId === selectedEmployeeId
-            );
-            
-            if (matchingAppointments.length > 0) {
-              console.error(`[BookingFlow] ⚠️⚠️⚠️ BACKEND BUG DETECTED!`);
-              console.error(`[BookingFlow] ${matchingAppointments.length} appointments exist with matching employee ID`);
-              console.error(`[BookingFlow] But backend returned all slots as available!`);
-              console.error(`[BookingFlow] This means backend's getEmployeeAppointments() query is failing.`);
-              console.error(`[BookingFlow] Check backend logs for the SQL query and parameters.`);
-            } else {
-              console.warn(`[BookingFlow] ⚠️ Found ${appointmentCount} appointments but NONE match employee ID ${selectedEmployeeId}`);
-              console.warn(`[BookingFlow] This suggests employee ID mismatch in database.`);
-            }
-          } else {
-            console.log(`[BookingFlow] DIAGNOSTIC: No appointments found - all slots should be available (this is correct)`);
-          }
-        } else {
-          console.warn(`[BookingFlow] Diagnostic: staffService.getAppointmentsByDate not available`);
-        }
-      } catch (diagError: any) {
-        console.warn(`[BookingFlow] Could not run diagnostic check:`, diagError?.message || diagError);
-      }
-      
-      // Use same API as web version - backend returns slots with available: false for booked times
       const slots = await appointmentsService.getEmployeeTimeSlots(
         selectedEmployeeId,
         dateStr,
         service.durationMinutes,
         service.id
       );
-      
-      console.log(`[BookingFlow] Received ${slots.length} slots from API`);
 
-      // Backend already marks booked slots as available: false
-      // The service now normalizes the response, but we'll double-check here
       const processedSlots = Array.isArray(slots) ? slots : [];
       
-      // Sort slots by time and ensure strict availability checking
       const validSlots = processedSlots
         .filter((slot) => slot && slot.startTime && slot.endTime)
         .map((slot) => ({
           ...slot,
-          // Strict boolean check - only true if explicitly true
-          // Service already normalizes, but ensure here too
           available: slot.available === true,
         }))
         .sort((a, b) => {
@@ -413,19 +397,8 @@ export default function BookingFlowScreen({
           return minutesA - minutesB;
         });
 
-      // Debug: Log slot availability
-      const unavailableSlots = validSlots.filter((s) => !s.available);
-      const availableSlots = validSlots.filter((s) => s.available);
-      console.log(`[BookingFlow] Slots for ${selectedDate.toISOString().split("T")[0]}:`, {
-        total: validSlots.length,
-        available: availableSlots.length,
-        unavailable: unavailableSlots.length,
-        unavailableTimes: unavailableSlots.map(s => `${s.startTime} (${s.reason || "booked"})`),
-      });
-
       setTimeSlots(validSlots);
-    } catch (error: any) {
-      console.error("Error fetching time slots:", error);
+    } catch {
       setError("Failed to load time slots. Please try again.");
       setTimeSlots([]);
     } finally {
@@ -542,9 +515,62 @@ export default function BookingFlowScreen({
 
   useEffect(() => {
     if (serviceId) {
+      // Normal flow - service is pre-selected
       fetchInitialData();
+    } else if (route?.params?.salonId) {
+      // Booking from favorites - need to load salon, services, and employees
+      const loadDataForFavorites = async () => {
+        try {
+          setLoading(true);
+          setError("");
+          
+          const salonId = route.params!.salonId!;
+          
+          // Fetch salon details
+          const fetchedSalon = await exploreService.getSalonById(salonId, true);
+          setSalon(fetchedSalon);
+          
+          // Parse operating hours
+          let parsedHours = null;
+          if (fetchedSalon.settings?.operatingHours) {
+            try {
+              let hours;
+              if (typeof fetchedSalon.settings.operatingHours === "string") {
+                hours = JSON.parse(fetchedSalon.settings.operatingHours);
+              } else {
+                hours = fetchedSalon.settings.operatingHours;
+              }
+              if (hours && typeof hours === "object" && !Array.isArray(hours)) {
+                parsedHours = hours;
+              }
+            } catch {
+              // Parsing failed
+            }
+          }
+          if (parsedHours) {
+            setOperatingHours(parsedHours);
+          }
+          
+          // Fetch services for this salon
+          await fetchServices(salonId);
+          
+          // Fetch employees for this salon
+          await fetchEmployees(salonId);
+        } catch (err: any) {
+          setError(err.message || "Failed to load booking data");
+          Alert.alert("Error", err.message || "Failed to load booking data");
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadDataForFavorites();
+    } else {
+      // No service or salon provided - show error
+      setLoading(false);
+      setError("No service or salon selected for booking");
     }
-  }, [serviceId, fetchInitialData]);
+  }, [serviceId, route?.params?.salonId, route?.params, fetchInitialData, fetchServices, fetchEmployees]);
 
   useEffect(() => {
     if (user?.id) {
@@ -637,7 +663,19 @@ export default function BookingFlowScreen({
   };
 
   const handleNext = () => {
-    if (currentStep === "employee") {
+    if (currentStep === "service") {
+      if (!service) {
+        setError("Please select a service");
+        return;
+      }
+      // Skip employee step if employee is pre-selected (from favorites)
+      if (hasPreSelectedEmployee) {
+        setCurrentStep("datetime");
+      } else {
+        setCurrentStep("employee");
+      }
+      setError("");
+    } else if (currentStep === "employee") {
       if (!selectedEmployeeId && !isAnyEmployee) {
         setError("Please select a stylist or choose 'Any Available'");
         return;
@@ -675,8 +713,22 @@ export default function BookingFlowScreen({
   };
 
   const handleBack = () => {
-    if (currentStep === "datetime") {
-      setCurrentStep("employee");
+    if (currentStep === "employee" && !hasPreSelectedService) {
+      setCurrentStep("service");
+      setError("");
+    } else if (currentStep === "datetime") {
+      // Go back to employee step only if employee wasn't pre-selected
+      if (hasPreSelectedEmployee) {
+        // Skip employee step, go to service if no pre-selected service
+        if (!hasPreSelectedService) {
+          setCurrentStep("service");
+        } else {
+          // Can't go back further, already at first step for this flow
+          navigation?.goBack();
+        }
+      } else {
+        setCurrentStep("employee");
+      }
       setError("");
     } else if (currentStep === "confirm") {
       setCurrentStep("datetime");
@@ -903,7 +955,10 @@ export default function BookingFlowScreen({
     }
 
     // For specific employee, use availability data from backend
-    const dateStr = date.toISOString().split("T")[0];
+    // CRITICAL: Use local date format, NOT toISOString() which converts to UTC
+    // toISOString() causes timezone issues (e.g., Dec 29 in UTC+2 becomes Dec 28 in UTC)
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
     const dayAvailability = availability.find((a) => a.date === dateStr);
     return dayAvailability && dayAvailability.availableSlots > 0;
   };
@@ -919,11 +974,16 @@ export default function BookingFlowScreen({
 
   const isPast = (date: Date | null) => {
     if (!date) return false;
+    
+    // Create dates at START of day (00:00:00) in local timezone
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
     const checkDate = new Date(date);
     checkDate.setHours(0, 0, 0, 0);
-    return checkDate < today;
+    
+    // Compare timestamps (both normalized to midnight)
+    return checkDate.getTime() < today.getTime();
   };
 
   const formatTime = (time: string) => {
@@ -963,7 +1023,9 @@ export default function BookingFlowScreen({
     );
   }
 
-  if (!service) {
+  // Only show "Service not found" if we're past the service selection step
+  // or if we came with a serviceId that didn't load
+  if (!service && hasPreSelectedService) {
     return (
       <View style={[styles.loadingContainer, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
@@ -990,10 +1052,12 @@ export default function BookingFlowScreen({
 
       {/* Header */}
       <View style={[styles.header, dynamicStyles.container]}>
-        {/* Back button hidden */}
-        <View style={styles.backButton} />
+        {/* Back button to go back */}
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack()}>
+          <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
+        </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          Book {service.name}
+          {service ? `Book ${service.name}` : salon ? `Book at ${salon.name}` : "Book Appointment"}
         </Text>
         <View style={styles.headerRight} />
       </View>
@@ -1068,7 +1132,134 @@ export default function BookingFlowScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Step 1: Employee Selection */}
+        {/* Step: Service Selection (only when booking from favorites) */}
+        {currentStep === "service" && (
+          <View style={styles.stepContent}>
+            {/* Show selected stylist banner when booking from favorites */}
+            {hasPreSelectedEmployee && selectedEmployee && (
+              <View style={[styles.selectedStylistBanner, dynamicStyles.card]}>
+                <View style={styles.selectedStylistContent}>
+                  <View style={[styles.selectedStylistAvatar, { backgroundColor: theme.colors.primary }]}>
+                    <Text style={styles.selectedStylistInitials}>
+                      {selectedEmployee.user?.fullName?.charAt(0).toUpperCase() || '?'}
+                    </Text>
+                  </View>
+                  <View style={styles.selectedStylistInfo}>
+                    <Text style={[styles.selectedStylistLabel, dynamicStyles.textSecondary]}>
+                      Booking with
+                    </Text>
+                    <Text style={[styles.selectedStylistName, dynamicStyles.text]}>
+                      {selectedEmployee.user?.fullName || 'Your Favorite Stylist'}
+                    </Text>
+                    {salon && (
+                      <Text style={[styles.selectedStylistSalon, dynamicStyles.textSecondary]}>
+                        at {salon.name}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <MaterialIcons name="favorite" size={24} color={theme.colors.error} />
+              </View>
+            )}
+
+            <Text style={[styles.stepTitle, dynamicStyles.text]}>
+              Select a Service
+            </Text>
+            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
+              Choose the service you want to book
+            </Text>
+
+            {servicesLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+            ) : services.length === 0 ? (
+              <View style={[styles.emptyCard, dynamicStyles.card]}>
+                <MaterialIcons
+                  name="spa"
+                  size={48}
+                  color={dynamicStyles.textSecondary.color}
+                />
+                <Text style={[styles.emptyText, dynamicStyles.text]}>
+                  No services available
+                </Text>
+                <Text style={[styles.emptySubtext, dynamicStyles.textSecondary]}>
+                  This salon hasn't added any services yet
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.employeesList}>
+                {services.map((svc) => {
+                  const isSelected = service?.id === svc.id;
+                  return (
+                    <TouchableOpacity
+                      key={svc.id}
+                      style={[
+                        styles.employeeCard,
+                        dynamicStyles.card,
+                        isSelected && styles.employeeCardSelected,
+                      ]}
+                      onPress={() => setService(svc)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.employeeInfo}>
+                        <View
+                          style={[
+                            styles.employeeAvatar,
+                            { backgroundColor: theme.colors.primary + "20" },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="spa"
+                            size={24}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                        <View style={styles.employeeDetails}>
+                          <Text
+                            style={[styles.employeeName, dynamicStyles.text]}
+                            numberOfLines={1}
+                          >
+                            {svc.name}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.employeeRole,
+                              dynamicStyles.textSecondary,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {svc.durationMinutes} mins • RWF {svc.basePrice.toLocaleString()}
+                          </Text>
+                          {svc.description && (
+                            <Text
+                              style={[
+                                styles.employeeRole,
+                                dynamicStyles.textSecondary,
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {svc.description}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      {isSelected && (
+                        <MaterialIcons
+                          name="check-circle"
+                          size={24}
+                          color={theme.colors.primary}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Step: Employee Selection */}
         {currentStep === "employee" && (
           <View style={styles.stepContent}>
             <Text style={[styles.stepTitle, dynamicStyles.text]}>
@@ -1465,7 +1656,7 @@ export default function BookingFlowScreen({
                     Service
                   </Text>
                   <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                    {service.name}
+                    {service?.name || "Selected service"}
                   </Text>
                 </View>
               </View>
@@ -1571,7 +1762,7 @@ export default function BookingFlowScreen({
                     Price
                   </Text>
                   <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                    ${Number(service.basePrice).toFixed(2)}
+                    RWF {Number(service?.basePrice || 0).toLocaleString()}
                   </Text>
                 </View>
               </View>
@@ -2017,6 +2208,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: theme.fonts.medium,
   },
+  emptySubtext: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+  },
   navigationContainer: {
     flexDirection: "row",
     paddingHorizontal: theme.spacing.lg,
@@ -2061,5 +2257,54 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: 14,
     fontFamily: theme.fonts.medium,
+  },
+  selectedStylistBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing.md,
+    borderRadius: 16,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.primary + "40",
+  },
+  selectedStylistContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+    flex: 1,
+  },
+  selectedStylistAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  selectedStylistInitials: {
+    color: theme.colors.white,
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+  },
+  selectedStylistInfo: {
+    flex: 1,
+  },
+  selectedStylistLabel: {
+    fontSize: 12,
+    marginBottom: 2,
+    fontFamily: theme.fonts.regular,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  selectedStylistName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    marginBottom: 2,
+  },
+  selectedStylistSalon: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
   },
 });

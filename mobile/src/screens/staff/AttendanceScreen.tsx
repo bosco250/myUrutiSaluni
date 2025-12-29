@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator,
   RefreshControl,
   Modal,
   Platform,
@@ -18,6 +17,7 @@ import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService, SalonDetails, SalonEmployee } from '../../services/salon';
 import { attendanceService, AttendanceLog, AttendanceType } from '../../services/attendance';
+import { Loader } from '../../components/common';
 
 export default function AttendanceScreen({ navigation }: any) {
   const { isDark } = useTheme();
@@ -34,48 +34,90 @@ export default function AttendanceScreen({ navigation }: any) {
   const [employeeRecord, setEmployeeRecord] = useState<SalonEmployee | null>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [currentStatus, setCurrentStatus] = useState<'in' | 'out'>('out');
+  
+  // Track if we're currently loading to prevent infinite loops
+  const loadingRef = useRef(false);
 
+  // Enhanced dynamic styles with system colors
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      backgroundColor: isDark ? '#000000' : '#FFFFFF',
     },
     text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
+      color: isDark ? '#FFFFFF' : '#000000',
     },
     textSecondary: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+      color: isDark ? '#8E8E93' : '#6D6D70',
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200,
+      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+      borderColor: isDark ? '#38383A' : '#E5E5EA',
+      shadowColor: isDark ? '#000000' : '#000000',
+    },
+    header: {
+      backgroundColor: isDark ? '#000000' : '#FFFFFF',
+      borderBottomColor: isDark ? '#38383A' : '#E5E5EA',
     },
     pickerModal: {
-       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
-    }
+      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+    },
+    divider: {
+      backgroundColor: isDark ? '#38383A' : '#E5E5EA',
+    },
+    emptyBackground: {
+      backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+    },
   };
 
-  const loadData = useCallback(async () => {
-    if (!user?.id) return;
+  const loadData = useCallback(async (salonId?: string) => {
+    if (!user?.id) {
+      setLoading(false);
+      setRefreshing(false);
+      loadingRef.current = false;
+      return;
+    }
+    
+    // Prevent concurrent loads
+    if (loadingRef.current) {
+      return;
+    }
     
     try {
+      loadingRef.current = true;
+      setLoading(true);
+      
       // 1. Fetch Salons (Workplaces or Owned)
-      // Note: Backend logic updated to return workplaces for employees
       const salonList = await salonService.getMySalons();
       setSalons(salonList);
       
-      let currentSalon = selectedSalon;
-      
-      // Auto-select first salon if none selected or if previously selected is not in list
-      if (salonList.length > 0) {
-          if (!currentSalon || !salonList.find(s => s.id === currentSalon?.id)) {
-            currentSalon = salonList[0];
-            setSelectedSalon(salonList[0]);
-          }
-      } else {
+      if (salonList.length === 0) {
         // No salons found
         setLoading(false);
         setRefreshing(false);
+        loadingRef.current = false;
         return;
+      }
+
+      // Determine which salon to use
+      let currentSalon: SalonDetails | null = null;
+      
+      if (salonId) {
+        // Use provided salon ID
+        currentSalon = salonList.find(s => s.id === salonId) || null;
+      } else {
+        // Use first salon if no specific salon requested
+        currentSalon = salonList[0];
+      }
+      
+      // Update selected salon if it changed
+      if (currentSalon) {
+        setSelectedSalon(prevSalon => {
+          // Only update if different to avoid infinite loop
+          if (prevSalon?.id !== currentSalon?.id) {
+            return currentSalon;
+          }
+          return prevSalon;
+        });
       }
 
       if (currentSalon) {
@@ -85,16 +127,16 @@ export default function AttendanceScreen({ navigation }: any) {
 
         // 3. Fetch Attendance History if employee record found
         if (empRecord) {
-             const logs = await attendanceService.getAttendanceHistory(empRecord.id);
-             setAttendanceLogs(logs);
-             
-             // Determine current status
-             const status = attendanceService.getCurrentStatus(logs);
-             setCurrentStatus(status === AttendanceType.CLOCK_IN ? 'in' : 'out');
+          const logs = await attendanceService.getAttendanceHistory(empRecord.id);
+          setAttendanceLogs(logs);
+          
+          // Determine current status
+          const status = attendanceService.getCurrentStatus(logs);
+          setCurrentStatus(status === AttendanceType.CLOCK_IN ? 'in' : 'out');
         } else {
-            // User might be owner but not employee?
-            setAttendanceLogs([]);
-            setCurrentStatus('out');
+          // User might be owner but not employee?
+          setAttendanceLogs([]);
+          setCurrentStatus('out');
         }
       }
       
@@ -104,23 +146,24 @@ export default function AttendanceScreen({ navigation }: any) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      loadingRef.current = false;
     }
-  }, [user?.id, selectedSalon]); // Depend on selectedSalon to refresh when switched
+  }, [user?.id]);
 
+  // Initial load on mount
   useEffect(() => {
-    loadData();
-  }, [loadData, selectedSalon?.id]); // Re-load when selection changes (via picker which updates state directly)
+    if (user?.id) {
+      loadData();
+    }
+  }, [user?.id, loadData]);
 
-  // Initial load
+  // Re-load when salon selection changes (but avoid loop)
   useEffect(() => {
-      // Logic inside loadData handles initial fetch, but we need to trigger it once on mount
-      // if selectedSalon is null, loadData fetches list and sets it.
-      if (!selectedSalon && !loading) { 
-         // prevent double call if loadData handles internal logic, but here we just call it on mount
-         setLoading(true);
-         loadData();
-      }
-  }, [loadData, selectedSalon, loading]);
+    if (user?.id && selectedSalon?.id && !loadingRef.current) {
+      // Only reload if not already loading
+      loadData(selectedSalon.id);
+    }
+  }, [selectedSalon?.id, user?.id, loadData]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -128,9 +171,8 @@ export default function AttendanceScreen({ navigation }: any) {
   };
 
   const handleSalonSelect = (salon: SalonDetails) => {
-    setSelectedSalon(salon);
     setShowSalonPicker(false);
-    setLoading(true); // Trigger loading state for new data fetch
+    setSelectedSalon(salon);
     // loadData will be called by useEffect dependency on selectedSalon?.id
   };
 
@@ -231,135 +273,203 @@ export default function AttendanceScreen({ navigation }: any) {
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, dynamicStyles.header, { borderBottomColor: dynamicStyles.header.borderBottomColor }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-           <Ionicons name="arrow-back" size={24} color={dynamicStyles.text.color} />
+          <Ionicons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Attendance</Text>
         <View style={{ width: 40 }} /> 
       </View>
 
-      <ScrollView 
-         contentContainerStyle={styles.scrollContent}
-         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-         {loading && !refreshing && !selectedSalon ? (
-            <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
-         ) : (
-            <>
-               {/* Salon Selector */}
-               {salons.length > 0 ? (
-                 <TouchableOpacity 
-                   style={[styles.salonCard, dynamicStyles.card]}
-                   onPress={() => salons.length > 1 && setShowSalonPicker(true)}
-                   disabled={salons.length <= 1}
-                 >
-                    <View style={styles.salonIconContainer}>
-                      <FontAwesome5 name="store" size={20} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.salonInfo}>
-                       <Text style={[styles.salonLabel, dynamicStyles.textSecondary]}>Current Workplace</Text>
-                       <Text style={[styles.salonName, dynamicStyles.text]}>{selectedSalon?.name || 'Select Salon'}</Text>
-                    </View>
-                    {salons.length > 1 && (
-                       <MaterialIcons name="keyboard-arrow-down" size={24} color={dynamicStyles.textSecondary.color} />
-                    )}
-                 </TouchableOpacity>
-               ) : (
-                 <View style={styles.emptyState}>
-                    <Text style={[styles.emptyText, dynamicStyles.text]}>No workplaces found.</Text>
-                 </View>
-               )}
+      {loading && !refreshing ? (
+        <Loader fullscreen message="Loading attendance..." />
+      ) : salons.length === 0 ? (
+        // Error State: No Salon Found
+        <View style={[styles.errorContainer, dynamicStyles.container]}>
+          <View style={[styles.errorContent, dynamicStyles.emptyBackground]}>
+            <View style={[styles.errorIconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+              <MaterialIcons name="store" size={64} color={theme.colors.error} />
+            </View>
+            <Text style={[styles.errorTitle, dynamicStyles.text]}>No Workplace Found</Text>
+            <Text style={[styles.errorMessage, dynamicStyles.textSecondary]}>
+              You don't have any salon assigned to you yet.{'\n\n'}
+              Please contact your manager or salon owner to get assigned to a workplace.
+            </Text>
+            <TouchableOpacity
+              style={[styles.errorButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={theme.colors.white} />
+              <Text style={styles.errorButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+              colors={[theme.colors.primary]}
+            />
+          }
+        >
+          {/* Salon Selector */}
+          {salons.length > 0 && (
+            <TouchableOpacity 
+              style={[styles.salonCard, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
+              onPress={() => salons.length > 1 && setShowSalonPicker(true)}
+              disabled={salons.length <= 1}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.salonIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+                <FontAwesome5 name="store" size={22} color={theme.colors.primary} />
+              </View>
+              <View style={styles.salonInfo}>
+                <Text style={[styles.salonLabel, dynamicStyles.textSecondary]}>Current Workplace</Text>
+                <Text style={[styles.salonName, dynamicStyles.text]} numberOfLines={1}>
+                  {selectedSalon?.name || 'Select Salon'}
+                </Text>
+                {selectedSalon?.city && (
+                  <Text style={[styles.salonAddress, dynamicStyles.textSecondary]} numberOfLines={1}>
+                    {selectedSalon.city}
+                  </Text>
+                )}
+              </View>
+              {salons.length > 1 && (
+                <MaterialIcons name="keyboard-arrow-down" size={24} color={dynamicStyles.textSecondary.color} />
+              )}
+            </TouchableOpacity>
+          )}
 
-               {/* Clock Status & Action */}
-               {selectedSalon && (
-                 <View style={styles.actionSection}>
-                    <View style={[styles.statusIndicator, currentStatus === 'in' ? styles.statusIn : styles.statusOut]}>
-                       <Text style={styles.statusLabel}>Currently</Text>
-                       <Text style={styles.statusMainText}>
-                          {currentStatus === 'in' ? 'CLOCKED IN' : 'CLOCKED OUT'}
-                       </Text>
-                       {currentStatus === 'in' && (
-                         <Text style={styles.statusSubText}>{getTodayDuration()}</Text>
-                       )}
-                    </View>
+          {/* Clock Status & Action */}
+          {selectedSalon && !employeeRecord ? (
+            // Error State: Not an Employee
+            <View style={[styles.errorStateCard, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor }]}>
+              <View style={[styles.errorIconContainer, { backgroundColor: theme.colors.error + '15' }]}>
+                <MaterialIcons name="error-outline" size={48} color={theme.colors.error} />
+              </View>
+              <Text style={[styles.errorStateTitle, dynamicStyles.text]}>Not Assigned</Text>
+              <Text style={[styles.errorStateMessage, dynamicStyles.textSecondary]}>
+                You are not listed as an employee at this salon.{'\n\n'}
+                Please contact your manager or salon owner to get assigned.
+              </Text>
+            </View>
+          ) : selectedSalon && employeeRecord ? (
+            <View style={styles.actionSection}>
+              <View style={[
+                styles.statusIndicator, 
+                currentStatus === 'in' ? styles.statusIn : styles.statusOut,
+                { backgroundColor: currentStatus === 'in' ? '#34C759' + '20' : '#FF3B30' + '20' }
+              ]}>
+                <View style={[styles.statusDot, { backgroundColor: currentStatus === 'in' ? '#34C759' : '#FF3B30' }]} />
+                <Text style={[styles.statusLabel, { color: currentStatus === 'in' ? '#34C759' : '#FF3B30' }]}>
+                  Currently
+                </Text>
+                <Text style={[styles.statusMainText, { color: currentStatus === 'in' ? '#34C759' : '#FF3B30' }]}>
+                  {currentStatus === 'in' ? 'CLOCKED IN' : 'CLOCKED OUT'}
+                </Text>
+                {currentStatus === 'in' && (
+                  <Text style={[styles.statusSubText, dynamicStyles.textSecondary]}>
+                    {getTodayDuration()}
+                  </Text>
+                )}
+              </View>
 
-                    <TouchableOpacity
-                      style={[
-                        styles.clockButton, 
-                        currentStatus === 'in' ? styles.clockOutBtn : styles.clockInBtn,
-                        actionLoading && styles.disabledBtn
-                      ]}
-                      onPress={handleClockAction}
-                      disabled={actionLoading || !employeeRecord}
-                    >
-                       {actionLoading ? (
-                          <ActivityIndicator color="white" />
-                       ) : (
-                          <>
-                             <FontAwesome5 name={currentStatus === 'in' ? "sign-out-alt" : "sign-in-alt"} size={24} color="white" />
-                             <Text style={styles.clockBtnText}>
-                                {currentStatus === 'in' ? 'CLOCK OUT' : 'CLOCK IN'}
-                             </Text>
-                          </>
-                       )}
-                    </TouchableOpacity>
-                    
-                    {!employeeRecord && (
-                        <Text style={[styles.errorText, { textAlign: 'center', marginTop: 8 }]}>
-                           You are not listed as an employee here.
+              <TouchableOpacity
+                style={[
+                  styles.clockButton, 
+                  currentStatus === 'in' ? styles.clockOutBtn : styles.clockInBtn,
+                  { backgroundColor: currentStatus === 'in' ? '#FF3B30' : '#34C759' },
+                  actionLoading && styles.disabledBtn
+                ]}
+                onPress={handleClockAction}
+                disabled={actionLoading}
+                activeOpacity={0.8}
+              >
+                {actionLoading ? (
+                  <MaterialIcons name="hourglass-empty" size={24} color="white" />
+                ) : (
+                  <>
+                    <FontAwesome5 
+                      name={currentStatus === 'in' ? "sign-out-alt" : "sign-in-alt"} 
+                      size={22} 
+                      color="white" 
+                    />
+                    <Text style={styles.clockBtnText}>
+                      {currentStatus === 'in' ? 'CLOCK OUT' : 'CLOCK IN'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {/* History */}
+          {selectedSalon && employeeRecord && (
+            <View style={styles.historySection}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="history" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Recent Activity</Text>
+              </View>
+              <View style={[styles.historyCard, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}>
+                {attendanceLogs.length > 0 ? (
+                  attendanceLogs.slice(0, 10).map((log, index) => (
+                    <View key={log.id}>
+                      <View style={styles.logItem}>
+                        <View style={[
+                          styles.logIcon, 
+                          { backgroundColor: log.type === AttendanceType.CLOCK_IN ? '#34C759' + '15' : '#FF3B30' + '15' }
+                        ]}>
+                          <MaterialIcons 
+                            name={log.type === AttendanceType.CLOCK_IN ? "login" : "logout"} 
+                            size={20} 
+                            color={log.type === AttendanceType.CLOCK_IN ? "#34C759" : "#FF3B30"} 
+                          />
+                        </View>
+                        <View style={styles.logInfo}>
+                          <Text style={[styles.logType, dynamicStyles.text]}>
+                            {log.type === AttendanceType.CLOCK_IN ? 'Clocked In' : 'Clocked Out'}
+                          </Text>
+                          <Text style={[styles.logDate, dynamicStyles.textSecondary]}>
+                            {new Date(log.recordedAt).toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </Text>
+                        </View>
+                        <Text style={[styles.logTime, dynamicStyles.text]}>
+                          {new Date(log.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Text>
-                    )}
-                 </View>
-               )}
-
-               {/* History */}
-               {selectedSalon && (
-                 <View style={styles.historySection}>
-                    <Text style={[styles.sectionTitle, dynamicStyles.text]}>Recent Activity</Text>
-                    <View style={[styles.historyCard, dynamicStyles.card]}>
-                       {attendanceLogs.length > 0 ? (
-                          attendanceLogs.slice(0, 10).map((log, index) => (
-                             <View key={log.id}>
-                                <View style={styles.logItem}>
-                                   <View style={[
-                                      styles.logIcon, 
-                                      { backgroundColor: log.type === AttendanceType.CLOCK_IN ? '#E8F5E9' : '#FFEBEE' }
-                                   ]}>
-                                      <MaterialIcons 
-                                        name={log.type === AttendanceType.CLOCK_IN ? "login" : "logout"} 
-                                        size={18} 
-                                        color={log.type === AttendanceType.CLOCK_IN ? "#2E7D32" : "#C62828"} 
-                                      />
-                                   </View>
-                                   <View style={styles.logInfo}>
-                                      <Text style={[styles.logType, dynamicStyles.text]}>
-                                         {log.type === AttendanceType.CLOCK_IN ? 'Clocked In' : 'Clocked Out'}
-                                      </Text>
-                                      <Text style={[styles.logDate, dynamicStyles.textSecondary]}>
-                                         {new Date(log.recordedAt).toLocaleDateString()}
-                                      </Text>
-                                   </View>
-                                   <Text style={[styles.logTime, dynamicStyles.text]}>
-                                      {new Date(log.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                   </Text>
-                                </View>
-                                {index < Math.min(attendanceLogs.length, 10) - 1 && (
-                                   <View style={[styles.divider, { backgroundColor: isDark ? theme.colors.gray700 : '#F0F0F0' }]} />
-                                )}
-                             </View>
-                          ))
-                       ) : (
-                          <View style={styles.emptyHistory}>
-                             <Text style={[styles.emptyHistoryText, dynamicStyles.textSecondary]}>No recent attendance activity.</Text>
-                          </View>
-                       )}
+                      </View>
+                      {index < Math.min(attendanceLogs.length, 10) - 1 && (
+                        <View style={[styles.divider, { backgroundColor: dynamicStyles.divider.backgroundColor }]} />
+                      )}
                     </View>
-                 </View>
-               )}
-            </>
-         )}
-      </ScrollView>
+                  ))
+                ) : (
+                  <View style={styles.emptyHistory}>
+                    <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                      <MaterialIcons name="history" size={32} color={dynamicStyles.textSecondary.color} />
+                    </View>
+                    <Text style={[styles.emptyHistoryText, dynamicStyles.textSecondary]}>
+                      No recent attendance activity
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          <View style={{ height: 80 }} />
+        </ScrollView>
+      )}
       
       {renderSalonPicker()}
     </SafeAreaView>
@@ -374,45 +484,133 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
-    paddingBottom: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: 1.5,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
   },
   backButton: {
-    padding: 8,
+    padding: theme.spacing.xs,
+    borderRadius: 20,
   },
   scrollContent: {
-    padding: 16,
+    padding: theme.spacing.md,
     paddingBottom: 40,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  sectionIcon: {
+    marginRight: 6,
+  },
   
+  // Error States
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  errorContent: {
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+    borderRadius: 20,
+    maxWidth: 400,
+    width: '100%',
+  },
+  errorIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: theme.spacing.xl,
+  },
+  errorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 16,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  errorButtonText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+    marginLeft: theme.spacing.sm,
+  },
+  errorStateCard: {
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    marginBottom: theme.spacing.lg,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  errorStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  errorStateMessage: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   // Salon Card
   salonCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: theme.spacing.md + 2,
     borderRadius: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   salonIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary + '15',
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   salonInfo: {
     flex: 1,
@@ -424,48 +622,54 @@ const styles = StyleSheet.create({
   },
   salonName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
+    marginBottom: 2,
+  },
+  salonAddress: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
   
   // Action Section
   actionSection: {
-    marginBottom: 32,
+    marginBottom: theme.spacing.xl,
     alignItems: 'center',
   },
   statusIndicator: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 100, // Pill shape
-    borderWidth: 1,
-    borderColor: 'transparent', // Can add border color
+    marginBottom: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    minWidth: 200,
+    justifyContent: 'center',
   },
-  statusIn: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#C8E6C9',
-  },
-  statusOut: {
-    backgroundColor: '#FFEBEE',
-    borderColor: '#FFCDD2',
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: theme.spacing.sm,
   },
   statusLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 11,
+    marginBottom: 2,
     fontFamily: theme.fonts.medium,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statusMainText: {
-     fontSize: 18,
-     fontWeight: 'bold',
-     fontFamily: theme.fonts.bold,
-     color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+    marginTop: 2,
   },
   statusSubText: {
     fontSize: 12,
-    color: '#666',
+    fontFamily: theme.fonts.regular,
     marginTop: 4,
   },
   
@@ -473,150 +677,148 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    paddingVertical: theme.spacing.md + 4,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: 18,
     width: '100%',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
-  },
-  clockInBtn: {
-    backgroundColor: '#2E7D32', // Green
-  },
-  clockOutBtn: {
-     backgroundColor: '#C62828', // Red
+    elevation: 6,
   },
   disabledBtn: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   clockBtnText: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
-    marginLeft: 12,
-  },
-  errorText: {
-     fontSize: 14,
-     color: '#C62828',
-     fontFamily: theme.fonts.medium,
+    marginLeft: theme.spacing.sm,
+    letterSpacing: 0.5,
   },
   
   // History
   historySection: {
-     marginBottom: 20,
+    marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-     fontSize: 18,
-     fontWeight: 'bold',
-     fontFamily: theme.fonts.bold,
-     marginBottom: 16,
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
   historyCard: {
-     borderRadius: 16,
-     borderWidth: 1,
-     padding: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: theme.spacing.sm,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   logItem: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
   },
   logIcon: {
-     width: 36,
-     height: 36,
-     borderRadius: 18,
-     alignItems: 'center',
-     justifyContent: 'center',
-     marginRight: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
   },
   logInfo: {
-     flex: 1,
+    flex: 1,
   },
   logType: {
-     fontSize: 16,
-     fontWeight: '600',
-     fontFamily: theme.fonts.bold,
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
   },
   logDate: {
-     fontSize: 12,
-     marginTop: 2,
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
   logTime: {
-     fontSize: 14,
-     fontWeight: '500',
-     fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
   divider: {
-     height: 1,
-     marginHorizontal: 12,
+    height: 1,
+    marginHorizontal: theme.spacing.md,
   },
   emptyHistory: {
-     padding: 24,
-     alignItems: 'center',
+    padding: theme.spacing.xl,
+    alignItems: 'center',
   },
   emptyHistoryText: {
-     fontSize: 14,
-     fontStyle: 'italic',
-  },
-  emptyState: {
-     alignItems: 'center',
-     padding: 20,
-  },
-  emptyText: {
-     fontSize: 16,
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
   },
   
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: theme.spacing.lg,
   },
   modalContent: {
     width: '100%',
     borderRadius: 20,
-    padding: 24,
+    padding: theme.spacing.lg,
     maxHeight: '80%',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: theme.spacing.md,
     fontFamily: theme.fonts.bold,
   },
   salonOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   salonOptionInfo: {
     flex: 1,
   },
   salonOptionName: {
-     fontSize: 16,
-     fontWeight: '600',
-     marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
   },
   salonOptionAddress: {
-     fontSize: 12,
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
   },
   modalCancelButton: {
-    marginTop: 16,
+    marginTop: theme.spacing.md,
     alignItems: 'center',
-    padding: 12,
+    padding: theme.spacing.md,
+    borderRadius: 12,
   },
   modalCancelText: {
     color: theme.colors.error,
     fontSize: 16,
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
 });

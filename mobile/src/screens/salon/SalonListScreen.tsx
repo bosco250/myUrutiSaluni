@@ -6,13 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService, SalonDetails } from '../../services/salon';
+import { Loader } from '../../components/common';
 
 interface SalonListScreenProps {
   navigation: {
@@ -185,7 +186,7 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
   );
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
@@ -197,10 +198,7 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, dynamicStyles.textSecondary]}>Loading salons...</Text>
-        </View>
+        <Loader fullscreen message="Loading salons..." />
       ) : error ? (
         renderError()
       ) : (
@@ -253,7 +251,7 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
           </View>
         </TouchableOpacity>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -282,16 +280,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: theme.spacing.lg,
     paddingBottom: 100,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
   },
   salonCard: {
     flexDirection: 'row',

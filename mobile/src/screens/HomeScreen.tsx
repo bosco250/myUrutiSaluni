@@ -225,11 +225,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       onPress: () => navigation?.navigate("Loyalty"),
     },
     {
-      icon: "account-balance-wallet",
-      label: "Wallet",
-      onPress: () => navigation?.navigate("Wallet"),
-    },
-    {
       icon: "local-offer",
       label: "Offers",
       onPress: () => navigation?.navigate("Offers"),

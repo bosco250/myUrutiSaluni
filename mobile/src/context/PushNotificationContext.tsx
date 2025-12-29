@@ -12,6 +12,7 @@ import {
   PushNotificationData,
 } from "../services/pushNotifications";
 import { useAuth } from "./AuthContext";
+import { useNetwork } from "./NetworkContext";
 
 // Check if running in Expo Go
 const isExpoGo = Constants.executionEnvironment === "storeClient";
@@ -53,8 +54,9 @@ export function PushNotificationProvider({
   onNotificationTap,
 }: PushNotificationProviderProps) {
   const { isAuthenticated, user } = useAuth();
+  const { isConnected } = useNetwork();
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const [notification] = useState<Notification | null>(null);
+  const [notification, setNotification] = useState<Notification | null>(null);
   const [lastNotificationResponse, setLastNotificationResponse] =
     useState<NotificationResponse | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -84,10 +86,12 @@ export function PushNotificationProvider({
 
   // Set up notification listeners
   useEffect(() => {
-    // TEMPORARILY DISABLED: Push notifications are disabled until deployment to avoid Expo Go errors
-    /*
+    if (isExpoGo) {
+      return () => {};
+    }
+
     // Listen for notifications received while app is foregrounded
-    notificationListener.current = pushNotificationsService.addNotificationReceivedListener(
+    const notificationListener = pushNotificationsService.addNotificationReceivedListener(
       (notification) => {
         console.log('📬 Notification received in foreground:', notification.request.content.title);
         setNotification(notification);
@@ -95,7 +99,7 @@ export function PushNotificationProvider({
     );
 
     // Listen for notification interactions (user taps on notification)
-    responseListener.current = pushNotificationsService.addNotificationResponseReceivedListener(
+    const responseListener = pushNotificationsService.addNotificationResponseReceivedListener(
       (response) => {
         console.log('👆 User interacted with notification');
         setLastNotificationResponse(response);
@@ -114,25 +118,31 @@ export function PushNotificationProvider({
     );
 
     return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
-      }
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
+      notificationListener.remove();
+      responseListener.remove();
     };
-    */
-    return () => {};
   }, [onNotificationTap]);
 
   // Register for push notifications when user is authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // TEMPORARILY DISABLED: Push notifications are disabled until deployment
-      // registerForPushNotifications();
-      console.log("Push notifications are currently disabled");
+    if (isAuthenticated && user && !isExpoGo) {
+      registerForPushNotifications();
     }
   }, [isAuthenticated, user, registerForPushNotifications]);
+
+  // Re-register push token when network reconnects (like WhatsApp reconnection)
+  useEffect(() => {
+    if (isConnected && isAuthenticated && user && expoPushToken && !isRegistered && !isExpoGo) {
+      // Network just came back - retry token registration
+      console.log('🌐 Network reconnected - re-registering push token...');
+      pushNotificationsService.registerTokenWithBackend(expoPushToken).then((success) => {
+        if (success) {
+          setIsRegistered(true);
+          console.log('✅ Push token re-registered after network reconnect');
+        }
+      });
+    }
+  }, [isConnected, isAuthenticated, user, expoPushToken, isRegistered]);
 
   // Check for initial notification (app was opened from notification)
   useEffect(() => {

@@ -70,8 +70,22 @@ class LoyaltyService {
         queryString ? `?${queryString}` : ""
       }`;
 
-      const response = await api.get<LoyaltyPointsHistory>(url);
-      return response;
+      // Backend returns { data: [], total, page, limit, totalPages }
+      // Map it to { transactions: [], total, page, limit }
+      const response = await api.get<{
+        data: LoyaltyPointTransaction[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }>(url);
+      
+      return {
+        transactions: response.data || [],
+        total: response.total || 0,
+        page: response.page,
+        limit: response.limit,
+      };
     } catch (error: any) {
       console.error("Error fetching points history:", error);
       return { transactions: [], total: 0 };

@@ -37,6 +37,7 @@ import { UpdateStyleReferenceDto } from './dto/update-style-reference.dto';
 import { FileUploadService } from '../common/services/file-upload.service';
 import { LoyaltyPointsService } from './loyalty-points.service';
 import { LoyaltyPointSourceType } from './entities/loyalty-point-transaction.entity';
+import { CustomerFavoritesService } from './customer-favorites.service';
 
 @ApiTags('Customers')
 @ApiBearerAuth()
@@ -49,6 +50,7 @@ export class CustomersController {
     private readonly customerStyleReferencesService: CustomerStyleReferencesService,
     private readonly fileUploadService: FileUploadService,
     private readonly loyaltyPointsService: LoyaltyPointsService,
+    private readonly customerFavoritesService: CustomerFavoritesService,
   ) {}
 
   @Post()
@@ -588,6 +590,70 @@ export class CustomersController {
     const balance =
       await this.loyaltyPointsService.getCurrentBalance(customerId);
     return { balance };
+  }
+
+  // ==================== Favorites Management ====================
+
+  @Get(':customerId/favorites')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
+  @ApiOperation({ summary: 'Get customer favorites' })
+  async getFavorites(
+    @Param('customerId') customerId: string,
+    @CurrentUser() user: any,
+  ) {
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      const customer = await this.customersService.findByUserId(
+        user.id || user.userId,
+      );
+      if (!customer || customer.id !== customerId) {
+        throw new ForbiddenException('You can only view your own favorites');
+      }
+    }
+    return this.customerFavoritesService.findByCustomerId(customerId);
+  }
+
+  @Post(':customerId/favorites')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Add employee to favorites' })
+  async addFavorite(
+    @Param('customerId') customerId: string,
+    @Body() body: { salonEmployeeId: string },
+    @CurrentUser() user: any,
+  ) {
+    const customer = await this.customersService.findByUserId(
+      user.id || user.userId,
+    );
+    if (!customer || customer.id !== customerId) {
+      throw new ForbiddenException('You can only manage your own favorites');
+    }
+    return this.customerFavoritesService.addFavorite(
+      customerId,
+      body.salonEmployeeId,
+    );
+  }
+
+  @Delete(':customerId/favorites/:favoriteId')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Remove employee from favorites' })
+  async removeFavorite(
+    @Param('customerId') customerId: string,
+    @Param('favoriteId') favoriteId: string,
+    @CurrentUser() user: any,
+  ) {
+    const customer = await this.customersService.findByUserId(
+      user.id || user.userId,
+    );
+    if (!customer || customer.id !== customerId) {
+      throw new ForbiddenException('You can only manage your own favorites');
+    }
+    await this.customerFavoritesService.removeFavorite(favoriteId, customerId);
+    return { success: true };
   }
 
   private async ensureCustomerAccess(customerId: string, currentUser: any) {

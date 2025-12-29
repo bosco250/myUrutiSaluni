@@ -5,10 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StatusBar,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -17,6 +15,7 @@ import { useTheme, useAuth } from '../../context';
 import { Loader } from '../../components/common';
 import { salesService, Commission } from '../../services/sales';
 import { UserRole } from '../../constants/roles';
+import CommissionPaymentModal from '../../components/CommissionPaymentModal';
 
 interface CommissionsScreenProps {
   navigation: {
@@ -34,7 +33,8 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
   const [refreshing, setRefreshing] = useState(false);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
-  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
 
   const dynamicStyles = {
     container: {
@@ -80,28 +80,13 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
     loadData();
   };
 
-  const handleMarkPaid = async (commission: Commission) => {
-    Alert.alert(
-      'Mark as Paid',
-      `Mark commission of RWF ${Number(commission.amount).toLocaleString()} as paid?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Mark Paid',
-          onPress: async () => {
-            setMarkingPaid(commission.id);
-            try {
-              await salesService.markCommissionPaid(commission.id, 'cash');
-              loadData();
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to mark as paid');
-            } finally {
-              setMarkingPaid(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleMarkPaid = (commission: Commission) => {
+    setSelectedCommission(commission);
+    setPaymentModalVisible(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    loadData();
   };
 
   // Calculate stats
@@ -297,18 +282,11 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
 
               {!commission.paid && !isEmployee && (
                 <TouchableOpacity
-                  style={[styles.markPaidButton, { backgroundColor: theme.colors.success }]}
+                  style={[styles.markPaidButton, { backgroundColor: theme.colors.primary }]}
                   onPress={() => handleMarkPaid(commission)}
-                  disabled={markingPaid === commission.id}
                 >
-                  {markingPaid === commission.id ? (
-                    <ActivityIndicator size="small" color={theme.colors.white} />
-                  ) : (
-                    <>
-                      <MaterialIcons name="check" size={16} color={theme.colors.white} />
-                      <Text style={styles.markPaidText}>Mark as Paid</Text>
-                    </>
-                  )}
+                  <MaterialIcons name="payment" size={16} color={theme.colors.white} />
+                  <Text style={styles.markPaidText}>Pay Commission</Text>
                 </TouchableOpacity>
               )}
 
@@ -321,6 +299,19 @@ export default function CommissionsScreen({ navigation }: CommissionsScreenProps
           ))
         )}
       </ScrollView>
+
+      {/* Commission Payment Modal */}
+      {selectedCommission && (
+        <CommissionPaymentModal
+          visible={paymentModalVisible}
+          onClose={() => {
+            setPaymentModalVisible(false);
+            setSelectedCommission(null);
+          }}
+          commission={selectedCommission}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </SafeAreaView>
   );
 }

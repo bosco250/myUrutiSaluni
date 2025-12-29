@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { exploreService, Service } from "../../services/explore";
+import { reviewsService, Review } from "../../services/reviews";
 import { Loader } from "../../components/common";
 
 interface ServiceDetailScreenProps {
@@ -40,6 +42,12 @@ export default function ServiceDetailScreen({
   );
   const [loading, setLoading] = useState(!route?.params?.service);
   const [isFavorite, setIsFavorite] = useState(false);
+  
+  // Reviews state
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
 
   const serviceId = route?.params?.serviceId || route?.params?.service?.id;
 
@@ -51,7 +59,6 @@ export default function ServiceDetailScreen({
       const fetchedService = await exploreService.getServiceById(serviceId);
       setService(fetchedService);
     } catch (error: any) {
-      console.error("Error fetching service:", error);
       Alert.alert("Error", error.message || "Failed to load service details");
       navigation?.goBack();
     } finally {
@@ -59,11 +66,35 @@ export default function ServiceDetailScreen({
     }
   }, [serviceId, navigation]);
 
+  const fetchReviews = useCallback(async (salonId: string) => {
+    try {
+      setReviewsLoading(true);
+      const response = await reviewsService.getReviews({ salonId, limit: 10 });
+      // Handle both nested and direct response structures
+      const data = (response as any)?.data || response;
+      setReviews(data.reviews || []);
+      setAverageRating(data.averageRating || 0);
+      setTotalReviews(data.total || 0);
+    } catch {
+      // Silently fail - reviews are optional
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (serviceId && !service) {
       fetchService();
     }
   }, [serviceId, service, fetchService]);
+
+  // Fetch reviews when service is loaded
+  useEffect(() => {
+    if (service?.salonId) {
+      fetchReviews(service.salonId);
+    }
+  }, [service?.salonId, fetchReviews]);
 
 
   const handleFavorite = () => {
@@ -312,22 +343,123 @@ export default function ServiceDetailScreen({
             </View>
           ) : (
             <View style={styles.reviewsContent}>
-              <Text style={[styles.sectionHeading, dynamicStyles.text]}>
-                REVIEWS
-              </Text>
-              <View style={styles.emptyReviews}>
+              {/* Rating Summary */}
+              {totalReviews > 0 && (
+                <View style={[styles.ratingSummary, dynamicStyles.card]}>
+                  <View style={styles.ratingAverage}>
+                    <Text style={[styles.ratingNumber, dynamicStyles.text]}>
+                      {averageRating.toFixed(1)}
+                    </Text>
+                    <View style={styles.ratingStars}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <MaterialIcons
+                          key={star}
+                          name={star <= Math.round(averageRating) ? "star" : "star-border"}
+                          size={16}
+                          color={theme.colors.primary}
+                        />
+                      ))}
+                    </View>
+                    <Text style={[styles.ratingCount, dynamicStyles.textSecondary]}>
+                      {totalReviews} review{totalReviews !== 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Reviews List */}
+              {reviewsLoading ? (
+                <View style={styles.loadingReviews}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={[styles.loadingText, dynamicStyles.textSecondary]}>
+                    Loading reviews...
+                  </Text>
+                </View>
+              ) : reviews.length === 0 ? (
+                <View style={styles.emptyReviews}>
+                  <MaterialIcons
+                    name="rate-review"
+                    size={48}
+                    color={dynamicStyles.textSecondary.color}
+                  />
+                  <Text style={[styles.emptyReviewsText, dynamicStyles.text]}>
+                    No reviews yet
+                  </Text>
+                  <Text style={[styles.emptyReviewsSubtext, dynamicStyles.textSecondary]}>
+                    Be the first to review this service
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.reviewsList}>
+                  {reviews.map((review) => (
+                    <View key={review.id} style={[styles.reviewCard, dynamicStyles.card]}>
+                      <View style={styles.reviewHeader}>
+                        <View style={styles.reviewerInfo}>
+                          <View style={[styles.reviewerAvatar, { backgroundColor: theme.colors.primary }]}>
+                            <Text style={styles.reviewerInitials}>
+                              {review.customer?.user?.fullName?.charAt(0).toUpperCase() || '?'}
+                            </Text>
+                          </View>
+                          <View>
+                            <Text style={[styles.reviewerName, dynamicStyles.text]}>
+                              {review.customer?.user?.fullName || 'Customer'}
+                            </Text>
+                            <Text style={[styles.reviewDate, dynamicStyles.textSecondary]}>
+                              {new Date(review.createdAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.reviewRating}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <MaterialIcons
+                              key={star}
+                              name={star <= review.rating ? "star" : "star-border"}
+                              size={14}
+                              color={theme.colors.primary}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                      {review.comment && (
+                        <Text style={[styles.reviewComment, dynamicStyles.text]}>
+                          {review.comment}
+                        </Text>
+                      )}
+                      {review.isVerified && (
+                        <View style={styles.verifiedBadge}>
+                          <MaterialIcons name="verified" size={12} color={theme.colors.success} />
+                          <Text style={[styles.verifiedText, { color: theme.colors.success }]}>
+                            Verified Visit
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Write Review Button */}
+              <TouchableOpacity
+                style={[styles.writeReviewButton, { backgroundColor: theme.colors.primary }]}
+                onPress={() => {
+                  navigation?.navigate("Review", {
+                    salonId: service.salonId,
+                    salonName: service.salon?.name || "Salon",
+                  });
+                }}
+                activeOpacity={0.7}
+              >
                 <MaterialIcons
-                  name="rate-review"
-                  size={48}
-                  color={dynamicStyles.textSecondary.color}
+                  name="star"
+                  size={18}
+                  color={theme.colors.white}
                 />
-                <Text style={[styles.emptyReviewsText, dynamicStyles.text]}>
-                  No reviews yet
-                </Text>
-                <Text style={[styles.emptyReviewsSubtext, dynamicStyles.textSecondary]}>
-                  Be the first to review this service
-                </Text>
-              </View>
+                <Text style={styles.writeReviewButtonText}>Write a Review</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -576,6 +708,114 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
     color: theme.colors.text,
+  },
+  writeReviewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 12,
+    marginTop: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  writeReviewButtonText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  // Reviews styles
+  ratingSummary: {
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.md,
+  },
+  ratingAverage: {
+    alignItems: "center",
+  },
+  ratingNumber: {
+    fontSize: 36,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+  },
+  ratingStars: {
+    flexDirection: "row",
+    marginTop: theme.spacing.xs,
+  },
+  ratingCount: {
+    fontSize: 14,
+    marginTop: theme.spacing.xs,
+    fontFamily: theme.fonts.regular,
+  },
+  loadingReviews: {
+    alignItems: "center",
+    paddingVertical: theme.spacing.xl,
+  },
+  loadingText: {
+    marginTop: theme.spacing.sm,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+  },
+  reviewsList: {
+    gap: theme.spacing.md,
+  },
+  reviewCard: {
+    padding: theme.spacing.md,
+    borderRadius: 12,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  reviewerInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    flex: 1,
+  },
+  reviewerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reviewerInitials: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  reviewerName: {
+    fontSize: 15,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  reviewDate: {
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: theme.fonts.regular,
+  },
+  reviewRating: {
+    flexDirection: "row",
+  },
+  reviewComment: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: theme.spacing.sm,
+    fontFamily: theme.fonts.regular,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: theme.spacing.sm,
+  },
+  verifiedText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
 });
 

@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   Image,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
@@ -18,6 +18,7 @@ import { useTheme } from '../../context';
 import { salonService, BusinessMetrics } from '../../services/salon';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import { api } from '../../services/api';
+import { Loader } from '../../components/common';
 
 // Import logo
 const logo = require('../../../assets/Logo.png');
@@ -163,9 +164,10 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <Loader fullscreen message="Loading dashboard..." />
+      </SafeAreaView>
     );
   }
 
@@ -875,12 +877,6 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: theme.colors.background,
   },
   scrollContent: {

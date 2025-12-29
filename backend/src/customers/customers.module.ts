@@ -15,6 +15,8 @@ import { LoyaltyPointTransaction } from './entities/loyalty-point-transaction.en
 import { LoyaltyPointsService } from './loyalty-points.service';
 import { SalonRewardsConfig } from './entities/rewards-config.entity';
 import { RewardsConfigService } from './rewards-config.service';
+import { CustomerFavorite } from './entities/customer-favorite.entity';
+import { CustomerFavoritesService } from './customer-favorites.service';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { RewardsConfigService } from './rewards-config.service';
       CustomerCommunication,
       LoyaltyPointTransaction,
       SalonRewardsConfig,
+      CustomerFavorite,
     ]),
     UsersModule,
     FileUploadModule,
@@ -37,6 +40,7 @@ import { RewardsConfigService } from './rewards-config.service';
     CustomerCommunicationService,
     LoyaltyPointsService,
     RewardsConfigService,
+    CustomerFavoritesService,
   ],
   exports: [
     CustomersService,
@@ -45,6 +49,7 @@ import { RewardsConfigService } from './rewards-config.service';
     CustomerCommunicationService,
     LoyaltyPointsService,
     RewardsConfigService,
+    CustomerFavoritesService,
   ],
 })
 export class CustomersModule {}

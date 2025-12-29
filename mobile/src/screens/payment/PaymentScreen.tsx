@@ -34,7 +34,7 @@ interface PaymentScreenProps {
 }
 
 const PAYMENT_METHODS: { method: PaymentMethod; label: string; icon: string; color: string }[] = [
-  { method: "mtn_momo", label: "MTN Mobile Money", icon: "phone-android", color: "#FFCC00" },
+  { method: "airtel_money", label: "Airtel Money", icon: "phone-android", color: "#FFCC00" },
   { method: "wallet", label: "URUTI Wallet", icon: "account-balance-wallet", color: theme.colors.primary },
 ];
 
@@ -79,8 +79,8 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
 
   const validatePhoneNumber = (phone: string): boolean => {
     const clean = phone.replace(/\D/g, "");
-    // Rwanda MTN: 078, 079, 072, 073
-    return /^0?(78|79|72|73)\d{7}$/.test(clean) || /^250(78|79|72|73)\d{7}$/.test(clean);
+    // Rwanda Airtel: 074, 075
+    return /^0?(74|75)\d{7}$/.test(clean) || /^250(74|75)\d{7}$/.test(clean);
   };
 
   const handlePayment = async () => {
@@ -89,8 +89,8 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
       return;
     }
 
-    if (selectedMethod === "mtn_momo" && !validatePhoneNumber(phoneNumber)) {
-      Alert.alert("Invalid Number", "Please enter a valid MTN Rwanda phone number");
+    if (selectedMethod === "airtel_money" && !validatePhoneNumber(phoneNumber)) {
+      Alert.alert("Invalid Number", "Please enter a valid Airtel Rwanda phone number");
       return;
     }
 
@@ -102,7 +102,7 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
         amount,
         method: selectedMethod,
         type,
-        phoneNumber: selectedMethod === "mtn_momo" ? phoneNumber : undefined,
+        phoneNumber: selectedMethod === "airtel_money" ? phoneNumber : undefined,
         appointmentId,
         salonId,
         description,
@@ -110,8 +110,8 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
 
       setPayment(paymentResponse);
 
-      // If MoMo, poll for status
-      if (selectedMethod === "mtn_momo") {
+      // If Airtel Money, poll for status
+      if (selectedMethod === "airtel_money") {
         try {
           const finalPayment = await paymentsService.pollStatus(
             paymentResponse.id,
@@ -165,7 +165,7 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
                 Please approve the payment on your phone...
               </Text>
               <Text style={[styles.phonePrompt, dynamicStyles.textSecondary]}>
-                Check your phone for MTN MoMo prompt
+                Check your phone for Airtel Money prompt
               </Text>
             </>
           )}
@@ -333,8 +333,8 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
           ))}
         </View>
 
-        {/* Phone Number Input (MTN MoMo) */}
-        {selectedMethod === "mtn_momo" && (
+        {/* Phone Number Input (Airtel Money) */}
+        {selectedMethod === "airtel_money" && (
           <View style={styles.phoneSection}>
             <Text style={[styles.sectionTitle, dynamicStyles.text]}>
               Phone Number
@@ -343,7 +343,7 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
               <Text style={[styles.phonePrefix, dynamicStyles.text]}>+250</Text>
               <TextInput
                 style={[styles.phoneInput, { color: dynamicStyles.text.color }]}
-                placeholder="78X XXX XXX"
+                placeholder="74X XXX XXX"
                 placeholderTextColor={theme.colors.textTertiary}
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
@@ -352,7 +352,7 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
               />
             </View>
             <Text style={[styles.phoneHint, dynamicStyles.textSecondary]}>
-              Enter your registered MTN MoMo number
+              Enter your registered Airtel Money number
             </Text>
           </View>
         )}
@@ -361,12 +361,12 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
         <TouchableOpacity
           style={[
             styles.payButton,
-            (!selectedMethod || (selectedMethod === "mtn_momo" && !phoneNumber) || (isTopUp && amount < 1000)) &&
+            (!selectedMethod || (selectedMethod === "airtel_money" && !phoneNumber) || (isTopUp && amount < 1000)) &&
               styles.payButtonDisabled,
           ]}
           onPress={handlePayment}
           activeOpacity={0.7}
-          disabled={!selectedMethod || loading || (selectedMethod === "mtn_momo" && !phoneNumber) || (isTopUp && amount < 1000)}
+          disabled={!selectedMethod || loading || (selectedMethod === "airtel_money" && !phoneNumber) || (isTopUp && amount < 1000)}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />

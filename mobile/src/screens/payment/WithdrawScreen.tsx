@@ -234,7 +234,7 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
             <Text style={[styles.phonePrefix, dynamicStyles.text]}>+250</Text>
             <TextInput
               style={[styles.phoneInput, { color: dynamicStyles.text.color }]}
-              placeholder="78X XXX XXX"
+              placeholder="74X XXX XXX"
               placeholderTextColor={theme.colors.textTertiary}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
@@ -243,7 +243,7 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
             />
           </View>
           <Text style={[styles.hint, dynamicStyles.textSecondary]}>
-            MTN Mobile Money number
+            Airtel Money number
           </Text>
         </View>
 

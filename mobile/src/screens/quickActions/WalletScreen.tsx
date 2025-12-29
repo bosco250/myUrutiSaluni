@@ -12,8 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme } from "../../context";
+import { useTheme, useAuth } from "../../context";
 import { api } from "../../services/api";
+import { canAccessScreen, Screen } from "../../constants/permissions";
+import CommissionTransactionModal from "../../components/CommissionTransactionModal";
 
 interface Transaction {
   id: string;
@@ -21,6 +23,16 @@ interface Transaction {
   date: string;
   amount: number;
   type: "debit" | "credit";
+  transactionType?: string;
+  description?: string;
+  createdAt?: string;
+  referenceType?: string;
+  referenceId?: string;
+  transactionReference?: string;
+  status?: string;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  metadata?: Record<string, any>;
 }
 
 interface WalletData {
@@ -38,9 +50,23 @@ interface WalletScreenProps {
 
 export default function WalletScreen({ navigation }: WalletScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showTransactionDetail, setShowTransactionDetail] = useState(false);
+
+  // Role-based access control: Only employees and owners can access wallet
+  const hasAccess = user?.role && canAccessScreen(user.role, Screen.WALLET);
+  
+  // If customer tries to access, redirect them back
+  useEffect(() => {
+    if (user && !hasAccess) {
+      // Customer trying to access wallet - redirect to home
+      navigation.goBack();
+    }
+  }, [user, hasAccess, navigation]);
 
   const dynamicStyles = {
     container: {
@@ -68,28 +94,54 @@ export default function WalletScreen({ navigation }: WalletScreenProps) {
     try {
       setLoading(true);
       // Fetch wallet from real API
-      const walletResponse = await api.get<any>("/wallets/me");
+      const walletResponse: any = await api.get("/wallets/me");
+      // Handle response structure: could be direct or wrapped in data
+      const wallet = walletResponse?.data || walletResponse;
       
       // Fetch transactions if wallet exists
       let transactions: Transaction[] = [];
-      if (walletResponse?.id) {
+      if (wallet?.id) {
         try {
-          const transactionsResponse = await api.get<any[]>(`/wallets/${walletResponse.id}/transactions`);
-          transactions = (transactionsResponse || []).slice(0, 5).map((t: any) => ({
-            id: t.id,
-            title: t.description || getTransactionTitle(t.transactionType),
-            date: formatTransactionDate(t.createdAt),
-            amount: Number(t.amount),
-            type: isDebit(t.transactionType) ? "debit" : "credit",
-          }));
-        } catch {
-          console.log("No transactions found");
+          const transactionsResponse: any = await api.get(`/wallets/${wallet.id}/transactions`);
+          // Handle response structure: could be direct array or wrapped in data
+          const transactionsData = transactionsResponse?.data || transactionsResponse || [];
+          const transactionsArray = Array.isArray(transactionsData) ? transactionsData : [];
+          
+          transactions = transactionsArray.slice(0, 5).map((t: any) => {
+            // Clean description to remove any IDs or technical data
+            let cleanDescription = t.description || "";
+            // Remove any UUIDs or IDs from description
+            cleanDescription = cleanDescription.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "");
+            cleanDescription = cleanDescription.replace(/\bID:\s*\w+\b/gi, "");
+            cleanDescription = cleanDescription.replace(/\bTransaction\s*ID[:\s]*\w+/gi, "");
+            cleanDescription = cleanDescription.trim();
+            
+            return {
+              id: t.id,
+              title: cleanDescription || getTransactionTitle(t.transactionType),
+              date: formatTransactionDate(t.createdAt),
+              amount: Number(t.amount),
+              type: isDebit(t.transactionType) ? "debit" : "credit",
+              transactionType: t.transactionType,
+              description: t.description,
+              createdAt: t.createdAt || t.created_at,
+              referenceType: t.referenceType || t.reference_type,
+              referenceId: t.referenceId || t.reference_id,
+              transactionReference: t.transactionReference || t.transaction_reference,
+              status: t.status,
+              balanceBefore: t.balanceBefore || t.balance_before,
+              balanceAfter: t.balanceAfter || t.balance_after,
+              metadata: t.metadata || {},
+            };
+          });
+        } catch (error) {
+          console.log("No transactions found", error);
         }
       }
 
       setWalletData({
-        balance: Number(walletResponse?.balance) || 0,
-        currency: walletResponse?.currency || "RWF",
+        balance: Number(wallet?.balance) || 0,
+        currency: wallet?.currency || "RWF",
         transactions,
       });
     } catch (error) {
@@ -170,13 +222,40 @@ export default function WalletScreen({ navigation }: WalletScreenProps) {
   };
 
   const handleViewHistory = () => {
-    navigation.navigate("PaymentHistory");
+    navigation.navigate("PaymentHistory", {
+      mode: 'wallet',
+      title: 'Wallet History'
+    });
   };
 
   const handleApplyForLoan = () => {
     // TODO: Navigate to loan application
     console.log("Apply for Loan pressed");
   };
+
+  // Show access denied for customers
+  if (user && !hasAccess) {
+    return (
+      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <View style={styles.loadingContainer}>
+          <MaterialIcons name="lock" size={48} color={theme.colors.error} />
+          <Text style={[styles.errorText, dynamicStyles.text]}>
+            Access Denied
+          </Text>
+          <Text style={[styles.errorSubtext, dynamicStyles.textSecondary]}>
+            Wallet is only available for employees and salon owners
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={{ color: theme.colors.primary }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (
@@ -270,7 +349,7 @@ export default function WalletScreen({ navigation }: WalletScreenProps) {
               Apply for Loan
             </Text>
             <Text style={[styles.loanSubtitle, dynamicStyles.textSecondary]}>
-              Get up to $5,000 instantly
+              Get up to RWF 7,500,000 instantly
             </Text>
           </View>
           <MaterialIcons
@@ -293,49 +372,74 @@ export default function WalletScreen({ navigation }: WalletScreenProps) {
             </TouchableOpacity>
           </View>
 
-          {walletData?.transactions.map((transaction) => (
-            <View
-              key={transaction.id}
-              style={[styles.transactionItem, dynamicStyles.borderLight]}
-            >
-              {/* Transaction Icon */}
-              <View style={[styles.transactionIconContainer, dynamicStyles.iconBackground]}>
-                <MaterialIcons
-                  name="history"
-                  size={22}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </View>
+          {walletData?.transactions.map((transaction) => {
+            const isDebit = transaction.type === "debit";
+            const getTransactionIcon = (title: string) => {
+              const lowerTitle = title.toLowerCase();
+              if (lowerTitle.includes("top-up") || lowerTitle.includes("deposit")) return "add-circle";
+              if (lowerTitle.includes("withdrawal") || lowerTitle.includes("withdraw")) return "remove-circle";
+              if (lowerTitle.includes("commission")) return "trending-up";
+              if (lowerTitle.includes("transfer")) return "swap-horiz";
+              if (lowerTitle.includes("refund")) return "undo";
+              if (lowerTitle.includes("fee")) return "money-off";
+              return isDebit ? "arrow-downward" : "arrow-upward";
+            };
+            
+            const iconName = getTransactionIcon(transaction.title);
+            const iconColor = isDebit ? theme.colors.error : theme.colors.success;
+            const iconBgColor = isDebit 
+              ? (isDark ? theme.colors.error + "20" : theme.colors.error + "15")
+              : (isDark ? theme.colors.success + "20" : theme.colors.success + "15");
 
-              {/* Transaction Details */}
-              <View style={styles.transactionDetails}>
-                <Text style={[styles.transactionTitle, dynamicStyles.text]}>
-                  {transaction.title}
-                </Text>
-                <Text
-                  style={[
-                    styles.transactionDate,
-                    dynamicStyles.textSecondary,
-                  ]}
-                >
-                  {transaction.date}
-                </Text>
-              </View>
-
-              {/* Transaction Amount */}
-              <Text
-                style={[
-                  styles.transactionAmount,
-                  transaction.type === "debit"
-                    ? styles.debitAmount
-                    : styles.creditAmount,
-                ]}
+            return (
+              <TouchableOpacity
+                key={transaction.id}
+                style={[styles.transactionItem, dynamicStyles.card]}
+                onPress={() => {
+                  setSelectedTransaction(transaction);
+                  setShowTransactionDetail(true);
+                }}
+                activeOpacity={0.7}
               >
-                {transaction.type === "debit" ? "-" : "+"}
-                {formatCurrency(transaction.amount)}
-              </Text>
-            </View>
-          ))}
+                {/* Transaction Icon */}
+                <View style={[styles.transactionIconContainer, { backgroundColor: iconBgColor }]}>
+                  <MaterialIcons
+                    name={iconName as any}
+                    size={20}
+                    color={iconColor}
+                  />
+                </View>
+
+                {/* Transaction Details */}
+                <View style={styles.transactionDetails}>
+                  <Text style={[styles.transactionTitle, dynamicStyles.text]} numberOfLines={1}>
+                    {transaction.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.transactionDate,
+                      dynamicStyles.textSecondary,
+                    ]}
+                  >
+                    {transaction.date}
+                  </Text>
+                </View>
+
+                {/* Transaction Amount */}
+                <View style={styles.amountContainer}>
+                  <Text
+                    style={[
+                      styles.transactionAmount,
+                      isDebit ? styles.debitAmount : styles.creditAmount,
+                    ]}
+                  >
+                    {isDebit ? "-" : "+"}
+                    {formatCurrency(transaction.amount)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
 
           {(!walletData?.transactions ||
             walletData.transactions.length === 0) && (
@@ -352,6 +456,40 @@ export default function WalletScreen({ navigation }: WalletScreenProps) {
           )}
         </View>
       </ScrollView>
+
+      {/* Commission Transaction Modal */}
+      {selectedTransaction && (() => {
+        const transactionTypeLower = (
+          selectedTransaction.transactionType || ""
+        ).toLowerCase();
+        const descriptionLower = (selectedTransaction.description || "").toLowerCase();
+        const referenceTypeLower = (selectedTransaction.referenceType || "").toLowerCase();
+        const isDebitCheck = ["withdrawal", "transfer", "fee", "loan_repayment"].includes(
+          selectedTransaction.transactionType || ""
+        );
+        const isCommissionCheck =
+          !isDebitCheck &&
+          (transactionTypeLower === "commission" ||
+            transactionTypeLower === "commission_earned" ||
+            transactionTypeLower.includes("commission") ||
+            descriptionLower.includes("commission") ||
+            referenceTypeLower.includes("commission"));
+
+        if (isCommissionCheck) {
+          return (
+            <CommissionTransactionModal
+              transaction={selectedTransaction}
+              visible={showTransactionDetail}
+              onClose={() => {
+                setShowTransactionDetail(false);
+                setSelectedTransaction(null);
+              }}
+              isDark={isDark}
+            />
+          );
+        }
+        return null;
+      })()}
     </View>
   );
 }
@@ -507,41 +645,43 @@ const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: theme.spacing.sm,
   },
   transactionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(142, 142, 147, 0.1)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
     marginRight: theme.spacing.md,
   },
   transactionDetails: {
     flex: 1,
+    minWidth: 0,
   },
   transactionTitle: {
     fontSize: 15,
-    fontWeight: "500",
-    color: theme.colors.text,
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
+    marginBottom: theme.spacing.xs,
   },
   transactionDate: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
-    marginTop: 2,
+  },
+  amountContainer: {
+    alignItems: "flex-end",
   },
   transactionAmount: {
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   debitAmount: {
-    color: theme.colors.text,
+    color: theme.colors.error,
   },
   creditAmount: {
     color: theme.colors.success,
@@ -555,5 +695,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     marginTop: theme.spacing.sm,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: theme.colors.error,
+    fontFamily: theme.fonts.bold,
+    marginTop: theme.spacing.md,
+    textAlign: "center",
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    marginTop: theme.spacing.sm,
+    textAlign: "center",
+    paddingHorizontal: theme.spacing.lg,
   },
 });

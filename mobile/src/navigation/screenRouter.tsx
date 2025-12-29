@@ -16,6 +16,7 @@ import {
   BookingFlowScreen,
 } from "../screens/booking";
 import { ProfileScreen } from "../screens/profile";
+import FavoritesScreen from "../screens/favorites/FavoritesScreen";
 import {
   SearchScreen,
   AIFaceScanScreen,
@@ -111,6 +112,9 @@ export const renderScreen = (
 
     case "Profile":
       return <ProfileScreen navigation={navigation} />;
+
+    case "Favorites":
+      return <FavoritesScreen navigation={navigation} />;
 
     // Role-specific dashboards
     case "StaffDashboard":
@@ -241,7 +245,12 @@ export const renderScreen = (
       );
 
     case "PaymentHistory":
-      return <PaymentHistoryScreen navigation={navigation} />;
+      return (
+        <PaymentHistoryScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
 
     case "Withdraw":
       return <WithdrawScreen navigation={navigation} />;

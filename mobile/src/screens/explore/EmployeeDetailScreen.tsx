@@ -6,6 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -17,6 +19,7 @@ import {
   Service,
   Salon,
 } from "../../services/explore";
+import { favoritesService } from "../../services/favorites";
 import { Loader } from "../../components/common";
 
 interface EmployeeDetailScreenProps {
@@ -46,9 +49,62 @@ export default function EmployeeDetailScreen({
   const [loading, setLoading] = useState(!route?.params?.employee);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteId, setFavoriteId] = useState<string | null>(null);
 
   const employeeId = route?.params?.employeeId;
   const salonId = route?.params?.salonId;
+
+  const checkFavoriteStatus = useCallback(async () => {
+    if (!employeeId) return;
+    
+    try {
+      const favorites = await favoritesService.getFavorites();
+      const favorited = favorites.find((fav) => fav.salonEmployeeId === employeeId);
+      setIsFavorite(!!favorited);
+      setFavoriteId(favorited?.id || null);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  }, [employeeId]);
+
+  const handleToggleFavorite = async () => {
+    if (!employeeId) return;
+    
+    try {
+      setFavoriteLoading(true);
+      
+      if (isFavorite && favoriteId) {
+        // Remove from favorites
+        await favoritesService.removeFavorite(favoriteId);
+        setIsFavorite(false);
+        setFavoriteId(null);
+        Alert.alert('Removed', 'Removed from your favorites');
+      } else {
+        // Add to favorites
+        const response = await favoritesService.addFavorite(employeeId);
+        
+        // Handle nested response structure
+        const newFavorite = (response as any)?.data || response;
+        const newId = newFavorite?.id;
+        
+        if (newId) {
+          setIsFavorite(true);
+          setFavoriteId(newId);
+          Alert.alert('Added', 'Added to your favorites!');
+        } else {
+          // Fallback: fetch favorites to get the ID
+          await checkFavoriteStatus();
+          Alert.alert('Added', 'Added to your favorites!');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', error.message || 'Failed to update favorites');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
 
   const fetchEmployee = useCallback(async () => {
     if (!employeeId || !salonId) return;
@@ -102,8 +158,9 @@ export default function EmployeeDetailScreen({
       }
       fetchSalon();
       fetchEmployeeServices();
+      checkFavoriteStatus();
     }
-  }, [employeeId, salonId, employee, fetchEmployee, fetchSalon, fetchEmployeeServices]);
+  }, [employeeId, salonId, employee, fetchEmployee, fetchSalon, fetchEmployeeServices, checkFavoriteStatus]);
 
 
   const handleServicePress = (service: Service) => {
@@ -206,14 +263,19 @@ export default function EmployeeDetailScreen({
         </Text>
         <TouchableOpacity
           style={styles.favoriteButton}
-          onPress={() => setIsFavorite(!isFavorite)}
+          onPress={handleToggleFavorite}
+          disabled={favoriteLoading}
           activeOpacity={0.7}
         >
-          <MaterialIcons
-            name={isFavorite ? "favorite" : "favorite-border"}
-            size={24}
-            color={isFavorite ? theme.colors.error : dynamicStyles.text.color}
-          />
+          {favoriteLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          ) : (
+            <MaterialIcons
+              name={isFavorite ? "favorite" : "favorite-border"}
+              size={24}
+              color={isFavorite ? theme.colors.error : dynamicStyles.text.color}
+            />
+          )}
         </TouchableOpacity>
       </View>
 

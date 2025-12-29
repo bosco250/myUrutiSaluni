@@ -662,56 +662,42 @@ export default function StaffDashboardScreen({
               </Text>
             </Pressable>
 
-            {/* Goal Setting Card */}
-            <View style={[styles.quickActionCard, dynamicStyles.card]}>
+            {/* Wallet Card - Replaced Goal Setting */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.quickActionCard,
+                dynamicStyles.card,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => navigation.navigate("Wallet")}
+            >
               <View style={styles.quickActionHeader}>
                 <View
                   style={[
                     styles.quickActionIcon,
                     {
                       backgroundColor: isDark
-                        ? `${theme.colors.secondary}20`
-                        : "#F3E5F5",
+                        ? `${theme.colors.warning}20`
+                        : "#FFF3E0",
                     },
                   ]}
                 >
                   <MaterialIcons
-                    name="track-changes"
+                    name="account-balance-wallet"
                     size={theme.sizes.icon.md}
-                    color={isDark ? theme.colors.secondary : "#9C27B0"}
+                    color={isDark ? theme.colors.warning : "#FF9800"}
                   />
-                </View>
-                <View
-                  style={[
-                    styles.activeBadge,
-                    {
-                      backgroundColor: isDark
-                        ? `${theme.colors.success}20`
-                        : "#E8F5E9",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.activeBadgeText,
-                      {
-                        color: isDark ? theme.colors.success : "#4CAF50",
-                      },
-                    ]}
-                  >
-                    Active
-                  </Text>
                 </View>
               </View>
               <Text
                 style={[styles.quickActionLabel, dynamicStyles.textSecondary]}
               >
-                Goal Setting
+                Wallet
               </Text>
               <Text style={[styles.quickActionValue, dynamicStyles.text]}>
-                2 Targets
+                View Balance
               </Text>
-            </View>
+            </Pressable>
 
             {/* Explore Card */}
             <Pressable

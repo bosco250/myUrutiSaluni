@@ -5,15 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { salonService, SalonEmployee } from '../../services/salon';
+import { Loader } from '../../components/common';
 
 interface EmployeeDetailScreenProps {
   navigation: {
@@ -124,26 +126,30 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer, dynamicStyles.container]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <Loader fullscreen message="Loading employee details..." />
+      </SafeAreaView>
     );
   }
 
   if (!employee) {
     return (
-      <View style={[styles.container, styles.loadingContainer, dynamicStyles.container]}>
-        <MaterialIcons name="error-outline" size={48} color={theme.colors.textSecondary} />
-        <Text style={[styles.errorText, dynamicStyles.textSecondary]}>Employee not found</Text>
-        <TouchableOpacity style={styles.backButtonAlt} onPress={() => navigation.goBack()}>
-          <Text style={{ color: theme.colors.primary }}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <View style={styles.loadingContainer}>
+          <MaterialIcons name="error-outline" size={48} color={theme.colors.textSecondary} />
+          <Text style={[styles.errorText, dynamicStyles.textSecondary]}>Employee not found</Text>
+          <TouchableOpacity style={styles.backButtonAlt} onPress={() => navigation.goBack()}>
+            <Text style={{ color: theme.colors.primary }}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
@@ -275,7 +281,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

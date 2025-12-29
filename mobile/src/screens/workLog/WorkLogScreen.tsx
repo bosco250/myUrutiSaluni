@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -110,6 +110,9 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
   const [error, setError] = useState<string | null>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
+  
+  // Track if we're currently loading to prevent infinite loops
+  const loadingRef = useRef(false);
 
   // Initialize calendar days
   useEffect(() => {
@@ -121,14 +124,23 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
     const fetchEmployeeId = async () => {
       if (user?.id) {
         try {
+          setLoading(true);
           const employee = await staffService.getEmployeeByUserId(String(user.id));
           if (employee) {
             const employeeData = Array.isArray(employee) ? employee[0] : employee;
             setEmployeeId(employeeData.id);
+          } else {
+            // No employee record found
+            setEmployeeId(null);
           }
         } catch (err) {
           console.error('Error fetching employee ID:', err);
+          setEmployeeId(null);
+        } finally {
+          setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
     fetchEmployeeId();
@@ -138,11 +150,20 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
   const fetchWorkLogData = useCallback(async () => {
     if (!employeeId) {
       setLoading(false);
+      setRefreshing(false);
+      loadingRef.current = false;
+      return;
+    }
+
+    // Prevent concurrent loads
+    if (loadingRef.current) {
       return;
     }
 
     try {
+      loadingRef.current = true;
       setError(null);
+      setLoading(true);
       const dateString = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
       // Fetch work log for selected date
@@ -161,11 +182,12 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      loadingRef.current = false;
     }
   }, [employeeId, selectedDate, viewMode]);
 
   useEffect(() => {
-    if (employeeId) {
+    if (employeeId && !loadingRef.current) {
       fetchWorkLogData();
     }
   }, [employeeId, selectedDate, viewMode, fetchWorkLogData]);
@@ -341,6 +363,38 @@ export const WorkLogScreen = ({ navigation }: { navigation: any }) => {
   const getMonthYearLabel = (): string => {
     return `${getMonthName(selectedDate)} ${selectedDate.getFullYear()}`;
   };
+
+  // Show empty state if employee is not assigned to any salon
+  if (!loading && !employeeId) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.emptyStateIconContainer}>
+            <MaterialIcons 
+              name="business-center" 
+              size={64} 
+              color={theme.colors.textSecondary} 
+            />
+          </View>
+          <Text style={styles.emptyStateTitle}>
+            No Salon Assignment
+          </Text>
+          <Text style={styles.emptyStateMessage}>
+            You are not currently assigned to any salon.{'\n'}
+            Please contact your salon owner or administrator to get assigned.
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyStateButton}
+            onPress={() => navigation?.goBack()}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
+            <Text style={styles.emptyStateButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -842,6 +896,57 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  emptyStateIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.backgroundSecondary,
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+    color: theme.colors.text,
+  },
+  emptyStateMessage: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: theme.spacing.xl,
+    color: theme.colors.textSecondary,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 16,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    backgroundColor: theme.colors.primary,
+  },
+  emptyStateButtonText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+    marginLeft: theme.spacing.sm,
   },
   summarySection: {
     marginTop: 32,

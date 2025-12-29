@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useAuth, useTheme } from "../../context";
 import { useEmployeeId } from "../../hooks/useEmployeeId";
@@ -19,6 +20,7 @@ import { workLogService, WorkLogDay } from "../../services/workLog";
 import { staffService } from "../../services/staff";
 import { salesService, Sale } from "../../services/sales";
 import { Appointment, AppointmentStatus } from "../../services/appointments";
+import { salonService, SalonDetails } from "../../services/salon";
 import {
   formatDateDisplay,
   formatTime,
@@ -56,7 +58,7 @@ interface ServiceTask {
 export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   const { user } = useAuth();
   const { isDark } = useTheme();
-  const employeeId = useEmployeeId();
+  const defaultEmployeeId = useEmployeeId();
 
   // Dynamic Theme Colors
   const bgColor = isDark ? theme.colors.gray900 : theme.colors.background;
@@ -70,6 +72,12 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
 
+  // Salon Selection State
+  const [salons, setSalons] = useState<SalonDetails[]>([]);
+  const [selectedSalon, setSelectedSalon] = useState<SalonDetails | null>(null);
+  const [showSalonPicker, setShowSalonPicker] = useState(false);
+  const [employeeId, setEmployeeId] = useState<string | null>(defaultEmployeeId);
+
   // Work Log State
   const [workLogDay, setWorkLogDay] = useState<WorkLogDay | null>(null);
 
@@ -81,6 +89,9 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // Track which task is loading
+  
+  // Track if we're currently loading to prevent infinite loops
+  const loadingRef = useRef(false);
 
   // Use shared hook for appointments
   const { appointments, refetch: refetchAppointments } =
@@ -91,104 +102,100 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     setCalendarDays(generateCalendarDaysForMonth(selectedDate));
   }, [selectedDate]);
 
-  // Define fetchTasks and fetchSales before fetchData so they can be used in dependencies
-  const fetchTasks = useCallback(async () => {
-    // Appointments are already fetched by useAppointmentsForDate hook
-    // Just transform them to tasks
-    const appointmentTasks: ServiceTask[] = appointments.map((apt) => ({
-      id: apt.id,
-      type: "appointment",
-      serviceName: apt.service?.name || "Service",
-      customerName: apt.customer?.user?.fullName || "Customer",
-      scheduledStart: apt.scheduledStart,
-      scheduledEnd: apt.scheduledEnd,
-      status: apt.status,
-      // Ensure numbers are properly parsed to prevent string concatenation
-      serviceAmount: Number(apt.serviceAmount) || Number(apt.service?.basePrice) || 0,
-      appointment: apt,
-    }));
+  // Load salons on mount
+  useEffect(() => {
+    const loadSalons = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        loadingRef.current = false;
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        const salonList = await salonService.getMySalons();
+        setSalons(salonList);
+        
+        if (salonList.length > 0) {
+          // Auto-select first salon if none selected or if selected salon is not in list
+          const currentSalon = selectedSalon && salonList.find(s => s.id === selectedSalon.id)
+            ? selectedSalon
+            : salonList[0];
+          
+          if (!selectedSalon || !salonList.find(s => s.id === selectedSalon.id)) {
+            setSelectedSalon(currentSalon);
+          }
+          
+          // Fetch employee ID for current salon
+          try {
+            const empRecord = await salonService.getCurrentEmployee(currentSalon.id);
+            if (empRecord) {
+              setEmployeeId(empRecord.id);
+            } else {
+              setEmployeeId(null);
+              setLoading(false);
+              loadingRef.current = false;
+            }
+          } catch (err) {
+            console.error('Error fetching employee record:', err);
+            setEmployeeId(null);
+            setLoading(false);
+            loadingRef.current = false;
+          }
+        } else {
+          // No salons found
+          setLoading(false);
+          loadingRef.current = false;
+        }
+      } catch (err) {
+        console.error('Error loading salons:', err);
+        setLoading(false);
+        loadingRef.current = false;
+      }
+    };
+    
+    loadSalons();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-    setTasks(appointmentTasks);
-  }, [appointments]);
-
-  const fetchSales = useCallback(async () => {
+  // Handle salon selection
+  const handleSalonSelect = async (salon: SalonDetails) => {
+    setShowSalonPicker(false);
+    setSelectedSalon(salon);
+    
+    // Fetch employee ID for selected salon
     try {
-      const periodStart = new Date(selectedDate);
-      periodStart.setHours(0, 0, 0, 0);
-      const periodEnd = new Date(selectedDate);
-      periodEnd.setHours(23, 59, 59, 999);
-
-      const startDateStr = formatDate(periodStart);
-      const endDateStr = formatDate(periodEnd);
-
-      const salesResponse = await salesService.getSales(
-        undefined,
-        1,
-        100,
-        startDateStr,
-        endDateStr
-      );
-
-      const salesData = salesResponse.data || [];
-
-      // Add sales to tasks
-      const saleTasks: ServiceTask[] = salesData
-        .filter((sale: Sale) => {
-          const employeeCommissions =
-            sale.commissions?.filter(
-              (c) => c.salonEmployee?.id === employeeId
-            ) || [];
-          return (
-            employeeCommissions.length > 0 ||
-            sale.items?.some((item) => item.salonEmployeeId === employeeId)
-          );
-        })
-        .map((sale: Sale) => {
-          const employeeCommissions =
-            sale.commissions?.filter(
-              (c) => c.salonEmployee?.id === employeeId
-            ) || [];
-          const totalCommission = employeeCommissions.reduce(
-            (sum, c) => sum + Number(c.amount),
-            0
-          );
-          const itemNames =
-            sale.items
-              ?.map((item) => item.name || "Service/Product")
-              .join(", ") || "Sale";
-
-          return {
-            id: `sale_${sale.id}`,
-            type: "sale",
-            serviceName:
-              itemNames.length > 30
-                ? itemNames.substring(0, 30) + "..."
-                : itemNames,
-            customerName: sale.customer?.fullName || "Walk-in Customer",
-            scheduledStart: sale.createdAt,
-            scheduledEnd: sale.createdAt,
-            status: "sale_completed" as const,
-            serviceAmount: Number(sale.totalAmount) || 0,
-            saleId: sale.id,
-            commissionAmount: totalCommission,
-          };
-        });
-
-      setTasks((prev) => [...prev, ...saleTasks]);
-    } catch (error) {
-      console.log("Could not fetch sales:", error);
+      const empRecord = await salonService.getCurrentEmployee(salon.id);
+      if (empRecord) {
+        setEmployeeId(empRecord.id);
+      } else {
+        setEmployeeId(null);
+      }
+    } catch (err) {
+      console.error('Error fetching employee record:', err);
+      setEmployeeId(null);
     }
-  }, [selectedDate, employeeId]);
+  };
+
 
   // Fetch all data
   const fetchData = useCallback(async () => {
     if (!employeeId) {
       setLoading(false);
+      setRefreshing(false);
+      loadingRef.current = false;
+      return;
+    }
+
+    // Prevent concurrent loads
+    if (loadingRef.current) {
       return;
     }
 
     try {
+      loadingRef.current = true;
       setError(null);
+      setLoading(true);
       const dateString = formatDate(selectedDate);
 
       if (viewMode === "worklog") {
@@ -203,7 +210,87 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
         await workLogService.getWorkLogSummary(employeeId, "week");
       } else {
         // Fetch tasks data (appointments + sales)
-        await Promise.all([fetchTasks(), fetchSales()]);
+        // Transform appointments to tasks
+        const appointmentTasks: ServiceTask[] = appointments.map((apt) => ({
+          id: apt.id,
+          type: "appointment",
+          serviceName: apt.service?.name || "Service",
+          customerName: apt.customer?.user?.fullName || "Customer",
+          scheduledStart: apt.scheduledStart,
+          scheduledEnd: apt.scheduledEnd,
+          status: apt.status,
+          serviceAmount: Number(apt.serviceAmount) || Number(apt.service?.basePrice) || 0,
+          appointment: apt,
+        }));
+
+        // Fetch sales
+        const periodStart = new Date(selectedDate);
+        periodStart.setHours(0, 0, 0, 0);
+        const periodEnd = new Date(selectedDate);
+        periodEnd.setHours(23, 59, 59, 999);
+
+        const startDateStr = formatDate(periodStart);
+        const endDateStr = formatDate(periodEnd);
+
+        try {
+          const salesResponse = await salesService.getSales(
+            undefined,
+            1,
+            100,
+            startDateStr,
+            endDateStr
+          );
+
+          const salesData = salesResponse.data || [];
+
+          // Add sales to tasks
+          const saleTasks: ServiceTask[] = salesData
+            .filter((sale: Sale) => {
+              const employeeCommissions =
+                sale.commissions?.filter(
+                  (c) => c.salonEmployee?.id === employeeId
+                ) || [];
+              return (
+                employeeCommissions.length > 0 ||
+                sale.items?.some((item) => item.salonEmployeeId === employeeId)
+              );
+            })
+            .map((sale: Sale) => {
+              const employeeCommissions =
+                sale.commissions?.filter(
+                  (c) => c.salonEmployee?.id === employeeId
+                ) || [];
+              const totalCommission = employeeCommissions.reduce(
+                (sum, c) => sum + Number(c.amount),
+                0
+              );
+              const itemNames =
+                sale.items
+                  ?.map((item) => item.name || "Service/Product")
+                  .join(", ") || "Sale";
+
+              return {
+                id: `sale_${sale.id}`,
+                type: "sale",
+                serviceName:
+                  itemNames.length > 30
+                    ? itemNames.substring(0, 30) + "..."
+                    : itemNames,
+                customerName: sale.customer?.fullName || "Walk-in Customer",
+                scheduledStart: sale.createdAt,
+                scheduledEnd: sale.createdAt,
+                status: "sale_completed" as const,
+                serviceAmount: Number(sale.totalAmount) || 0,
+                saleId: sale.id,
+                commissionAmount: totalCommission,
+              };
+            });
+
+          setTasks([...appointmentTasks, ...saleTasks]);
+        } catch (error) {
+          console.log("Could not fetch sales:", error);
+          setTasks(appointmentTasks);
+        }
       }
     } catch (err: any) {
       console.error("Error fetching data:", err);
@@ -211,20 +298,27 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      loadingRef.current = false;
     }
-  }, [employeeId, selectedDate, viewMode, fetchTasks, fetchSales]);
+  }, [employeeId, selectedDate, viewMode, appointments]);
 
+  // Initial load and when key dependencies change
   useEffect(() => {
-    if (employeeId) {
+    // Don't fetch if no salons
+    if (salons.length === 0) {
+      setLoading(false);
+      loadingRef.current = false;
+      return;
+    }
+    
+    if (employeeId && !loadingRef.current) {
       fetchData();
+    } else if (!employeeId && salons.length > 0) {
+      // If we have salons but no employee ID, stop loading
+      setLoading(false);
+      loadingRef.current = false;
     }
-  }, [employeeId, selectedDate, viewMode, fetchData]);
-
-  useEffect(() => {
-    if (viewMode === "tasks" && appointments.length > 0) {
-      fetchTasks();
-    }
-  }, [appointments, viewMode, fetchTasks]);
+  }, [employeeId, selectedDate, viewMode, fetchData, salons.length]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -414,6 +508,38 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
 
   if (loading && !refreshing) {
     return <Loader fullscreen message="Loading work log..." />;
+  }
+
+  // Show empty state if employee is not assigned to any salon
+  if (!loading && salons.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={["top"]}>
+        <View style={[styles.emptyStateContainer, { backgroundColor: bgColor }]}>
+          <View style={[styles.emptyStateIconContainer, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary }]}>
+            <MaterialIcons 
+              name="business-center" 
+              size={64} 
+              color={isDark ? theme.colors.gray600 : theme.colors.textSecondary} 
+            />
+          </View>
+          <Text style={[styles.emptyStateTitle, { color: textColor }]}>
+            No Salon Assignment
+          </Text>
+          <Text style={[styles.emptyStateMessage, { color: subTextColor }]}>
+            You are not currently assigned to any salon. {'\n'}
+            Please contact your salon owner or administrator to get assigned.
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyStateButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => navigation?.navigate("Profile")}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="person" size={20} color="#FFFFFF" />
+            <Text style={styles.emptyStateButtonText}>Go to Profile</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const handleTaskPress = (task: ServiceTask) => {
@@ -684,6 +810,66 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     );
   };
 
+  // Render salon picker modal
+  const renderSalonPicker = () => {
+    const dynamicStyles = {
+      pickerModal: {
+        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+      },
+      text: {
+        color: isDark ? '#FFFFFF' : '#000000',
+      },
+      textSecondary: {
+        color: isDark ? '#8E8E93' : '#6D6D70',
+      },
+    };
+
+    return (
+      <Modal
+        visible={showSalonPicker}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSalonPicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowSalonPicker(false)}
+        >
+          <View style={[styles.modalContent, dynamicStyles.pickerModal]}>
+            <Text style={[styles.modalTitle, dynamicStyles.text]}>Select Workplace</Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {salons.map(salon => (
+                <TouchableOpacity
+                  key={salon.id}
+                  style={[
+                    styles.salonOption,
+                    selectedSalon?.id === salon.id && { backgroundColor: theme.colors.primary + '10' }
+                  ]}
+                  onPress={() => handleSalonSelect(salon)}
+                >
+                  <View style={styles.salonOptionInfo}>
+                    <Text style={[styles.salonOptionName, dynamicStyles.text]}>{salon.name}</Text>
+                    <Text style={[styles.salonOptionAddress, dynamicStyles.textSecondary]}>{salon.city || 'Location'}</Text>
+                  </View>
+                  {selectedSalon?.id === salon.id && (
+                    <MaterialIcons name="check-circle" size={24} color={theme.colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity 
+              style={styles.modalCancelButton}
+              onPress={() => setShowSalonPicker(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={["top"]}>
         {/* Header with Week Navigation */}
@@ -779,6 +965,41 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           />
         }
       >
+        {/* Salon Selector */}
+        {salons.length > 0 && (
+          <TouchableOpacity 
+            style={[
+              styles.salonCard, 
+              { 
+                backgroundColor: cardColor,
+                borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+                shadowColor: isDark ? '#000000' : '#000000',
+              }
+            ]}
+            onPress={() => salons.length > 1 && setShowSalonPicker(true)}
+            disabled={salons.length <= 1}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.salonIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+              <FontAwesome5 name="store" size={22} color={theme.colors.primary} />
+            </View>
+            <View style={styles.salonInfo}>
+              <Text style={[styles.salonLabel, { color: subTextColor }]}>Current Workplace</Text>
+              <Text style={[styles.salonName, { color: textColor }]} numberOfLines={1}>
+                {selectedSalon?.name || 'Select Salon'}
+              </Text>
+              {selectedSalon?.city && (
+                <Text style={[styles.salonAddress, { color: subTextColor }]} numberOfLines={1}>
+                  {selectedSalon.city}
+                </Text>
+              )}
+            </View>
+            {salons.length > 1 && (
+              <MaterialIcons name="keyboard-arrow-down" size={24} color={subTextColor} />
+            )}
+          </TouchableOpacity>
+        )}
+
         {/* Calendar Strip */}
         <CalendarStrip
           days={calendarDays}
@@ -1013,6 +1234,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           </>
         )}
       </ScrollView>
+      
+      {renderSalonPicker()}
     </SafeAreaView>
   );
 };
@@ -1419,6 +1642,146 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 14,
+  },
+  // Empty State styles
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyStateIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  emptyStateMessage: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  emptyStateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyStateButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  // Salon Card
+  salonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: theme.spacing.md + 2,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  salonIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
+  },
+  salonInfo: {
+    flex: 1,
+  },
+  salonLabel: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    marginBottom: 4,
+  },
+  salonName: {
+    fontSize: 16,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+    marginBottom: 2,
+  },
+  salonAddress: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+  },
+  modalContent: {
+    width: "100%",
+    borderRadius: 20,
+    padding: theme.spacing.lg,
+    maxHeight: "80%",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: theme.spacing.md,
+    fontFamily: theme.fonts.bold,
+  },
+  salonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 12,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  salonOptionInfo: {
+    flex: 1,
+  },
+  salonOptionName: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
+  },
+  salonOptionAddress: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+  },
+  modalCancelButton: {
+    marginTop: theme.spacing.md,
+    alignItems: "center",
+    padding: theme.spacing.md,
+    borderRadius: 12,
+  },
+  modalCancelText: {
+    color: theme.colors.error,
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
   },
 });
 

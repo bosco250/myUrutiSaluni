@@ -88,11 +88,12 @@ export class PushNotificationService {
       body,
       data,
       channelId: options?.channelId || 'default',
-      priority: options?.priority || 'high',
+      priority: options?.priority || 'high', // Always use high priority for immediate delivery
       badge: options?.badge,
     };
 
     try {
+      // Send immediately without any delay - like WhatsApp instant delivery
       const response = await fetch(this.expoPushUrl, {
         method: 'POST',
         headers: {
@@ -101,6 +102,7 @@ export class PushNotificationService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(message),
+        // No timeout - ensure immediate delivery attempt
       });
 
       const result = await response.json();

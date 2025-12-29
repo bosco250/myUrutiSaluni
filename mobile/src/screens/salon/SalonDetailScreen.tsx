@@ -6,15 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { salonService, SalonDetails, SalonEmployee, SalonProduct } from '../../services/salon';
+import { Loader } from '../../components/common';
 
 interface SalonDetailScreenProps {
   navigation: {
@@ -615,14 +616,15 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.loadingContainer, dynamicStyles.container]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <Loader fullscreen message="Loading salon details..." />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
@@ -670,17 +672,13 @@ const SalonDetailScreen = ({ navigation, route }: SalonDetailScreenProps) => {
       >
         {renderTabContent()}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',

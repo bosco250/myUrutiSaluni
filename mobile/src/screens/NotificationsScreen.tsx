@@ -223,12 +223,34 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
       else if (notification.type?.startsWith('commission_') || notification.type === 'commission_earned' || notification.type === 'commission_paid') {
         navigation?.navigate('Commissions');
       }
-      // Handle payment/sale notifications - go to PaymentHistory
-      else if (notification.type?.startsWith('payment_') || notification.type?.startsWith('sale_') || notification.type === 'payment') {
+      // Handle sale notifications - go to SaleDetail for receipt
+      else if (notification.type?.startsWith('sale_') || notification.type === 'sale_completed') {
+        const saleId = metadata.saleId || (notification as any).saleId;
+        if (saleId) {
+          navigation?.navigate('SaleDetail', {
+            saleId: saleId,
+          });
+        } else {
+          // Fallback: navigate to SalesHistory if no saleId
+          navigation?.navigate('SalesHistory');
+        }
+      }
+      // Handle payment notifications - go to PaymentHistory
+      else if (notification.type?.startsWith('payment_') || notification.type === 'payment') {
         const paymentId = metadata.paymentId || (notification as any).paymentId;
         navigation?.navigate('PaymentHistory', {
           highlightPaymentId: paymentId,
         });
+      }
+      // Handle loyalty/points notifications - go to Loyalty screen
+      else if (
+        notification.type?.startsWith('points_') || 
+        notification.type === 'points_earned' || 
+        notification.type === 'points_redeemed' ||
+        notification.type === 'reward_available' || 
+        notification.type === 'vip_status_achieved'
+      ) {
+        navigation?.navigate('Loyalty');
       }
       // For other notifications, stay on notifications screen or navigate to relevant screen
       else {

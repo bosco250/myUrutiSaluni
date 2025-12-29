@@ -6,16 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { api } from '../../services/api';
 import { salesService } from '../../services/sales';
 import { salonService } from '../../services/salon';
+import { Loader } from '../../components/common';
 
 interface FinanceScreenProps {
   navigation: {
@@ -615,16 +616,15 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, dynamicStyles.textSecondary]}>Loading financial data...</Text>
-      </View>
+        <Loader fullscreen message="Loading financial data..." />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
@@ -664,7 +664,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -672,19 +672,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-  },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl + 20,
+    // paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   headerTitle: {

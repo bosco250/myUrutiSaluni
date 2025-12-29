@@ -6,15 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   TextInput,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService } from '../../services/salon';
 import { api } from '../../services/api';
+import { Loader } from '../../components/common';
 
 interface CustomerManagementScreenProps {
   navigation: {
@@ -303,7 +304,7 @@ export default function CustomerManagementScreen({ navigation, route }: Customer
   );
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -319,9 +320,7 @@ export default function CustomerManagementScreen({ navigation, route }: Customer
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
+        <Loader fullscreen message="Loading customers..." />
       ) : (
         <ScrollView
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -395,7 +394,7 @@ export default function CustomerManagementScreen({ navigation, route }: Customer
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -418,11 +417,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollContent: {
     padding: 16,

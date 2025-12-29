@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 
@@ -48,6 +49,7 @@ export const Loader: React.FC<LoaderProps> = ({
   fullscreen = false,
 }) => {
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   
   // Animation values
   const rotateValue = useRef(new Animated.Value(0)).current;
@@ -312,10 +314,21 @@ export const Loader: React.FC<LoaderProps> = ({
     );
   }
 
-  // Fullscreen mode
+  // Fullscreen mode - use absolute positioning to fill screen but respect bottom navigation
   if (fullscreen && !overlay) {
+    // Bottom navigation height is approximately 80-90px, plus safe area bottom inset
+    const bottomNavHeight = 90;
+    const bottomInset = insets.bottom;
+    const totalBottomSpace = bottomNavHeight + bottomInset;
+    
     return (
-      <View style={[styles.fullscreenContainer, { backgroundColor: bgColor }]}>
+      <View style={[
+        styles.fullscreenContainer, 
+        { 
+          backgroundColor: bgColor,
+          bottom: totalBottomSpace,
+        }
+      ]}>
         <LoaderContent />
         <MessageComponent />
         <Text style={[styles.brandText, { color: theme.colors.primary }]}>
@@ -449,9 +462,13 @@ const styles = StyleSheet.create({
 
   // Fullscreen
   fullscreenContainer: {
-    flex: 1,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 1000,
   },
   brandText: {
     position: "absolute",

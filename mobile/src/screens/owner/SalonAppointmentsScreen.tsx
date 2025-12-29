@@ -5,11 +5,11 @@ import {
   StyleSheet,
   SectionList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
@@ -19,6 +19,7 @@ import {
   Appointment,
   AppointmentStatus,
 } from '../../services/appointments';
+import { Loader } from '../../components/common';
 
 interface SalonAppointmentsScreenProps {
   navigation: {
@@ -446,15 +447,15 @@ export default function SalonAppointmentsScreen({ navigation }: SalonAppointment
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, dynamicStyles.textSecondary]}>Loading appointments...</Text>
-      </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <Loader fullscreen message="Loading appointments..." />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -534,23 +535,13 @@ export default function SalonAppointmentsScreen({ navigation }: SalonAppointment
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
   },
   header: {
     flexDirection: 'row',

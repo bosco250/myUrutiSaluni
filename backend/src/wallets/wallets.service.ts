@@ -36,6 +36,8 @@ export class WalletsService {
     type: WalletTransactionType,
     amount: number,
     description?: string,
+    referenceType?: string,
+    referenceId?: string,
   ): Promise<WalletTransaction> {
     return this.dataSource.transaction(async (manager) => {
       const wallet = await manager.findOne(Wallet, { where: { id: walletId } });
@@ -65,6 +67,8 @@ export class WalletsService {
         balanceAfter,
         status: WalletTransactionStatus.COMPLETED,
         description,
+        referenceType,
+        referenceId,
       });
 
       return manager.save(transaction);

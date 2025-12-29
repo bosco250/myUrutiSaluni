@@ -13,8 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
-import { loyaltyService, LoyaltyData } from "../../services/loyalty";
+import { loyaltyService, LoyaltyData, LoyaltyPointTransaction } from "../../services/loyalty";
 import { customersService } from "../../services/customers";
+import { format, formatDistanceToNow } from "date-fns";
 
 // Mock data - in production, this would come from the API
 const mockLoyaltyData: LoyaltyData = {
@@ -62,6 +63,8 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pointsHistory, setPointsHistory] = useState<LoyaltyPointTransaction[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const dynamicStyles = {
     container: {
@@ -148,15 +151,32 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
     }
   }, [customerId]);
 
+  // Fetch points history
+  const fetchPointsHistory = useCallback(async () => {
+    if (!customerId) return;
+
+    try {
+      setHistoryLoading(true);
+      const history = await loyaltyService.getPointsHistory(customerId, 1, 20);
+      setPointsHistory(history.transactions || []);
+    } catch (error: any) {
+      console.error("Error fetching points history:", error);
+      setPointsHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [customerId]);
+
   useEffect(() => {
     if (customerId) {
       fetchLoyaltyData();
+      fetchPointsHistory();
     }
-  }, [customerId, fetchLoyaltyData]);
+  }, [customerId, fetchLoyaltyData, fetchPointsHistory]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchLoyaltyData();
+    await Promise.all([fetchLoyaltyData(), fetchPointsHistory()]);
     setRefreshing(false);
   };
 
@@ -185,6 +205,48 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
 
   const getProgressPercentage = (progress: number, required: number) => {
     return Math.min((progress / required) * 100, 100);
+  };
+
+  const getTransactionIcon = (sourceType: string, points: number) => {
+    if (points > 0) {
+      return "add-circle";
+    } else {
+      return "remove-circle";
+    }
+  };
+
+  const getTransactionColor = (points: number) => {
+    return points > 0 ? theme.colors.success : theme.colors.error;
+  };
+
+  const getTransactionTypeLabel = (sourceType: string) => {
+    const labels: Record<string, string> = {
+      sale: "Purchase",
+      appointment: "Appointment",
+      redemption: "Redeemed",
+      manual: "Manual Adjustment",
+      bonus: "Bonus Points",
+      correction: "Correction",
+    };
+    return labels[sourceType] || sourceType;
+  };
+
+  const formatTransactionDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+      if (diffInHours < 24) {
+        return formatDistanceToNow(date, { addSuffix: true });
+      } else if (diffInHours < 48) {
+        return "Yesterday";
+      } else {
+        return format(date, "MMM d, yyyy");
+      }
+    } catch {
+      return dateString;
+    }
   };
 
   if (loading) {
@@ -347,6 +409,112 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
           ))}
         </View>
 
+        {/* Loyalty History Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+            Loyalty History
+          </Text>
+
+          {historyLoading ? (
+            <View style={styles.historyLoadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.historyLoadingText, dynamicStyles.textSecondary]}>
+                Loading history...
+              </Text>
+            </View>
+          ) : pointsHistory.length === 0 ? (
+            <View style={[styles.emptyHistoryCard, dynamicStyles.card]}>
+              <MaterialIcons
+                name="history"
+                size={48}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <Text style={[styles.emptyHistoryText, dynamicStyles.text]}>
+                No transaction history
+              </Text>
+              <Text style={[styles.emptyHistorySubtext, dynamicStyles.textSecondary]}>
+                Your points transactions will appear here
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.historyContainer}>
+              {pointsHistory.map((transaction) => {
+                const isPositive = transaction.points > 0;
+                const transactionColor = getTransactionColor(transaction.points);
+                const iconName = getTransactionIcon(transaction.sourceType, transaction.points);
+
+                return (
+                  <View
+                    key={transaction.id}
+                    style={[styles.historyCard, dynamicStyles.card]}
+                  >
+                    {/* Icon and Points */}
+                    <View style={styles.historyCardLeft}>
+                      <View
+                        style={[
+                          styles.historyIconContainer,
+                          { backgroundColor: transactionColor + "20" },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name={iconName as any}
+                          size={24}
+                          color={transactionColor}
+                        />
+                      </View>
+                      <View style={styles.historyDetails}>
+                        <Text style={[styles.historyType, dynamicStyles.text]}>
+                          {getTransactionTypeLabel(transaction.sourceType)}
+                        </Text>
+                        {transaction.description && (
+                          <Text
+                            style={[
+                              styles.historyDescription,
+                              dynamicStyles.textSecondary,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {transaction.description}
+                          </Text>
+                        )}
+                        <Text
+                          style={[
+                            styles.historyDate,
+                            dynamicStyles.textSecondary,
+                          ]}
+                        >
+                          {formatTransactionDate(transaction.createdAt)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Points Amount and Balance */}
+                    <View style={styles.historyCardRight}>
+                      <Text
+                        style={[
+                          styles.historyPoints,
+                          { color: transactionColor },
+                        ]}
+                      >
+                        {isPositive ? "+" : ""}
+                        {formatNumber(Math.abs(transaction.points))}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.historyBalance,
+                          dynamicStyles.textSecondary,
+                        ]}
+                      >
+                        Balance: {formatNumber(transaction.balanceAfter)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
         {/* How to Earn Points */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, dynamicStyles.text]}>
@@ -361,7 +529,7 @@ export default function LoyaltyScreen({ navigation }: LoyaltyScreenProps) {
                 color={theme.colors.primary}
               />
               <Text style={[styles.infoText, dynamicStyles.text]}>
-                1 point for every $1 spent on services
+                1 point for every RWF 1,500 spent on services
               </Text>
             </View>
             <View style={styles.infoRow}>
@@ -580,6 +748,95 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: theme.colors.error,
+    fontFamily: theme.fonts.regular,
+  },
+  historyLoadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.xl,
+    gap: theme.spacing.md,
+  },
+  historyLoadingText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+  },
+  emptyHistoryCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.xl,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.md,
+  },
+  emptyHistoryText: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    textAlign: "center",
+  },
+  emptyHistorySubtext: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+  },
+  historyContainer: {
+    gap: theme.spacing.sm,
+  },
+  historyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.background,
+    borderRadius: 12,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  historyCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: theme.spacing.md,
+  },
+  historyIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: theme.spacing.md,
+  },
+  historyDetails: {
+    flex: 1,
+  },
+  historyType: {
+    fontSize: 15,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    marginBottom: 2,
+  },
+  historyDescription: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    marginBottom: 4,
+  },
+  historyDate: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+  },
+  historyCardRight: {
+    alignItems: "flex-end",
+  },
+  historyPoints: {
+    fontSize: 18,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+    marginBottom: 4,
+  },
+  historyBalance: {
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
 });

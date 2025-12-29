@@ -13,6 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { api } from '../../services/api';
+import { Loader } from '../../components/common';
 
 interface LoanRepaymentScreenProps {
   navigation: {
@@ -142,17 +143,15 @@ export default function LoanRepaymentScreen({ navigation, route }: LoanRepayment
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
+        <Loader fullscreen message="Loading loan details..." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
@@ -238,11 +237,6 @@ export default function LoanRepaymentScreen({ navigation, route }: LoanRepayment
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',

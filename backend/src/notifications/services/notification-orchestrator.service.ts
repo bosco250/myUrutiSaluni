@@ -10,6 +10,7 @@ import {
 import { NotificationPreference } from '../entities/notification-preference.entity';
 import { EmailService } from './email.service';
 import { InAppNotificationService } from './in-app-notification.service';
+import { PushNotificationService } from './push-notification.service';
 import { EmailTemplateVariables } from './email-template.service';
 import { format } from 'date-fns';
 
@@ -37,6 +38,7 @@ export class NotificationOrchestratorService {
     private preferencesRepository: Repository<NotificationPreference>,
     private emailService: EmailService,
     private inAppService: InAppNotificationService,
+    private pushService: PushNotificationService,
   ) {}
 
   /**
@@ -59,6 +61,7 @@ export class NotificationOrchestratorService {
       const channels = options?.channels || [
         NotificationChannel.IN_APP,
         NotificationChannel.EMAIL,
+        NotificationChannel.PUSH,
       ];
       const handler = this.getHandler(type);
 
@@ -80,6 +83,13 @@ export class NotificationOrchestratorService {
           await this.sendEmailNotification(type, context, notificationData);
         } else if (channel === NotificationChannel.IN_APP) {
           await this.sendInAppNotification(
+            type,
+            context,
+            notificationData,
+            options?.priority,
+          );
+        } else if (channel === NotificationChannel.PUSH) {
+          await this.sendPushNotification(
             type,
             context,
             notificationData,
@@ -253,6 +263,129 @@ export class NotificationOrchestratorService {
     } catch (error) {
       this.logger.error(`❌ Failed to save in-app notification:`, error.stack);
       throw error;
+    }
+  }
+
+  private async sendPushNotification(
+    type: NotificationType,
+    context: NotificationContext,
+    data: { title: string; message: string; variables: EmailTemplateVariables },
+    priority?: 'low' | 'medium' | 'high' | 'critical',
+  ): Promise<void> {
+    this.logger.log(
+      `📱 Sending push notification - Type: ${type}, UserId: ${context.userId || 'N/A'}, CustomerId: ${context.customerId || 'N/A'}`,
+    );
+
+    // Push notifications require a userId (not customerId directly)
+    // For customers, we need to find their associated user account
+    if (!context.userId) {
+      // If we have customerId but no userId, we can't send push notification
+      this.logger.debug(
+        `⏭️ Push notification skipped - no userId provided (CustomerId: ${context.customerId || 'N/A'})`,
+      );
+      return;
+    }
+
+    // Check preferences
+    const shouldSend = await this.shouldSendNotification(
+      type,
+      NotificationChannel.PUSH,
+      context.userId,
+      context.customerId,
+    );
+
+    if (!shouldSend) {
+      this.logger.debug(
+        `⏭️ Push notification skipped due to preferences: ${type}`,
+      );
+      return;
+    }
+
+    // Prepare notification data for push
+    const pushData: Record<string, any> = {
+      type,
+      ...context,
+    };
+
+    // Map priority
+    const pushPriority = priority || this.getDefaultPriority(type);
+    const expoPriority: 'default' | 'normal' | 'high' =
+      pushPriority === 'critical' || pushPriority === 'high'
+        ? 'high'
+        : pushPriority === 'low'
+          ? 'normal'
+          : 'default';
+
+    // Get channel ID based on notification type
+    const channelId = this.pushService.getChannelIdForType(type);
+
+    try {
+      const success = await this.pushService.sendPushNotificationToUser(
+        context.userId,
+        data.title,
+        data.message,
+        pushData,
+        {
+          priority: expoPriority,
+          channelId,
+        },
+      );
+
+      if (success) {
+        this.logger.log(
+          `✅ Push notification sent successfully to user ${context.userId}`,
+        );
+
+        // Log notification
+        await this.logNotification({
+          userId: context.userId,
+          customerId: context.customerId,
+          appointmentId: context.appointmentId,
+          channel: NotificationChannel.PUSH,
+          type,
+          title: data.title,
+          body: data.message,
+          status: NotificationStatus.SENT,
+          metadata: pushData,
+        });
+      } else {
+        this.logger.warn(
+          `⚠️ Push notification failed for user ${context.userId} - likely no push token registered`,
+        );
+
+        // Log failed notification
+        await this.logNotification({
+          userId: context.userId,
+          customerId: context.customerId,
+          appointmentId: context.appointmentId,
+          channel: NotificationChannel.PUSH,
+          type,
+          title: data.title,
+          body: data.message,
+          status: NotificationStatus.FAILED,
+          errorMessage: 'No push token registered or push notification failed',
+          metadata: pushData,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `❌ Error sending push notification to user ${context.userId}:`,
+        error.stack,
+      );
+
+      // Log failed notification
+      await this.logNotification({
+        userId: context.userId,
+        customerId: context.customerId,
+        appointmentId: context.appointmentId,
+        channel: NotificationChannel.PUSH,
+        type,
+        title: data.title,
+        body: data.message,
+        status: NotificationStatus.FAILED,
+        errorMessage: error.message,
+        metadata: pushData,
+      });
     }
   }
 

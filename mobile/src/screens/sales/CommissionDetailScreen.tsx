@@ -18,6 +18,7 @@ import { salesService, Commission } from '../../services/sales';
 import { UserRole } from '../../constants/roles';
 import { api } from '../../services/api';
 import { exploreService } from '../../services/explore';
+import CommissionPaymentModal from '../../components/CommissionPaymentModal';
 
 interface CommissionDetailScreenProps {
   navigation: {
@@ -46,6 +47,7 @@ export default function CommissionDetailScreen({
   const [error, setError] = useState<string | null>(null);
   const [serviceData, setServiceData] = useState<{ name: string; type: 'service' | 'product' } | null>(null);
   const [loadingServiceData, setLoadingServiceData] = useState(false);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
 
   const dynamicStyles = {
     container: {
@@ -445,6 +447,21 @@ export default function CommissionDetailScreen({
           </View>
         )}
 
+        {/* Pay Commission Button (for unpaid commissions, salon owners only) */}
+        {!commission.paid && !isEmployee && (
+          <View style={[styles.section, dynamicStyles.card]}>
+            <TouchableOpacity
+              style={[styles.payButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => setPaymentModalVisible(true)}
+            >
+              <MaterialIcons name="payment" size={20} color={theme.colors.white} />
+              <Text style={styles.payButtonText}>
+                Pay Commission ({formatCurrency(commission.amount)})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Payment Information */}
         {commission.paid && (
           <View style={[styles.section, dynamicStyles.card]}>
@@ -532,6 +549,19 @@ export default function CommissionDetailScreen({
 
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Commission Payment Modal */}
+      {commission && !commission.paid && !isEmployee && (
+        <CommissionPaymentModal
+          visible={paymentModalVisible}
+          onClose={() => setPaymentModalVisible(false)}
+          commission={commission}
+          onSuccess={() => {
+            setPaymentModalVisible(false);
+            loadCommissionDetails();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -755,6 +785,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
+  },
+  payButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    gap: theme.spacing.sm,
+  },
+  payButtonText: {
+    color: theme.colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
   },
 });
 

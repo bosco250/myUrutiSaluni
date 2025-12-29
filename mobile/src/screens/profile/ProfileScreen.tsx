@@ -19,6 +19,7 @@ import { api } from "../../services/api";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
+import EmployeeContractScreen from "./EmployeeContractScreen";
 
 // Placeholder profile image - in production, use actual user image
 const profileImage = require("../../../assets/Logo.png");
@@ -30,7 +31,7 @@ interface ProfileScreenProps {
   };
 }
 
-type ProfileSubScreen = "main" | "personal" | "notifications" | "security";
+type ProfileSubScreen = "main" | "personal" | "notifications" | "security" | "contract";
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { isDark, toggleTheme } = useTheme();
@@ -43,6 +44,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   // Check if user is an employee
   const isEmployee = user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE";
+  
+  // Check if user is a customer (favorites should only show for customers)
+  const isCustomer = user?.role === "customer" || user?.role === "CUSTOMER";
 
   // Check if employee already has a membership application
   const checkMembershipStatus = useCallback(async () => {
@@ -156,6 +160,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   if (currentSubScreen === "security") {
     return <SecurityLoginScreen navigation={{ goBack: handleGoBackToMain }} />;
+  }
+
+  if (currentSubScreen === "contract") {
+    return <EmployeeContractScreen navigation={{ goBack: handleGoBackToMain }} />;
   }
 
   if (checkingMembership && isEmployee) {
@@ -301,6 +309,37 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             </View>
           </View>
 
+          {/* Favorites - Only show for customers */}
+          {isCustomer && (
+            <>
+              <TouchableOpacity
+                style={styles.settingRow}
+                activeOpacity={0.7}
+                onPress={() => navigation?.navigate("Favorites")}
+              >
+                <Text
+                  style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
+                >
+                  Favorites
+                </Text>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={dynamicStyles.textSecondary.color}
+                />
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.divider,
+                  {
+                    backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+                  },
+                ]}
+              />
+            </>
+          )}
+
           {/* Personal Information */}
           <TouchableOpacity
             style={styles.settingRow}
@@ -327,6 +366,37 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               },
             ]}
           />
+
+          {/* Employment Contract - Only show for employees */}
+          {isEmployee && (
+            <>
+              <TouchableOpacity
+                style={styles.settingRow}
+                activeOpacity={0.7}
+                onPress={() => handleNavigateToSubScreen("contract")}
+              >
+                <Text
+                  style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
+                >
+                  Employment Contract
+                </Text>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={dynamicStyles.textSecondary.color}
+                />
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.divider,
+                  {
+                    backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+                  },
+                ]}
+              />
+            </>
+          )}
 
           {/* Notification Preferences */}
           <TouchableOpacity

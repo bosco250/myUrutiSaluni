@@ -21,7 +21,13 @@ export const useEmployeeId = (): string | null => {
             const employeeData = Array.isArray(employee)
               ? employee[0]
               : employee;
-            setEmployeeId(employeeData.id);
+            // Ensure employeeData exists and has an id before setting
+            if (employeeData && employeeData.id) {
+              setEmployeeId(employeeData.id);
+            } else {
+              // Employee not assigned to any salon - empty state will handle this
+              setEmployeeId(null);
+            }
           }
         } catch (err) {
           console.error("Error fetching employee ID:", err);

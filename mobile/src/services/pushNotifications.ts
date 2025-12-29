@@ -22,19 +22,34 @@ try {
   notificationsAvailable = false;
 }
 
-// Configure how notifications appear when app is in foreground
-// TEMPORARILY DISABLED: Push notifications are disabled until deployment
-/*
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-*/
+// Configure how notifications appear - CRITICAL: Always show in device notification system
+// This ensures notifications appear like WhatsApp - immediately visible in notification tray
+if (Notifications && notificationsAvailable && !isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async (notification) => {
+      // Always show notification in system tray, even when app is in foreground
+      // This mimics WhatsApp behavior - notifications always visible
+      return {
+        shouldShowAlert: true,      // Show alert/banner
+        shouldPlaySound: true,       // Play sound
+        shouldSetBadge: true,        // Update badge count
+        shouldShowBanner: true,      // Show banner at top
+        shouldShowList: true,        // Show in notification list
+      };
+    },
+  });
+  
+  // Set notification presentation options for iOS
+  if (Platform.OS === 'ios') {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'Default',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'default',
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#C89B68',
+    });
+  }
+}
 
 export interface PushNotificationData {
   type?: string;
@@ -118,6 +133,7 @@ class PushNotificationsService {
 
   /**
    * Set up Android notification channels for different notification types
+   * Using MAX importance to ensure notifications are always visible like WhatsApp
    */
   private async setupAndroidChannels(): Promise<void> {
     if (!Notifications || !notificationsAvailable || isExpoGo) {
@@ -125,40 +141,55 @@ class PushNotificationsService {
     }
 
     try {
-      // Default channel for general notifications
+      // Default channel for general notifications - MAX importance for immediate visibility
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#C89B68',
-        sound: 'default',
+        name: 'UrutiSaluni Notifications',
+        description: 'Important notifications from UrutiSaluni',
+        importance: Notifications.AndroidImportance.MAX, // Highest priority - always visible
+        vibrationPattern: [0, 250, 250, 250], // Vibrate pattern
+        lightColor: '#C89B68', // LED color
+        sound: 'default', // Default notification sound
+        enableVibrate: true,
+        showBadge: true,
       });
 
-      // Appointments channel
+      // Appointments channel - MAX importance for critical appointment updates
       await Notifications.setNotificationChannelAsync('appointments', {
         name: 'Appointments',
         description: 'Notifications about your appointments',
-        importance: Notifications.AndroidImportance.HIGH,
+        importance: Notifications.AndroidImportance.MAX, // Highest priority
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#C89B68',
         sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
       });
 
-      // Sales & Payments channel
+      // Sales & Payments channel - MAX importance for financial updates
       await Notifications.setNotificationChannelAsync('payments', {
         name: 'Payments & Sales',
         description: 'Notifications about payments and sales',
-        importance: Notifications.AndroidImportance.HIGH,
+        importance: Notifications.AndroidImportance.MAX, // Highest priority
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#C89B68',
         sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
       });
 
-      // Promotions & Loyalty channel
+      // Promotions & Loyalty channel - HIGH importance (still very visible)
       await Notifications.setNotificationChannelAsync('promotions', {
         name: 'Promotions & Rewards',
         description: 'Notifications about loyalty points and promotions',
-        importance: Notifications.AndroidImportance.DEFAULT,
+        importance: Notifications.AndroidImportance.HIGH, // High priority
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#C89B68',
         sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
       });
+      
+      console.log('✅ Android notification channels configured with MAX importance');
     } catch (error) {
       console.error('Error setting up Android notification channels:', error);
     }
@@ -166,18 +197,33 @@ class PushNotificationsService {
 
   /**
    * Send the push token to the backend for storage
+   * Includes retry logic for network issues (like WhatsApp reconnection)
    */
-  async registerTokenWithBackend(token: string): Promise<boolean> {
-    try {
-      await api.post('/notifications/push-token', {
-        expoPushToken: token,
-      });
-      console.log('✅ Push token registered with backend');
-      return true;
-    } catch (error: any) {
-      console.error('Failed to register push token with backend:', error.message);
-      return false;
+  async registerTokenWithBackend(token: string, retries: number = 3): Promise<boolean> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await api.post('/notifications/push-token', {
+          expoPushToken: token,
+        });
+        console.log('✅ Push token registered with backend');
+        return true;
+      } catch (error: any) {
+        const isLastAttempt = attempt === retries;
+        const errorMessage = error.message || 'Unknown error';
+        
+        if (isLastAttempt) {
+          console.error(`❌ Failed to register push token after ${retries} attempts:`, errorMessage);
+          // Don't give up - will retry on next app open or network reconnect
+          return false;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        console.log(`⚠️ Token registration failed (attempt ${attempt}/${retries}), retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
+    return false;
   }
 
   /**
@@ -241,8 +287,23 @@ class PushNotificationsService {
       return { screen: 'Bookings', params: {} };
     }
 
-    // Sales & Payment notifications
-    if (type.startsWith('sale_') || type.startsWith('payment_')) {
+    // Sale notifications - navigate to SaleDetail for receipt
+    if (type.startsWith('sale_') || type === 'sale_completed') {
+      if (data.saleId) {
+        return {
+          screen: 'SaleDetail',
+          params: { saleId: data.saleId },
+        };
+      }
+      // Fallback: navigate to SalesHistory if no saleId
+      return {
+        screen: 'SalesHistory',
+        params: {},
+      };
+    }
+
+    // Payment notifications - navigate to PaymentHistory
+    if (type.startsWith('payment_')) {
       return {
         screen: 'PaymentHistory',
         params: { highlightPaymentId: data.paymentId },

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -50,37 +51,44 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
   const [products, setProducts] = useState<SalonProduct[]>([]);
   const [checkIns, setCheckIns] = useState<CheckInItem[]>([]);
 
-  // Dynamic styles for dark/light mode (matching AddProductScreen)
+  // Dynamic styles with system colors and enhanced theme support
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      backgroundColor: isDark ? '#000000' : '#FFFFFF',
     },
     text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
+      color: isDark ? '#FFFFFF' : '#000000',
     },
     textSecondary: {
-      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+      color: isDark ? '#8E8E93' : '#6D6D70',
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+      borderColor: isDark ? '#38383A' : '#E5E5EA',
+      shadowColor: isDark ? '#000000' : '#000000',
     },
     header: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-      borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+      backgroundColor: isDark ? '#000000' : '#FFFFFF',
+      borderBottomColor: isDark ? '#38383A' : '#E5E5EA',
     },
     divider: {
-      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+      backgroundColor: isDark ? '#38383A' : '#E5E5EA',
     },
-    // Button with primary color
+    sectionBackground: {
+      backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
+    },
     primaryButton: {
       backgroundColor: theme.colors.primary,
     },
     outlineButtonBorder: {
-      borderColor: isDark ? theme.colors.gray600 : theme.colors.border,
+      borderColor: isDark ? '#48484A' : '#C7C7CC',
     },
     outlineButtonText: {
-      color: isDark ? theme.colors.white : theme.colors.text,
+      color: isDark ? '#FFFFFF' : '#000000',
+    },
+    quickActionCard: {
+      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+      borderColor: isDark ? '#38383A' : '#E5E5EA',
     },
   };
 
@@ -196,6 +204,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <Loader fullscreen message="Loading operations..." />
       </SafeAreaView>
     );
@@ -203,10 +212,12 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
 
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
       <View style={[styles.header, dynamicStyles.header, { borderBottomColor: dynamicStyles.header.borderBottomColor }]}>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Operations Management</Text>
+        <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>Manage your salon operations</Text>
       </View>
 
       <ScrollView
@@ -224,18 +235,21 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
         {/* Service Menu Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Menu</Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialIcons name="content-cut" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Menu</Text>
+            </View>
             <TouchableOpacity
               style={[styles.addButton, dynamicStyles.primaryButton]}
               onPress={() => navigation.navigate('AddService', { salonId })}
               activeOpacity={0.8}
             >
               <MaterialIcons name="add" size={16} color={theme.colors.white} />
-              <Text style={styles.addButtonText}>Add Service</Text>
+              <Text style={styles.addButtonText}>Add</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.card, dynamicStyles.card]}>
+          <View style={[styles.card, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}>
             {services.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
@@ -269,24 +283,29 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
         {/* Inventory Levels Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory Levels</Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialIcons name="inventory-2" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory Levels</Text>
+            </View>
             <TouchableOpacity
-              style={[styles.outlineButton, dynamicStyles.outlineButtonBorder]}
+              style={[styles.outlineButton, dynamicStyles.outlineButtonBorder, { borderColor: dynamicStyles.outlineButtonBorder.borderColor }]}
               onPress={() => navigation.navigate('StockManagement', { salonId })}
               activeOpacity={0.7}
             >
-              <Text style={[styles.outlineButtonText, dynamicStyles.outlineButtonText]}>Purchase Order</Text>
+              <Text style={[styles.outlineButtonText, dynamicStyles.outlineButtonText]}>Order</Text>
             </TouchableOpacity>
           </View>
 
           {products.length === 0 ? (
-            <View style={[styles.card, dynamicStyles.card, styles.emptyState]}>
-              <MaterialIcons name="inventory-2" size={32} color={dynamicStyles.textSecondary.color} />
-              <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 10 }]}>
+            <View style={[styles.card, dynamicStyles.card, styles.emptyState, { borderColor: dynamicStyles.card.borderColor }]}>
+              <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                <MaterialIcons name="inventory-2" size={32} color={dynamicStyles.textSecondary.color} />
+              </View>
+              <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
                 No inventory items
               </Text>
               <TouchableOpacity
-                style={[styles.addProductButton, { marginTop: 16 }]}
+                style={[styles.addProductButton, { marginTop: 16, borderColor: theme.colors.primary }]}
                 onPress={() => navigation.navigate('AddProduct', { salonId })}
               >
                 <Text style={styles.addProductButtonText}>+ Add Product</Text>
@@ -299,7 +318,8 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                 style={[
                   styles.inventoryCard,
                   dynamicStyles.card,
-                  isLowStock(product.stockLevel) && styles.lowStockCard,
+                  { borderColor: dynamicStyles.card.borderColor },
+                  isLowStock(product.stockLevel) && [styles.lowStockCard, { borderColor: theme.colors.error + '60' }],
                 ]}
                 onPress={() => navigation.navigate('AddProduct', { salonId, product })}
                 activeOpacity={0.7}
@@ -330,7 +350,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                 </View>
                 {isLowStock(product.stockLevel) && (
                   <TouchableOpacity
-                    style={styles.orderButton}
+                    style={[styles.orderButton, { borderColor: theme.colors.error }]}
                     onPress={() => navigation.navigate('StockManagement', { salonId })}
                   >
                     <Text style={styles.orderButtonText}>Order</Text>
@@ -356,20 +376,25 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
         {/* Today's Check-ins Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Today's Check-ins</Text>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialIcons name="event-available" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Today's Check-ins</Text>
+            </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('SalonAppointments', { salonId })}
               activeOpacity={0.7}
             >
-              <Text style={[styles.linkText, { color: theme.colors.primary }]}>View Calendar</Text>
+              <Text style={[styles.linkText, { color: theme.colors.primary }]}>Calendar</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.card, dynamicStyles.card]}>
+          <View style={[styles.card, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}>
             {checkIns.length === 0 ? (
               <View style={styles.emptyState}>
-                <MaterialIcons name="event-available" size={32} color={dynamicStyles.textSecondary.color} />
-                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 10 }]}>
+                <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <MaterialIcons name="event-available" size={32} color={dynamicStyles.textSecondary.color} />
+                </View>
+                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
                   No check-ins today
                 </Text>
               </View>
@@ -382,7 +407,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                     index < checkIns.length - 1 && [styles.serviceRowBorder, { borderBottomColor: dynamicStyles.divider.backgroundColor }],
                   ]}
                 >
-                  <View style={styles.checkInTime}>
+                  <View style={[styles.checkInTime, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
                     <Text style={[styles.timeText, dynamicStyles.text]}>
                       {checkIn.time.split(' ')[0]}
                     </Text>
@@ -396,9 +421,12 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                       {checkIn.service}
                     </Text>
                   </View>
-                  <Text style={[styles.checkInStatus, { color: getStatusColor(checkIn.status) }]}>
-                    {getStatusLabel(checkIn.status)}
-                  </Text>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(checkIn.status) + '20' }]}>
+                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(checkIn.status) }]} />
+                    <Text style={[styles.checkInStatus, { color: getStatusColor(checkIn.status) }]}>
+                      {getStatusLabel(checkIn.status)}
+                    </Text>
+                  </View>
                 </View>
               ))
             )}
@@ -407,10 +435,15 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialIcons name="flash-on" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
+            </View>
+          </View>
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
               onPress={() => navigation.navigate('SalonList')}
               activeOpacity={0.7}
             >
@@ -421,56 +454,56 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
               onPress={() => navigation.navigate('StaffManagement', { salonId })}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.info + '15' }]}>
-                <MaterialIcons name="people" size={20} color={theme.colors.info} />
+              <View style={[styles.quickActionIcon, { backgroundColor: '#007AFF' + '15' }]}>
+                <MaterialIcons name="people" size={20} color="#007AFF" />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Staff</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
               onPress={() => navigation.navigate('BusinessAnalytics', { salonId })}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.secondary + '15' }]}>
-                <MaterialIcons name="bar-chart" size={20} color={theme.colors.secondary} />
+              <View style={[styles.quickActionIcon, { backgroundColor: '#5856D6' + '15' }]}>
+                <MaterialIcons name="bar-chart" size={20} color="#5856D6" />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Reports</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
               onPress={() => navigation.navigate('Sales')}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.success + '15' }]}>
-                <MaterialIcons name="point-of-sale" size={20} color={theme.colors.success} />
+              <View style={[styles.quickActionIcon, { backgroundColor: '#34C759' + '15' }]}>
+                <MaterialIcons name="point-of-sale" size={20} color="#34C759" />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>New Sale</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
               onPress={() => navigation.navigate('Commissions')}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                <MaterialIcons name="payments" size={20} color={theme.colors.primary} />
+              <View style={[styles.quickActionIcon, { backgroundColor: '#FF9500' + '15' }]}>
+                <MaterialIcons name="payments" size={20} color="#FF9500" />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Commissions</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.card]}
+              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
               onPress={() => navigation.navigate('MoreMenu')}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.warning + '15' }]}>
-                <MaterialIcons name="settings" size={20} color={theme.colors.warning} />
+              <View style={[styles.quickActionIcon, { backgroundColor: '#8E8E93' + '15' }]}>
+                <MaterialIcons name="settings" size={20} color="#8E8E93" />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Settings</Text>
             </TouchableOpacity>
@@ -489,15 +522,28 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionIcon: {
+    marginRight: 6,
   },
   scrollContent: {
     paddingHorizontal: theme.spacing.md,
@@ -548,14 +594,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   card: {
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    shadowColor: theme.colors.black,
+    borderRadius: 14,
+    padding: theme.spacing.md + 2,
+    borderWidth: 1.5,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   serviceRow: {
     flexDirection: 'row',
@@ -661,17 +706,33 @@ const styles = StyleSheet.create({
   checkInTime: {
     alignItems: 'center',
     marginRight: theme.spacing.sm,
-    minWidth: 44,
+    minWidth: 50,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
   },
   timeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
   timePeriod: {
     fontSize: 10,
     fontFamily: theme.fonts.regular,
-    marginTop: 1,
+    marginTop: 2,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
   },
   checkInInfo: {
     flex: 1,
@@ -701,24 +762,23 @@ const styles = StyleSheet.create({
   quickActionCard: {
     width: '48%',
     marginHorizontal: '1%',
-    marginBottom: theme.spacing.xs + 2,
-    padding: theme.spacing.sm + 2,
-    borderRadius: 10,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: 14,
     borderWidth: 1.5,
     alignItems: 'center',
-    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   quickActionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs + 2,
+    marginBottom: theme.spacing.sm,
   },
   quickActionLabel: {
     fontSize: 12,
@@ -728,11 +788,20 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   emptyText: {
     fontSize: 13,
     fontFamily: theme.fonts.regular,
+    textAlign: 'center',
   },
   addProductButton: {
     borderWidth: 1.5,
