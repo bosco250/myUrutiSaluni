@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import { Loader } from "../../components/common";
 import { chatService, Message, Conversation } from "../../services/chat";
 import { useAuth } from "../../context/AuthContext";
 
@@ -316,20 +317,15 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, dynamicStyles.text]}>
-            Loading conversation...
-          </Text>
-        </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+        <Loader fullscreen message="Loading conversation..." />
       </SafeAreaView>
     );
   }
 
   if (!conversation) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, dynamicStyles.errorText]}>
             {error || "Conversation not found"}
@@ -340,7 +336,7 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}

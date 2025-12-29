@@ -12,3 +12,4 @@ export { CalendarStrip } from "./CalendarStrip";
 export { EmptyState } from "./EmptyState";
 export { default as Card } from "./Card";
 export { default as ListItem } from "./ListItem";
+export { Loader } from "./Loader";

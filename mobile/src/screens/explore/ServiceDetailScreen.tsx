@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { exploreService, Service } from "../../services/explore";
+import { Loader } from "../../components/common";
 
 interface ServiceDetailScreenProps {
   navigation?: {
@@ -100,9 +100,10 @@ export default function ServiceDetailScreen({
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <Loader
+        fullscreen
+        message="Loading service..."
+      />
     );
   }
 

@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
+import { useTheme } from "../../context";
 
 interface StatCardProps {
   label: string;
@@ -21,12 +22,16 @@ export const StatCard: React.FC<StatCardProps> = ({
   color,
   size = "medium",
 }) => {
+  const { isDark } = useTheme();
   const iconSize = size === "small" ? 20 : size === "large" ? 28 : 24;
   const valueSize = size === "small" ? 16 : size === "large" ? 22 : 18;
   const containerSize = size === "small" ? 40 : size === "large" ? 56 : 48;
 
+  const bgColor = isDark ? theme.colors.gray800 : theme.colors.background;
+  const textColor = isDark ? theme.colors.white : theme.colors.text;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: bgColor }]}>
       <View
         style={[
           styles.iconContainer,
@@ -39,7 +44,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       >
         <MaterialIcons name={icon as any} size={iconSize} color={color} />
       </View>
-      <Text style={[styles.value, { fontSize: valueSize }]}>{value}</Text>
+      <Text style={[styles.value, { fontSize: valueSize, color: textColor }]}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
     </View>
   );

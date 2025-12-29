@@ -9,9 +9,11 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
+import { Loader } from '../../components/common';
 import { salesService, Commission } from '../../services/sales';
 import { UserRole } from '../../constants/roles';
 import { api } from '../../services/api';
@@ -225,16 +227,16 @@ export default function CommissionDetailScreen({
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+        <Loader fullscreen message="Loading commission details..." />
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.container, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View style={[styles.header, dynamicStyles.card]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -243,7 +245,7 @@ export default function CommissionDetailScreen({
           <Text style={[styles.headerTitle, dynamicStyles.text]}>Commission Details</Text>
         </View>
         <View style={styles.errorContainer}>
-          <MaterialIcons name="error-outline" size={64} color={theme.colors.error} />
+          <MaterialIcons name="error-outline" size={56} color={theme.colors.error} />
           <Text style={[styles.errorTitle, dynamicStyles.text]}>{error}</Text>
           <TouchableOpacity
             style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
@@ -252,13 +254,13 @@ export default function CommissionDetailScreen({
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!commission) {
     return (
-      <View style={[styles.container, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View style={[styles.header, dynamicStyles.card]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -267,10 +269,10 @@ export default function CommissionDetailScreen({
           <Text style={[styles.headerTitle, dynamicStyles.text]}>Commission Details</Text>
         </View>
         <View style={styles.errorContainer}>
-          <MaterialIcons name="info-outline" size={64} color={dynamicStyles.textSecondary.color} />
+          <MaterialIcons name="info-outline" size={56} color={dynamicStyles.textSecondary.color} />
           <Text style={[styles.errorTitle, dynamicStyles.text]}>Commission not found</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -279,7 +281,7 @@ export default function CommissionDetailScreen({
   const isFromAppointment = source === 'appointment';
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -309,7 +311,7 @@ export default function CommissionDetailScreen({
           }]}>
             <MaterialIcons
               name={commission.paid ? 'check-circle' : 'pending'}
-              size={24}
+              size={20}
               color={commission.paid ? theme.colors.success : theme.colors.warning}
             />
           </View>
@@ -339,11 +341,11 @@ export default function CommissionDetailScreen({
         {/* Source Information */}
         <View style={[styles.section, dynamicStyles.card]}>
           <View style={styles.sectionHeader}>
-            <MaterialIcons
-              name={isFromSale ? 'shopping-cart' : isFromAppointment ? 'event' : 'info'}
-              size={20}
-              color={theme.colors.primary}
-            />
+              <MaterialIcons
+                name={isFromSale ? 'shopping-cart' : isFromAppointment ? 'event' : 'info'}
+                size={18}
+                color={theme.colors.primary}
+              />
             <Text style={[styles.sectionTitle, dynamicStyles.text]}>Source</Text>
           </View>
           <View style={[styles.sourceBadge, {
@@ -369,7 +371,7 @@ export default function CommissionDetailScreen({
               onPress={handleViewSource}
               activeOpacity={0.7}
             >
-              <MaterialIcons name="visibility" size={18} color={theme.colors.primary} />
+              <MaterialIcons name="visibility" size={16} color={theme.colors.primary} />
               <Text style={[styles.viewSourceText, { color: theme.colors.primary }]}>
                 View {isFromSale ? 'Sale' : 'Appointment'} Details
               </Text>
@@ -389,7 +391,7 @@ export default function CommissionDetailScreen({
                     ? 'content-cut'
                     : 'shopping-bag'
                 }
-                size={20}
+                size={18}
                 color={theme.colors.primary}
               />
               <Text style={[styles.sectionTitle, dynamicStyles.text]}>
@@ -429,7 +431,7 @@ export default function CommissionDetailScreen({
         {!isEmployee && commission.salonEmployee && (
           <View style={[styles.section, dynamicStyles.card]}>
             <View style={styles.sectionHeader}>
-              <MaterialIcons name="person" size={20} color={theme.colors.primary} />
+              <MaterialIcons name="person" size={18} color={theme.colors.primary} />
               <Text style={[styles.sectionTitle, dynamicStyles.text]}>Employee</Text>
             </View>
             <Text style={[styles.employeeName, dynamicStyles.text]}>
@@ -447,7 +449,7 @@ export default function CommissionDetailScreen({
         {commission.paid && (
           <View style={[styles.section, dynamicStyles.card]}>
             <View style={styles.sectionHeader}>
-              <MaterialIcons name="payment" size={20} color={theme.colors.success} />
+              <MaterialIcons name="payment" size={18} color={theme.colors.success} />
               <Text style={[styles.sectionTitle, dynamicStyles.text]}>Payment Details</Text>
             </View>
             {commission.paidAt && (
@@ -481,7 +483,7 @@ export default function CommissionDetailScreen({
         {commission.metadata && Object.keys(commission.metadata).length > 1 && (
           <View style={[styles.section, dynamicStyles.card]}>
             <View style={styles.sectionHeader}>
-              <MaterialIcons name="info" size={20} color={theme.colors.primary} />
+              <MaterialIcons name="info" size={18} color={theme.colors.primary} />
               <Text style={[styles.sectionTitle, dynamicStyles.text]}>Additional Information</Text>
             </View>
             {Object.entries(commission.metadata)
@@ -528,9 +530,9 @@ export default function CommissionDetailScreen({
           </View>
         )}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -538,17 +540,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
-    paddingTop: 50,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
   },
   backButton: {
@@ -562,12 +558,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
     marginTop: 2,
   },
@@ -576,149 +572,150 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    borderRadius: 16,
+    padding: theme.spacing.sm + 2,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   statusBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.sm,
   },
   statusContent: {
     flex: 1,
   },
   statusLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statusValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
   },
   amountCard: {
-    padding: theme.spacing.lg,
-    borderRadius: 16,
+    padding: theme.spacing.md,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     alignItems: 'center',
   },
   amountLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
-    marginBottom: theme.spacing.sm,
-  },
-  amountValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.xs,
   },
+  amountValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+    marginBottom: 2,
+  },
   amountBreakdown: {
-    marginTop: theme.spacing.xs,
+    marginTop: 2,
   },
   breakdownText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   section: {
-    padding: theme.spacing.md,
-    borderRadius: 16,
+    padding: theme.spacing.sm + 2,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   sourceBadge: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 12,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 8,
     alignSelf: 'flex-start',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   sourceBadgeText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   viewSourceButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   viewSourceText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 2,
   },
   itemAmount: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   employeeName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 2,
   },
   employeeRole: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   paymentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   paymentLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   paymentValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   metadataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
     flexWrap: 'wrap',
   },
   metadataLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
     flex: 1,
   },
   metadataValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     fontFamily: theme.fonts.medium,
     flex: 1,
@@ -727,35 +724,35 @@ const styles = StyleSheet.create({
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: theme.spacing.lg,
   },
   errorTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
     marginTop: theme.spacing.md,
     textAlign: 'center',
   },
   retryButton: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
-    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 10,
+    marginTop: theme.spacing.md,
   },
   retryButtonText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },

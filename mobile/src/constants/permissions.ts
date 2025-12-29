@@ -185,6 +185,7 @@ export const ROLE_PERMISSIONS = {
       Screen.CHAT,
       Screen.CUSTOMER_MANAGEMENT,
       Screen.COMMISSIONS,
+      Screen.EXPLORE,
     ],
     actions: [
       Action.CLOCK_IN_OUT,

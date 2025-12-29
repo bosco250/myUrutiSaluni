@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   StatusBar,
   Animated,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { format } from "date-fns";
@@ -18,6 +18,7 @@ import { theme } from "../theme";
 import { useTheme, useAuth } from "../context";
 import QuickActionButton from "../components/common/QuickActionButton";
 import AppointmentCard from "../components/common/AppointmentCard";
+import { Loader } from "../components/common";
 import SalonCard from "./explore/components/SalonCard";
 import AutoSlider from "./explore/components/AutoSlider";
 import { appointmentsService, Appointment } from "../services/appointments";
@@ -41,13 +42,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { user } = useAuth();
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [headerHeight, setHeaderHeight] = useState(180);
   const headerAnimatedValue = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Data states
-  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<
+    Appointment[]
+  >([]);
   const [topSalons, setTopSalons] = useState<Salon[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [salonsLoading, setSalonsLoading] = useState(false);
 
@@ -94,12 +99,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
         // Filter upcoming appointments (scheduledStart in the future or today)
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+
         // Separate today's appointments and future appointments
         const todayAppointments: Appointment[] = [];
         const futureAppointments: Appointment[] = [];
-        
+
         appointments.forEach((apt) => {
           const scheduledStart = new Date(apt.scheduledStart);
           const scheduledDate = new Date(
@@ -107,7 +116,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             scheduledStart.getMonth(),
             scheduledStart.getDate()
           );
-          
+
           // Include today's appointments and future appointments
           if (scheduledDate.getTime() >= today.getTime()) {
             if (scheduledDate.getTime() === today.getTime()) {
@@ -117,7 +126,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             }
           }
         });
-        
+
         // Sort today's appointments by time (earliest first)
         todayAppointments.sort((a, b) => {
           return (
@@ -125,7 +134,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             new Date(b.scheduledStart).getTime()
           );
         });
-        
+
         // Sort future appointments by time (earliest first)
         futureAppointments.sort((a, b) => {
           return (
@@ -133,10 +142,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             new Date(b.scheduledStart).getTime()
           );
         });
-        
+
         // Prioritize today's appointments, then future appointments
-        const prioritized = [...todayAppointments, ...futureAppointments].slice(0, 3);
-        
+        const prioritized = [...todayAppointments, ...futureAppointments].slice(
+          0,
+          3
+        );
+
         setUpcomingAppointments(prioritized);
       }
     } catch (error: any) {
@@ -155,7 +167,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
       // Filter active salons and sort by rating (if available) or name
       const activeSalons = salons
-        .filter((salon) => salon.status === "active" || (salon as any).isActive === true)
+        .filter(
+          (salon) =>
+            salon.status === "active" || (salon as any).isActive === true
+        )
         .sort((a, b) => {
           // Sort by rating if available, otherwise by name
           const ratingA = (a as any).rating || 0;
@@ -179,7 +194,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
+      setInitialLoading(true);
       await Promise.all([fetchAppointments(), fetchTopSalons()]);
+      setInitialLoading(false);
     };
     loadData();
   }, [user?.id, fetchAppointments]);
@@ -228,27 +245,42 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     const currentScrollY = event.nativeEvent.contentOffset.y;
     const scrollDifference = currentScrollY - lastScrollY;
 
-    // Show header when scrolling up, hide when scrolling down
-    if (scrollDifference > 0 && currentScrollY > 50) {
-      // Scrolling down - hide header
-      if (isHeaderVisible) {
-        setIsHeaderVisible(false);
-        Animated.timing(headerAnimatedValue, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }
-    } else if (scrollDifference < 0) {
-      // Scrolling up - show header
-      if (!isHeaderVisible) {
-        setIsHeaderVisible(true);
-        Animated.timing(headerAnimatedValue, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }
+    // Calculate when Quick Actions reaches the top
+    // Quick Actions starts at headerHeight + theme.spacing.sm
+    const quickActionsTop = headerHeight + theme.spacing.sm;
+    const shouldHideHeader = currentScrollY >= quickActionsTop - 20; // Small threshold for smooth transition
+
+    // Show header immediately when scrolling UP (scrollDifference < 0)
+    if (scrollDifference < 0 && !isHeaderVisible) {
+      setIsHeaderVisible(true);
+      Animated.timing(headerAnimatedValue, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+    // Show header when scroll position is before Quick Actions top
+    else if (!shouldHideHeader && !isHeaderVisible) {
+      setIsHeaderVisible(true);
+      Animated.timing(headerAnimatedValue, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+    // Hide header when scrolling DOWN and Quick Actions reaches the top
+    else if (
+      scrollDifference > 0 &&
+      shouldHideHeader &&
+      isHeaderVisible &&
+      currentScrollY > 50
+    ) {
+      setIsHeaderVisible(false);
+      Animated.timing(headerAnimatedValue, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
 
     setLastScrollY(currentScrollY);
@@ -263,7 +295,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     inputRange: [0, 1],
     outputRange: [1, 0],
   });
-
 
   // Format appointment date and time - clearer format
   const formatAppointmentDateTime = (dateString: string) => {
@@ -297,13 +328,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       return { dateLabel: "Date TBD", time: "" };
     }
   };
-  
+
   // Format created date and time
   const formatCreatedDateTime = (appointment: Appointment) => {
     try {
-      const createdDate = (appointment as any).created_at || appointment.createdAt;
+      const createdDate =
+        (appointment as any).created_at || appointment.createdAt;
       if (!createdDate) return null;
-      
+
       const date = new Date(createdDate);
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -334,8 +366,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     }
   };
 
+  // Show fullscreen loader on initial load
+  if (initialLoading) {
+    return (
+      <SafeAreaView
+        style={[styles.container, dynamicStyles.container]}
+        edges={["top"]}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "light-content"} />
+        <Loader fullscreen message="Loading home..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={["top"]}
+    >
       <StatusBar barStyle={isDark ? "light-content" : "light-content"} />
 
       {/* Header Section with Gold Background - Animated */}
@@ -353,6 +401,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           },
         ]}
         pointerEvents={isHeaderVisible ? "auto" : "none"}
+        onLayout={(event) => {
+          const { height } = event.nativeEvent.layout;
+          setHeaderHeight(height);
+        }}
       >
         {/* Decorative Background Elements */}
         <View style={styles.headerDecoration1} />
@@ -365,9 +417,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               <View style={styles.logoGlow} />
               <Image source={logo} style={styles.logo} resizeMode="contain" />
             </View>
-            <Text style={styles.greeting}>
-              Hello, {getUserFirstName()}!
-            </Text>
+            <Text style={styles.greeting}>Hello, {getUserFirstName()}!</Text>
             <Text style={styles.tagline}>Ready for a new look today?</Text>
           </View>
           <View style={styles.profileContainer}>
@@ -387,7 +437,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: (StatusBar.currentHeight || 0) + 180 },
+          { paddingTop: headerHeight + theme.spacing.sm },
         ]}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
@@ -402,7 +452,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         }
       >
         {/* Quick Actions Section */}
-        <View style={styles.section}>
+        <View style={styles.firstSection}>
           <View style={styles.sectionTitleContainer}>
             <View style={styles.sectionTitleLine} />
             <Text
@@ -455,7 +505,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
           {appointmentsLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Loader message="Loading appointments..." />
             </View>
           ) : upcomingAppointments.length > 0 ? (
             upcomingAppointments.map((appointment) => {
@@ -463,8 +513,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 appointment.scheduledStart
               );
               const createdInfo = formatCreatedDateTime(appointment);
-              const serviceName =
-                appointment.service?.name || "Service";
+              const serviceName = appointment.service?.name || "Service";
               const salonName = appointment.salon?.name || "Salon";
               const stylistName =
                 appointment.salonEmployee?.user?.fullName || "Any Stylist";
@@ -549,7 +598,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
           {salonsLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Loader message="Loading salons..." />
             </View>
           ) : topSalons.length > 0 ? (
             <AutoSlider
@@ -598,7 +647,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         {/* Membership Association Banner */}
         <View style={styles.membershipSection}>
           <LinearGradient
-            colors={[theme.colors.primary + "15", theme.colors.primaryLight + "10"]}
+            colors={[
+              theme.colors.primary + "15",
+              theme.colors.primaryLight + "10",
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.membershipBanner}
@@ -615,25 +667,40 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <Text style={[styles.membershipTitle, dynamicStyles.text]}>
               Become a Salon Owner
             </Text>
-            <Text style={[styles.membershipSubtitle, dynamicStyles.textSecondary]}>
-              Apply to start your salon business on our platform and grow your success
+            <Text
+              style={[styles.membershipSubtitle, dynamicStyles.textSecondary]}
+            >
+              Apply to start your salon business on our platform and grow your
+              success
             </Text>
 
             <View style={styles.membershipBenefits}>
               <View style={styles.benefitRow}>
-                <MaterialIcons name="check-circle" size={18} color={theme.colors.primary} />
+                <MaterialIcons
+                  name="check-circle"
+                  size={18}
+                  color={theme.colors.primary}
+                />
                 <Text style={[styles.benefitText, dynamicStyles.text]}>
                   Create Your Salon
                 </Text>
               </View>
               <View style={styles.benefitRow}>
-                <MaterialIcons name="check-circle" size={18} color={theme.colors.primary} />
+                <MaterialIcons
+                  name="check-circle"
+                  size={18}
+                  color={theme.colors.primary}
+                />
                 <Text style={[styles.benefitText, dynamicStyles.text]}>
                   Manage Bookings
                 </Text>
               </View>
               <View style={styles.benefitRow}>
-                <MaterialIcons name="check-circle" size={18} color={theme.colors.primary} />
+                <MaterialIcons
+                  name="check-circle"
+                  size={18}
+                  color={theme.colors.primary}
+                />
                 <Text style={[styles.benefitText, dynamicStyles.text]}>
                   Track Revenue
                 </Text>
@@ -646,7 +713,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 onPress={() => navigation?.navigate("MembershipInfo")}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.learnMoreText, { color: theme.colors.primary }]}>
+                <Text
+                  style={[
+                    styles.learnMoreText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
                   Learn More
                 </Text>
               </TouchableOpacity>
@@ -663,14 +735,18 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                   style={styles.applyNowGradient}
                 >
                   <Text style={styles.applyNowText}>Apply Now</Text>
-                  <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                  <MaterialIcons
+                    name="arrow-forward"
+                    size={18}
+                    color="#FFFFFF"
+                  />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           </LinearGradient>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -799,22 +875,26 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   scrollContent: {
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
   },
   section: {
-    paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+  },
+  firstSection: {
+    paddingHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitleLine: {
     flex: 1,
@@ -824,11 +904,11 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "600",
     color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
-    marginHorizontal: theme.spacing.md,
+    fontFamily: theme.fonts.semibold,
+    marginHorizontal: theme.spacing.sm,
   },
   sectionTitleWithIcon: {
     flexDirection: "row",
@@ -851,7 +931,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(200, 155, 104, 0.1)",
   },
   viewAllLink: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.colors.primary,
     fontFamily: theme.fonts.medium,
     fontWeight: "600",
@@ -860,11 +940,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   quickActionWrapper: {
     width: "30%",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   salonsGrid: {
     flexDirection: "row",
@@ -873,84 +953,84 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   loadingContainer: {
-    padding: theme.spacing.xl,
+    padding: theme.spacing.lg,
     alignItems: "center",
     justifyContent: "center",
   },
   emptyContainer: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderStyle: "dashed",
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
     textAlign: "center",
   },
   bookNowButton: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs + 2,
     borderRadius: 8,
   },
   bookNowText: {
     color: theme.colors.textInverse,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   // Membership Banner Styles
   membershipSection: {
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   membershipBanner: {
-    marginHorizontal: theme.spacing.lg,
-    borderRadius: 20,
-    padding: theme.spacing.xl,
+    marginHorizontal: theme.spacing.md,
+    borderRadius: 16,
+    padding: theme.spacing.md,
     alignItems: "center",
   },
   membershipIconContainer: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   membershipIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   membershipTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
     textAlign: "center",
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.xs / 2,
   },
   membershipSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: theme.spacing.lg,
+    lineHeight: 16,
+    marginBottom: theme.spacing.md,
   },
   membershipBenefits: {
     width: "100%",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
   benefitRow: {
     flexDirection: "row",
@@ -958,44 +1038,44 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   benefitText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.medium,
   },
   membershipActions: {
     flexDirection: "row",
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
     width: "100%",
   },
   learnMoreButton: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
-    borderWidth: 2,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   learnMoreText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   applyNowButton: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: "hidden",
   },
   applyNowGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.xs / 2,
   },
   applyNowText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: theme.colors.white,
     fontFamily: theme.fonts.medium,
   },
 });

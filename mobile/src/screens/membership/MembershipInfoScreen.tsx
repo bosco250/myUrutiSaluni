@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import { Loader } from "../../components/common";
 import {api} from "../../services/api";
 
 interface MembershipInfoScreenProps {
@@ -118,10 +118,9 @@ export default function MembershipInfoScreen({ navigation }: MembershipInfoScree
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <Loader fullscreen message="Loading..." />
       </SafeAreaView>
     );
   }
@@ -164,7 +163,7 @@ export default function MembershipInfoScreen({ navigation }: MembershipInfoScree
               colors={[theme.colors.primary, theme.colors.primaryLight]}
               style={styles.heroIcon}
             >
-              <MaterialIcons name="business" size={48} color="#FFFFFF" />
+              <MaterialIcons name="business" size={36} color="#FFFFFF" />
             </LinearGradient>
           </View>
           <Text style={[styles.heroTitle, dynamicStyles.text]}>
@@ -187,7 +186,7 @@ export default function MembershipInfoScreen({ navigation }: MembershipInfoScree
                     ? "cancel"
                     : "pending"
                 }
-                size={24}
+                size={20}
                 color={
                   applicationStatus === "approved"
                     ? theme.colors.success
@@ -216,7 +215,7 @@ export default function MembershipInfoScreen({ navigation }: MembershipInfoScree
               <Text style={[styles.viewApplicationText, { color: theme.colors.primary }]}>
                 View Application Details
               </Text>
-              <MaterialIcons name="arrow-forward" size={18} color={theme.colors.primary} />
+              <MaterialIcons name="arrow-forward" size={16} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
         )}
@@ -232,7 +231,7 @@ export default function MembershipInfoScreen({ navigation }: MembershipInfoScree
                 <View style={[styles.benefitIconBg, { backgroundColor: theme.colors.primary + "15" }]}>
                   <MaterialIcons
                     name={benefit.icon as any}
-                    size={24}
+                    size={20}
                     color={theme.colors.primary}
                   />
                 </View>
@@ -297,7 +296,7 @@ export default function MembershipInfoScreen({ navigation }: MembershipInfoScree
               end={{ x: 1, y: 1 }}
               style={styles.applyButtonGradient}
             >
-              <MaterialIcons name="business-center" size={20} color="#FFFFFF" />
+              <MaterialIcons name="business-center" size={18} color={theme.colors.white} />
               <Text style={styles.applyButtonText}>Apply Now</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -320,16 +319,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },
   backButton: {
-    padding: theme.spacing.xs,
+    padding: theme.spacing.xs / 2,
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
     textAlign: "center",
@@ -341,102 +340,102 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 90,
   },
   heroSection: {
-    padding: theme.spacing.xl,
+    padding: theme.spacing.md,
     alignItems: "center",
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   heroIconContainer: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   heroIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
   },
   heroTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
-    marginTop: theme.spacing.md,
+    fontSize: 22,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
+    marginTop: theme.spacing.sm,
     textAlign: "center",
   },
   heroSubtitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
     textAlign: "center",
-    lineHeight: 22,
-    paddingHorizontal: theme.spacing.md,
+    lineHeight: 18,
+    paddingHorizontal: theme.spacing.sm,
   },
   statusCard: {
-    margin: theme.spacing.lg,
-    padding: theme.spacing.md,
-    borderRadius: 16,
+    margin: theme.spacing.md,
+    padding: theme.spacing.sm + 2,
+    borderRadius: 12,
     borderWidth: 1,
   },
   statusHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
   },
   statusTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   statusText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
-    lineHeight: 20,
-    marginBottom: theme.spacing.md,
+    lineHeight: 16,
+    marginBottom: theme.spacing.sm,
   },
   viewApplicationButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: theme.spacing.xs,
-    paddingVertical: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
+    paddingVertical: theme.spacing.xs / 2,
   },
   viewApplicationText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     fontFamily: theme.fonts.medium,
   },
   benefitsSection: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.md,
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
+    marginBottom: theme.spacing.sm,
   },
   benefitsList: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   benefitCard: {
     flexDirection: "row",
-    padding: theme.spacing.md,
-    borderRadius: 16,
+    padding: theme.spacing.sm,
+    borderRadius: 12,
     borderWidth: 1,
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   benefitIconBg: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -444,33 +443,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   benefitTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   benefitDesc: {
-    fontSize: 13,
-    fontFamily:theme.fonts.regular,
-    lineHeight: 18,
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    lineHeight: 16,
   },
   requirementsSection: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
     paddingTop: 0,
   },
   requirementsCard: {
-    padding: theme.spacing.md,
-    borderRadius: 16,
+    padding: theme.spacing.sm,
+    borderRadius: 12,
     borderWidth: 1,
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   requirementItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   requirementText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
     flex: 1,
   },
@@ -480,24 +479,24 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderTopWidth: 1,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
   },
   applyButton: {
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: "hidden",
   },
   applyButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   applyButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: theme.colors.white,
+    fontSize: 14,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },

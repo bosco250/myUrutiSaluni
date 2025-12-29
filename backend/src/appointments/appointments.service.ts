@@ -73,6 +73,25 @@ export class AppointmentsService {
         appointmentData.metadata.preferredEmployeeId;
     }
 
+    // Set serviceAmount from service basePrice if not already provided
+    if (!appointmentData.serviceAmount && appointmentData.serviceId) {
+      try {
+        const service = await this.servicesService.findOne(
+          appointmentData.serviceId,
+        );
+        if (service && service.basePrice) {
+          (appointment as any).serviceAmount = Number(service.basePrice) || 0;
+          this.logger.log(
+            `Set serviceAmount ${service.basePrice} from service ${service.name} for new appointment`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Could not fetch service price during appointment creation: ${error.message}`,
+        );
+      }
+    }
+
     const saved = await this.appointmentsRepository.save(appointment);
     const result = Array.isArray(saved) ? saved[0] : saved;
 
@@ -659,16 +678,28 @@ export class AppointmentsService {
   async findByPreferredEmployee(
     salonEmployeeId: string,
   ): Promise<Appointment[]> {
+    // For the metadata comparison, we need to cast UUID to text since JSONB ->> returns text
+    const metadataAccessor = this.getMetadataFieldAccessor(
+      'preferredEmployeeId',
+    );
+
     return this.appointmentsRepository
       .createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.customer', 'customer')
       .leftJoinAndSelect('appointment.service', 'service')
       .leftJoinAndSelect('appointment.salon', 'salon')
       .leftJoinAndSelect('appointment.createdBy', 'createdBy')
+      .leftJoinAndSelect('appointment.salonEmployee', 'salonEmployee')
+      .leftJoinAndSelect('salonEmployee.user', 'employeeUser')
       .where(
-        `${this.getMetadataFieldAccessor('preferredEmployeeId')} = :salonEmployeeId`,
+        // Check EITHER the direct salonEmployeeId column OR the metadata preferredEmployeeId
+        // Cast UUID to text for metadata comparison since JSONB ->> returns text
+        this.isPostgres
+          ? `(appointment.salon_employee_id = :salonEmployeeId OR ${metadataAccessor} = :salonEmployeeIdText)`
+          : `(appointment.salon_employee_id = :salonEmployeeId OR ${metadataAccessor} = :salonEmployeeIdText)`,
         {
           salonEmployeeId,
+          salonEmployeeIdText: salonEmployeeId, // Text version for metadata comparison
         },
       )
       .orderBy('appointment.scheduledStart', 'DESC')

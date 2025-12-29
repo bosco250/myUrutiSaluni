@@ -59,11 +59,19 @@ export interface Salon {
 class ExploreService {
   /**
    * Get all services (for customers, shows all active services)
+   * For employees with browse=true, shows all services for exploration
    * @param salonId Optional filter by salon ID
+   * @param browse If true, employees can view services from any salon
    */
-  async getServices(salonId?: string): Promise<Service[]> {
+  async getServices(salonId?: string, browse: boolean = true): Promise<Service[]> {
     try {
-      const endpoint = salonId ? `/services?salonId=${salonId}` : "/services";
+      // Build query params
+      const params = new URLSearchParams();
+      if (salonId) params.append('salonId', salonId);
+      if (browse) params.append('browse', 'true');
+      
+      const queryString = params.toString();
+      const endpoint = queryString ? `/services?${queryString}` : "/services";
       const response = await api.get<Service[]>(endpoint);
       return response;
     } catch (error: any) {
@@ -74,10 +82,14 @@ class ExploreService {
 
   /**
    * Get a single service by ID
+   * @param browse If true, employees can view services from any salon
    */
-  async getServiceById(serviceId: string): Promise<Service> {
+  async getServiceById(serviceId: string, browse: boolean = true): Promise<Service> {
     try {
-      const response = await api.get<Service>(`/services/${serviceId}`);
+      const endpoint = browse
+        ? `/services/${serviceId}?browse=true`
+        : `/services/${serviceId}`;
+      const response = await api.get<Service>(endpoint);
       return response;
     } catch (error: any) {
       console.error("Error fetching service:", error);
@@ -89,11 +101,15 @@ class ExploreService {
    * Get all salons (for customers, shows all active salons)
    * Backend endpoint: GET /api/salons
    * For customers, returns all salons. For salon owners, returns only their salons.
+   * For employees with browse=true, returns all salons.
    * Backend returns Salon[] directly from salonsService.findAll()
+   * @param browse If true, employees can see all salons (not just their own)
    */
-  async getSalons(): Promise<Salon[]> {
+  async getSalons(browse: boolean = true): Promise<Salon[]> {
     try {
-      const response = await api.get<Salon[]>("/salons");
+      // Always pass browse=true to ensure employees can see all salons
+      const endpoint = browse ? "/salons?browse=true" : "/salons";
+      const response = await api.get<Salon[]>(endpoint);
       // API service already parses JSON, so response is the array directly
       // Ensure we return an array even if backend returns unexpected format
       return Array.isArray(response) ? response : [];
@@ -156,17 +172,18 @@ class ExploreService {
 
   /**
    * Get products for a salon
-   * Customers can now view products for any salon
-   * Backend endpoint: GET /api/inventory/products?salonId={salonId}
+   * Customers and employees (in browse mode) can view products for any salon
+   * Backend endpoint: GET /api/inventory/products?salonId={salonId}&browse=true
    */
-  async getProducts(salonId: string): Promise<Product[]> {
+  async getProducts(salonId: string, browse: boolean = true): Promise<Product[]> {
     try {
       if (!salonId) {
         return [];
       }
 
+      const browseParam = browse ? '&browse=true' : '';
       const response = await api.get<Product[]>(
-        `/inventory/products?salonId=${salonId}`
+        `/inventory/products?salonId=${salonId}${browseParam}`
       );
 
       // Ensure we return an array of valid products
@@ -188,17 +205,18 @@ class ExploreService {
 
   /**
    * Get employees for a salon
-   * Customers can view employees for booking purposes
-   * Backend endpoint: GET /api/salons/{salonId}/employees
+   * Customers and employees (in browse mode) can view employees for booking purposes
+   * Backend endpoint: GET /api/salons/{salonId}/employees?browse=true
    */
-  async getSalonEmployees(salonId: string): Promise<Employee[]> {
+  async getSalonEmployees(salonId: string, browse: boolean = true): Promise<Employee[]> {
     try {
       if (!salonId) {
         return [];
       }
 
+      const browseParam = browse ? '?browse=true' : '';
       const response = await api.get<Employee[]>(
-        `/salons/${salonId}/employees`
+        `/salons/${salonId}/employees${browseParam}`
       );
 
       if (!Array.isArray(response)) {

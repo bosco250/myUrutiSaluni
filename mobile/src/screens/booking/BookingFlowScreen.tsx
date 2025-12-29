@@ -319,23 +319,115 @@ export default function BookingFlowScreen({
   }, [service, isAnyEmployee, operatingHours, selectedEmployeeId]);
 
   const fetchTimeSlots = useCallback(async () => {
-    if (!selectedDate || !selectedEmployeeId || !service) return;
+    // CRITICAL: Only fetch if we have a SPECIFIC employee (not "any")
+    if (!selectedDate || !selectedEmployeeId || selectedEmployeeId === "any" || !service) {
+      console.log("[BookingFlow] fetchTimeSlots skipped:", {
+        hasDate: !!selectedDate,
+        employeeId: selectedEmployeeId,
+        isAny: selectedEmployeeId === "any",
+        hasService: !!service,
+      });
+      return;
+    }
 
     try {
       setTimeSlotsLoading(true);
       const dateStr = selectedDate.toISOString().split("T")[0];
-      // Use same API as web version
+      console.log(`[BookingFlow] Fetching time slots for employee ${selectedEmployeeId}, date ${dateStr}, service ${service.id}, duration ${service.durationMinutes}`);
+      
+      // DIAGNOSTIC: Try to verify if appointments exist for this employee/date
+      // This helps identify if the issue is backend not finding appointments
+      try {
+        // Import staffService properly
+        const { staffService } = await import("../../services/staff");
+        if (staffService && typeof staffService.getAppointmentsByDate === 'function') {
+          const existingAppointments = await staffService.getAppointmentsByDate(selectedEmployeeId, dateStr);
+          const appointmentCount = Array.isArray(existingAppointments) ? existingAppointments.length : 0;
+          
+          console.log(`[BookingFlow] DIAGNOSTIC: Found ${appointmentCount} appointments for employee ${selectedEmployeeId} on ${dateStr}`);
+          
+          if (appointmentCount > 0 && Array.isArray(existingAppointments)) {
+            console.log(`[BookingFlow] DIAGNOSTIC: Appointments details:`, existingAppointments.map((apt: any) => ({
+              id: apt.id,
+              start: apt.scheduledStart,
+              end: apt.scheduledEnd,
+              status: apt.status,
+              salonEmployeeId: apt.salonEmployeeId,
+              preferredEmployeeId: apt.metadata?.preferredEmployeeId,
+              employeeIdMatch: apt.salonEmployeeId === selectedEmployeeId || apt.metadata?.preferredEmployeeId === selectedEmployeeId,
+            })));
+            
+            const matchingAppointments = existingAppointments.filter((apt: any) => 
+              apt.salonEmployeeId === selectedEmployeeId || 
+              apt.metadata?.preferredEmployeeId === selectedEmployeeId
+            );
+            
+            if (matchingAppointments.length > 0) {
+              console.error(`[BookingFlow] ⚠️⚠️⚠️ BACKEND BUG DETECTED!`);
+              console.error(`[BookingFlow] ${matchingAppointments.length} appointments exist with matching employee ID`);
+              console.error(`[BookingFlow] But backend returned all slots as available!`);
+              console.error(`[BookingFlow] This means backend's getEmployeeAppointments() query is failing.`);
+              console.error(`[BookingFlow] Check backend logs for the SQL query and parameters.`);
+            } else {
+              console.warn(`[BookingFlow] ⚠️ Found ${appointmentCount} appointments but NONE match employee ID ${selectedEmployeeId}`);
+              console.warn(`[BookingFlow] This suggests employee ID mismatch in database.`);
+            }
+          } else {
+            console.log(`[BookingFlow] DIAGNOSTIC: No appointments found - all slots should be available (this is correct)`);
+          }
+        } else {
+          console.warn(`[BookingFlow] Diagnostic: staffService.getAppointmentsByDate not available`);
+        }
+      } catch (diagError: any) {
+        console.warn(`[BookingFlow] Could not run diagnostic check:`, diagError?.message || diagError);
+      }
+      
+      // Use same API as web version - backend returns slots with available: false for booked times
       const slots = await appointmentsService.getEmployeeTimeSlots(
         selectedEmployeeId,
         dateStr,
         service.durationMinutes,
         service.id
       );
+      
+      console.log(`[BookingFlow] Received ${slots.length} slots from API`);
 
-      // Use slots directly from backend - they already respect operating hours
-      setTimeSlots(slots);
-    } catch {
-      setError("Failed to load time slots");
+      // Backend already marks booked slots as available: false
+      // The service now normalizes the response, but we'll double-check here
+      const processedSlots = Array.isArray(slots) ? slots : [];
+      
+      // Sort slots by time and ensure strict availability checking
+      const validSlots = processedSlots
+        .filter((slot) => slot && slot.startTime && slot.endTime)
+        .map((slot) => ({
+          ...slot,
+          // Strict boolean check - only true if explicitly true
+          // Service already normalizes, but ensure here too
+          available: slot.available === true,
+        }))
+        .sort((a, b) => {
+          const timeA = a.startTime.split(":").map(Number);
+          const timeB = b.startTime.split(":").map(Number);
+          const minutesA = timeA[0] * 60 + timeA[1];
+          const minutesB = timeB[0] * 60 + timeB[1];
+          return minutesA - minutesB;
+        });
+
+      // Debug: Log slot availability
+      const unavailableSlots = validSlots.filter((s) => !s.available);
+      const availableSlots = validSlots.filter((s) => s.available);
+      console.log(`[BookingFlow] Slots for ${selectedDate.toISOString().split("T")[0]}:`, {
+        total: validSlots.length,
+        available: availableSlots.length,
+        unavailable: unavailableSlots.length,
+        unavailableTimes: unavailableSlots.map(s => `${s.startTime} (${s.reason || "booked"})`),
+      });
+
+      setTimeSlots(validSlots);
+    } catch (error: any) {
+      console.error("Error fetching time slots:", error);
+      setError("Failed to load time slots. Please try again.");
+      setTimeSlots([]);
     } finally {
       setTimeSlotsLoading(false);
     }
@@ -484,11 +576,20 @@ export default function BookingFlowScreen({
     if (selectedDate && service) {
       if (isAnyEmployee) {
         // Generate time slots from salon operating hours (like web version)
+        // Note: For "Any Available", we can't check specific employee bookings
+        // The backend will handle assignment when creating the appointment
         generateTimeSlotsFromOperatingHours();
-      } else if (selectedEmployeeId) {
+      } else if (selectedEmployeeId && selectedEmployeeId !== "any") {
         // Fetch time slots from backend for specific employee
+        // Backend will return slots with available: false for booked times
         fetchTimeSlots();
+      } else {
+        // No valid employee selected, clear slots
+        setTimeSlots([]);
       }
+    } else {
+      // No date selected, clear slots
+      setTimeSlots([]);
     }
   }, [
     selectedDate,
@@ -519,11 +620,19 @@ export default function BookingFlowScreen({
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
     setSelectedSlot(null);
+    setError(""); // Clear errors when selecting a new date
+    // Time slots will be automatically fetched via useEffect
   };
 
   const handleSlotSelect = (slot: TimeSlot) => {
-    if (slot.available) {
+    // Only allow selection of explicitly available slots
+    if (slot.available === true) {
       setSelectedSlot(slot);
+      setError(""); // Clear any previous errors
+    } else {
+      setError(slot.reason || "This time slot is not available");
+      // Don't set selected slot if unavailable
+      setSelectedSlot(null);
     }
   };
 
@@ -548,6 +657,16 @@ export default function BookingFlowScreen({
       // If specific employee is selected, require time slot
       if (!isAnyEmployee && !selectedSlot) {
         setError("Please select a time slot");
+        return;
+      }
+      // Double-check that selected slot is actually available
+      if (selectedSlot && selectedSlot.available !== true) {
+        setError("The selected time slot is no longer available. Please select another time.");
+        setSelectedSlot(null);
+        // Refresh slots
+        if (selectedDate && selectedEmployeeId && selectedEmployeeId !== "any") {
+          fetchTimeSlots();
+        }
         return;
       }
       setCurrentStep("confirm");
@@ -594,6 +713,76 @@ export default function BookingFlowScreen({
         scheduledEnd.getMinutes() + (service.durationMinutes || 30)
       );
 
+      // Validate booking first - ALWAYS validate to prevent double bookings
+      // For "Any Available", we still validate but don't specify employee
+      if (selectedEmployeeId && selectedEmployeeId !== "any") {
+        try {
+          const validation = await appointmentsService.validateBooking({
+            employeeId: selectedEmployeeId,
+            serviceId: service.id,
+            scheduledStart: scheduledStart.toISOString(),
+            scheduledEnd: scheduledEnd.toISOString(),
+          });
+
+          if (!validation.valid) {
+            setError(
+              validation.reason ||
+                "This time slot is no longer available. Please select another time."
+            );
+            // Refresh availability and time slots to get latest status
+            if (selectedDate) {
+              const dateStr = selectedDate.toISOString().split("T")[0];
+              try {
+                const slots = await appointmentsService.getEmployeeTimeSlots(
+                  selectedEmployeeId,
+                  dateStr,
+                  service.durationMinutes,
+                  service.id
+                );
+                // Process and set slots
+                const processedSlots = Array.isArray(slots) ? slots : [];
+                const validSlots = processedSlots
+                  .filter((slot) => slot && slot.startTime && slot.endTime)
+                  .sort((a, b) => {
+                    const timeA = a.startTime.split(":").map(Number);
+                    const timeB = b.startTime.split(":").map(Number);
+                    const minutesA = timeA[0] * 60 + timeA[1];
+                    const minutesB = timeB[0] * 60 + timeB[1];
+                    return minutesA - minutesB;
+                  });
+                setTimeSlots(validSlots);
+                // Clear selected slot if it's now unavailable
+                if (selectedSlot && !validSlots.find(
+                  (s) => s.startTime === selectedSlot.startTime && s.available !== false
+                )) {
+                  setSelectedSlot(null);
+                }
+              } catch {
+                // Ignore refresh errors
+              }
+            }
+            setSubmitting(false);
+            return;
+          }
+        } catch (validationError: any) {
+          setError(
+            validationError.message ||
+              "Failed to validate booking. Please try again."
+          );
+          setSubmitting(false);
+          return;
+        }
+      } else if (isAnyEmployee) {
+        // For "Any Available", we can't validate specific employee, but backend will handle assignment
+        // Still check if the slot itself is valid (not in past, etc.)
+        const now = new Date();
+        if (scheduledStart < now) {
+          setError("Cannot book appointments in the past");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       // Create appointment
       const appointmentData: any = {
         salonId: salon.id,
@@ -606,7 +795,7 @@ export default function BookingFlowScreen({
       };
 
       // Only include salonEmployeeId if a specific employee was selected
-      if (!isAnyEmployee && selectedEmployeeId) {
+      if (!isAnyEmployee && selectedEmployeeId && selectedEmployeeId !== "any") {
         appointmentData.salonEmployeeId = selectedEmployeeId;
       }
 
@@ -629,7 +818,33 @@ export default function BookingFlowScreen({
         },
       ]);
     } catch (error: any) {
-      setError(error.message || "Failed to create appointment");
+      // Check if error is about availability
+      if (
+        error.message?.includes("not available") ||
+        error.message?.includes("conflict") ||
+        error.message?.includes("already booked")
+      ) {
+        setError(
+          "This time slot is no longer available. Please select another time."
+        );
+        // Refresh time slots
+        if (selectedDate && selectedEmployeeId && selectedEmployeeId !== "any") {
+          const dateStr = selectedDate.toISOString().split("T")[0];
+          try {
+            const slots = await appointmentsService.getEmployeeTimeSlots(
+              selectedEmployeeId,
+              dateStr,
+              service.durationMinutes,
+              service.id
+            );
+            setTimeSlots(slots);
+          } catch {
+            // Ignore refresh errors
+          }
+        }
+      } else {
+        setError(error.message || "Failed to create appointment");
+      }
       Alert.alert("Error", error.message || "Failed to create appointment");
     } finally {
       setSubmitting(false);
@@ -1099,9 +1314,36 @@ export default function BookingFlowScreen({
             {/* Time Slots */}
             {selectedDate && (
               <View style={styles.timeSlotsContainer}>
-                <Text style={[styles.timeSlotsTitle, dynamicStyles.text]}>
-                  Available Times
-                </Text>
+                <View style={styles.timeSlotsHeader}>
+                  <View>
+                    <Text style={[styles.timeSlotsTitle, dynamicStyles.text]}>
+                      Available Times
+                    </Text>
+                    {timeSlots.length > 0 && (
+                      <Text style={[styles.timeSlotsSubtitle, dynamicStyles.textSecondary]}>
+                        {timeSlots.filter((s) => s.available === true).length} available • {timeSlots.filter((s) => s.available !== true).length} booked
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      // Refresh time slots to get latest availability
+                      if (selectedDate && selectedEmployeeId && selectedEmployeeId !== "any") {
+                        fetchTimeSlots();
+                      } else if (isAnyEmployee) {
+                        generateTimeSlotsFromOperatingHours();
+                      }
+                    }}
+                    style={styles.refreshButton}
+                    disabled={timeSlotsLoading}
+                  >
+                    <MaterialIcons
+                      name="refresh"
+                      size={18}
+                      color={theme.colors.primary}
+                    />
+                  </TouchableOpacity>
+                </View>
                 {timeSlotsLoading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator
@@ -1117,35 +1359,80 @@ export default function BookingFlowScreen({
                   </Text>
                 ) : (
                   <View style={styles.timeSlotsGrid}>
-                    {timeSlots
-                      .filter((slot) => slot.available)
-                      .map((slot, index) => {
+                    {timeSlots.length === 0 ? (
+                      <Text
+                        style={[styles.noSlotsText, dynamicStyles.textSecondary]}
+                      >
+                        No time slots available for this date
+                      </Text>
+                    ) : (
+                      timeSlots.map((slot, index) => {
                         const isSelected =
                           selectedSlot?.startTime === slot.startTime &&
                           selectedSlot?.endTime === slot.endTime;
+                        // STRICT CHECK: Only available if explicitly true
+                        const isAvailable = slot.available === true;
+                        const isUnavailable = !isAvailable;
+                        
                         return (
                           <TouchableOpacity
-                            key={index}
+                            key={`${slot.startTime}-${slot.endTime}-${index}`}
                             style={[
                               styles.timeSlot,
                               dynamicStyles.card,
-                              isSelected && styles.timeSlotSelected,
+                              isSelected && isAvailable && styles.timeSlotSelected,
+                              isUnavailable && styles.timeSlotUnavailable,
                             ]}
-                            onPress={() => handleSlotSelect(slot)}
-                            activeOpacity={0.7}
+                            onPress={() => {
+                              if (isAvailable) {
+                                handleSlotSelect(slot);
+                              } else {
+                                // Show error and prevent selection
+                                setError(slot.reason || "This time slot is already booked");
+                                // Clear any previously selected slot if this one is unavailable
+                                if (isSelected) {
+                                  setSelectedSlot(null);
+                                }
+                              }
+                            }}
+                            disabled={isUnavailable}
+                            activeOpacity={isUnavailable ? 1 : 0.7}
                           >
-                            <Text
-                              style={[
-                                styles.timeSlotText,
-                                dynamicStyles.text,
-                                isSelected && styles.timeSlotTextSelected,
-                              ]}
-                            >
-                              {formatTime(slot.startTime)}
-                            </Text>
+                            <View style={styles.timeSlotContent}>
+                              <Text
+                                style={[
+                                  styles.timeSlotText,
+                                  dynamicStyles.text,
+                                  isSelected && isAvailable && styles.timeSlotTextSelected,
+                                  isUnavailable && styles.timeSlotTextUnavailable,
+                                ]}
+                              >
+                                {formatTime(slot.startTime)}
+                              </Text>
+                              {isUnavailable && (
+                                <MaterialIcons
+                                  name="block"
+                                  size={14}
+                                  color={theme.colors.error}
+                                  style={styles.unavailableIcon}
+                                />
+                              )}
+                            </View>
+                            {isUnavailable && (
+                              <Text
+                                style={[
+                                  styles.timeSlotReason,
+                                  dynamicStyles.textSecondary,
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {slot.reason || "Booked"}
+                              </Text>
+                            )}
                           </TouchableOpacity>
                         );
-                      })}
+                      })
+                    )}
                   </View>
                 )}
               </View>
@@ -1603,11 +1890,24 @@ const styles = StyleSheet.create({
   timeSlotsContainer: {
     marginTop: theme.spacing.md,
   },
+  timeSlotsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.md,
+  },
   timeSlotsTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: theme.spacing.md,
     fontFamily: theme.fonts.medium,
+  },
+  timeSlotsSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: theme.fonts.regular,
+  },
+  refreshButton: {
+    padding: theme.spacing.xs,
   },
   timeSlotsGrid: {
     flexDirection: "row",
@@ -1618,17 +1918,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.borderLight,
     minWidth: 100,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  timeSlotContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs / 2,
+  },
+  unavailableIcon: {
+    marginLeft: 2,
   },
   timeSlotSelected: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary,
   },
   timeSlotUnavailable: {
-    opacity: 0.5,
+    opacity: 0.6,
+    backgroundColor: theme.colors.error + "15",
+    borderColor: theme.colors.error + "50",
+    borderWidth: 1.5,
   },
   timeSlotText: {
     fontSize: 14,
@@ -1638,7 +1950,13 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
   },
   timeSlotTextUnavailable: {
+    opacity: 0.6,
     textDecorationLine: "line-through",
+  },
+  timeSlotReason: {
+    fontSize: 10,
+    marginTop: 2,
+    fontFamily: theme.fonts.regular,
   },
   noSlotsText: {
     fontSize: 14,

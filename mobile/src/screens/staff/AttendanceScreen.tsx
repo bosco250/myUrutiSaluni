@@ -10,7 +10,9 @@ import {
   RefreshControl,
   Modal,
   Platform,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
@@ -226,7 +228,8 @@ export default function AttendanceScreen({ navigation }: any) {
   );
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -359,7 +362,7 @@ export default function AttendanceScreen({ navigation }: any) {
       </ScrollView>
       
       {renderSalonPicker()}
-    </View>
+    </SafeAreaView>
   );
 }
 

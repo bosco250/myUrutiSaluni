@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService, SalonProduct } from '../../services/salon';
+import { Loader } from '../../components/common';
 
 interface OperationsScreenProps {
   navigation: {
@@ -62,11 +62,12 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
       color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     header: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     divider: {
       backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
@@ -194,19 +195,17 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+        <Loader fullscreen message="Loading operations..." />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
 
       {/* Header */}
-      <View style={[styles.header, dynamicStyles.header]}>
+      <View style={[styles.header, dynamicStyles.header, { borderBottomColor: dynamicStyles.header.borderBottomColor }]}>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Operations Management</Text>
       </View>
 
@@ -231,7 +230,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               onPress={() => navigation.navigate('AddService', { salonId })}
               activeOpacity={0.8}
             >
-              <MaterialIcons name="add" size={18} color={theme.colors.white} />
+              <MaterialIcons name="add" size={16} color={theme.colors.white} />
               <Text style={styles.addButtonText}>Add Service</Text>
             </TouchableOpacity>
           </View>
@@ -260,7 +259,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                       {service.duration} min • Commission: {service.commission}%
                     </Text>
                   </View>
-                  <Text style={[styles.servicePrice, dynamicStyles.text]}>${service.price}</Text>
+                  <Text style={[styles.servicePrice, dynamicStyles.text]}>RWF {service.price.toLocaleString()}</Text>
                 </TouchableOpacity>
               ))
             )}
@@ -282,8 +281,8 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
 
           {products.length === 0 ? (
             <View style={[styles.card, dynamicStyles.card, styles.emptyState]}>
-              <MaterialIcons name="inventory-2" size={40} color={dynamicStyles.textSecondary.color} />
-              <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
+              <MaterialIcons name="inventory-2" size={32} color={dynamicStyles.textSecondary.color} />
+              <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 10 }]}>
                 No inventory items
               </Text>
               <TouchableOpacity
@@ -311,7 +310,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                 ]}>
                   <MaterialIcons
                     name="inventory-2"
-                    size={20}
+                    size={18}
                     color={isLowStock(product.stockLevel) ? theme.colors.error : theme.colors.primary}
                   />
                 </View>
@@ -369,8 +368,8 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
           <View style={[styles.card, dynamicStyles.card]}>
             {checkIns.length === 0 ? (
               <View style={styles.emptyState}>
-                <MaterialIcons name="event-available" size={40} color={dynamicStyles.textSecondary.color} />
-                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
+                <MaterialIcons name="event-available" size={32} color={dynamicStyles.textSecondary.color} />
+                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 10 }]}>
                   No check-ins today
                 </Text>
               </View>
@@ -416,7 +415,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                <MaterialIcons name="store" size={24} color={theme.colors.primary} />
+                <MaterialIcons name="store" size={20} color={theme.colors.primary} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>My Salons</Text>
             </TouchableOpacity>
@@ -427,7 +426,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.info + '15' }]}>
-                <MaterialIcons name="people" size={24} color={theme.colors.info} />
+                <MaterialIcons name="people" size={20} color={theme.colors.info} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Staff</Text>
             </TouchableOpacity>
@@ -438,7 +437,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.secondary + '15' }]}>
-                <MaterialIcons name="bar-chart" size={24} color={theme.colors.secondary} />
+                <MaterialIcons name="bar-chart" size={20} color={theme.colors.secondary} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Reports</Text>
             </TouchableOpacity>
@@ -449,7 +448,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.success + '15' }]}>
-                <MaterialIcons name="point-of-sale" size={24} color={theme.colors.success} />
+                <MaterialIcons name="point-of-sale" size={20} color={theme.colors.success} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>New Sale</Text>
             </TouchableOpacity>
@@ -460,7 +459,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                <MaterialIcons name="payments" size={24} color={theme.colors.primary} />
+                <MaterialIcons name="payments" size={20} color={theme.colors.primary} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Commissions</Text>
             </TouchableOpacity>
@@ -471,16 +470,16 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.warning + '15' }]}>
-                <MaterialIcons name="settings" size={24} color={theme.colors.warning} />
+                <MaterialIcons name="settings" size={20} color={theme.colors.warning} />
               </View>
               <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Settings</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -488,243 +487,264 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: 60,
-    paddingBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
     alignItems: 'center',
+    borderBottomWidth: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
   },
   scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
   section: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 20,
+    paddingHorizontal: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.xs + 2,
+    borderRadius: 16,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   addButtonText: {
     color: theme.colors.white,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
     marginLeft: 4,
   },
   outlineButton: {
-    borderWidth: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 20,
+    borderWidth: 1.5,
+    paddingHorizontal: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.xs + 2,
+    borderRadius: 16,
   },
   outlineButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   card: {
-    borderRadius: 16,
-    padding: theme.spacing.lg,
+    borderRadius: 12,
+    padding: theme.spacing.md,
     borderWidth: 1,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   serviceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   serviceRowBorder: {
     borderBottomWidth: 1,
   },
   serviceInfo: {
     flex: 1,
+    marginRight: theme.spacing.sm,
   },
   serviceName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
-    marginBottom: 4,
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
   },
   serviceDetails: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   servicePrice: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
   },
   inventoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.sm + 2,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    marginBottom: theme.spacing.xs + 2,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   lowStockCard: {
-    backgroundColor: theme.colors.error + '08',
-    borderColor: theme.colors.error + '30',
+    backgroundColor: theme.colors.error + '0C',
+    borderColor: theme.colors.error + '40',
   },
   inventoryIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.sm,
   },
   inventoryInfo: {
     flex: 1,
   },
   inventoryName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
     marginBottom: 2,
   },
   inventoryStock: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   orderButton: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.error,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
   orderButtonText: {
     color: theme.colors.error,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
   },
   viewAllLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs + 2,
+    marginTop: theme.spacing.xs,
   },
   viewAllText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   linkText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   checkInRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   checkInTime: {
     alignItems: 'center',
-    marginRight: theme.spacing.md,
-    minWidth: 50,
+    marginRight: theme.spacing.sm,
+    minWidth: 44,
   },
   timeText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
   },
   timePeriod: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: theme.fonts.regular,
+    marginTop: 1,
   },
   checkInInfo: {
     flex: 1,
+    marginRight: theme.spacing.xs,
   },
   customerName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
     marginBottom: 2,
   },
   checkInService: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   checkInStatus: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
   },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: theme.spacing.sm,
-    marginHorizontal: -theme.spacing.xs,
+    marginTop: theme.spacing.xs,
+    marginHorizontal: -theme.spacing.xs / 2,
   },
   quickActionCard: {
     width: '48%',
     marginHorizontal: '1%',
-    marginBottom: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginBottom: theme.spacing.xs + 2,
+    padding: theme.spacing.sm + 2,
+    borderRadius: 10,
+    borderWidth: 1.5,
     alignItems: 'center',
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs + 2,
   },
   quickActionLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: theme.fonts.medium,
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
     textAlign: 'center',
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   addProductButton: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 20,
+    paddingHorizontal: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.xs + 2,
+    borderRadius: 16,
   },
   addProductButtonText: {
     color: theme.colors.primary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.semibold,
   },
 });

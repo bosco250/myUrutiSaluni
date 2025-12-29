@@ -66,13 +66,13 @@ export default function AppointmentCard({
 
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
-          <MaterialIcons name="access-time" size={18} color={theme.colors.primary} />
+          <MaterialIcons name="access-time" size={14} color={theme.colors.primary} />
           <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>
             {date === "Today" ? time : `${date} ${time}`}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <MaterialIcons name="person" size={18} color={theme.colors.primary} />
+          <MaterialIcons name="person" size={14} color={theme.colors.primary} />
           <Text style={[styles.detailText, { color: dynamicStyles.textSecondary.color }]}>{stylist}</Text>
         </View>
       </View>
@@ -81,7 +81,7 @@ export default function AppointmentCard({
         <View style={styles.additionalInfoRow}>
           {status && (
             <View style={styles.statusContainer}>
-              <MaterialIcons name="info-outline" size={16} color={dynamicStyles.textSecondary.color} />
+              <MaterialIcons name="info-outline" size={12} color={dynamicStyles.textSecondary.color} />
               <Text style={[styles.additionalInfoText, { color: dynamicStyles.textSecondary.color }]}>
                 {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
               </Text>
@@ -89,7 +89,7 @@ export default function AppointmentCard({
           )}
           {createdDate && createdTime && (
             <View style={styles.createdContainer}>
-              <MaterialIcons name="add-circle-outline" size={16} color={dynamicStyles.textSecondary.color} />
+              <MaterialIcons name="add-circle-outline" size={12} color={dynamicStyles.textSecondary.color} />
               <Text style={[styles.additionalInfoText, { color: dynamicStyles.textSecondary.color }]}>
                 Created: {createdDate === "Today" ? createdTime : `${createdDate} ${createdTime}`}
               </Text>
@@ -111,7 +111,7 @@ export default function AppointmentCard({
           onPress={onShare}
           activeOpacity={0.7}
         >
-          <MaterialIcons name="send" size={20} color={theme.colors.primary} />
+          <MaterialIcons name="send" size={18} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -121,103 +121,103 @@ export default function AppointmentCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1C1C1E',
-    borderRadius: 16,
-    padding: theme.spacing.lg,
-    marginTop: theme.spacing.md,
+    borderRadius: 12,
+    padding: theme.spacing.md + 2,
+    marginTop: theme.spacing.sm,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   cardHeaderLeft: {
     flex: 1,
   },
   serviceName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.textInverse,
-    marginBottom: theme.spacing.xs,
-    fontFamily: theme.fonts.bold,
+    marginBottom: theme.spacing.xs / 2,
+    fontFamily: theme.fonts.semibold,
   },
   salonName: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.colors.textInverse,
     opacity: 0.9,
     fontFamily: theme.fonts.regular,
   },
   badge: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 20,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs / 2,
+    borderRadius: 16,
   },
   badgeText: {
     color: theme.colors.textInverse,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   detailsRow: {
     flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   detailText: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.colors.textInverse,
     fontFamily: theme.fonts.regular,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
   },
   viewDetailsButton: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs + 2,
+    paddingHorizontal: theme.spacing.sm,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   viewDetailsText: {
     color: theme.colors.text,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
   shareButton: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     backgroundColor: '#2C2C2E',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   additionalInfoRow: {
-    marginTop: theme.spacing.xs,
-    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs / 2,
+    gap: theme.spacing.xs / 2,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   createdContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   additionalInfoText: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.textInverse,
     opacity: 0.8,
     fontFamily: theme.fonts.regular,

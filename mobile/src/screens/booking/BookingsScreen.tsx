@@ -6,12 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import { Loader } from "../../components/common";
 import {
   appointmentsService,
   Appointment,
@@ -141,7 +142,6 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
     setRefreshing(false);
   };
 
-
   const handlePreviousMonth = () => {
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
@@ -210,10 +210,23 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   // Get appointments count for a specific date
   const getAppointmentsForDate = (date: Date | null) => {
     if (!date) return 0;
-    const dateStr = date.toISOString().split("T")[0];
+
+    // Normalize date to local date (year, month, day only)
+    const dateYear = date.getFullYear();
+    const dateMonth = date.getMonth();
+    const dateDay = date.getDate();
+
     return appointments.filter((apt) => {
-      const aptDate = new Date(apt.scheduledStart).toISOString().split("T")[0];
-      return aptDate === dateStr;
+      // Normalize appointment date to local date (year, month, day only)
+      const aptDate = new Date(apt.scheduledStart);
+      const aptYear = aptDate.getFullYear();
+      const aptMonth = aptDate.getMonth();
+      const aptDay = aptDate.getDate();
+
+      // Compare dates in local timezone
+      return (
+        aptYear === dateYear && aptMonth === dateMonth && aptDay === dateDay
+      );
     }).length;
   };
 
@@ -259,12 +272,24 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
 
     // Filter by selected date only if a date is explicitly selected (not null)
     if (selectedDate !== null) {
-      const selectedDateStr = selectedDate.toISOString().split("T")[0];
+      // Normalize selected date to local date (year, month, day only)
+      const selectedYear = selectedDate.getFullYear();
+      const selectedMonth = selectedDate.getMonth();
+      const selectedDay = selectedDate.getDate();
+
       filtered = filtered.filter((apt) => {
-        const aptDate = new Date(apt.scheduledStart)
-          .toISOString()
-          .split("T")[0];
-        return aptDate === selectedDateStr;
+        // Normalize appointment date to local date (year, month, day only)
+        const aptDate = new Date(apt.scheduledStart);
+        const aptYear = aptDate.getFullYear();
+        const aptMonth = aptDate.getMonth();
+        const aptDay = aptDate.getDate();
+
+        // Compare dates in local timezone
+        return (
+          aptYear === selectedYear &&
+          aptMonth === selectedMonth &&
+          aptDay === selectedDay
+        );
       });
     }
 
@@ -408,8 +433,23 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
     },
   ];
 
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView
+        style={[styles.container, dynamicStyles.container]}
+        edges={["top"]}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <Loader fullscreen message="Loading appointments..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={["top"]}
+    >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header - Fixed */}
@@ -425,7 +465,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
           onPress={() => navigation?.navigate("Explore")}
           activeOpacity={0.7}
         >
-          <MaterialIcons name="add" size={20} color={theme.colors.white} />
+          <MaterialIcons name="add" size={16} color={theme.colors.white} />
           <Text style={styles.newBookingButtonText}>New Booking</Text>
         </TouchableOpacity>
       </View>
@@ -607,11 +647,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
             </Text>
           </View>
 
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
-          ) : filteredAppointments.length === 0 ? (
+          {filteredAppointments.length === 0 ? (
             <View style={[styles.emptyCard, dynamicStyles.card]}>
               <MaterialIcons
                 name={
@@ -623,7 +659,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                         ? "cancel"
                         : "event-busy"
                 }
-                size={64}
+                size={48}
                 color={dynamicStyles.textSecondary.color}
               />
               <Text style={[styles.emptyText, dynamicStyles.text]}>
@@ -657,7 +693,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
               >
                 <MaterialIcons
                   name="add"
-                  size={20}
+                  size={16}
                   color={theme.colors.white}
                 />
                 <Text style={styles.exploreButtonText}>New Booking</Text>
@@ -694,7 +730,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                     <View style={styles.appointmentIconContainer}>
                       <MaterialIcons
                         name={getStatusIcon(appointment.status) as any}
-                        size={24}
+                        size={18}
                         color={appointmentsService.getStatusColor(
                           appointment.status
                         )}
@@ -753,7 +789,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                     <View style={styles.appointmentTime}>
                       <MaterialIcons
                         name="event"
-                        size={16}
+                        size={14}
                         color={dynamicStyles.textSecondary.color}
                       />
                       <Text
@@ -772,7 +808,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                       <View style={styles.appointmentTime}>
                         <MaterialIcons
                           name="add-circle-outline"
-                          size={16}
+                          size={14}
                           color={dynamicStyles.textSecondary.color}
                         />
                         <Text
@@ -798,7 +834,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                       <View style={styles.appointmentEmployee}>
                         <MaterialIcons
                           name="person"
-                          size={16}
+                          size={14}
                           color={dynamicStyles.textSecondary.color}
                         />
                         <Text
@@ -816,7 +852,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                       <View style={styles.appointmentPrice}>
                         <MaterialIcons
                           name="attach-money"
-                          size={16}
+                          size={14}
                           color={theme.colors.primary}
                         />
                         <Text
@@ -836,7 +872,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -855,9 +891,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: StatusBar.currentHeight || 0,
+    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
   },
   newBookingButton: {
     flexDirection: "row",
@@ -865,23 +901,23 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: 20,
+    borderRadius: 18,
     gap: theme.spacing.xs,
   },
   newBookingButtonText: {
     color: theme.colors.white,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.xs / 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
   },
   headerBadge: {
@@ -900,24 +936,24 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.bold,
   },
   filterContainer: {
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
     backgroundColor: theme.colors.background,
   },
   filterTabs: {
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.xs,
   },
   filterTab: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 20,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs + 2,
+    borderRadius: 16,
     backgroundColor: theme.colors.backgroundSecondary,
-    marginRight: theme.spacing.sm,
-    gap: theme.spacing.xs,
+    marginRight: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   filterTabActive: {
     shadowColor: theme.colors.primary,
@@ -927,7 +963,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   filterTabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
     color: theme.colors.text,
@@ -956,40 +992,43 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   calendarContainer: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: 16,
-    padding: theme.spacing.md,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    borderRadius: 12,
+    paddingTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
     shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   monthHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
   },
   monthButton: {
-    padding: theme.spacing.xs,
+    padding: theme.spacing.xs / 2,
   },
   monthText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   daysOfWeek: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs / 2,
   },
   dayOfWeek: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
-    width: 40,
+    width: 36,
     textAlign: "center",
   },
   calendarGrid: {
@@ -1061,22 +1100,22 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   section: {
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
   },
   sectionCount: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   loadingContainer: {
@@ -1084,27 +1123,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   appointmentCard: {
-    borderRadius: 16,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    borderRadius: 12,
+    padding: theme.spacing.sm + 2,
+    marginBottom: theme.spacing.sm,
     shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    borderLeftWidth: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    borderLeftWidth: 3,
     borderLeftColor: theme.colors.primary,
   },
   appointmentHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+    gap: theme.spacing.xs,
   },
   appointmentIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.colors.primaryLight + "20",
     justifyContent: "center",
     alignItems: "center",
@@ -1113,37 +1152,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appointmentService: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
     marginBottom: theme.spacing.xs / 2,
   },
   appointmentSalon: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   statusBadge: {
-    paddingHorizontal: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs + 2,
     paddingVertical: theme.spacing.xs / 2,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   appointmentDetails: {
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   appointmentTime: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   appointmentDateTime: {
-    fontSize: 14,
-    fontFamily: theme.fonts.medium,
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
   appointmentEmployee: {
     flexDirection: "row",
@@ -1151,37 +1190,37 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   appointmentEmployeeText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   appointmentPrice: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
   },
   appointmentPriceText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   emptyCard: {
-    borderRadius: 16,
-    padding: theme.spacing.xl,
+    borderRadius: 12,
+    padding: theme.spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 200,
+    minHeight: 160,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
     textAlign: "center",
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs / 2,
+    marginBottom: theme.spacing.sm,
     textAlign: "center",
   },
   clearDateButton: {
@@ -1196,14 +1235,14 @@ const styles = StyleSheet.create({
   },
   exploreButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
-    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 10,
+    marginTop: theme.spacing.md,
   },
   exploreButtonText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },

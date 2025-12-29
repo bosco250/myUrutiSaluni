@@ -9,12 +9,12 @@ import {
   Image,
   TextInput,
   RefreshControl,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import { Loader } from "../../components/common";
 import { chatService, ConversationWithLastMessage } from "../../services/chat";
 import { useAuth } from "../../context/AuthContext";
 
@@ -156,19 +156,14 @@ export default function ChatListScreen({ navigation }: ChatListScreenProps) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, dynamicStyles.text]}>
-            Loading conversations...
-          </Text>
-        </View>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+        <Loader fullscreen message="Loading conversations..." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}

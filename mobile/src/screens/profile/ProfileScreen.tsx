@@ -11,8 +11,10 @@ import {
   Modal,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
+import { Loader } from "../../components/common";
 import { api } from "../../services/api";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
@@ -37,15 +39,20 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     useState<ProfileSubScreen>("main");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [hasExistingApplication, setHasExistingApplication] = useState(false);
+  const [checkingMembership, setCheckingMembership] = useState(true);
 
   // Check if user is an employee
   const isEmployee = user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE";
 
   // Check if employee already has a membership application
   const checkMembershipStatus = useCallback(async () => {
-    if (!isEmployee) return;
+    if (!isEmployee) {
+      setCheckingMembership(false);
+      return;
+    }
     
     try {
+      setCheckingMembership(true);
       const response = await api.get("/memberships/applications/my");
       // If we get a response with an id, user has an existing application
       if (response && (response as any).id) {
@@ -57,6 +64,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         console.log("Error checking membership:", error.message);
       }
       setHasExistingApplication(false);
+    } finally {
+      setCheckingMembership(false);
     }
   }, [isEmployee]);
 
@@ -116,16 +125,17 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   // Dynamic styles based on theme
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? "#1C1C1E" : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     sectionCard: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     text: {
-      color: isDark ? "#FFFFFF" : theme.colors.text,
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? "#8E8E93" : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
   };
 
@@ -148,8 +158,16 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     return <SecurityLoginScreen navigation={{ goBack: handleGoBackToMain }} />;
   }
 
+  if (checkingMembership && isEmployee) {
+    return (
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+        <Loader fullscreen message="Loading profile..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScrollView
@@ -260,7 +278,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               </Text>
               <MaterialIcons
                 name="chevron-right"
-                size={24}
+                size={20}
                 color={dynamicStyles.textSecondary.color}
               />
             </View>
@@ -361,7 +379,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={[styles.sectionCard, styles.ownerCard]}>
             <View style={styles.ownerCardHeader}>
               <View style={styles.ownerIconContainer}>
-                <MaterialIcons name="business" size={28} color={theme.colors.primary} />
+                <MaterialIcons name="business" size={24} color={theme.colors.primary} />
               </View>
               <View style={styles.ownerTextContainer}>
                 <Text style={[styles.ownerTitle, dynamicStyles.text]}>
@@ -378,7 +396,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               onPress={() => navigation?.navigate("MembershipApplication")}
             >
               <Text style={styles.ownerApplyButtonText}>Apply Now</Text>
-              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+              <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
@@ -395,15 +413,15 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
             <View style={styles.logoutIconContainer}>
               <MaterialIcons
                 name="exit-to-app"
-                size={20}
+                size={18}
                 color={theme.colors.error}
               />
             </View>
           </View>
         </TouchableOpacity>
 
-        {/* Bottom spacing */}
-        <View style={{ height: theme.spacing.xl }} />
+        {/* Bottom spacing for bottom navigation */}
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* Logout Confirmation Modal */}
@@ -416,7 +434,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, dynamicStyles.sectionCard]}>
             <View style={styles.modalIconContainer}>
-              <MaterialIcons name="exit-to-app" size={40} color={theme.colors.error} />
+              <MaterialIcons name="exit-to-app" size={36} color={theme.colors.error} />
             </View>
             <Text style={[styles.modalTitle, dynamicStyles.text]}>Log Out</Text>
             <Text style={[styles.modalMessage, dynamicStyles.textSecondary]}>
@@ -441,7 +459,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -454,118 +472,128 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: 100,
+    paddingTop: theme.spacing.xs,
   },
   profileHeader: {
     alignItems: "center",
-    paddingTop: StatusBar.currentHeight
-      ? StatusBar.currentHeight + theme.spacing.md
-      : theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     position: "relative",
     overflow: "hidden",
+    marginBottom: theme.spacing.xs,
   },
   decorativeCircle1: {
     position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.primaryLight,
-    opacity: 0.15,
-    top: 20,
-    right: -40,
-  },
-  decorativeCircle2: {
-    position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
-    opacity: 0.1,
-    top: 60,
-    left: -20,
-  },
-  decorativeCircle3: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.primaryLight,
-    opacity: 0.2,
-    bottom: 40,
-    right: 20,
-  },
-  profileImageContainer: {
-    marginBottom: theme.spacing.sm,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileImageGlow: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.primary,
-    opacity: 0.15,
-  },
-  profileImageShadow: {
-    position: "absolute",
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: theme.colors.backgroundSecondary,
-  },
-  profileImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
+    backgroundColor: theme.colors.primaryLight,
+    opacity: 0.1,
+    top: 10,
+    right: -30,
+    zIndex: 0,
+  },
+  decorativeCircle2: {
+    position: "absolute",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: theme.colors.primary,
+    opacity: 0.08,
+    top: 40,
+    left: -15,
+    zIndex: 0,
+  },
+  decorativeCircle3: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: theme.colors.primaryLight,
+    opacity: 0.15,
+    bottom: 20,
+    right: 15,
+    zIndex: 0,
+  },
+  profileImageContainer: {
+    marginBottom: theme.spacing.xs,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  profileImageGlow: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.colors.primary,
+    opacity: 0.12,
+  },
+  profileImageShadow: {
+    position: "absolute",
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: theme.colors.backgroundSecondary,
+  },
+  profileImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: theme.colors.backgroundSecondary,
     zIndex: 1,
   },
   profileName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 2,
     fontFamily: theme.fonts.bold,
   },
   profileTitle: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.xs / 2,
-  },
-  profileEmail: {
     fontSize: 14,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.xs / 2,
+    marginTop: 2,
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
   sectionCard: {
     backgroundColor: theme.colors.background,
     marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    borderRadius: 16,
-    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: 12,
+    padding: theme.spacing.sm + 2,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionHeader: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   sectionTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
   sectionIcon: {
-    width: 4,
-    height: 20,
+    width: 3,
+    height: 16,
     backgroundColor: theme.colors.primary,
-    borderRadius: 2,
-    marginRight: theme.spacing.xs,
+    borderRadius: 1.5,
+    marginRight: theme.spacing.xs / 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: theme.colors.text,
     fontFamily: theme.fonts.bold,
@@ -574,11 +602,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: theme.spacing.sm,
-    minHeight: 44,
+    paddingVertical: theme.spacing.xs + 2,
+    minHeight: 40,
   },
   settingLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.text,
     fontFamily: theme.fonts.regular,
     flex: 1,
@@ -588,23 +616,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   settingValue: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.textSecondary,
-    marginRight: theme.spacing.xs,
+    marginRight: theme.spacing.xs / 2,
     fontFamily: theme.fonts.regular,
   },
   divider: {
     height: 1,
     backgroundColor: theme.colors.borderLight,
-    marginVertical: theme.spacing.xs,
+    marginVertical: theme.spacing.xs / 2,
   },
   logoutButton: {
     marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-    borderRadius: 12,
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    borderRadius: 10,
     overflow: "hidden",
     position: "relative",
+    borderWidth: 1.5,
+    borderColor: theme.colors.error + "30",
   },
   logoutButtonGlow: {
     position: "absolute",
@@ -622,15 +652,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   logoutButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: theme.colors.error,
     fontFamily: theme.fonts.medium,
   },
   logoutIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "rgba(255, 59, 48, 0.1)",
     alignItems: "center",
     justifyContent: "center",
@@ -645,37 +675,37 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    maxWidth: 340,
-    borderRadius: 20,
-    padding: theme.spacing.xl,
+    maxWidth: 320,
+    borderRadius: 16,
+    padding: theme.spacing.lg,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
   },
   modalIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "rgba(255, 59, 48, 0.1)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.md,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.sm,
   },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    marginBottom: theme.spacing.xs,
+  },
   modalMessage: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: "center",
     fontFamily: theme.fonts.regular,
-    marginBottom: theme.spacing.xl,
-    lineHeight: 22,
+    marginBottom: theme.spacing.lg,
+    lineHeight: 20,
   },
   modalButtons: {
     flexDirection: "row",
@@ -684,8 +714,8 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -695,7 +725,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: theme.colors.text,
     fontFamily: theme.fonts.medium,
@@ -704,7 +734,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.error,
   },
   confirmButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: "#FFFFFF",
     fontFamily: theme.fonts.medium,
@@ -718,29 +748,29 @@ const styles = StyleSheet.create({
   ownerCardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   ownerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     backgroundColor: theme.colors.primary + "15",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.sm,
   },
   ownerTextContainer: {
     flex: 1,
   },
   ownerTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 2,
   },
   ownerDescription: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     fontFamily: theme.fonts.regular,
   },
   ownerApplyButton: {
@@ -748,13 +778,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm + 2,
-    borderRadius: 10,
-    gap: 8,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 8,
+    gap: 6,
   },
   ownerApplyButtonText: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },

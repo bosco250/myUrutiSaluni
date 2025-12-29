@@ -13,6 +13,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../theme";
 import { useTheme } from "../context";
+import { Loader } from "../components/common";
 import { notificationsService, Notification } from "../services/notifications";
 
 export default function NotificationsScreen({ navigation }: { navigation?: any }) {
@@ -263,12 +264,9 @@ export default function NotificationsScreen({ navigation }: { navigation?: any }
   // Loading state
   if (loading) {
     return (
-      <View style={[styles.container, dynamicStyles.container, styles.loadingContainer]}>
+      <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={[styles.loadingText, { color: dynamicStyles.textSecondary.color }]}>
-          Loading notifications...
-        </Text>
+        <Loader fullscreen message="Loading notifications..." />
       </View>
     );
   }
@@ -441,15 +439,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
   },
   header: {
     flexDirection: "row",

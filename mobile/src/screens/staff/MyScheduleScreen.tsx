@@ -6,13 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
+import { Loader } from '../../components/common';
 import {
   appointmentsService,
   Appointment,
@@ -106,9 +107,19 @@ export default function MyScheduleScreen({ navigation }: any) {
       grouped[dateKey].push(apt);
     });
 
-    // Convert to array and sort by date
+    // Get today's date string for comparison
+    const todayStr = formatDate(new Date());
+
+    // Convert to array and sort by date, with today first
     const groupedArray: GroupedAppointments[] = Object.keys(grouped)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+      .sort((a, b) => {
+        // If one is today, it comes first
+        if (a === todayStr) return -1;
+        if (b === todayStr) return 1;
+        
+        // Otherwise sort chronologically
+        return new Date(a).getTime() - new Date(b).getTime();
+      })
       .map((dateKey) => ({
         date: dateKey,
         dateLabel: getDateLabel(dateKey),
@@ -400,7 +411,7 @@ export default function MyScheduleScreen({ navigation }: any) {
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -421,43 +432,42 @@ export default function MyScheduleScreen({ navigation }: any) {
             My Schedule
           </Text>
           <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>
-            {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
+            {loading ? 'Loading...' : `${appointments.length} appointment${appointments.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
         <TouchableOpacity
           style={styles.refreshButton}
           onPress={onRefresh}
           activeOpacity={0.7}
+          disabled={loading}
         >
           <MaterialIcons
             name="refresh"
             size={24}
-            color={theme.colors.primary}
+            color={loading ? dynamicStyles.textSecondary.color : theme.colors.primary}
           />
         </TouchableOpacity>
       </View>
 
       {/* Schedule List */}
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-          />
-        }
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.loadingText, dynamicStyles.textSecondary]}>
-              Loading appointments...
-            </Text>
-          </View>
-        ) : groupedAppointments.length > 0 ? (
+      {loading ? (
+        <View style={styles.loadingWrapper}>
+          <Loader message="Loading appointments..." />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+            />
+          }
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {groupedAppointments.length > 0 ? (
           groupedAppointments.map(renderDateSection)
         ) : (
           <View style={styles.emptyState}>
@@ -486,7 +496,8 @@ export default function MyScheduleScreen({ navigation }: any) {
             </Text>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -496,7 +507,7 @@ export default function MyScheduleScreen({ navigation }: any) {
       >
         <MaterialIcons name="add" size={28} color={theme.colors.white} />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -540,21 +551,16 @@ const styles = StyleSheet.create({
   },
 
   // Content
+  loadingWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   content: {
     flex: 1,
   },
   scrollContent: {
     paddingBottom: theme.spacing.xl,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
   },
 
   // Date Section

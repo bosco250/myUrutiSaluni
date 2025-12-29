@@ -71,9 +71,22 @@ export class ServicesController {
   @ApiOperation({ summary: 'Get all services' })
   async findAll(
     @Query('salonId') salonId: string | undefined,
+    @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
-    // Salon owners and employees can only see services for their salon(s)
+    const isBrowseMode = browse === 'true';
+
+    // Customers can see all services (public browsing)
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      return this.servicesService.findAll(salonId);
+    }
+
+    // Salon employees can browse all services when in browse mode
+    if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
+      return this.servicesService.findAll(salonId);
+    }
+
+    // Salon owners and employees (in management mode) can only see services for their salon(s)
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
@@ -100,7 +113,7 @@ export class ServicesController {
       }
       return this.servicesService.findBySalonIds(accessibleSalonIds);
     }
-    // Customers and admins can see all or filter by salonId
+    // Admins and district leaders can see all or filter by salonId
     return this.servicesService.findAll(salonId);
   }
 
@@ -114,10 +127,25 @@ export class ServicesController {
     UserRole.CUSTOMER,
   )
   @ApiOperation({ summary: 'Get a service by ID' })
-  async findOne(@Param('id') id: string, @CurrentUser() user: any) {
+  async findOne(
+    @Param('id') id: string,
+    @Query('browse') browse: string | undefined,
+    @CurrentUser() user: any,
+  ) {
     const service = await this.servicesService.findOne(id);
+    const isBrowseMode = browse === 'true';
 
-    // Salon owners and employees can only access services for their salon
+    // Customers can view any service (public browsing)
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      return service;
+    }
+
+    // Employees can view any service when browsing
+    if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
+      return service;
+    }
+
+    // Salon owners and employees (in management mode) can only access services for their salon
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE

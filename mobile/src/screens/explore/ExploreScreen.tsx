@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from "react-native";
@@ -19,6 +18,7 @@ import ServiceCard from "./components/ServiceCard";
 import SalonCard from "./components/SalonCard";
 import AutoSlider from "./components/AutoSlider";
 import { exploreService, Service, Salon } from "../../services/explore";
+import { Loader } from "../../components/common";
 
 interface ExploreScreenProps {
   navigation?: {
@@ -31,7 +31,7 @@ type FilterType = "For You" | "Hair" | "Nails" | "Facials" | "Oil";
 export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const { isDark } = useTheme();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("For You");
-  const [services, setServices] = useState<Service[]>([]);
+  const [allServices, setAllServices] = useState<Service[]>([]);
   const [trendingServices, setTrendingServices] = useState<Service[]>([]);
   const [salons, setSalons] = useState<Salon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,15 +47,15 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [allServices, trending, allSalons] = await Promise.all([
+      const [allServicesData, trending, allSalons] = await Promise.all([
         exploreService.getServices(),
         exploreService.getTrendingServices(10),
         exploreService.getSalons(),
       ]);
 
       // Filter active services only
-      const activeServices = allServices.filter((s) => s.isActive);
-      setServices(activeServices);
+      const activeServices = allServicesData.filter((s) => s.isActive);
+      setAllServices(activeServices);
       setTrendingServices(trending.filter((s) => s.isActive));
 
       // Filter active salons only (status === 'active')
@@ -68,6 +68,43 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
       setLoading(false);
     }
   };
+
+  // Filter services based on selected filter
+  const services = useMemo(() => {
+    if (selectedFilter === "For You") {
+      return allServices;
+    }
+
+    // Filter by category from metadata or service name
+    const filterLower = selectedFilter.toLowerCase();
+    
+    return allServices.filter((service) => {
+      // First try to match by category in metadata
+      const category = service.metadata?.category;
+      if (category) {
+        const categoryLower = String(category).toLowerCase();
+        if (categoryLower === filterLower || categoryLower.includes(filterLower)) {
+          return true;
+        }
+      }
+      
+      // Fallback: try to match by service name
+      const serviceNameLower = service.name.toLowerCase();
+      if (serviceNameLower.includes(filterLower)) {
+        return true;
+      }
+      
+      // Also check description if available
+      if (service.description) {
+        const descriptionLower = service.description.toLowerCase();
+        if (descriptionLower.includes(filterLower)) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+  }, [selectedFilter, allServices]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -87,6 +124,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     navigation?.navigate("SalonDetail", {
       salonId: salon.id,
       salon,
+      browse: true, // Allow employees to view any salon
     });
   };
 
@@ -158,7 +196,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Loader message="Discovering salons..." />
         </View>
       ) : (
         <ScrollView

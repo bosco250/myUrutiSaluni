@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
+import { useAuth, useTheme } from "../../context";
 import { useEmployeeId } from "../../hooks/useEmployeeId";
 import { useAppointmentsForDate } from "../../hooks/useAppointmentsForDate";
 import { workLogService, WorkLogDay } from "../../services/workLog";
@@ -22,14 +24,17 @@ import {
   formatTime,
   formatDuration,
   formatDate,
-  generateCalendarDays,
+  generateCalendarDaysForMonth,
+  getPreviousWeek,
+  getNextWeek,
   CalendarDay,
   getMonthName,
 } from "../../utils/dateHelpers";
-import { formatCurrency } from "../../utils/formatting";
+import { formatCurrency, formatCompactCurrency } from "../../utils/formatting";
 import { CalendarStrip } from "../../components/common/CalendarStrip";
 import { StatCard } from "../../components/common/StatCard";
 import { EmptyState } from "../../components/common/EmptyState";
+import { Loader } from "../../components/common/Loader";
 
 type ViewMode = "tasks" | "worklog";
 type TaskFilter = "all" | "pending" | "in_progress" | "completed";
@@ -49,7 +54,17 @@ interface ServiceTask {
 }
 
 export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
+  const { user } = useAuth();
+  const { isDark } = useTheme();
   const employeeId = useEmployeeId();
+
+  // Dynamic Theme Colors
+  const bgColor = isDark ? theme.colors.gray900 : theme.colors.background;
+  const cardColor = isDark ? theme.colors.gray800 : theme.colors.background;
+  const textColor = isDark ? theme.colors.white : theme.colors.text;
+  const subTextColor = isDark ? theme.colors.gray400 : theme.colors.textSecondary;
+  const navBtnColor = isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary;
+
   const [viewMode, setViewMode] = useState<ViewMode>("tasks");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
@@ -65,6 +80,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // Track which task is loading
 
   // Use shared hook for appointments
   const { appointments, refetch: refetchAppointments } =
@@ -72,8 +88,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
 
   // Initialize calendar days
   useEffect(() => {
-    setCalendarDays(generateCalendarDays());
-  }, []);
+    setCalendarDays(generateCalendarDaysForMonth(selectedDate));
+  }, [selectedDate]);
 
   // Define fetchTasks and fetchSales before fetchData so they can be used in dependencies
   const fetchTasks = useCallback(async () => {
@@ -87,7 +103,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
       scheduledStart: apt.scheduledStart,
       scheduledEnd: apt.scheduledEnd,
       status: apt.status,
-      serviceAmount: apt.serviceAmount || 0,
+      // Ensure numbers are properly parsed to prevent string concatenation
+      serviceAmount: Number(apt.serviceAmount) || Number(apt.service?.basePrice) || 0,
       appointment: apt,
     }));
 
@@ -132,7 +149,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
               (c) => c.salonEmployee?.id === employeeId
             ) || [];
           const totalCommission = employeeCommissions.reduce(
-            (sum, c) => sum + c.amount,
+            (sum, c) => sum + Number(c.amount),
             0
           );
           const itemNames =
@@ -151,7 +168,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
             scheduledStart: sale.createdAt,
             scheduledEnd: sale.createdAt,
             status: "sale_completed" as const,
-            serviceAmount: sale.totalAmount,
+            serviceAmount: Number(sale.totalAmount) || 0,
             saleId: sale.id,
             commissionAmount: totalCommission,
           };
@@ -242,7 +259,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           t.status === AppointmentStatus.COMPLETED ||
           t.status === "sale_completed"
       )
-      .reduce((sum, t) => sum + (t.commissionAmount || t.serviceAmount), 0);
+      .reduce((sum, t) => sum + (Number(t.commissionAmount) || Number(t.serviceAmount) || 0), 0);
 
     return {
       pending,
@@ -297,7 +314,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
       },
       {
         label: "Earnings",
-        value: formatCurrency(workLogDay.earnings),
+        value: formatCompactCurrency(Number(workLogDay.earnings) || 0),
         icon: "attach-money",
         color: theme.colors.success,
       },
@@ -349,23 +366,55 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
 
   const handleStartService = async (taskId: string) => {
     try {
+      setActionLoading(taskId);
       await staffService.startAppointment(taskId);
       await refetchAppointments();
       await fetchData();
-    } catch (error) {
+      // Success feedback
+      Alert.alert(
+        "✅ Service Started",
+        "The appointment is now in progress.",
+        [{ text: "OK", style: "default" }]
+      );
+    } catch (error: any) {
       console.error("Error starting service:", error);
+      Alert.alert(
+        "❌ Error",
+        error.message || "Failed to start service. Please try again.",
+        [{ text: "OK", style: "cancel" }]
+      );
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleCompleteService = async (taskId: string) => {
     try {
+      setActionLoading(taskId);
       await staffService.completeAppointment(taskId);
       await refetchAppointments();
       await fetchData();
-    } catch (error) {
+      // Success feedback
+      Alert.alert(
+        "🎉 Service Completed!",
+        "Great job! The appointment has been marked as completed.",
+        [{ text: "Awesome!", style: "default" }]
+      );
+    } catch (error: any) {
       console.error("Error completing service:", error);
+      Alert.alert(
+        "❌ Error",
+        error.message || "Failed to complete service. Please try again.",
+        [{ text: "OK", style: "cancel" }]
+      );
+    } finally {
+      setActionLoading(null);
     }
   };
+
+  if (loading && !refreshing) {
+    return <Loader fullscreen message="Loading work log..." />;
+  }
 
   const handleTaskPress = (task: ServiceTask) => {
     if (task.type === "sale" && task.saleId) {
@@ -391,36 +440,46 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     return (
       <TouchableOpacity
         key={task.id}
-        style={[styles.taskCard, isCompleted && styles.taskCardCompleted]}
+        style={[
+          styles.taskCard, 
+          isCompleted && styles.taskCardCompleted,
+          { backgroundColor: cardColor, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }
+        ]}
         onPress={() => handleTaskPress(task)}
         activeOpacity={0.7}
       >
         <View style={styles.taskHeader}>
           <View style={styles.taskTitleRow}>
             <View style={styles.taskTitleContainer}>
-              <Text style={styles.taskTitle} numberOfLines={1}>
+              <Text style={[styles.taskTitle, { color: textColor }]} numberOfLines={1}>
                 {task.serviceName}
               </Text>
               <View
-                style={[
-                  styles.typeBadge,
-                  {
-                    backgroundColor:
-                      task.type === "appointment" ? "#E3F2FD" : "#FFF3E0",
-                  },
-                ]}
-              >
-                <MaterialIcons
-                  name={task.type === "appointment" ? "event" : "receipt"}
-                  size={10}
-                  color={task.type === "appointment" ? "#1565C0" : "#E65100"}
-                />
+                  style={[
+                    styles.typeBadge,
+                    {
+                      backgroundColor:
+                        task.type === "appointment" 
+                          ? (isDark ? theme.colors.infoDark + '40' : "#E3F2FD") 
+                          : (isDark ? theme.colors.warningDark + '40' : "#FFF3E0"),
+                    },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={task.type === "appointment" ? "event" : "receipt"}
+                    size={10}
+                    color={task.type === "appointment" 
+                      ? (isDark ? theme.colors.info : "#1565C0") 
+                      : (isDark ? theme.colors.warning : "#E65100")}
+                  />
                 <Text
                   style={[
                     styles.typeBadgeText,
                     {
                       color:
-                        task.type === "appointment" ? "#1565C0" : "#E65100",
+                        task.type === "appointment" 
+                          ? (isDark ? theme.colors.info : "#1565C0") 
+                          : (isDark ? theme.colors.warning : "#E65100"),
                     },
                   ]}
                 >
@@ -429,29 +488,29 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
               </View>
             </View>
             <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor: isCompleted
-                    ? "#E8F5E9"
-                    : isInProgress
-                      ? "#E3F2FD"
-                      : "#FFF3E0",
-                },
-              ]}
-            >
-              <Text
                 style={[
-                  styles.statusBadgeText,
+                  styles.statusBadge,
                   {
-                    color: isCompleted
-                      ? "#1B5E20"
+                    backgroundColor: isCompleted
+                      ? (isDark ? theme.colors.successDark + '40' : '#E8F5E9')
                       : isInProgress
-                        ? "#1565C0"
-                        : "#E65100",
+                        ? (isDark ? theme.colors.infoDark + '40' : '#E3F2FD')
+                        : (isDark ? theme.colors.warningDark + '40' : '#FFF3E0'),
                   },
                 ]}
               >
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    {
+                      color: isCompleted
+                        ? (isDark ? theme.colors.success : '#1B5E20')
+                        : isInProgress
+                          ? (isDark ? theme.colors.info : '#1565C0')
+                          : (isDark ? theme.colors.warning : '#E65100'),
+                    },
+                  ]}
+                >
                 {isCompleted
                   ? "Done"
                   : isInProgress
@@ -464,7 +523,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
 
         <View style={styles.customerRow}>
           <MaterialIcons name="person" size={14} color={theme.colors.primary} />
-          <Text style={styles.customerName}>{task.customerName}</Text>
+          <Text style={[styles.customerName, { color: textColor }]}>{task.customerName}</Text>
         </View>
 
         <View style={styles.taskDetails}>
@@ -472,9 +531,9 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
             <MaterialIcons
               name="access-time"
               size={13}
-              color={theme.colors.textSecondary}
+              color={subTextColor}
             />
-            <Text style={styles.taskDetailText}>
+            <Text style={[styles.taskDetailText, { color: subTextColor }]}>
               {task.type === "sale"
                 ? formatTime(task.scheduledStart)
                 : `${formatTime(task.scheduledStart)} - ${formatTime(task.scheduledEnd)}`}
@@ -485,27 +544,41 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
               {formatCurrency(task.serviceAmount)}
             </Text>
             {task.commissionAmount && task.commissionAmount > 0 && (
-              <Text style={styles.commissionText}>
+              <Text style={[styles.commissionText, { color: subTextColor }]}>
                 +{formatCurrency(task.commissionAmount)} commission
               </Text>
             )}
           </View>
         </View>
 
-        {task.type === "appointment" && isPending && (
+        {/* Start Service button - Only visible for salon owners, not employees */}
+        {task.type === "appointment" && isPending && user?.role?.toLowerCase() === 'salon_owner' && (
           <TouchableOpacity
             style={[
               styles.actionButton,
               { backgroundColor: theme.colors.primary },
+              actionLoading === task.id && styles.actionButtonLoading,
             ]}
             onPress={(e) => {
               e.stopPropagation();
-              handleStartService(task.id);
+              if (actionLoading !== task.id) {
+                handleStartService(task.id);
+              }
             }}
             activeOpacity={0.8}
+            disabled={actionLoading === task.id}
           >
-            <MaterialIcons name="play-arrow" size={18} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Start Service</Text>
+            {actionLoading === task.id ? (
+              <>
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.actionButtonText}>Starting...</Text>
+              </>
+            ) : (
+              <>
+                <MaterialIcons name="play-arrow" size={18} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Start Service</Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
 
@@ -514,15 +587,28 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
             style={[
               styles.actionButton,
               { backgroundColor: theme.colors.success },
+              actionLoading === task.id && styles.actionButtonLoading,
             ]}
             onPress={(e) => {
               e.stopPropagation();
-              handleCompleteService(task.id);
+              if (actionLoading !== task.id) {
+                handleCompleteService(task.id);
+              }
             }}
             activeOpacity={0.8}
+            disabled={actionLoading === task.id}
           >
-            <MaterialIcons name="check" size={18} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>Complete Service</Text>
+            {actionLoading === task.id ? (
+              <>
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.actionButtonText}>Completing...</Text>
+              </>
+            ) : (
+              <>
+                <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Complete Service</Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
       </TouchableOpacity>
@@ -550,13 +636,13 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     return (
       <View key={entry.id} style={styles.timelineItem}>
         <View style={styles.timelineLeft}>
-          <View style={[styles.timelineDot, { backgroundColor: dotColor }]} />
-          {!isLast && <View style={styles.timelineLine} />}
+          <View style={[styles.timelineDot, { backgroundColor: dotColor, borderColor: isDark ? theme.colors.gray900 : "#FFFFFF" }]} />
+          {!isLast && <View style={[styles.timelineLine, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]} />}
         </View>
         <View style={styles.timelineContent}>
-          <Text style={styles.timeText}>{formatTime(entry.timestamp)}</Text>
+          <Text style={[styles.timeText, { color: subTextColor }]}>{formatTime(entry.timestamp)}</Text>
           <TouchableOpacity
-            style={styles.entryCard}
+            style={[styles.entryCard, { backgroundColor: cardColor, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]}
             onPress={() => {
               if (entry.appointment) {
                 navigation?.navigate("AppointmentDetail", {
@@ -568,9 +654,9 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
             disabled={!entry.appointment}
           >
             <View style={styles.entryHeader}>
-              <Text style={styles.entryTitle}>{entry.title}</Text>
+              <Text style={[styles.entryTitle, { color: textColor }]}>{entry.title}</Text>
               {entry.duration && (
-                <View style={styles.durationBadge}>
+                <View style={[styles.durationBadge, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.backgroundSecondary }]}>
                   <Text style={styles.durationText}>
                     {formatDuration(entry.duration)}
                   </Text>
@@ -578,7 +664,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
               )}
             </View>
             {entry.description && (
-              <Text style={styles.entryDescription}>{entry.description}</Text>
+              <Text style={[styles.entryDescription, { color: subTextColor }]}>{entry.description}</Text>
             )}
             {entry.earnings && entry.earnings > 0 && (
               <View style={styles.earningsContainer}>
@@ -599,8 +685,89 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={["top"]}>
+        {/* Header with Week Navigation */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={[styles.navButton, { backgroundColor: navBtnColor }]}
+            onPress={() => setSelectedDate(getPreviousWeek(selectedDate))}
+          >
+            <MaterialIcons name="chevron-left" size={28} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: textColor }]}>My Work</Text>
+            <Text style={[styles.headerSubtitle, { color: subTextColor }]}>
+              {getMonthName(selectedDate)} {selectedDate.getFullYear()}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.navButton, { backgroundColor: navBtnColor }]}
+            onPress={() => setSelectedDate(getNextWeek(selectedDate))}
+          >
+            <MaterialIcons name="chevron-right" size={28} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* View Mode Tabs */}
+        <View style={[styles.tabContainer, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary }]}>
+          <TouchableOpacity
+            style={[
+              styles.tab, 
+              viewMode === "tasks" && styles.tabActive,
+              viewMode === "tasks" && { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.background }
+            ]}
+            onPress={() => setViewMode("tasks")}
+          >
+            <MaterialIcons
+              name="task-alt"
+              size={20}
+              color={
+                viewMode === "tasks"
+                  ? theme.colors.primary
+                  : subTextColor
+              }
+            />
+            <Text
+              style={[
+                styles.tabText,
+                viewMode === "tasks" && styles.tabTextActive,
+                { color: viewMode === "tasks" ? theme.colors.primary : subTextColor }
+              ]}
+            >
+              Tasks
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab, 
+              viewMode === "worklog" && styles.tabActive,
+              viewMode === "worklog" && { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.background }
+            ]}
+            onPress={() => setViewMode("worklog")}
+          >
+            <MaterialIcons
+              name="history"
+              size={20}
+              color={
+                viewMode === "worklog"
+                  ? theme.colors.primary
+                  : subTextColor
+              }
+            />
+            <Text
+              style={[
+                styles.tabText,
+                viewMode === "worklog" && styles.tabTextActive,
+                { color: viewMode === "worklog" ? theme.colors.primary : subTextColor }
+              ]}
+            >
+              Work Log
+            </Text>
+          </TouchableOpacity>
+        </View>
+
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -612,64 +779,6 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerTitle}>My Work</Text>
-            <Text style={styles.headerSubtitle}>
-              {getMonthName(selectedDate)} {selectedDate.getFullYear()}
-            </Text>
-          </View>
-        </View>
-
-        {/* View Mode Tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, viewMode === "tasks" && styles.tabActive]}
-            onPress={() => setViewMode("tasks")}
-          >
-            <MaterialIcons
-              name="task-alt"
-              size={20}
-              color={
-                viewMode === "tasks"
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
-            />
-            <Text
-              style={[
-                styles.tabText,
-                viewMode === "tasks" && styles.tabTextActive,
-              ]}
-            >
-              Tasks
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, viewMode === "worklog" && styles.tabActive]}
-            onPress={() => setViewMode("worklog")}
-          >
-            <MaterialIcons
-              name="history"
-              size={20}
-              color={
-                viewMode === "worklog"
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
-            />
-            <Text
-              style={[
-                styles.tabText,
-                viewMode === "worklog" && styles.tabTextActive,
-              ]}
-            >
-              Work Log
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Calendar Strip */}
         <CalendarStrip
           days={calendarDays}
@@ -700,7 +809,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
             />
             <StatCard
               label="Earned"
-              value={formatCurrency(taskStats.totalEarnings)}
+              value={formatCompactCurrency(taskStats.totalEarnings)}
               icon="attach-money"
               color={theme.colors.primary}
             />
@@ -717,7 +826,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
 
         {/* Clock In/Out Status (Work Log only) */}
         {viewMode === "worklog" && workLogDay && workLogDay.clockIn && (
-          <View style={styles.clockStatusCard}>
+          <View style={[styles.clockStatusCard, { backgroundColor: cardColor }]}>
             <View style={styles.clockStatusRow}>
               <View style={styles.clockStatusItem}>
                 <MaterialIcons
@@ -725,8 +834,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                   size={20}
                   color={theme.colors.success}
                 />
-                <Text style={styles.clockStatusLabel}>Clock In</Text>
-                <Text style={styles.clockStatusTime}>
+                <Text style={[styles.clockStatusLabel, { color: subTextColor }]}>Clocked In</Text>
+                <Text style={[styles.clockStatusTime, { color: textColor }]}>
                   {formatTime(workLogDay.clockIn)}
                 </Text>
               </View>
@@ -737,15 +846,15 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                     size={20}
                     color={theme.colors.error}
                   />
-                  <Text style={styles.clockStatusLabel}>Clock Out</Text>
-                  <Text style={styles.clockStatusTime}>
+                  <Text style={[styles.clockStatusLabel, { color: subTextColor }]}>Clock Out</Text>
+                  <Text style={[styles.clockStatusTime, { color: textColor }]}>
                     {formatTime(workLogDay.clockOut)}
                   </Text>
                 </View>
               ) : (
                 <View style={styles.clockStatusItem}>
                   <View style={styles.workingIndicator} />
-                  <Text style={styles.clockStatusLabel}>Status</Text>
+                  <Text style={[styles.clockStatusLabel, { color: subTextColor }]}>Status</Text>
                   <Text
                     style={[
                       styles.clockStatusTime,
@@ -802,6 +911,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                     style={[
                       styles.filterButtonText,
                       taskFilter === option.id && styles.filterButtonTextActive,
+                      { color: taskFilter === option.id ? "#FFFFFF" : textColor }
                     ]}
                   >
                     {option.label}
@@ -810,6 +920,11 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                     style={[
                       styles.filterCount,
                       taskFilter === option.id && styles.filterCountActive,
+                      { 
+                        backgroundColor: taskFilter === option.id 
+                          ? "rgba(255,255,255,0.3)" 
+                          : (isDark ? theme.colors.gray700 : theme.colors.gray200)
+                      }
                     ]}
                   >
                     <Text
@@ -817,6 +932,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                         styles.filterCountText,
                         taskFilter === option.id &&
                           styles.filterCountTextActive,
+                        { color: taskFilter === option.id ? "#FFFFFF" : subTextColor }
                       ]}
                     >
                       {option.count}
@@ -832,7 +948,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text style={[styles.loadingText, { color: subTextColor }]}>Loading...</Text>
           </View>
         )}
 
@@ -844,7 +960,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
               size={48}
               color={theme.colors.error}
             />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
               <Text style={styles.retryText}>Retry</Text>
             </TouchableOpacity>
@@ -871,8 +987,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                 {workLogDay && workLogDay.entries.length > 0 ? (
                   <>
                     <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Timeline</Text>
-                      <Text style={styles.sectionStats}>
+                      <Text style={[styles.sectionTitle, { color: textColor }]}>Timeline</Text>
+                      <Text style={[styles.sectionStats, { color: subTextColor }]}>
                         {workLogDay.entries.length}{" "}
                         {workLogDay.entries.length === 1 ? "Entry" : "Entries"}
                       </Text>
@@ -907,26 +1023,40 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 10,
     marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
     color: theme.colors.text,
     letterSpacing: -0.5,
+    textAlign: "center",
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+  },
+  navButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+    backgroundColor: theme.colors.backgroundSecondary,
   },
   tabContainer: {
     flexDirection: "row",
@@ -1026,13 +1156,11 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.text,
   },
   filterButtonTextActive: {
     color: "#FFFFFF",
   },
   filterCount: {
-    backgroundColor: theme.colors.gray200,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
@@ -1045,7 +1173,6 @@ const styles = StyleSheet.create({
   filterCountText: {
     fontSize: 10,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
   },
   filterCountTextActive: {
     color: "#FFFFFF",
@@ -1132,7 +1259,6 @@ const styles = StyleSheet.create({
   },
   taskDetailText: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
   },
   priceContainer: {
     alignItems: "flex-end",
@@ -1143,7 +1269,6 @@ const styles = StyleSheet.create({
   },
   commissionText: {
     fontSize: 11,
-    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   actionButton: {
@@ -1160,6 +1285,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  actionButtonLoading: {
+    opacity: 0.7,
+  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1169,11 +1297,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.text,
   },
   sectionStats: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
   },
   timelineList: {
     paddingBottom: 20,
@@ -1194,7 +1320,6 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     marginTop: 6,
     borderWidth: 2,
-    borderColor: "#FFFFFF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1204,7 +1329,6 @@ const styles = StyleSheet.create({
   timelineLine: {
     flex: 1,
     width: 2,
-    backgroundColor: theme.colors.borderLight,
     marginTop: 4,
     marginBottom: 4,
   },
@@ -1215,7 +1339,6 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
     marginBottom: 10,
   },
   entryCard: {
@@ -1242,7 +1365,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   durationBadge: {
-    backgroundColor: theme.colors.backgroundSecondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1275,7 +1397,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: theme.colors.textSecondary,
   },
   errorContainer: {
     paddingVertical: 60,
@@ -1285,7 +1406,6 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     fontSize: 14,
-    color: theme.colors.error,
     textAlign: "center",
   },
   retryButton: {

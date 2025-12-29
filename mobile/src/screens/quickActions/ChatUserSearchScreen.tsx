@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   StatusBar,
   TextInput,
-  ActivityIndicator,
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import { Loader } from "../../components/common";
 import { chatService } from "../../services/chat";
 
 interface ChatUser {
@@ -141,7 +141,7 @@ export default function ChatUserSearchScreen({
   };
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
@@ -240,7 +240,7 @@ export default function ChatUserSearchScreen({
       {/* Users List */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Loader message="Searching users..." />
         </View>
       ) : (
         <ScrollView

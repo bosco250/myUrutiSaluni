@@ -26,6 +26,7 @@ export const ROLE_NAVIGATION_TABS = {
   salon_employee: [
     { id: 'home', label: 'Home', icon: 'home', screen: Screen.STAFF_DASHBOARD },
     { id: 'worklog', label: 'My Work', icon: 'assignment', screen: Screen.WORK_LOG },
+    { id: 'explore', label: 'Explore', icon: 'explore', screen: Screen.EXPLORE },
     { id: 'chats', label: 'Chats', icon: 'chat', screen: Screen.CHAT },
     { id: 'profile', label: 'Profile', icon: 'person', screen: Screen.PROFILE },
   ] as NavigationTab[],

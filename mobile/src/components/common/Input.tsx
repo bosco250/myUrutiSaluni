@@ -77,9 +77,9 @@ export default function Input({
             style={styles.eyeIcon}
           >
             {isPasswordVisible ? (
-              <EyeIcon size={20} color={isDark ? '#8E8E93' : theme.colors.textSecondary} />
+              <EyeIcon size={18} color={isDark ? '#8E8E93' : theme.colors.textSecondary} />
             ) : (
-              <EyeOffIcon size={20} color={isDark ? '#8E8E93' : theme.colors.textSecondary} />
+              <EyeOffIcon size={18} color={isDark ? '#8E8E93' : theme.colors.textSecondary} />
             )}
           </TouchableOpacity>
         )}
@@ -92,11 +92,12 @@ export default function Input({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   label: {
     ...theme.typography.label,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.xs / 2,
+    fontSize: 13,
     fontFamily: theme.fontFamilies.medium,
   },
   inputContainer: {
@@ -104,9 +105,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: theme.sizes.radius.md,
-    paddingHorizontal: theme.componentSpacing.inputHorizontal,
-    paddingVertical: theme.componentSpacing.inputVertical,
-    minHeight: theme.touchTargets.comfortable,
+    paddingHorizontal: theme.componentSpacing.inputHorizontal - 2,
+    paddingVertical: theme.componentSpacing.inputVertical - 4,
+    minHeight: 40,
   },
   inputContainerFocused: {
     borderWidth: 2,
@@ -117,12 +118,14 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...theme.typography.body,
+    fontSize: 14,
     fontFamily: theme.fontFamilies.regular,
+    paddingVertical: 0,
   },
   eyeIcon: {
-    padding: theme.spacing.xs,
-    minWidth: theme.touchTargets.minimum,
-    minHeight: theme.touchTargets.minimum,
+    padding: theme.spacing.xs / 2,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -135,7 +138,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.error,
     ...theme.typography.caption,
-    marginTop: theme.spacing.xs,
+    fontSize: 11,
+    marginTop: theme.spacing.xs / 2,
     fontFamily: theme.fontFamilies.regular,
   },
 });

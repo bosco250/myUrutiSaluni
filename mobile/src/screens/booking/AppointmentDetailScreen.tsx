@@ -6,13 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   Alert,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme } from "../../context";
+import { useTheme, useAuth } from "../../context";
+import { Loader } from "../../components/common";
 import {
   appointmentsService,
   Appointment,
@@ -37,10 +38,14 @@ export default function AppointmentDetailScreen({
   route,
 }: AppointmentDetailScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [appointment, setAppointment] = useState<Appointment | null>(
     route?.params?.appointment || null
   );
   const [loading, setLoading] = useState(!route?.params?.appointment);
+
+  // Check if user is a customer
+  const isCustomer = user?.role === "customer" || user?.role === "CUSTOMER";
 
   // Fetch appointment if only appointmentId is provided
   useEffect(() => {
@@ -170,6 +175,11 @@ export default function AppointmentDetailScreen({
     container: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
+    header: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+      borderBottomWidth: 1,
+    },
     text: {
       color: isDark ? theme.colors.white : theme.colors.text,
     },
@@ -179,21 +189,26 @@ export default function AppointmentDetailScreen({
     divider: {
       backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+    },
   };
 
   if (loading && !appointment) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+        <Loader fullscreen message="Loading appointment details..." />
+      </SafeAreaView>
     );
   }
 
   if (!appointment) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="error-outline" size={64} color={dynamicStyles.textSecondary.color} />
         <Text style={[styles.errorText, dynamicStyles.text]}>
           Appointment not found
         </Text>
@@ -201,6 +216,7 @@ export default function AppointmentDetailScreen({
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
+      </SafeAreaView>
     );
   }
 
@@ -223,11 +239,11 @@ export default function AppointmentDetailScreen({
     appointment.status === AppointmentStatus.CONFIRMED;
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={[styles.header, dynamicStyles.container]}>
+      <View style={[styles.header, dynamicStyles.header]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleGoBack}
@@ -240,8 +256,9 @@ export default function AppointmentDetailScreen({
           />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          Appointment Details
+          {isCustomer ? "My Appointment" : "Appointment Details"}
         </Text>
+        {isCustomer && (
         <TouchableOpacity
           style={styles.newBookingButton}
           onPress={() => navigation?.navigate("Explore")}
@@ -250,6 +267,8 @@ export default function AppointmentDetailScreen({
           <MaterialIcons name="add" size={20} color={theme.colors.white} />
           <Text style={styles.newBookingButtonText}>New</Text>
         </TouchableOpacity>
+        )}
+        {!isCustomer && <View style={styles.headerRight} />}
       </View>
 
       <ScrollView
@@ -270,7 +289,7 @@ export default function AppointmentDetailScreen({
             >
               <MaterialIcons
                 name={getStatusIcon(appointment.status) as any}
-                size={32}
+                size={28}
                 color={statusColor}
               />
             </View>
@@ -286,7 +305,8 @@ export default function AppointmentDetailScreen({
               <Text
                 style={[styles.statusSubtitle, dynamicStyles.textSecondary]}
               >
-                {appointment.status === AppointmentStatus.COMPLETED
+                {isCustomer
+                  ? appointment.status === AppointmentStatus.COMPLETED
                   ? "Service completed successfully"
                   : appointment.status === AppointmentStatus.CANCELLED
                     ? "This appointment has been cancelled"
@@ -294,14 +314,23 @@ export default function AppointmentDetailScreen({
                       ? "Your appointment is confirmed"
                       : appointment.status === AppointmentStatus.BOOKED
                         ? "Your appointment is booked"
-                        : "Awaiting confirmation"}
+                          : "Awaiting confirmation"
+                  : appointment.status === AppointmentStatus.COMPLETED
+                    ? "Service completed"
+                    : appointment.status === AppointmentStatus.CANCELLED
+                      ? "Appointment cancelled"
+                      : appointment.status === AppointmentStatus.CONFIRMED
+                        ? "Appointment confirmed"
+                        : appointment.status === AppointmentStatus.BOOKED
+                          ? "Appointment booked"
+                          : "Pending confirmation"}
               </Text>
             </View>
           </View>
         </View>
 
         {/* Service Section */}
-        <View style={styles.section}>
+        <View style={[styles.sectionCard, dynamicStyles.card]}>
           <View style={styles.sectionHeader}>
             <MaterialIcons
               name="content-cut"
@@ -329,10 +358,8 @@ export default function AppointmentDetailScreen({
           )}
         </View>
 
-        <View style={[styles.divider, dynamicStyles.divider]} />
-
         {/* Date & Time Section */}
-        <View style={styles.section}>
+        <View style={[styles.sectionCard, dynamicStyles.card]}>
           <View style={styles.sectionHeader}>
             <MaterialIcons
               name="event"
@@ -372,9 +399,44 @@ export default function AppointmentDetailScreen({
           </View>
         </View>
 
-        {/* Booking Information Section */}
-        <View style={[styles.divider, dynamicStyles.divider]} />
-        <View style={styles.section}>
+        {/* Customer Information Section - Only for Staff/Employees */}
+        {!isCustomer && appointment.customer?.user && (
+          <View style={[styles.sectionCard, dynamicStyles.card]}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons
+                name="person"
+                size={20}
+                color={theme.colors.primary}
+              />
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+                Customer
+              </Text>
+            </View>
+            <Text style={[styles.customerName, dynamicStyles.text]}>
+              {appointment.customer.user.fullName || "Customer"}
+            </Text>
+            {appointment.customer.phone && (
+              <TouchableOpacity
+                style={styles.infoRow}
+                onPress={() => handlePhonePress(appointment.customer?.phone)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name="phone"
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={[styles.infoText, { color: theme.colors.primary }]}>
+                  {appointment.customer.phone}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Booking Information Section - Only for Staff/Employees */}
+        {!isCustomer && (
+          <View style={[styles.sectionCard, dynamicStyles.card]}>
           <View style={styles.sectionHeader}>
             <MaterialIcons
               name="schedule"
@@ -426,11 +488,10 @@ export default function AppointmentDetailScreen({
             </View>
           </View>
         </View>
-
-        <View style={[styles.divider, dynamicStyles.divider]} />
+        )}
 
         {/* Salon Section */}
-        <View style={styles.section}>
+        <View style={[styles.sectionCard, dynamicStyles.card]}>
           <View style={styles.sectionHeader}>
             <MaterialIcons
               name="store"
@@ -472,11 +533,9 @@ export default function AppointmentDetailScreen({
           )}
         </View>
 
-        {/* Stylist Section */}
-        {appointment.salonEmployee?.user?.fullName && (
-          <>
-            <View style={[styles.divider, dynamicStyles.divider]} />
-            <View style={styles.section}>
+        {/* Stylist Section - Only for Customers */}
+        {isCustomer && appointment.salonEmployee?.user?.fullName && (
+          <View style={[styles.sectionCard, dynamicStyles.card]}>
               <View style={styles.sectionHeader}>
                 <MaterialIcons
                   name="person"
@@ -519,14 +578,37 @@ export default function AppointmentDetailScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          </>
+        )}
+
+        {/* Assigned Employee Section - Only for Staff/Employees */}
+        {!isCustomer && appointment.salonEmployee?.user?.fullName && (
+          <View style={[styles.sectionCard, dynamicStyles.card]}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons
+                name="person"
+                size={20}
+                color={theme.colors.primary}
+              />
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+                Assigned Employee
+              </Text>
+            </View>
+            <Text style={[styles.employeeName, dynamicStyles.text]}>
+              {appointment.salonEmployee.user.fullName}
+            </Text>
+            {appointment.salonEmployee.roleTitle && (
+              <Text
+                style={[styles.employeeTitle, dynamicStyles.textSecondary]}
+              >
+                {appointment.salonEmployee.roleTitle}
+              </Text>
+            )}
+          </View>
         )}
 
         {/* Price Section */}
         {appointment.serviceAmount && (
-          <>
-            <View style={[styles.divider, dynamicStyles.divider]} />
-            <View style={styles.section}>
+          <View style={[styles.sectionCard, dynamicStyles.card]}>
               <View style={styles.sectionHeader}>
                 <MaterialIcons
                   name="attach-money"
@@ -541,14 +623,11 @@ export default function AppointmentDetailScreen({
                 ${Number(appointment.serviceAmount).toFixed(2)}
               </Text>
             </View>
-          </>
         )}
 
         {/* Notes Section */}
         {appointment.notes && (
-          <>
-            <View style={[styles.divider, dynamicStyles.divider]} />
-            <View style={styles.section}>
+          <View style={[styles.sectionCard, dynamicStyles.card]}>
               <View style={styles.sectionHeader}>
                 <MaterialIcons
                   name="notes"
@@ -563,11 +642,13 @@ export default function AppointmentDetailScreen({
                 {appointment.notes}
               </Text>
             </View>
-          </>
         )}
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Different for Customers vs Staff */}
         <View style={styles.actionsContainer}>
+          {isCustomer ? (
+            <>
+              {/* Customer Actions */}
           {appointment.status === AppointmentStatus.COMPLETED && (
             <>
               <TouchableOpacity
@@ -681,10 +762,41 @@ export default function AppointmentDetailScreen({
                 Reschedule
               </Text>
             </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Staff/Employee Actions - Can mark as completed, in progress, etc. */}
+              {appointment.status !== AppointmentStatus.COMPLETED &&
+                appointment.status !== AppointmentStatus.CANCELLED && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={() => {
+                      // Navigate to work log or action screen
+                      navigation?.navigate("UnifiedWorkLog");
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons
+                      name="play-arrow"
+                      size={20}
+                      color={theme.colors.white}
+                    />
+                    <Text
+                      style={[
+                        styles.actionButtonText,
+                        { color: theme.colors.white },
+                      ]}
+                    >
+                      Start Service
+                    </Text>
+                  </TouchableOpacity>
+                )}
+            </>
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -692,11 +804,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   errorText: {
     fontSize: 16,
@@ -715,9 +822,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: StatusBar.currentHeight || 0,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   headerTitle: {
     flex: 1,
@@ -749,21 +855,37 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+    paddingTop: theme.spacing.xs,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.xl,
+  },
+  customerName: {
+    fontSize: 18,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    marginBottom: theme.spacing.xs,
   },
   statusHeader: {
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+    marginHorizontal: theme.spacing.lg,
+    borderRadius: 12,
   },
   statusHeaderContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   statusIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -771,35 +893,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.xs / 2,
+    marginBottom: 2,
   },
   statusSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   section: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
   },
+  sectionCard: {
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   serviceName: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.xs / 2,
   },
   serviceDescription: {
     fontSize: 15,
@@ -810,11 +943,11 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs / 2,
+    marginTop: theme.spacing.xs / 2,
   },
   metaText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   divider: {
@@ -823,39 +956,39 @@ const styles = StyleSheet.create({
   },
   dateTimeRow: {
     flexDirection: "row",
-    gap: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   dateTimeItem: {
     flex: 1,
-    gap: theme.spacing.xs / 2,
+    gap: 2,
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "500",
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs / 2,
+    marginBottom: 2,
   },
   value: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   valueSmall: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.xs / 2,
+    marginTop: 2,
   },
   salonName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
   },
   infoText: {
     fontSize: 15,
@@ -864,45 +997,45 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   employeeName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs / 2,
+    marginBottom: 2,
   },
   employeeTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
   },
   price: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
   },
   notes: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   actionsContainer: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: theme.colors.primary,
     backgroundColor: "transparent",
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   actionButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
@@ -910,14 +1043,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: theme.spacing.md,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: theme.colors.error,
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
@@ -925,15 +1059,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.sm + 2,
-    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
     backgroundColor: theme.colors.primary + "15",
-    borderRadius: 10,
-    gap: theme.spacing.sm,
+    borderRadius: 8,
+    gap: theme.spacing.xs,
   },
   messageStylistButtonText: {
     color: theme.colors.primary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },

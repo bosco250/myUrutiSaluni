@@ -186,3 +186,62 @@ export const generateCalendarDays = (): CalendarDay[] => {
 
   return days;
 };
+
+/**
+ * Generate calendar days for a specific month (all days in the month)
+ * Allows employees to see their complete work history
+ */
+export const generateCalendarDaysForMonth = (centerDate: Date): CalendarDay[] => {
+  const days: CalendarDay[] = [];
+  
+  // Generate 7 days centered around the centerDate
+  for (let i = -3; i <= 3; i++) {
+    const date = new Date(centerDate);
+    date.setDate(centerDate.getDate() + i);
+
+    days.push({
+      day: getDayAbbrev(date),
+      date: date.getDate(),
+      fullDate: new Date(date),
+      dateString: formatDate(date),
+    });
+  }
+
+  return days;
+};
+
+/**
+ * Navigate to previous week
+ */
+export const getPreviousWeek = (currentDate: Date): Date => {
+  const newDate = new Date(currentDate);
+  newDate.setDate(currentDate.getDate() - 7);
+  return newDate;
+};
+
+/**
+ * Navigate to next week
+ */
+export const getNextWeek = (currentDate: Date): Date => {
+  const newDate = new Date(currentDate);
+  newDate.setDate(currentDate.getDate() + 7);
+  return newDate;
+};
+
+/**
+ * Navigate to previous month
+ */
+export const getPreviousMonth = (currentDate: Date): Date => {
+  const newDate = new Date(currentDate);
+  newDate.setMonth(currentDate.getMonth() - 1);
+  return newDate;
+};
+
+/**
+ * Navigate to next month
+ */
+export const getNextMonth = (currentDate: Date): Date => {
+  const newDate = new Date(currentDate);
+  newDate.setMonth(currentDate.getMonth() + 1);
+  return newDate;
+};

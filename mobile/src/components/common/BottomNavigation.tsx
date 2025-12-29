@@ -29,17 +29,17 @@ export default function BottomNavigation({
   const dynamicStyles = {
     container: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-      borderTopColor: isDark ? theme.colors.gray700 : theme.colors.border,
+      borderTopColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     tabLabel: {
-      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     tabLabelActive: {
       color: theme.colors.primary,
     },
     iconColor: (isActive: boolean) => {
       if (isActive) return theme.colors.primary;
-      return isDark ? theme.colors.gray600 : theme.colors.textSecondary;
+      return isDark ? theme.colors.gray400 : theme.colors.textSecondary;
     },
   };
 
@@ -51,14 +51,20 @@ export default function BottomNavigation({
         return (
           <TouchableOpacity
             key={tab.id}
-            style={styles.tab}
+            style={[
+              styles.tab,
+              isActive && styles.tabActive,
+              isActive && {
+                backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+              }
+            ]}
             onPress={() => onTabPress(tab.id)}
             activeOpacity={0.7}
           >
             <View style={styles.iconContainer}>
               <MaterialIcons
                 name={tab.icon as any}
-                size={theme.sizes.icon.md}
+                size={isActive ? 26 : 24}
                 color={dynamicStyles.iconColor(isActive)}
               />
               {showBadge && (
@@ -73,6 +79,7 @@ export default function BottomNavigation({
               style={[
                 styles.tabLabel,
                 isActive ? [styles.tabLabelActive, dynamicStyles.tabLabelActive] : dynamicStyles.tabLabel,
+                { fontSize: isActive ? 12 : 11, fontWeight: isActive ? '700' : '600' }
               ]}
             >
               {tab.label}
@@ -88,59 +95,74 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: theme.colors.background,
-    borderTopWidth: theme.sizes.divider.thin,
+    borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm + 4, // Extra padding for safe area
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md + 4, // Extra padding for safe area
     paddingHorizontal: theme.spacing.xs,
     justifyContent: 'space-around',
     alignItems: 'center',
     shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: theme.sizes.elevation.md,
+    shadowRadius: 12,
+    elevation: 8,
   },
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    paddingVertical: theme.spacing.xs,
-    minHeight: theme.touchTargets.comfortable, // Ensure proper touch target
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+    borderRadius: 12,
+    minHeight: 64, // Ensure proper touch target
+    marginHorizontal: 2,
+  },
+  tabActive: {
+    borderRadius: 12,
   },
   tabLabel: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs / 2,
-    fontFamily: theme.fontFamilies.regular,
+    marginTop: 4,
+    fontFamily: theme.fontFamilies.medium,
+    fontSize: 11,
+    fontWeight: '600',
   },
   tabLabelActive: {
     ...theme.typography.caption,
     color: theme.colors.primary,
-    fontFamily: theme.fontFamilies.medium,
-    fontWeight: '600',
+    fontFamily: theme.fontFamilies.bold,
+    fontWeight: '700',
+    fontSize: 12,
   },
   iconContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: theme.sizes.icon.md,
-    height: theme.sizes.icon.md,
+    width: 28,
+    height: 28,
+    marginBottom: 2,
   },
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -10,
+    top: -8,
+    right: -12,
     backgroundColor: theme.colors.error,
-    borderRadius: theme.sizes.badge.md / 2,
-    minWidth: theme.sizes.badge.md,
-    height: theme.sizes.badge.md,
-    paddingHorizontal: 4,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: theme.colors.background,
     zIndex: 10,
+    shadowColor: theme.colors.error,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   badgeText: {
     color: theme.colors.white,

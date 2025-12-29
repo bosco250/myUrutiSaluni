@@ -559,6 +559,125 @@ export class AppointmentsController {
     return this.appointmentsService.update(id, updateAppointmentDto);
   }
 
+  @Patch(':id/start')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SALON_OWNER)
+  @ApiOperation({
+    summary: 'Start an appointment (mark as in_progress) - Owner only',
+  })
+  async startAppointment(@Param('id') id: string, @CurrentUser() user: any) {
+    const appointment = await this.appointmentsService.findOne(id);
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    // Only allow starting pending/booked/confirmed appointments
+    if (!['pending', 'booked', 'confirmed'].includes(appointment.status)) {
+      throw new ForbiddenException(
+        `Cannot start an appointment with status '${appointment.status}'. Only pending, booked, or confirmed appointments can be started.`,
+      );
+    }
+
+    // Salon owners can only start appointments for their salon
+    if (user.role === UserRole.SALON_OWNER) {
+      const salon = await this.salonsService.findOne(appointment.salonId);
+      if (salon.ownerId !== user.id) {
+        throw new ForbiddenException(
+          'You can only start appointments for your own salon',
+        );
+      }
+    }
+
+    return this.appointmentsService.update(id, { status: 'in_progress' });
+  }
+
+  @Patch(':id/complete')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @ApiOperation({ summary: 'Complete an appointment - Owner and Employee' })
+  async completeAppointment(
+    @Param('id') id: string,
+    @Body() body: { notes?: string },
+    @CurrentUser() user: any,
+  ) {
+    const appointment = await this.appointmentsService.findOne(id);
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    // Only allow completing in_progress appointments
+    if (appointment.status !== 'in_progress') {
+      throw new ForbiddenException(
+        `Cannot complete an appointment with status '${appointment.status}'. Only in-progress appointments can be completed.`,
+      );
+    }
+
+    // Salon owners can complete appointments for their salon
+    if (user.role === UserRole.SALON_OWNER) {
+      const salon = await this.salonsService.findOne(appointment.salonId);
+      if (salon.ownerId !== user.id) {
+        throw new ForbiddenException(
+          'You can only complete appointments for your own salon',
+        );
+      }
+    }
+
+    // Employees can complete appointments if they are the assigned employee or work at the salon
+    if (
+      user.role === UserRole.SALON_EMPLOYEE ||
+      user.role === 'salon_employee'
+    ) {
+      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(
+        user.id,
+        appointment.salonId,
+      );
+
+      let isPreferredEmployee = false;
+      let metadata = appointment.metadata;
+      if (typeof metadata === 'string') {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          metadata = {};
+        }
+      }
+      if (!metadata || typeof metadata !== 'object') {
+        metadata = {};
+      }
+
+      const preferredEmployeeId =
+        metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
+      if (preferredEmployeeId) {
+        try {
+          const preferredEmployee =
+            await this.salonsService.findEmployeeById(preferredEmployeeId);
+          if (
+            preferredEmployee &&
+            (preferredEmployee.userId === user.id ||
+              preferredEmployee.user?.id === user.id)
+          ) {
+            isPreferredEmployee = true;
+          }
+        } catch (error) {
+          // Employee record not found, continue
+        }
+      }
+
+      if (!isEmployeeOfSalon && !isPreferredEmployee) {
+        throw new ForbiddenException(
+          'You can only complete appointments for your salon or appointments assigned to you',
+        );
+      }
+    }
+
+    const updateData: any = { status: 'completed' };
+    if (body.notes) {
+      updateData.notes = body.notes;
+    }
+
+    return this.appointmentsService.update(id, updateData);
+  }
+
   @Delete(':id')
   @Roles(
     UserRole.SUPER_ADMIN,

@@ -67,7 +67,7 @@ export interface CreateAppointmentDto {
 export interface TimeSlot {
   startTime: string;
   endTime: string;
-  available: boolean;
+  available: boolean | string;  // API may return boolean or string
   reason?: string;
   price?: number;
 }
@@ -162,28 +162,195 @@ class AppointmentsService {
     serviceId?: string
   ): Promise<TimeSlot[]> {
     try {
-      // Build query string manually since api.get doesn't support params option
+      // Build query string manually - match web implementation exactly
       let queryString = `?date=${encodeURIComponent(date)}&duration=${duration}`;
       if (serviceId) {
         queryString += `&serviceId=${encodeURIComponent(serviceId)}`;
       }
-      const response = await api.get<{ data: TimeSlot[]; meta?: any }>(
+      
+      // Call the same API endpoint as web: /appointments/availability/{employeeId}/slots
+      // Backend returns: { data: TimeSlot[], meta: { ... } }
+      console.log(`[TimeSlots API] Calling: /appointments/availability/${employeeId}/slots${queryString}`);
+      
+      const response = await api.get<any>(
         `/appointments/availability/${employeeId}/slots${queryString}`
       );
-      // API service already parses JSON, so response is the actual data
-      if (Array.isArray(response)) {
-        return response;
+      
+      // CRITICAL: Log the raw response to debug
+      console.log(`[TimeSlots API] Raw response type:`, typeof response);
+      console.log(`[TimeSlots API] Raw response keys:`, response ? Object.keys(response) : 'null');
+      console.log(`[TimeSlots API] Raw response.data exists:`, !!(response as any)?.data);
+      console.log(`[TimeSlots API] Raw response.data type:`, typeof (response as any)?.data);
+      console.log(`[TimeSlots API] Raw response.data isArray:`, Array.isArray((response as any)?.data));
+      
+      // Mobile API service (fetch) already parses JSON via response.json()
+      // So response is the actual data object returned by backend
+      // Backend returns: { data: TimeSlot[], meta: {...} }
+      // Web (axios) gets: response.data = { data: TimeSlot[], meta: {...} }, so web uses response.data.data
+      // Mobile (fetch) gets: response = { data: TimeSlot[], meta: {...} }, so mobile uses response.data
+      let slots: TimeSlot[] = [];
+      
+      // Extract slots - handle all possible response structures
+      if (response && typeof response === 'object') {
+        // Case 1: response = { data: TimeSlot[], meta: {...} } (expected for mobile/fetch)
+        if ((response as any).data && Array.isArray((response as any).data)) {
+          slots = (response as any).data;
+          console.log(`[TimeSlots API] Found slots in response.data: ${slots.length} slots`);
+        }
+        // Case 2: response = { data: { data: TimeSlot[], meta: {...} }, ... } (double wrapped)
+        else if ((response as any).data && typeof (response as any).data === 'object' && (response as any).data.data && Array.isArray((response as any).data.data)) {
+          slots = (response as any).data.data;
+          console.log(`[TimeSlots API] Found slots in response.data.data: ${slots.length} slots`);
+        }
+        // Case 3: response is directly an array (shouldn't happen, but handle it)
+        else if (Array.isArray(response)) {
+          slots = response;
+          console.log(`[TimeSlots API] Response is directly an array: ${slots.length} slots`);
+        }
       }
-      // Handle wrapped response
-      if (
-        response &&
-        (response as any).data &&
-        Array.isArray((response as any).data)
-      ) {
-        return (response as any).data;
+      
+      if (slots.length === 0) {
+        console.error("[TimeSlots API] ⚠️ NO SLOTS FOUND IN RESPONSE!");
+        console.error("[TimeSlots API] Full response:", JSON.stringify(response, null, 2).substring(0, 500));
       }
-      return [];
+
+      // CRITICAL: Log first few slots to see their structure
+      if (slots.length > 0) {
+        console.log(`[TimeSlots API] First 3 slots structure:`, JSON.stringify(slots.slice(0, 3), null, 2));
+        console.log(`[TimeSlots API] Sample slot available field:`, {
+          slot1: { 
+            startTime: slots[0]?.startTime,
+            endTime: slots[0]?.endTime,
+            available: slots[0]?.available, 
+            type: typeof slots[0]?.available, 
+            reason: slots[0]?.reason,
+            hasAvailableField: 'available' in (slots[0] || {}),
+          },
+          slot2: { 
+            startTime: slots[1]?.startTime,
+            endTime: slots[1]?.endTime,
+            available: slots[1]?.available, 
+            type: typeof slots[1]?.available, 
+            reason: slots[1]?.reason,
+            hasAvailableField: 'available' in (slots[1] || {}),
+          },
+          slot3: { 
+            startTime: slots[2]?.startTime,
+            endTime: slots[2]?.endTime,
+            available: slots[2]?.available, 
+            type: typeof slots[2]?.available, 
+            reason: slots[2]?.reason,
+            hasAvailableField: 'available' in (slots[2] || {}),
+          },
+        });
+        
+        // Check ALL slots for available field
+        const slotsWithoutAvailable = slots.filter(s => !('available' in s));
+        if (slotsWithoutAvailable.length > 0) {
+          console.error(`[TimeSlots API] ⚠️ ${slotsWithoutAvailable.length} slots are missing the 'available' field!`);
+        }
+        
+        // Check for any false values
+        const falseSlots = slots.filter(s => s.available === false);
+        console.log(`[TimeSlots API] Slots with available=false: ${falseSlots.length}`);
+        if (falseSlots.length > 0) {
+          console.log(`[TimeSlots API] False slots:`, falseSlots.slice(0, 3).map(s => ({
+            time: `${s.startTime}-${s.endTime}`,
+            available: s.available,
+            reason: s.reason,
+          })));
+        }
+      }
+
+      // Normalize slots - ensure availability is boolean (match web implementation)
+      // Web checks slot.available directly as boolean
+      const normalizedSlots = slots
+        .filter((slot) => slot && slot.startTime && slot.endTime) // Filter invalid entries
+        .map((slot, index) => {
+          // Log if we find any slots with available: false
+          if (slot.available === false || slot.available === 'false') {
+            console.log(`[TimeSlots API] Found unavailable slot at index ${index}:`, {
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              available: slot.available,
+              reason: slot.reason,
+            });
+          }
+
+          // Normalize available to strict boolean (match web's behavior)
+          let available = true; // Default to true (available) - backend should set false for booked
+          if (typeof slot.available === 'boolean') {
+            available = slot.available;
+          } else if (typeof slot.available === 'string') {
+            available = slot.available.toLowerCase() === 'true';
+          } else if (slot.available === undefined || slot.available === null) {
+            // If undefined/null, assume available (backend should explicitly set false for booked)
+            available = true;
+            console.warn(`[TimeSlots API] Slot ${slot.startTime} has undefined/null available field - assuming available`);
+          }
+
+          return {
+            ...slot,
+            available,
+            // Set reason for unavailable slots if not provided
+            reason: slot.reason || (!available ? "Already booked" : undefined),
+          };
+        })
+        .sort((a, b) => {
+          // Sort by time
+          const timeA = a.startTime.split(":").map(Number);
+          const timeB = b.startTime.split(":").map(Number);
+          const minutesA = timeA[0] * 60 + timeA[1];
+          const minutesB = timeB[0] * 60 + timeB[1];
+          return minutesA - minutesB;
+        });
+
+      // Debug logging - match web's approach
+      const availableCount = normalizedSlots.filter((s) => s.available === true).length;
+      const unavailableCount = normalizedSlots.filter((s) => s.available !== true).length;
+      
+      console.log(`[TimeSlots API] Employee: ${employeeId}, Date: ${date}`);
+      console.log(`[TimeSlots API] Total: ${normalizedSlots.length}, Available: ${availableCount}, Unavailable: ${unavailableCount}`);
+      
+      // CRITICAL: Check if backend is actually returning booked slots
+      const slotsWithFalseAvailable = slots.filter((s) => s.available === false || s.available === 'false');
+      console.log(`[TimeSlots API] ⚠️ Backend returned ${slotsWithFalseAvailable.length} slots with available=false`);
+      
+      if (slotsWithFalseAvailable.length > 0) {
+        console.log(`[TimeSlots API] Backend unavailable slots:`, slotsWithFalseAvailable.slice(0, 5).map(s => ({
+          time: `${s.startTime}-${s.endTime}`,
+          available: s.available,
+          reason: s.reason,
+        })));
+      } else {
+        console.warn(`[TimeSlots API] ⚠️⚠️⚠️ BACKEND RETURNED ALL SLOTS AS AVAILABLE! This means either:`);
+        console.warn(`[TimeSlots API] 1. No appointments exist for this employee on ${date}`);
+        console.warn(`[TimeSlots API] 2. Backend is not finding appointments correctly`);
+        console.warn(`[TimeSlots API] 3. Conflict detection is not working`);
+      }
+      
+      if (unavailableCount > 0) {
+        const unavailableTimes = normalizedSlots
+          .filter((s) => !s.available)
+          .map((s) => `${s.startTime} (${s.reason || "booked"})`)
+          .slice(0, 5); // Show first 5
+        console.log(`[TimeSlots API] Normalized unavailable slots:`, unavailableTimes);
+        if (unavailableCount > 5) {
+          console.log(`[TimeSlots API] ... and ${unavailableCount - 5} more unavailable slots`);
+        }
+      }
+
+      return normalizedSlots;
     } catch (error: any) {
+      console.error("[TimeSlots API] Error fetching slots:", error);
+      console.error("[TimeSlots API] Error details:", {
+        message: error.message,
+        status: error.status,
+        employeeId,
+        date,
+        duration,
+        serviceId,
+      });
       throw error;
     }
   }
@@ -223,6 +390,52 @@ class AppointmentsService {
       return [];
     } catch (error: any) {
       throw error;
+    }
+  }
+
+  /**
+   * Validate a booking request before submission
+   * Prevents double bookings by checking for conflicts
+   */
+  async validateBooking(data: {
+    employeeId: string;
+    serviceId: string;
+    scheduledStart: string;
+    scheduledEnd: string;
+    excludeAppointmentId?: string;
+  }): Promise<{
+    valid: boolean;
+    conflicts?: {
+      id: string;
+      scheduledStart: string;
+      scheduledEnd: string;
+    }[];
+    suggestions?: TimeSlot[];
+    reason?: string;
+  }> {
+    try {
+      const response = await api.post<{
+        valid: boolean;
+        conflicts?: {
+          id: string;
+          scheduledStart: string;
+          scheduledEnd: string;
+        }[];
+        suggestions?: TimeSlot[];
+        reason?: string;
+      }>("/appointments/availability/validate", data);
+      
+      // Handle wrapped response
+      if ((response as any).data) {
+        return (response as any).data;
+      }
+      return response as any;
+    } catch (error: any) {
+      // If validation fails, return invalid result
+      return {
+        valid: false,
+        reason: error.message || "Failed to validate booking",
+      };
     }
   }
 

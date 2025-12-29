@@ -72,8 +72,11 @@ export class InventoryController {
   @ApiOperation({ summary: 'Get all products' })
   async findAllProducts(
     @Query('salonId') salonId: string | undefined,
+    @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
+    const isBrowseMode = browse === 'true';
+
     // Customers can view products for any salon (public browsing)
     if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
       if (salonId) {
@@ -84,7 +87,15 @@ export class InventoryController {
       return [];
     }
 
-    // Salon owners and employees can only see products for their salon(s)
+    // Employees can browse products from any salon when in browse mode
+    if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
+      if (salonId) {
+        return this.inventoryService.findAllProducts(salonId);
+      }
+      return [];
+    }
+
+    // Salon owners and employees (in management mode) can only see products for their salon(s)
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE

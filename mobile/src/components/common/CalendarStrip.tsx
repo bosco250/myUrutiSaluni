@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { theme } from "../../theme";
+import { useTheme } from "../../context";
 import { CalendarDay, isSameDay } from "../../utils/dateHelpers";
 
 interface CalendarStripProps {
@@ -18,9 +19,16 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
   selectedDate,
   onDateSelect,
 }) => {
+  const { isDark } = useTheme();
+  
+  // Dynamic theme colors
+  const stripBgColor = isDark ? theme.colors.gray800 : theme.colors.background;
+  const dayNameColor = isDark ? theme.colors.gray400 : theme.colors.textSecondary;
+  const dayDateColor = isDark ? theme.colors.white : theme.colors.text;
+  
   return (
     <View style={styles.container}>
-      <View style={styles.strip}>
+      <View style={[styles.strip, { backgroundColor: stripBgColor }]}>
         {days.map((item) => {
           const isActive = isSameDay(item.fullDate, selectedDate);
           return (
@@ -29,10 +37,16 @@ export const CalendarStrip: React.FC<CalendarStripProps> = ({
               style={[styles.day, isActive && styles.activeDay]}
               onPress={() => onDateSelect(item.fullDate)}
             >
-              <Text style={[styles.dayName, isActive && styles.activeText]}>
+              <Text style={[
+                styles.dayName, 
+                { color: isActive ? "#FFFFFF" : dayNameColor }
+              ]}>
                 {item.day}
               </Text>
-              <Text style={[styles.dayDate, isActive && styles.activeText]}>
+              <Text style={[
+                styles.dayDate, 
+                { color: isActive ? "#FFFFFF" : dayDateColor }
+              ]}>
                 {item.date}
               </Text>
             </TouchableOpacity>
@@ -51,7 +65,6 @@ const styles = StyleSheet.create({
   strip: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.background,
     borderRadius: 20,
     padding: 16,
     shadowColor: "#000",
@@ -78,16 +91,11 @@ const styles = StyleSheet.create({
   dayName: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
     marginBottom: 4,
     textTransform: "uppercase",
   },
   dayDate: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.text,
-  },
-  activeText: {
-    color: "#FFFFFF",
   },
 });

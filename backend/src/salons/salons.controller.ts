@@ -635,23 +635,42 @@ export class SalonsController {
   ) {
     const salon = await this.salonsService.findOne(id);
     const isBrowseMode = browse === 'true';
+    const userRole = user.role?.toLowerCase();
 
     // Customers can view any salon (public browsing)
-    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+    if (userRole === UserRole.CUSTOMER || userRole === 'customer') {
       return salon; // Allow customers to view salon details
     }
 
     // Salon employees can view any salon when browsing (similar to customers)
-    if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
+    if (
+      (userRole === UserRole.SALON_EMPLOYEE || userRole === 'salon_employee') &&
+      isBrowseMode
+    ) {
       return salon; // Allow employees to browse other salons
     }
 
     // Salon owners and employees (in management mode) can only access their own salon
     if (
-      (user.role === UserRole.SALON_OWNER ||
-        user.role === UserRole.SALON_EMPLOYEE) &&
+      (userRole === UserRole.SALON_OWNER ||
+        userRole === 'salon_owner' ||
+        userRole === UserRole.SALON_EMPLOYEE ||
+        userRole === 'salon_employee') &&
       salon.ownerId !== user.id
     ) {
+      // For employees, also check if they work at this salon
+      if (
+        userRole === UserRole.SALON_EMPLOYEE ||
+        userRole === 'salon_employee'
+      ) {
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          id,
+        );
+        if (isEmployee) {
+          return salon; // Allow employees to access their own salon details
+        }
+      }
       throw new ForbiddenException('You can only access your own salon');
     }
 

@@ -148,11 +148,10 @@ class WorkLogService {
       let earnings = 0;
       let commission = 0;
 
-      // Calculate earnings from appointments (if serviceAmount is available)
+      // Calculate earnings from appointments (use serviceAmount or fallback to service.basePrice)
       completedAppointments.forEach((apt) => {
-        if (apt.serviceAmount) {
-          earnings += apt.serviceAmount;
-        }
+        const amount = Number(apt.serviceAmount) || Number(apt.service?.basePrice) || 0;
+        earnings += amount;
       });
 
       // Build entries array
@@ -182,7 +181,7 @@ class WorkLogService {
           description: apt.customer?.user?.fullName || 'Customer',
           status: apt.status,
           duration: this.calculateDuration(apt.scheduledStart, apt.scheduledEnd),
-          earnings: apt.serviceAmount,
+          earnings: Number(apt.serviceAmount) || Number(apt.service?.basePrice) || 0,
           appointment: apt,
         });
       });
@@ -271,8 +270,8 @@ class WorkLogService {
             totalHours += log.totalHours;
             totalAppointments += log.appointments.length;
             completedAppointments += log.completedAppointments.length;
-            totalEarnings += log.earnings;
-            totalCommission += log.commission;
+            totalEarnings += Number(log.earnings) || 0;
+            totalCommission += Number(log.commission) || 0;
 
             // Track best day (by earnings)
             if (!bestDay || log.earnings > bestDay.earnings) {

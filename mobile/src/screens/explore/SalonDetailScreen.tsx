@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,21 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   Alert,
   Linking,
-  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome, Feather } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme } from "../../context";
-import ServiceCard from "./components/ServiceCard";
-import { exploreService, Salon, Service, Product, Employee } from "../../services/explore";
+import { useTheme, useAuth } from "../../context";
+import {
+  exploreService,
+  Salon,
+  Service,
+  Product,
+  Employee,
+} from "../../services/explore";
+import { Loader } from "../../components/common";
 
 interface SalonDetailScreenProps {
   navigation?: {
@@ -37,8 +42,11 @@ export default function SalonDetailScreen({
   route,
 }: SalonDetailScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const [selectedTab, setSelectedTab] = useState<TabType>("Overview");
-  const [salon, setSalon] = useState<Salon | null>(route?.params?.salon || null);
+  const [salon, setSalon] = useState<Salon | null>(
+    route?.params?.salon || null
+  );
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -49,15 +57,6 @@ export default function SalonDetailScreen({
   const [employeesLoading, setEmployeesLoading] = useState(false);
 
   const salonId = route?.params?.salonId || route?.params?.salon?.id;
-
-  // Calculate card width safely
-  const cardWidth = useMemo(() => {
-    try {
-      return (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.sm) / 2;
-    } catch {
-      return 160; // Fallback width
-    }
-  }, []);
 
   const fetchSalon = useCallback(async () => {
     if (!salonId) return;
@@ -97,9 +96,7 @@ export default function SalonDetailScreen({
       setProductsLoading(true);
       const salonProducts = await exploreService.getProducts(salonId);
       // Filter out invalid products and ensure we have valid data
-      const validProducts = salonProducts.filter(
-        (p) => p && p.id && p.name
-      );
+      const validProducts = salonProducts.filter((p) => p && p.id && p.name);
       setProducts(validProducts);
     } catch {
       // Set empty array on error to show "No products available" message
@@ -109,25 +106,6 @@ export default function SalonDetailScreen({
       setProductsLoading(false);
     }
   }, [salonId]);
-
-  useEffect(() => {
-    if (salonId && !salon) {
-      fetchSalon();
-    }
-    if (salonId) {
-      fetchServices();
-      fetchProducts();
-      fetchEmployees();
-    }
-  }, [salonId, salon, fetchSalon, fetchServices, fetchProducts, fetchEmployees]);
-
-
-  const handleServicePress = (service: Service) => {
-    navigation?.navigate("ServiceDetail", {
-      serviceId: service.id,
-      service,
-    });
-  };
 
   const fetchEmployees = useCallback(async () => {
     if (!salonId) return;
@@ -143,18 +121,36 @@ export default function SalonDetailScreen({
     }
   }, [salonId]);
 
+  useEffect(() => {
+    if (salonId && !salon) {
+      fetchSalon();
+    }
+    if (salonId) {
+      fetchServices();
+      fetchProducts();
+      fetchEmployees();
+    }
+  }, [
+    salonId,
+    salon,
+    fetchSalon,
+    fetchServices,
+    fetchProducts,
+    fetchEmployees,
+  ]);
+
+  const handleServicePress = (service: Service) => {
+    navigation?.navigate("ServiceDetail", {
+      serviceId: service.id,
+      service,
+    });
+  };
+
   const handleEmployeePress = (employee: Employee) => {
     navigation?.navigate("EmployeeDetail", {
       employeeId: employee.id,
       salonId: salonId,
       employee,
-    });
-  };
-
-  const handleViewAllEmployees = () => {
-    navigation?.navigate("EmployeeList", {
-      salonId: salonId,
-      salon,
     });
   };
 
@@ -164,6 +160,11 @@ export default function SalonDetailScreen({
     }
   };
 
+  const handleEmailPress = () => {
+    if (salon?.email) {
+      Linking.openURL(`mailto:${salon.email}`);
+    }
+  };
 
   const handleWebsitePress = () => {
     if (salon?.website) {
@@ -195,7 +196,7 @@ export default function SalonDetailScreen({
         let hours;
         if (typeof salon.settings.operatingHours === "string") {
           const hoursStr = salon.settings.operatingHours.trim();
-          
+
           // Check if it's already a valid JSON object string
           if (hoursStr.startsWith("{") && hoursStr.endsWith("}")) {
             try {
@@ -206,19 +207,19 @@ export default function SalonDetailScreen({
               try {
                 const unescaped = hoursStr
                   .replace(/\\"/g, '"')
-                  .replace(/\\n/g, '')
-                  .replace(/\\t/g, '');
+                  .replace(/\\n/g, "")
+                  .replace(/\\t/g, "");
                 hours = JSON.parse(unescaped);
               } catch {
                 // If still fails, try removing outer quotes if present
                 try {
-                  const cleaned = hoursStr.replace(/^["']|["']$/g, '');
+                  const cleaned = hoursStr.replace(/^["']|["']$/g, "");
                   hours = JSON.parse(cleaned);
                 } catch {
                   // Last attempt: try parsing after removing all escape characters
                   const fullyUnescaped = hoursStr
-                    .replace(/\\/g, '')
-                    .replace(/^["']|["']$/g, '');
+                    .replace(/\\/g, "")
+                    .replace(/^["']|["']$/g, "");
                   hours = JSON.parse(fullyUnescaped);
                 }
               }
@@ -236,7 +237,11 @@ export default function SalonDetailScreen({
         if (hours && typeof hours === "object" && !Array.isArray(hours)) {
           // Check if it has at least one day with the expected structure
           const firstDay = Object.keys(hours)[0];
-          if (firstDay && hours[firstDay] && typeof hours[firstDay] === "object") {
+          if (
+            firstDay &&
+            hours[firstDay] &&
+            typeof hours[firstDay] === "object"
+          ) {
             if (
               hours[firstDay].hasOwnProperty("isOpen") &&
               hours[firstDay].hasOwnProperty("startTime") &&
@@ -285,12 +290,14 @@ export default function SalonDetailScreen({
 
   // Get specialties from settings
   const getSpecialties = () => {
-    if (salon?.settings?.specialties && Array.isArray(salon.settings.specialties)) {
+    if (
+      salon?.settings?.specialties &&
+      Array.isArray(salon.settings.specialties)
+    ) {
       return salon.settings.specialties;
     }
     return [];
   };
-
 
   const dynamicStyles = {
     container: {
@@ -300,46 +307,92 @@ export default function SalonDetailScreen({
       color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     header: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark
+        ? theme.colors.gray800
+        : theme.colors.borderLight,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+      backgroundColor: isDark
+        ? theme.colors.gray800
+        : theme.colors.backgroundSecondary,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    listItem: {
+      backgroundColor: isDark
+        ? theme.colors.gray800
+        : theme.colors.backgroundSecondary,
+      borderBottomColor: isDark
+        ? theme.colors.gray700
+        : theme.colors.borderLight,
+    },
+    sectionBorder: {
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
   };
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+      <SafeAreaView
+        style={[styles.container, dynamicStyles.container]}
+        edges={["top"]}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <Loader fullscreen message="Loading salon details..." />
+      </SafeAreaView>
     );
   }
 
   if (!salon) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <Text style={[styles.errorText, dynamicStyles.text]}>
-          Salon not found
-        </Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation?.goBack()}
-        >
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView
+        style={[styles.container, dynamicStyles.container]}
+        edges={["top"]}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+        <View style={styles.errorContainer}>
+          <MaterialIcons
+            name="error-outline"
+            size={64}
+            color={theme.colors.error}
+          />
+          <Text style={[styles.errorText, dynamicStyles.text]}>
+            Salon not found
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.errorBackButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => navigation?.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={["top"]}
+    >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={[styles.header, dynamicStyles.header]}>
+      <View
+        style={[
+          styles.header,
+          dynamicStyles.header,
+          { borderBottomColor: dynamicStyles.header.borderBottomColor },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack()}
@@ -351,7 +404,10 @@ export default function SalonDetailScreen({
             color={dynamicStyles.text.color}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]} numberOfLines={1}>
+        <Text
+          style={[styles.headerTitle, dynamicStyles.text]}
+          numberOfLines={1}
+        >
           {salon.name}
         </Text>
         <View style={styles.headerRight} />
@@ -363,14 +419,31 @@ export default function SalonDetailScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* Salon Image/Header */}
-        <View style={[styles.salonHeader, { backgroundColor: theme.colors.primaryLight }]}>
+        <View
+          style={[
+            styles.salonHeader,
+            { backgroundColor: theme.colors.primaryLight },
+          ]}
+        >
           <View style={styles.salonHeaderDecoration} />
           <View style={styles.salonImageContainer}>
-            <View style={[styles.salonImagePlaceholder, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.salonInitials}>{getInitials(salon.name)}</Text>
+            <View
+              style={[
+                styles.salonImagePlaceholder,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
+              <Text style={styles.salonInitials}>
+                {getInitials(salon.name)}
+              </Text>
             </View>
             {salon.status === "active" && (
-              <View style={[styles.statusBadge, { backgroundColor: theme.colors.success }]}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: theme.colors.success },
+                ]}
+              >
                 <View style={styles.statusDot} />
                 <Text style={styles.statusText}>Open</Text>
               </View>
@@ -386,8 +459,14 @@ export default function SalonDetailScreen({
             </Text>
             {salon.registrationNumber && (
               <View style={[styles.verifiedBadge, dynamicStyles.card]}>
-                <MaterialIcons name="verified" size={14} color={theme.colors.primary} />
-                <Text style={[styles.verifiedText, { color: theme.colors.primary }]}>
+                <MaterialIcons
+                  name="verified"
+                  size={14}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[styles.verifiedText, { color: theme.colors.primary }]}
+                >
                   Verified
                 </Text>
               </View>
@@ -398,11 +477,20 @@ export default function SalonDetailScreen({
           <View style={styles.contactCards}>
             {salon.phone && (
               <TouchableOpacity
-                style={[styles.contactCard, dynamicStyles.card]}
+                style={[
+                  styles.contactCard,
+                  dynamicStyles.card,
+                  { borderColor: dynamicStyles.card.borderColor },
+                ]}
                 onPress={handlePhonePress}
                 activeOpacity={0.7}
               >
-                <View style={[styles.contactIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <View
+                  style={[
+                    styles.contactIconContainer,
+                    { backgroundColor: theme.colors.primaryLight },
+                  ]}
+                >
                   <MaterialIcons
                     name="phone"
                     size={18}
@@ -410,8 +498,15 @@ export default function SalonDetailScreen({
                   />
                 </View>
                 <View style={styles.contactTextContainer}>
-                  <Text style={[styles.contactLabel, dynamicStyles.textSecondary]}>Phone</Text>
-                  <Text style={[styles.contactText, dynamicStyles.text]} numberOfLines={1}>
+                  <Text
+                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
+                  >
+                    Phone
+                  </Text>
+                  <Text
+                    style={[styles.contactText, dynamicStyles.text]}
+                    numberOfLines={1}
+                  >
                     {salon.phone}
                   </Text>
                 </View>
@@ -424,11 +519,20 @@ export default function SalonDetailScreen({
             )}
             {salon.email && (
               <TouchableOpacity
-                style={[styles.contactCard, dynamicStyles.card]}
+                style={[
+                  styles.contactCard,
+                  dynamicStyles.card,
+                  { borderColor: dynamicStyles.card.borderColor },
+                ]}
                 onPress={handleEmailPress}
                 activeOpacity={0.7}
               >
-                <View style={[styles.contactIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <View
+                  style={[
+                    styles.contactIconContainer,
+                    { backgroundColor: theme.colors.primaryLight },
+                  ]}
+                >
                   <MaterialIcons
                     name="email"
                     size={18}
@@ -436,8 +540,15 @@ export default function SalonDetailScreen({
                   />
                 </View>
                 <View style={styles.contactTextContainer}>
-                  <Text style={[styles.contactLabel, dynamicStyles.textSecondary]}>Email</Text>
-                  <Text style={[styles.contactText, dynamicStyles.text]} numberOfLines={1}>
+                  <Text
+                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
+                  >
+                    Email
+                  </Text>
+                  <Text
+                    style={[styles.contactText, dynamicStyles.text]}
+                    numberOfLines={1}
+                  >
                     {salon.email}
                   </Text>
                 </View>
@@ -450,11 +561,20 @@ export default function SalonDetailScreen({
             )}
             {salon.website && (
               <TouchableOpacity
-                style={[styles.contactCard, dynamicStyles.card]}
+                style={[
+                  styles.contactCard,
+                  dynamicStyles.card,
+                  { borderColor: dynamicStyles.card.borderColor },
+                ]}
                 onPress={handleWebsitePress}
                 activeOpacity={0.7}
               >
-                <View style={[styles.contactIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <View
+                  style={[
+                    styles.contactIconContainer,
+                    { backgroundColor: theme.colors.primaryLight },
+                  ]}
+                >
                   <MaterialIcons
                     name="language"
                     size={18}
@@ -462,8 +582,15 @@ export default function SalonDetailScreen({
                   />
                 </View>
                 <View style={styles.contactTextContainer}>
-                  <Text style={[styles.contactLabel, dynamicStyles.textSecondary]}>Website</Text>
-                  <Text style={[styles.contactText, dynamicStyles.text]} numberOfLines={1}>
+                  <Text
+                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
+                  >
+                    Website
+                  </Text>
+                  <Text
+                    style={[styles.contactText, dynamicStyles.text]}
+                    numberOfLines={1}
+                  >
                     Visit Website
                   </Text>
                 </View>
@@ -472,43 +599,72 @@ export default function SalonDetailScreen({
                   size={20}
                   color={dynamicStyles.textSecondary.color}
                 />
-                </TouchableOpacity>
+              </TouchableOpacity>
             )}
-            {/* Message Salon Button */}
-            <TouchableOpacity
-              style={[styles.contactCard, dynamicStyles.card]}
-              onPress={() => {
-                navigation?.navigate("Chat", {
-                  salonId: salon?.id,
-                });
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.contactIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+            {/* Message Salon Button - Only show for customers */}
+            {user?.role?.toLowerCase() === "customer" && (
+              <TouchableOpacity
+                style={[
+                  styles.contactCard,
+                  dynamicStyles.card,
+                  { borderColor: dynamicStyles.card.borderColor },
+                ]}
+                onPress={() => {
+                  navigation?.navigate("Chat", {
+                    salonId: salon?.id,
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.contactIconContainer,
+                    { backgroundColor: theme.colors.primaryLight },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="chat"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <View style={styles.contactTextContainer}>
+                  <Text
+                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
+                  >
+                    Message
+                  </Text>
+                  <Text
+                    style={[styles.contactText, dynamicStyles.text]}
+                    numberOfLines={1}
+                  >
+                    Start a Conversation
+                  </Text>
+                </View>
                 <MaterialIcons
-                  name="chat"
-                  size={18}
-                  color={theme.colors.primary}
+                  name="chevron-right"
+                  size={20}
+                  color={dynamicStyles.textSecondary.color}
                 />
-              </View>
-              <View style={styles.contactTextContainer}>
-                <Text style={[styles.contactLabel, dynamicStyles.textSecondary]}>Message</Text>
-                <Text style={[styles.contactText, dynamicStyles.text]} numberOfLines={1}>
-                  Start a Conversation
-                </Text>
-              </View>
-              <MaterialIcons
-                name="chevron-right"
-                size={20}
-                color={dynamicStyles.textSecondary.color}
-              />
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Location Card */}
           {(salon.address || salon.city || salon.district) && (
-            <View style={[styles.locationCard, dynamicStyles.card]}>
-              <View style={[styles.locationIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+            <View
+              style={[
+                styles.locationCard,
+                dynamicStyles.card,
+                { borderColor: dynamicStyles.card.borderColor },
+              ]}
+            >
+              <View
+                style={[
+                  styles.locationIconContainer,
+                  { backgroundColor: theme.colors.primaryLight },
+                ]}
+              >
                 <MaterialIcons
                   name="location-on"
                   size={20}
@@ -516,16 +672,13 @@ export default function SalonDetailScreen({
                 />
               </View>
               <View style={styles.locationContent}>
-                <Text style={[styles.locationLabel, dynamicStyles.textSecondary]}>
+                <Text
+                  style={[styles.locationLabel, dynamicStyles.textSecondary]}
+                >
                   Location
                 </Text>
                 <Text style={[styles.locationText, dynamicStyles.text]}>
-                  {[
-                    salon.address,
-                    salon.district,
-                    salon.city,
-                    salon.country,
-                  ]
+                  {[salon.address, salon.district, salon.city, salon.country]
                     .filter(Boolean)
                     .join(", ")}
                 </Text>
@@ -535,13 +688,32 @@ export default function SalonDetailScreen({
 
           {/* Description */}
           {salon.description && (
-            <View style={styles.descriptionSection}>
+            <View
+              style={[
+                styles.descriptionSection,
+                { borderTopColor: dynamicStyles.sectionBorder.borderColor },
+              ]}
+            >
               <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionHeaderLine} />
+                <View
+                  style={[
+                    styles.sectionHeaderLine,
+                    {
+                      backgroundColor: dynamicStyles.sectionBorder.borderColor,
+                    },
+                  ]}
+                />
                 <Text style={[styles.sectionHeading, dynamicStyles.text]}>
                   About
                 </Text>
-                <View style={styles.sectionHeaderLine} />
+                <View
+                  style={[
+                    styles.sectionHeaderLine,
+                    {
+                      backgroundColor: dynamicStyles.sectionBorder.borderColor,
+                    },
+                  ]}
+                />
               </View>
               <Text
                 style={[styles.description, dynamicStyles.textSecondary]}
@@ -551,11 +723,18 @@ export default function SalonDetailScreen({
               </Text>
               {salon.description.length > 150 && (
                 <TouchableOpacity
-                  onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  onPress={() =>
+                    setIsDescriptionExpanded(!isDescriptionExpanded)
+                  }
                   style={styles.viewMoreButton}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.viewMoreText, { color: theme.colors.primary }]}>
+                  <Text
+                    style={[
+                      styles.viewMoreText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
                     {isDescriptionExpanded ? "Show Less" : "Read More"}
                   </Text>
                   <MaterialIcons
@@ -569,7 +748,12 @@ export default function SalonDetailScreen({
           )}
 
           {/* Tabs */}
-          <View style={styles.tabsContainer}>
+          <View
+            style={[
+              styles.tabsContainer,
+              { borderBottomColor: dynamicStyles.sectionBorder.borderColor },
+            ]}
+          >
             <TouchableOpacity
               style={[
                 styles.tab,
@@ -611,14 +795,18 @@ export default function SalonDetailScreen({
                 Services
               </Text>
               {services.length > 0 && (
-                <View style={[
-                  styles.tabBadge,
-                  selectedTab === "Services" && styles.tabBadgeActive,
-                ]}>
-                  <Text style={[
-                    styles.tabBadgeText,
-                    selectedTab === "Services" && styles.tabBadgeTextActive,
-                  ]}>
+                <View
+                  style={[
+                    styles.tabBadge,
+                    selectedTab === "Services" && styles.tabBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      selectedTab === "Services" && styles.tabBadgeTextActive,
+                    ]}
+                  >
                     {services.length}
                   </Text>
                 </View>
@@ -646,14 +834,18 @@ export default function SalonDetailScreen({
                 Products
               </Text>
               {products.length > 0 && (
-                <View style={[
-                  styles.tabBadge,
-                  selectedTab === "Products" && styles.tabBadgeActive,
-                ]}>
-                  <Text style={[
-                    styles.tabBadgeText,
-                    selectedTab === "Products" && styles.tabBadgeTextActive,
-                  ]}>
+                <View
+                  style={[
+                    styles.tabBadge,
+                    selectedTab === "Products" && styles.tabBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      selectedTab === "Products" && styles.tabBadgeTextActive,
+                    ]}
+                  >
                     {products.length}
                   </Text>
                 </View>
@@ -681,14 +873,18 @@ export default function SalonDetailScreen({
                 Employees
               </Text>
               {employees.length > 0 && (
-                <View style={[
-                  styles.tabBadge,
-                  selectedTab === "Employees" && styles.tabBadgeActive,
-                ]}>
-                  <Text style={[
-                    styles.tabBadgeText,
-                    selectedTab === "Employees" && styles.tabBadgeTextActive,
-                  ]}>
+                <View
+                  style={[
+                    styles.tabBadge,
+                    selectedTab === "Employees" && styles.tabBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      selectedTab === "Employees" && styles.tabBadgeTextActive,
+                    ]}
+                  >
                     {employees.length}
                   </Text>
                 </View>
@@ -703,7 +899,14 @@ export default function SalonDetailScreen({
           {selectedTab === "Overview" && (
             <View style={styles.overviewContent}>
               {/* Business Information */}
-              <View style={styles.infoSection}>
+              <View
+                style={[
+                  styles.infoSection,
+                  {
+                    borderBottomColor: dynamicStyles.sectionBorder.borderColor,
+                  },
+                ]}
+              >
                 <View style={styles.infoRowItem}>
                   <View style={styles.infoIconContainer}>
                     <MaterialIcons
@@ -713,7 +916,9 @@ export default function SalonDetailScreen({
                     />
                   </View>
                   <View style={styles.infoContent}>
-                    <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
+                    <Text
+                      style={[styles.infoLabel, dynamicStyles.textSecondary]}
+                    >
                       Business Type
                     </Text>
                     <Text style={[styles.infoValue, dynamicStyles.text]}>
@@ -732,11 +937,16 @@ export default function SalonDetailScreen({
                       />
                     </View>
                     <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
+                      <Text
+                        style={[styles.infoLabel, dynamicStyles.textSecondary]}
+                      >
                         Team Size
                       </Text>
                       <Text style={[styles.infoValue, dynamicStyles.text]}>
-                        {salon.settings.numberOfEmployees} {salon.settings.numberOfEmployees === 1 ? "professional" : "professionals"}
+                        {salon.settings.numberOfEmployees}{" "}
+                        {salon.settings.numberOfEmployees === 1
+                          ? "professional"
+                          : "professionals"}
                       </Text>
                     </View>
                   </View>
@@ -752,7 +962,9 @@ export default function SalonDetailScreen({
                       />
                     </View>
                     <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
+                      <Text
+                        style={[styles.infoLabel, dynamicStyles.textSecondary]}
+                      >
                         Registration Number
                       </Text>
                       <Text style={[styles.infoValue, dynamicStyles.text]}>
@@ -767,11 +979,17 @@ export default function SalonDetailScreen({
                     <MaterialIcons
                       name="check-circle"
                       size={20}
-                      color={salon.status === "active" ? theme.colors.success : dynamicStyles.textSecondary.color}
+                      color={
+                        salon.status === "active"
+                          ? theme.colors.success
+                          : dynamicStyles.textSecondary.color
+                      }
                     />
                   </View>
                   <View style={styles.infoContent}>
-                    <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
+                    <Text
+                      style={[styles.infoLabel, dynamicStyles.textSecondary]}
+                    >
                       Status
                     </Text>
                     <Text
@@ -785,7 +1003,9 @@ export default function SalonDetailScreen({
                         },
                       ]}
                     >
-                      {salon.status === "active" ? "Open for business" : "Currently closed"}
+                      {salon.status === "active"
+                        ? "Open for business"
+                        : "Currently closed"}
                     </Text>
                   </View>
                 </View>
@@ -793,7 +1013,15 @@ export default function SalonDetailScreen({
 
               {/* Specialties */}
               {getSpecialties().length > 0 && (
-                <View style={styles.infoSection}>
+                <View
+                  style={[
+                    styles.infoSection,
+                    {
+                      borderBottomColor:
+                        dynamicStyles.sectionBorder.borderColor,
+                    },
+                  ]}
+                >
                   <View style={styles.sectionHeader}>
                     <MaterialIcons
                       name="star"
@@ -805,24 +1033,35 @@ export default function SalonDetailScreen({
                     </Text>
                   </View>
                   <View style={styles.specialtiesList}>
-                    {getSpecialties().map((specialty: string, index: number) => (
-                      <View key={index} style={styles.specialtyItem}>
-                        <MaterialIcons
-                          name="check"
-                          size={16}
-                          color={theme.colors.primary}
-                        />
-                        <Text style={[styles.specialtyText, dynamicStyles.text]}>
-                          {specialty}
-                        </Text>
-                      </View>
-                    ))}
+                    {getSpecialties().map(
+                      (specialty: string, index: number) => (
+                        <View key={index} style={styles.specialtyItem}>
+                          <MaterialIcons
+                            name="check"
+                            size={16}
+                            color={theme.colors.primary}
+                          />
+                          <Text
+                            style={[styles.specialtyText, dynamicStyles.text]}
+                          >
+                            {specialty}
+                          </Text>
+                        </View>
+                      )
+                    )}
                   </View>
                 </View>
               )}
 
               {/* Operating Hours */}
-              <View style={styles.infoSection}>
+              <View
+                style={[
+                  styles.infoSection,
+                  {
+                    borderBottomColor: dynamicStyles.sectionBorder.borderColor,
+                  },
+                ]}
+              >
                 <View style={styles.sectionHeader}>
                   <MaterialIcons
                     name="schedule"
@@ -837,15 +1076,22 @@ export default function SalonDetailScreen({
                   const hours = parseOperatingHours();
                   if (!hours) {
                     return (
-                      <Text style={[styles.operatingHoursText, dynamicStyles.textSecondary]}>
+                      <Text
+                        style={[
+                          styles.operatingHoursText,
+                          dynamicStyles.textSecondary,
+                        ]}
+                      >
                         Hours not specified
                       </Text>
                     );
                   }
-                  
+
                   if (typeof hours === "string") {
                     return (
-                      <Text style={[styles.operatingHoursText, dynamicStyles.text]}>
+                      <Text
+                        style={[styles.operatingHoursText, dynamicStyles.text]}
+                      >
                         {hours}
                       </Text>
                     );
@@ -853,39 +1099,81 @@ export default function SalonDetailScreen({
 
                   return (
                     <View style={styles.hoursList}>
-                      {Object.entries(hours).map(([day, dayHours]: [string, any]) => {
-                        if (dayHours && typeof dayHours === "object" && dayHours.isOpen) {
-                          return (
-                            <View key={day} style={styles.hourRow}>
-                              <Text style={[styles.dayText, dynamicStyles.text]}>
-                                {day.charAt(0).toUpperCase() + day.slice(1)}
-                              </Text>
-                              <View style={styles.timeContainer}>
-                                <MaterialIcons
-                                  name="access-time"
-                                  size={14}
-                                  color={dynamicStyles.textSecondary.color}
-                                />
-                                <Text style={[styles.timeText, dynamicStyles.text]}>
-                                  {dayHours.startTime} - {dayHours.endTime}
+                      {Object.entries(hours).map(
+                        ([day, dayHours]: [string, any]) => {
+                          if (
+                            dayHours &&
+                            typeof dayHours === "object" &&
+                            dayHours.isOpen
+                          ) {
+                            return (
+                              <View
+                                key={day}
+                                style={[
+                                  styles.hourRow,
+                                  {
+                                    borderBottomColor:
+                                      dynamicStyles.sectionBorder.borderColor,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[styles.dayText, dynamicStyles.text]}
+                                >
+                                  {day.charAt(0).toUpperCase() + day.slice(1)}
+                                </Text>
+                                <View style={styles.timeContainer}>
+                                  <MaterialIcons
+                                    name="access-time"
+                                    size={14}
+                                    color={dynamicStyles.textSecondary.color}
+                                  />
+                                  <Text
+                                    style={[
+                                      styles.timeText,
+                                      dynamicStyles.text,
+                                    ]}
+                                  >
+                                    {dayHours.startTime} - {dayHours.endTime}
+                                  </Text>
+                                </View>
+                              </View>
+                            );
+                          } else if (
+                            dayHours &&
+                            typeof dayHours === "object" &&
+                            !dayHours.isOpen
+                          ) {
+                            return (
+                              <View
+                                key={day}
+                                style={[
+                                  styles.hourRow,
+                                  {
+                                    borderBottomColor:
+                                      dynamicStyles.sectionBorder.borderColor,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[styles.dayText, dynamicStyles.text]}
+                                >
+                                  {day.charAt(0).toUpperCase() + day.slice(1)}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.timeText,
+                                    dynamicStyles.textSecondary,
+                                  ]}
+                                >
+                                  Closed
                                 </Text>
                               </View>
-                            </View>
-                          );
-                        } else if (dayHours && typeof dayHours === "object" && !dayHours.isOpen) {
-                          return (
-                            <View key={day} style={styles.hourRow}>
-                              <Text style={[styles.dayText, dynamicStyles.text]}>
-                                {day.charAt(0).toUpperCase() + day.slice(1)}
-                              </Text>
-                              <Text style={[styles.timeText, dynamicStyles.textSecondary]}>
-                                Closed
-                              </Text>
-                            </View>
-                          );
+                            );
+                          }
+                          return null;
                         }
-                        return null;
-                      })}
+                      )}
                     </View>
                   );
                 })()}
@@ -893,7 +1181,15 @@ export default function SalonDetailScreen({
 
               {/* Location */}
               {salon.latitude && salon.longitude && (
-                <View style={styles.infoSection}>
+                <View
+                  style={[
+                    styles.infoSection,
+                    {
+                      borderBottomColor:
+                        dynamicStyles.sectionBorder.borderColor,
+                    },
+                  ]}
+                >
                   <View style={styles.sectionHeader}>
                     <MaterialIcons
                       name="place"
@@ -923,7 +1219,9 @@ export default function SalonDetailScreen({
                       <Text style={[styles.mapButtonText, dynamicStyles.text]}>
                         View on Map
                       </Text>
-                      <Text style={[styles.mapSubtext, dynamicStyles.textSecondary]}>
+                      <Text
+                        style={[styles.mapSubtext, dynamicStyles.textSecondary]}
+                      >
                         Tap to open location
                       </Text>
                     </View>
@@ -937,8 +1235,18 @@ export default function SalonDetailScreen({
               )}
 
               {/* Social Media Links */}
-              {(salon.settings?.facebookUrl || salon.settings?.instagramUrl || salon.settings?.twitterUrl) && (
-                <View style={styles.infoSection}>
+              {(salon.settings?.facebookUrl ||
+                salon.settings?.instagramUrl ||
+                salon.settings?.twitterUrl) && (
+                <View
+                  style={[
+                    styles.infoSection,
+                    {
+                      borderBottomColor:
+                        dynamicStyles.sectionBorder.borderColor,
+                    },
+                  ]}
+                >
                   <View style={styles.sectionHeader}>
                     <MaterialIcons
                       name="share"
@@ -953,13 +1261,23 @@ export default function SalonDetailScreen({
                     {salon.settings?.facebookUrl && (
                       <TouchableOpacity
                         style={styles.socialLinkItem}
-                        onPress={() => Linking.openURL(salon.settings?.facebookUrl || "")}
+                        onPress={() =>
+                          Linking.openURL(salon.settings?.facebookUrl || "")
+                        }
                         activeOpacity={0.7}
                       >
                         <View style={styles.socialIconContainer}>
-                          <MaterialIcons name="facebook" size={22} color="#1877F2" />
+                          <MaterialIcons
+                            name="facebook"
+                            size={22}
+                            color="#1877F2"
+                          />
                         </View>
-                        <Text style={[styles.socialLinkText, dynamicStyles.text]}>Facebook</Text>
+                        <Text
+                          style={[styles.socialLinkText, dynamicStyles.text]}
+                        >
+                          Facebook
+                        </Text>
                         <MaterialIcons
                           name="chevron-right"
                           size={20}
@@ -970,13 +1288,23 @@ export default function SalonDetailScreen({
                     {salon.settings?.instagramUrl && (
                       <TouchableOpacity
                         style={styles.socialLinkItem}
-                        onPress={() => Linking.openURL(salon.settings?.instagramUrl || "")}
+                        onPress={() =>
+                          Linking.openURL(salon.settings?.instagramUrl || "")
+                        }
                         activeOpacity={0.7}
                       >
                         <View style={styles.socialIconContainer}>
-                          <FontAwesome name="instagram" size={24} color="#E1306C" />
+                          <FontAwesome
+                            name="instagram"
+                            size={24}
+                            color="#E1306C"
+                          />
                         </View>
-                        <Text style={[styles.socialLinkText, dynamicStyles.text]}>Instagram</Text>
+                        <Text
+                          style={[styles.socialLinkText, dynamicStyles.text]}
+                        >
+                          Instagram
+                        </Text>
                         <MaterialIcons
                           name="chevron-right"
                           size={20}
@@ -987,13 +1315,19 @@ export default function SalonDetailScreen({
                     {salon.settings?.twitterUrl && (
                       <TouchableOpacity
                         style={styles.socialLinkItem}
-                        onPress={() => Linking.openURL(salon.settings?.twitterUrl || "")}
+                        onPress={() =>
+                          Linking.openURL(salon.settings?.twitterUrl || "")
+                        }
                         activeOpacity={0.7}
                       >
                         <View style={styles.socialIconContainer}>
                           <Feather name="twitter" size={24} color="#1DA1F2" />
                         </View>
-                        <Text style={[styles.socialLinkText, dynamicStyles.text]}>Twitter</Text>
+                        <Text
+                          style={[styles.socialLinkText, dynamicStyles.text]}
+                        >
+                          Twitter
+                        </Text>
                         <MaterialIcons
                           name="chevron-right"
                           size={20}
@@ -1011,7 +1345,7 @@ export default function SalonDetailScreen({
             <View style={styles.servicesContent}>
               {servicesLoading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Loader message="Loading services..." />
                 </View>
               ) : services.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -1025,18 +1359,67 @@ export default function SalonDetailScreen({
                   </Text>
                 </View>
               ) : (
-                <View style={styles.servicesGrid}>
-                  {services.map((service) => (
-                    <View key={service.id} style={[styles.serviceCardWrapper, { width: cardWidth }]}>
-                      <ServiceCard
-                        image={null}
-                        title={service.name}
-                        author={salon.name}
-                        likes={0}
-                        onPress={() => handleServicePress(service)}
-                        onLike={() => console.log("Like:", service.id)}
+                <View style={styles.listContainer}>
+                  {services.map((service, index) => (
+                    <TouchableOpacity
+                      key={service.id}
+                      style={[
+                        styles.listItem,
+                        dynamicStyles.listItem,
+                        index === services.length - 1 && styles.listItemLast,
+                      ]}
+                      onPress={() => handleServicePress(service)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.listItemLeft}>
+                        <View
+                          style={[
+                            styles.listItemIcon,
+                            { backgroundColor: theme.colors.primaryLight },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="content-cut"
+                            size={20}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                        <View style={styles.listItemContent}>
+                          <Text
+                            style={[styles.listItemTitle, dynamicStyles.text]}
+                            numberOfLines={1}
+                          >
+                            {service.name}
+                          </Text>
+                          {service.description && (
+                            <Text
+                              style={[
+                                styles.listItemSubtitle,
+                                dynamicStyles.textSecondary,
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {service.description}
+                            </Text>
+                          )}
+                          {service.basePrice && (
+                            <Text
+                              style={[
+                                styles.listItemPrice,
+                                { color: theme.colors.primary },
+                              ]}
+                            >
+                              RWF {Number(service.basePrice).toFixed(2)}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <MaterialIcons
+                        name="chevron-right"
+                        size={20}
+                        color={dynamicStyles.textSecondary.color}
                       />
-                    </View>
+                    </TouchableOpacity>
                   ))}
                 </View>
               )}
@@ -1047,7 +1430,7 @@ export default function SalonDetailScreen({
             <View style={styles.productsContent}>
               {productsLoading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Loader message="Loading products..." />
                 </View>
               ) : products.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -1061,40 +1444,79 @@ export default function SalonDetailScreen({
                   </Text>
                 </View>
               ) : (
-                <View style={styles.productsGrid}>
-                  {products.map((product) => (
-                    <View key={product.id} style={[styles.productCard, dynamicStyles.card, { width: cardWidth }]}>
-                      <View style={[styles.productImage, { backgroundColor: theme.colors.primaryLight }]}>
-                        <Text style={styles.productInitials}>
-                          {getInitials(product.name)}
-                        </Text>
-                      </View>
-                      <View style={styles.productContent}>
-                        <Text style={[styles.productTitle, dynamicStyles.text]} numberOfLines={2}>
-                          {product.name}
-                        </Text>
-                        {product.description && (
+                <View style={styles.listContainer}>
+                  {products.map((product, index) => (
+                    <TouchableOpacity
+                      key={product.id}
+                      style={[
+                        styles.listItem,
+                        dynamicStyles.listItem,
+                        index === products.length - 1 && styles.listItemLast,
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.listItemLeft}>
+                        <View
+                          style={[
+                            styles.listItemIcon,
+                            { backgroundColor: theme.colors.primaryLight },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="inventory"
+                            size={20}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                        <View style={styles.listItemContent}>
                           <Text
-                            style={[styles.productDescription, dynamicStyles.textSecondary]}
-                            numberOfLines={2}
+                            style={[styles.listItemTitle, dynamicStyles.text]}
+                            numberOfLines={1}
                           >
-                            {product.description}
+                            {product.name}
                           </Text>
-                        )}
-                        <View style={styles.productFooter}>
-                          <Text style={[styles.productPrice, { color: theme.colors.primary }]}>
-                            {product.price && product.price > 0
-                              ? `$${Number(product.price).toFixed(2)}`
-                              : "Price N/A"}
-                          </Text>
-                          {product.stockQuantity !== undefined && product.stockQuantity !== null && (
-                            <Text style={[styles.productStock, dynamicStyles.textSecondary]}>
-                              {product.stockQuantity} in stock
+                          {product.description && (
+                            <Text
+                              style={[
+                                styles.listItemSubtitle,
+                                dynamicStyles.textSecondary,
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {product.description}
                             </Text>
                           )}
+                          <View style={styles.listItemFooter}>
+                            <Text
+                              style={[
+                                styles.listItemPrice,
+                                { color: theme.colors.primary },
+                              ]}
+                            >
+                              {product.price && product.price > 0
+                                ? `RWF ${Number(product.price).toFixed(2)}`
+                                : "Price N/A"}
+                            </Text>
+                            {product.stockQuantity !== undefined &&
+                              product.stockQuantity !== null && (
+                                <Text
+                                  style={[
+                                    styles.listItemStock,
+                                    dynamicStyles.textSecondary,
+                                  ]}
+                                >
+                                  {product.stockQuantity} in stock
+                                </Text>
+                              )}
+                          </View>
                         </View>
                       </View>
-                    </View>
+                      <MaterialIcons
+                        name="chevron-right"
+                        size={20}
+                        color={dynamicStyles.textSecondary.color}
+                      />
+                    </TouchableOpacity>
                   ))}
                 </View>
               )}
@@ -1105,7 +1527,7 @@ export default function SalonDetailScreen({
             <View style={styles.employeesContent}>
               {employeesLoading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Loader message="Loading employees..." />
                 </View>
               ) : employees.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -1119,17 +1541,26 @@ export default function SalonDetailScreen({
                   </Text>
                 </View>
               ) : (
-                <>
-                  <View style={styles.employeesGrid}>
-                    {employees.slice(0, 4).map((employee) => (
-                      <TouchableOpacity
-                        key={employee.id}
-                        style={[styles.employeeCard, dynamicStyles.card]}
-                        onPress={() => handleEmployeePress(employee)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.employeeImage, { backgroundColor: theme.colors.primaryLight }]}>
-                          <Text style={styles.employeeInitials}>
+                <View style={styles.listContainer}>
+                  {employees.map((employee, index) => (
+                    <TouchableOpacity
+                      key={employee.id}
+                      style={[
+                        styles.listItem,
+                        dynamicStyles.listItem,
+                        index === employees.length - 1 && styles.listItemLast,
+                      ]}
+                      onPress={() => handleEmployeePress(employee)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.listItemLeft}>
+                        <View
+                          style={[
+                            styles.listItemAvatar,
+                            { backgroundColor: theme.colors.primaryLight },
+                          ]}
+                        >
+                          <Text style={styles.listItemAvatarText}>
                             {employee.user?.fullName
                               ? employee.user.fullName
                                   .split(" ")
@@ -1140,45 +1571,40 @@ export default function SalonDetailScreen({
                               : "EM"}
                           </Text>
                         </View>
-                        <Text style={[styles.employeeName, dynamicStyles.text]} numberOfLines={1}>
-                          {employee.user?.fullName || "Employee"}
-                        </Text>
-                        {employee.roleTitle && (
-                          <Text style={[styles.employeeRole, dynamicStyles.textSecondary]} numberOfLines={1}>
-                            {employee.roleTitle}
+                        <View style={styles.listItemContent}>
+                          <Text
+                            style={[styles.listItemTitle, dynamicStyles.text]}
+                            numberOfLines={1}
+                          >
+                            {employee.user?.fullName || "Employee"}
                           </Text>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {employees.length > 4 && (
-                    <TouchableOpacity
-                      style={styles.viewAllButtonBottom}
-                      onPress={handleViewAllEmployees}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.viewAllText,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        View All Employees
-                      </Text>
+                          {employee.roleTitle && (
+                            <Text
+                              style={[
+                                styles.listItemSubtitle,
+                                dynamicStyles.textSecondary,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {employee.roleTitle}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
                       <MaterialIcons
-                        name="arrow-forward"
-                        size={16}
-                        color={theme.colors.primary}
+                        name="chevron-right"
+                        size={20}
+                        color={dynamicStyles.textSecondary.color}
                       />
                     </TouchableOpacity>
-                  )}
-                </>
+                  ))}
+                </View>
               )}
             </View>
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -1193,9 +1619,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: theme.colors.background,
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.xl,
+  },
   errorText: {
     fontSize: 16,
-    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    textAlign: "center",
+    fontFamily: theme.fonts.medium,
   },
   header: {
     flexDirection: "row",
@@ -1204,7 +1639,7 @@ const styles = StyleSheet.create({
     paddingTop: StatusBar.currentHeight || 0,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
+    borderBottomWidth: 0,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -1241,7 +1676,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: "rgba(200, 155, 104, 0.15)",
+    backgroundColor: theme.colors.primaryLight + "40",
   },
   salonImageContainer: {
     position: "relative",
@@ -1254,11 +1689,11 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   salonInitials: {
     color: theme.colors.white,
@@ -1276,11 +1711,11 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.xs / 2,
     borderRadius: 12,
     gap: theme.spacing.xs / 2,
-    shadowColor: "#000",
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 4,
+    elevation: 5,
   },
   statusDot: {
     width: 6,
@@ -1336,21 +1771,20 @@ const styles = StyleSheet.create({
   contactCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: theme.spacing.sm,
+    padding: theme.spacing.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    gap: theme.spacing.sm,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: theme.spacing.md,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   contactIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1371,22 +1805,21 @@ const styles = StyleSheet.create({
   },
   locationCard: {
     flexDirection: "row",
-    padding: theme.spacing.sm,
+    padding: theme.spacing.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: theme.spacing.md,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   locationIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1406,10 +1839,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   descriptionSection: {
-    marginBottom: theme.spacing.md,
-    paddingTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -1420,7 +1852,6 @@ const styles = StyleSheet.create({
   sectionHeaderLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.borderLight,
   },
   sectionHeading: {
     fontSize: 16,
@@ -1464,11 +1895,10 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
-    marginBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     backgroundColor: "transparent",
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   tab: {
     flex: 1,
@@ -1558,71 +1988,81 @@ const styles = StyleSheet.create({
   servicesContent: {
     marginTop: theme.spacing.sm,
   },
-  servicesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-    justifyContent: "space-between",
-  },
-  serviceCardWrapper: {
-    marginBottom: theme.spacing.md,
-  },
   productsContent: {
     marginTop: theme.spacing.sm,
   },
-  productsGrid: {
+  listContainer: {
+    gap: 0,
+  },
+  listItem: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
+    alignItems: "center",
     justifyContent: "space-between",
+    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md + 2,
+    borderBottomWidth: 1,
+    borderRadius: 0,
   },
-  productCard: {
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    marginBottom: theme.spacing.md,
+  listItemLast: {
+    borderBottomWidth: 0,
   },
-  productImage: {
-    width: "100%",
-    height: 120,
+  listItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: theme.spacing.md,
+  },
+  listItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
   },
-  productInitials: {
-    color: theme.colors.primary,
-    fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-  },
-  productContent: {
-    padding: theme.spacing.sm,
-  },
-  productTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.bold,
-  },
-  productDescription: {
-    fontSize: 11,
-    marginBottom: theme.spacing.xs,
-    lineHeight: 14,
-    fontFamily: theme.fonts.regular,
-  },
-  productFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  listItemAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: theme.spacing.xs,
   },
-  productPrice: {
+  listItemAvatarText: {
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
   },
-  productStock: {
-    fontSize: 10,
+  listItemContent: {
+    flex: 1,
+    gap: theme.spacing.xs / 2,
+  },
+  listItemTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    lineHeight: 22,
+    marginBottom: theme.spacing.xs / 2,
+  },
+  listItemSubtitle: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    lineHeight: 18,
+    marginTop: theme.spacing.xs / 2,
+  },
+  listItemPrice: {
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: theme.fonts.semibold,
+    marginTop: theme.spacing.xs,
+  },
+  listItemFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.xs / 2,
+  },
+  listItemStock: {
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   emptyContainer: {
@@ -1635,8 +2075,14 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     fontFamily: theme.fonts.regular,
   },
+  errorBackButton: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 12,
+    marginTop: theme.spacing.md,
+  },
   backButtonText: {
-    color: theme.colors.primary,
+    color: theme.colors.white,
     fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
@@ -1644,52 +2090,10 @@ const styles = StyleSheet.create({
   employeesContent: {
     marginTop: theme.spacing.sm,
   },
-  employeesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-    justifyContent: "space-between",
-  },
-  employeeCard: {
-    width: (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.sm) / 2,
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    marginBottom: theme.spacing.md,
-  },
-  employeeImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: theme.spacing.sm,
-  },
-  employeeInitials: {
-    color: theme.colors.primary,
-    fontSize: 24,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-  },
-  employeeName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.bold,
-  },
-  employeeRole: {
-    fontSize: 12,
-    textAlign: "center",
-    fontFamily: theme.fonts.regular,
-  },
   infoSection: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
     paddingBottom: theme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -1760,9 +2164,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
   },
   dayText: {
     fontSize: 14,
@@ -1834,4 +2237,3 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
 });
-
