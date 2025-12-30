@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import RoleBasedHome from "../screens/RoleBasedHome";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import { createLazyScreen } from "./lazyScreenLoader";
 import {
   ExploreScreen,
   ServiceDetailScreen,
@@ -74,7 +75,6 @@ import {
 } from "../screens/sales";
 import { BusinessAnalyticsScreen } from "../screens/analytics";
 import { SalonSettingsScreen } from "../screens/settings";
-import { FinanceScreen, LoanRepaymentScreen } from "../screens/finance";
 import {
   FinancialReportsScreen,
   ProfitLossReportScreen,
@@ -83,6 +83,15 @@ import {
 } from "../screens/reports";
 import UnifiedWorkLogScreen from "../screens/workLog/UnifiedWorkLogScreen";
 import { theme } from "../theme";
+
+// Lazy load heavy screens to improve startup performance
+// These screens are only loaded when actually navigated to, not on app startup
+const FinanceScreen = createLazyScreen(
+  () => import("../screens/finance/FinanceScreen")
+);
+const LoanRepaymentScreen = createLazyScreen(
+  () => import("../screens/finance/LoanRepaymentScreen")
+);
 
 /**
  * Screen router helper

@@ -1,9 +1,11 @@
 {
   "watch": ["src"],
   "ext": "ts",
-  "ignore": ["src/**/*.spec.ts"],
-  "exec": "nest start",
+  "ignore": ["src/**/*.spec.ts", "dist"],
+  "exec": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
   "signal": "SIGTERM",
   "verbose": true,
-  "restartable": "rs"
+  "restartable": "rs",
+  "delay": 3000,
+  "killTimeout": 8000
 }

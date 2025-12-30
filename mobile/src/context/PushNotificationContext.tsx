@@ -91,31 +91,38 @@ export function PushNotificationProvider({
     }
 
     // Listen for notifications received while app is foregrounded
-    const notificationListener = pushNotificationsService.addNotificationReceivedListener(
-      (notification) => {
-        console.log('📬 Notification received in foreground:', notification.request.content.title);
-        setNotification(notification);
-      }
-    );
+    const notificationListener =
+      pushNotificationsService.addNotificationReceivedListener(
+        (notification) => {
+          console.log(
+            "📬 Notification received in foreground:",
+            notification.request.content.title
+          );
+          setNotification(notification);
+        }
+      );
 
     // Listen for notification interactions (user taps on notification)
-    const responseListener = pushNotificationsService.addNotificationResponseReceivedListener(
-      (response) => {
-        console.log('👆 User interacted with notification');
-        setLastNotificationResponse(response);
-        
-        // Get navigation target based on notification data
-        const data = response.notification.request.content.data as PushNotificationData;
-        const { screen, params } = pushNotificationsService.getNavigationTarget(data);
-        
-        console.log(`📍 Navigating to: ${screen}`, params);
-        
-        // Call the navigation callback if provided
-        if (onNotificationTap) {
-          onNotificationTap(screen, params);
+    const responseListener =
+      pushNotificationsService.addNotificationResponseReceivedListener(
+        (response) => {
+          console.log("👆 User interacted with notification");
+          setLastNotificationResponse(response);
+
+          // Get navigation target based on notification data
+          const data = response.notification.request.content
+            .data as PushNotificationData;
+          const { screen, params } =
+            pushNotificationsService.getNavigationTarget(data);
+
+          console.log(`📍 Navigating to: ${screen}`, params);
+
+          // Call the navigation callback if provided
+          if (onNotificationTap) {
+            onNotificationTap(screen, params);
+          }
         }
-      }
-    );
+      );
 
     return () => {
       notificationListener.remove();
@@ -124,27 +131,46 @@ export function PushNotificationProvider({
   }, [onNotificationTap]);
 
   // Register for push notifications when user is authenticated
+  // Defer until after app is visible to not block startup
   useEffect(() => {
     if (isAuthenticated && user && !isExpoGo) {
-      registerForPushNotifications();
+      // Defer push notification registration to not block startup
+      // Register after a short delay to ensure app UI is rendered first
+      const registrationTimeout = setTimeout(() => {
+        registerForPushNotifications();
+      }, 500); // Delay to let app render first
+
+      return () => {
+        clearTimeout(registrationTimeout);
+      };
     }
   }, [isAuthenticated, user, registerForPushNotifications]);
 
   // Re-register push token when network reconnects (like WhatsApp reconnection)
   useEffect(() => {
-    if (isConnected && isAuthenticated && user && expoPushToken && !isRegistered && !isExpoGo) {
+    if (
+      isConnected &&
+      isAuthenticated &&
+      user &&
+      expoPushToken &&
+      !isRegistered &&
+      !isExpoGo
+    ) {
       // Network just came back - retry token registration
-      console.log('🌐 Network reconnected - re-registering push token...');
-      pushNotificationsService.registerTokenWithBackend(expoPushToken).then((success) => {
-        if (success) {
-          setIsRegistered(true);
-          console.log('✅ Push token re-registered after network reconnect');
-        }
-      });
+      console.log("🌐 Network reconnected - re-registering push token...");
+      pushNotificationsService
+        .registerTokenWithBackend(expoPushToken)
+        .then((success) => {
+          if (success) {
+            setIsRegistered(true);
+            console.log("✅ Push token re-registered after network reconnect");
+          }
+        });
     }
   }, [isConnected, isAuthenticated, user, expoPushToken, isRegistered]);
 
   // Check for initial notification (app was opened from notification)
+  // Defer to not block startup
   useEffect(() => {
     if (isExpoGo) {
       return; // Skip in Expo Go
@@ -166,10 +192,10 @@ export function PushNotificationProvider({
             pushNotificationsService.getNavigationTarget(data);
 
           if (onNotificationTap) {
-            // Delay navigation slightly to ensure app is ready
+            // Delay navigation to ensure app is fully ready
             setTimeout(() => {
               onNotificationTap(screen, params);
-            }, 500);
+            }, 800); // Increased delay to ensure app is ready
           }
         }
       } catch {
@@ -178,7 +204,14 @@ export function PushNotificationProvider({
       }
     };
 
-    checkInitialNotification();
+    // Defer initial notification check to not block startup
+    const checkTimeout = setTimeout(() => {
+      checkInitialNotification();
+    }, 300); // Check after app has rendered
+
+    return () => {
+      clearTimeout(checkTimeout);
+    };
   }, [onNotificationTap]);
 
   const value: PushNotificationContextType = {

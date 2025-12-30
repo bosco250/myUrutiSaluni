@@ -8,9 +8,11 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prestart": "powershell -ExecutionPolicy Bypass -File scripts/kill-port.ps1 -Port 4000",
     "start": "nodemon --exec \"nest start\" --watch src -e ts",
     "start:dev": "nest start --watch",
     "dev:watch": "nodemon --config nodemon.json",
+    "kill-port": "powershell -ExecutionPolicy Bypass -File scripts/kill-port.ps1 -Port 4000",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

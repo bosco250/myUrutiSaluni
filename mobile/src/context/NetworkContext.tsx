@@ -1,5 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import * as Network from 'expo-network';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from "react";
+import * as Network from "expo-network";
 
 interface NetworkContextType {
   isConnected: boolean;
@@ -22,7 +29,7 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
       setIsConnected(connected);
       return connected;
     } catch (error) {
-      console.error('Error checking network:', error);
+      console.error("Error checking network:", error);
       setIsConnected(false);
       return false;
     } finally {
@@ -31,23 +38,39 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Initial check and periodic monitoring
+  // Defer network check to not block startup - check after initial render
   useEffect(() => {
-    // Initial check
-    checkConnection();
+    // Defer initial check to allow app to render first (non-blocking)
+    const initialCheckTimeout = setTimeout(() => {
+      checkConnection();
+    }, 100); // Small delay to let UI render first
 
     // Set up periodic checking every 5 seconds when disconnected
     // or every 30 seconds when connected
     let intervalId: NodeJS.Timeout;
 
     const setupInterval = () => {
-      intervalId = setInterval(() => {
-        checkConnection();
-      }, isConnected ? 30000 : 5000);
+      // Clear any existing interval
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+
+      intervalId = setInterval(
+        () => {
+          checkConnection();
+        },
+        isConnected ? 30000 : 5000
+      );
     };
 
-    setupInterval();
+    // Setup interval after initial check completes
+    const intervalSetupTimeout = setTimeout(() => {
+      setupInterval();
+    }, 500);
 
     return () => {
+      clearTimeout(initialCheckTimeout);
+      clearTimeout(intervalSetupTimeout);
       if (intervalId) {
         clearInterval(intervalId);
       }
@@ -60,13 +83,15 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     checkConnection,
   };
 
-  return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>;
+  return (
+    <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>
+  );
 }
 
 export function useNetwork() {
   const context = useContext(NetworkContext);
   if (context === undefined) {
-    throw new Error('useNetwork must be used within a NetworkProvider');
+    throw new Error("useNetwork must be used within a NetworkProvider");
   }
   return context;
 }

@@ -8,11 +8,15 @@ import { json, urlencoded } from 'express';
 import * as os from 'os';
 import { AppModule } from './app.module';
 
+// Store app instance and server for graceful shutdown
+let app: NestExpressApplication;
+let httpServer: any;
+
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   logger.log('🚀 Starting Nest application...');
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log'],
     bodyParser: true,
     rawBody: false,
@@ -147,6 +151,9 @@ async function bootstrap() {
   // Listen on all network interfaces (0.0.0.0) to allow connections from other devices
   await app.listen(port, '0.0.0.0');
 
+  // Get and store server reference for graceful shutdown (store in separate variable, not on app proxy)
+  httpServer = app.getHttpServer();
+
   // Get local network IP for mobile device access
   const networkInterfaces = os.networkInterfaces();
   let localIp = 'localhost';
@@ -176,20 +183,91 @@ async function bootstrap() {
   logger.log(
     `🔐 Environment: ${configService.get<string>('NODE_ENV', 'development')}`,
   );
+
+  return app;
 }
 
-bootstrap().catch((error) => {
-  console.error('Failed to start application:', error);
-  process.exit(1);
-});
+// Graceful shutdown function
+async function gracefulShutdown(signal: string) {
+  const logger = new Logger('Shutdown');
+  logger.log(`${signal} signal received: closing HTTP server gracefully...`);
+
+  if (app) {
+    try {
+      // Close the HTTP server first (use stored reference)
+      if (httpServer) {
+        return new Promise<void>((resolve) => {
+          httpServer.close(() => {
+            logger.log('✅ HTTP server closed successfully');
+            // Then close the NestJS app
+            app
+              .close()
+              .then(() => {
+                logger.log('✅ NestJS application closed successfully');
+                // Give the OS time to release the port (especially important on Windows)
+                setTimeout(() => {
+                  process.exit(0);
+                }, 1000);
+              })
+              .catch((error) => {
+                logger.error('❌ Error closing NestJS app:', error);
+                setTimeout(() => {
+                  process.exit(1);
+                }, 500);
+              });
+            resolve();
+          });
+
+          // Force close after 5 seconds if graceful close doesn't work
+          setTimeout(() => {
+            logger.warn('⚠️  Force closing server after timeout');
+            if (httpServer.closeAllConnections) {
+              httpServer.closeAllConnections();
+            }
+            app
+              .close()
+              .then(() => process.exit(0))
+              .catch(() => process.exit(1));
+          }, 5000);
+        });
+      } else {
+        // Fallback if server reference not available
+        await app.close();
+        logger.log('✅ Application closed successfully');
+        setTimeout(() => {
+          process.exit(0);
+        }, 500);
+      }
+    } catch (error) {
+      logger.error('❌ Error during shutdown:', error);
+      process.exit(1);
+    }
+  } else {
+    process.exit(0);
+  }
+}
 
 // Graceful shutdown handlers
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  process.exit(0);
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
 });
 
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing HTTP server');
-  process.exit(0);
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
 });
+
+bootstrap()
+  .then(() => {
+    console.log('✅ Application started successfully');
+  })
+  .catch((error) => {
+    console.error('❌ Failed to start application:', error);
+    process.exit(1);
+  });

@@ -39,10 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
-      // Load token and user data from AsyncStorage
+      // Load token and user data from AsyncStorage in parallel for faster startup
       // This restores the session when app restarts
-      const savedToken = await authService.getToken();
-      const savedUser = await authService.getUser();
+      const [savedToken, savedUser] = await Promise.all([
+        authService.getToken(),
+        authService.getUser(),
+      ]);
 
       if (savedToken && savedUser) {
         setToken(savedToken);
