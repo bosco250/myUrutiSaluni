@@ -252,16 +252,35 @@ export class AppointmentsService {
   }
 
   async findBySalonIds(salonIds: string[]): Promise<Appointment[]> {
-    return this.appointmentsRepository.find({
+    // If no salon IDs provided, return empty array
+    if (!salonIds || salonIds.length === 0) {
+      this.logger.warn('findBySalonIds called with empty salonIds array');
+      return [];
+    }
+
+    this.logger.log(
+      `Finding appointments for ${salonIds.length} salon(s): ${salonIds.join(', ')}`,
+    );
+
+    const appointments = await this.appointmentsRepository.find({
       where: salonIds.map((id) => ({ salonId: id })),
       relations: [
         'customer',
+        'customer.user',
         'service',
         'salon',
+        'salon.owner',
         'salonEmployee',
         'salonEmployee.user',
       ],
+      order: { scheduledStart: 'DESC' },
     });
+
+    this.logger.log(
+      `Found ${appointments.length} appointment(s) for salon(s): ${salonIds.join(', ')}`,
+    );
+
+    return appointments;
   }
 
   async findByCustomerId(customerId: string): Promise<Appointment[]> {

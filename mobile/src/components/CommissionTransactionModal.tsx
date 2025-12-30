@@ -13,11 +13,11 @@ import { api } from "../services/api";
 
 interface WalletTransaction {
   id: string;
-  walletId: string;
-  transactionType: string;
+  walletId?: string;
+  transactionType?: string;
   amount: number;
   description?: string;
-  createdAt: string;
+  createdAt?: string;
   updatedAt?: string;
   referenceType?: string;
   referenceId?: string;
@@ -365,7 +365,7 @@ export default function CommissionTransactionModal({
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, dynamicStyles.textSecondary]}>Date</Text>
                   <Text style={[styles.detailValue, dynamicStyles.text]}>
-                    {formatDate(transaction.createdAt)}
+                    {formatDate(transaction.createdAt || '')}
                   </Text>
                 </View>
                 
@@ -374,7 +374,7 @@ export default function CommissionTransactionModal({
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, dynamicStyles.textSecondary]}>Time</Text>
                   <Text style={[styles.detailValue, dynamicStyles.text]}>
-                    {formatTime(transaction.createdAt)}
+                    {formatTime(transaction.createdAt || '')}
                   </Text>
                 </View>
 

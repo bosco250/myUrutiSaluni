@@ -18,6 +18,7 @@ import {
 } from '../wallets/entities/wallet-transaction.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { WalletTransaction } from '../wallets/entities/wallet-transaction.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class CommissionsService {
@@ -237,6 +238,12 @@ export class CommissionsService {
     const salonOwnerId = commission.salonEmployee?.salon?.ownerId;
     const commissionAmount = Number(commission.amount);
     const employeeUserId = commission.salonEmployee?.user?.id;
+    const employeeName = commission.salonEmployee?.user?.fullName || null;
+
+    // Log to verify employee name is available
+    this.logger.log(
+      `[COMMISSION PAYMENT] Employee info: userId=${employeeUserId}, name=${employeeName || 'NULL'}, hasUser=${!!commission.salonEmployee?.user}`,
+    );
 
     // Validate payment prerequisites
     if (!salonOwnerId) {
@@ -264,6 +271,18 @@ export class CommissionsService {
 
     // Use database transaction to ensure atomicity - prevent race conditions and data loss
     return this.dataSource.transaction(async (manager) => {
+      // Resolve owner name for richer transaction metadata (best UX in wallet history)
+      const ownerUser = await manager.findOne(User, {
+        where: { id: salonOwnerId },
+        select: ['id', 'fullName'],
+      });
+      const salonOwnerName = ownerUser?.fullName || null;
+
+      // Log to verify names are being stored
+      this.logger.log(
+        `[COMMISSION PAYMENT] Storing names in metadata: employeeName=${employeeName || 'NULL'}, salonOwnerName=${salonOwnerName || 'NULL'}`,
+      );
+
       // Get or create wallets WITHIN transaction (ensures consistency)
       let ownerWallet = await manager.findOne(Wallet, {
         where: { userId: salonOwnerId },
@@ -279,7 +298,11 @@ export class CommissionsService {
       }
 
       // Check balance WITHIN transaction using pessimistic lock to prevent race conditions
-      const ownerBalance = Number(ownerWallet.balance);
+      // Ensure proper number conversion (decimal from DB comes as string)
+      const ownerBalance =
+        typeof ownerWallet.balance === 'string'
+          ? parseFloat(ownerWallet.balance) || 0
+          : Number(ownerWallet.balance) || 0;
 
       if (ownerBalance < commissionAmount) {
         throw new BadRequestException(
@@ -301,7 +324,11 @@ export class CommissionsService {
         employeeWallet = await manager.save(employeeWallet);
       }
 
-      const employeeBalanceBefore = Number(employeeWallet.balance);
+      // Ensure proper number conversion (decimal from DB comes as string)
+      const employeeBalanceBefore =
+        typeof employeeWallet.balance === 'string'
+          ? parseFloat(employeeWallet.balance) || 0
+          : Number(employeeWallet.balance) || 0;
 
       // Step 1: Deduct from salon owner's wallet (atomic within transaction)
       const ownerBalanceAfter = ownerBalance - commissionAmount;
@@ -325,6 +352,9 @@ export class CommissionsService {
         metadata: {
           commissionId: commissionId,
           employeeUserId: employeeUserId,
+          employeeName: employeeName,
+          salonOwnerId: salonOwnerId,
+          salonOwnerName: salonOwnerName,
           paymentMethod: paymentDetails?.paymentMethod || null,
           paymentReference: paymentDetails?.paymentReference || null,
           paidById: paymentDetails?.paidById || null,
@@ -358,6 +388,9 @@ export class CommissionsService {
         metadata: {
           commissionId: commissionId,
           salonOwnerId: salonOwnerId,
+          salonOwnerName: salonOwnerName,
+          employeeUserId: employeeUserId,
+          employeeName: employeeName,
           paymentMethod: paymentDetails?.paymentMethod || null,
           paymentReference: paymentDetails?.paymentReference || null,
           paidById: paymentDetails?.paidById || null,
@@ -472,11 +505,19 @@ export class CommissionsService {
     }
 
     const salonOwnerId = Array.from(salonOwnerIds)[0];
+    const ownerUser = await this.dataSource
+      .getRepository(User)
+      .findOne({ where: { id: salonOwnerId }, select: ['id', 'fullName'] });
+    const salonOwnerName = ownerUser?.fullName || null;
 
     // Check salon owner's wallet balance BEFORE processing
     const ownerWallet =
       await this.walletsService.getOrCreateWallet(salonOwnerId);
-    const ownerBalance = Number(ownerWallet.balance);
+    // Ensure proper number conversion (decimal from DB comes as string)
+    const ownerBalance =
+      typeof ownerWallet.balance === 'string'
+        ? parseFloat(ownerWallet.balance) || 0
+        : Number(ownerWallet.balance) || 0;
 
     if (ownerBalance < totalAmount) {
       throw new BadRequestException(
@@ -506,7 +547,11 @@ export class CommissionsService {
       }
 
       // Check balance WITHIN transaction to prevent race conditions
-      const ownerBalanceInTx = Number(ownerWallet.balance);
+      // Ensure proper number conversion (decimal from DB comes as string)
+      const ownerBalanceInTx =
+        typeof ownerWallet.balance === 'string'
+          ? parseFloat(ownerWallet.balance) || 0
+          : Number(ownerWallet.balance) || 0;
 
       if (ownerBalanceInTx < totalAmount) {
         throw new BadRequestException(
@@ -520,6 +565,7 @@ export class CommissionsService {
       // Process each commission atomically
       for (const commission of commissionsToPay) {
         const employeeUserId = commission.salonEmployee!.user!.id;
+        const employeeName = commission.salonEmployee!.user!.fullName || null;
         const commissionAmount = Number(commission.amount);
 
         // Get or create employee wallet
@@ -536,7 +582,11 @@ export class CommissionsService {
           employeeWallet = await manager.save(employeeWallet);
         }
 
-        const employeeBalanceBefore = Number(employeeWallet.balance);
+        // Ensure proper number conversion (decimal from DB comes as string)
+        const employeeBalanceBefore =
+          typeof employeeWallet.balance === 'string'
+            ? parseFloat(employeeWallet.balance) || 0
+            : Number(employeeWallet.balance) || 0;
 
         // Deduct from owner's wallet
         runningOwnerBalance -= commissionAmount;
@@ -560,6 +610,9 @@ export class CommissionsService {
           metadata: {
             commissionId: commission.id,
             employeeUserId: employeeUserId,
+            employeeName: employeeName,
+            salonOwnerId: salonOwnerId,
+            salonOwnerName: salonOwnerName,
             paymentMethod: paymentDetails?.paymentMethod || null,
             paymentReference: paymentDetails?.paymentReference || null,
             paidById: paymentDetails?.paidById || null,
@@ -590,6 +643,9 @@ export class CommissionsService {
           metadata: {
             commissionId: commission.id,
             salonOwnerId: salonOwnerId,
+            salonOwnerName: salonOwnerName,
+            employeeUserId: employeeUserId,
+            employeeName: employeeName,
             paymentMethod: paymentDetails?.paymentMethod || null,
             paymentReference: paymentDetails?.paymentReference || null,
             paidById: paymentDetails?.paidById || null,

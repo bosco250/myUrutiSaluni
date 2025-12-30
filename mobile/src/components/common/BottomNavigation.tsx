@@ -14,8 +14,9 @@ interface BottomNavigationProps {
 /**
  * Role-aware bottom navigation component
  * Displays different tabs based on the user's role
+ * Memoized to prevent unnecessary re-renders
  */
-export default function BottomNavigation({ 
+const BottomNavigation = React.memo(function BottomNavigation({ 
   activeTab, 
   onTabPress, 
   unreadNotificationCount = 0 
@@ -24,7 +25,7 @@ export default function BottomNavigation({
   const { user } = useAuth();
   
   // Get tabs based on user's role
-  const tabs = getNavigationTabsForRole(user?.role);
+  const tabs = React.useMemo(() => getNavigationTabsForRole(user?.role), [user?.role]);
 
   const dynamicStyles = {
     container: {
@@ -89,7 +90,9 @@ export default function BottomNavigation({
       })}
     </View>
   );
-}
+});
+
+export default BottomNavigation;
 
 const styles = StyleSheet.create({
   container: {

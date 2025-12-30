@@ -6,6 +6,7 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
   Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -13,33 +14,26 @@ import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../theme";
 import { useTheme } from "../context";
 import { api } from "../services/api";
+import { salesService, Commission } from "../services/sales";
 import { paymentSecurityService } from "../services/paymentSecurity";
 import PaymentAuthModal from "./PaymentAuthModal";
 import PINSetupModal from "./PINSetupModal";
 
-interface CommissionPaymentModalProps {
+interface BulkCommissionPaymentModalProps {
   visible: boolean;
   onClose: () => void;
-  commission: {
-    id: string;
-    amount: number;
-    salonEmployee?: {
-      user?: {
-        fullName: string;
-      };
-    };
-  };
+  commissions: Commission[];
   onSuccess: () => void;
   navigation?: any;
 }
 
-export default function CommissionPaymentModal({
+export default function BulkCommissionPaymentModal({
   visible,
   onClose,
-  commission,
+  commissions,
   onSuccess,
   navigation,
-}: CommissionPaymentModalProps) {
+}: BulkCommissionPaymentModalProps) {
   const { isDark } = useTheme();
   const [loading, setLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -47,31 +41,32 @@ export default function CommissionPaymentModal({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPinSetup, setShowPinSetup] = useState(false);
 
-  const commissionAmount = Number(commission.amount);
+  // Calculate totals
+  const totalAmount = commissions.reduce(
+    (sum, c) => sum + Number(c.amount || 0),
+    0
+  );
   const newBalance =
-    walletBalance !== null ? walletBalance - commissionAmount : null;
+    walletBalance !== null ? walletBalance - totalAmount : null;
   const hasInsufficientBalance =
-    walletBalance !== null && walletBalance < commissionAmount;
-  const shortfall = hasInsufficientBalance
-    ? commissionAmount - (walletBalance || 0)
-    : 0;
+    walletBalance !== null && walletBalance < totalAmount;
+  const shortfall = hasInsufficientBalance ? totalAmount - walletBalance : 0;
 
-  // Handle Top Up navigation
-  const handleTopUp = () => {
-    if (navigation) {
-      onClose();
-      navigation.navigate("Payment", {
-        amount: shortfall > 0 ? shortfall : 10000,
-        type: "wallet_topup",
-        description: "Wallet Top-up for Commission Payment",
-      });
-    }
-  };
+  // Group by employee for display
+  const employeeTotals = commissions.reduce(
+    (acc, c) => {
+      const name = c.salonEmployee?.user?.fullName || "Unknown";
+      if (!acc[name]) {
+        acc[name] = { count: 0, amount: 0 };
+      }
+      acc[name].count += 1;
+      acc[name].amount += Number(c.amount || 0);
+      return acc;
+    },
+    {} as Record<string, { count: number; amount: number }>
+  );
 
   const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-    },
     card: {
       backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
@@ -119,7 +114,13 @@ export default function CommissionPaymentModal({
             ? [
                 {
                   text: "Top Up Wallet",
-                  onPress: handleTopUp,
+                  onPress: () => {
+                    onClose();
+                    navigation.navigate("Payment", {
+                      amount: shortfall,
+                      type: "wallet_topup",
+                    });
+                  },
                 },
               ]
             : []),
@@ -142,48 +143,46 @@ export default function CommissionPaymentModal({
   const processPayment = async () => {
     setLoading(true);
     try {
-      await api.post(`/commissions/${commission.id}/mark-paid`, {
-        paymentMethod: "wallet",
-      });
+      const commissionIds = commissions.map((c) => c.id);
+      await salesService.markMultipleCommissionsPaid(commissionIds, "wallet");
 
-      Alert.alert("Payment Successful! ✓", `Commission paid successfully.`, [
-        {
-          text: "Done",
-          onPress: () => {
-            onSuccess();
-            onClose();
+      Alert.alert(
+        "Payment Successful! ✓",
+        `${commissions.length} commission${commissions.length > 1 ? "s" : ""} paid successfully.`,
+        [
+          {
+            text: "Done",
+            onPress: () => {
+              onSuccess();
+              onClose();
+            },
           },
-        },
-      ]);
+        ]
+      );
     } catch (error: any) {
-      console.error("Payment error:", error);
-      const errorMessage =
+      console.error("Bulk payment error:", error);
+      Alert.alert(
+        "Payment Failed",
         error.response?.data?.message ||
-        error.message ||
-        "Failed to process payment. Please try again.";
-
-      Alert.alert("Payment Failed", errorMessage);
+          error.message ||
+          "Failed to process payment."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (amount: number | string | null | undefined) => {
-    // Ensure amount is converted to number
-    const numAmount =
-      typeof amount === "number"
-        ? amount
-        : Number(String(amount || 0).replace(/[^0-9.-]/g, "")) || 0;
-    return `RWF ${numAmount.toLocaleString()}`;
+  const handleTopUp = () => {
+    if (navigation) {
+      onClose();
+      navigation.navigate("Payment", {
+        amount: shortfall > 0 ? shortfall : 10000,
+        type: "wallet_topup",
+      });
+    }
   };
 
-  const employeeName = commission.salonEmployee?.user?.fullName || "Employee";
-  const initials = employeeName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const formatCurrency = (amount: number) => `RWF ${amount.toLocaleString()}`;
 
   return (
     <React.Fragment>
@@ -214,22 +213,29 @@ export default function CommissionPaymentModal({
               />
             </View>
 
-            {/* Employee Avatar & Amount Header */}
+            {/* Header */}
             <View style={styles.headerSection}>
               <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryLight]}
-                style={styles.avatar}
+                colors={[theme.colors.success, theme.colors.primary]}
+                style={styles.iconBadge}
               >
-                <Text style={styles.avatarText}>{initials}</Text>
+                <MaterialIcons
+                  name="payments"
+                  size={28}
+                  color={theme.colors.white}
+                />
               </LinearGradient>
-              <Text style={[styles.employeeName, dynamicStyles.text]}>
-                {employeeName}
+              <Text style={[styles.headerTitle, dynamicStyles.text]}>
+                Bulk Payment
               </Text>
-              <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
-                Commission Amount
+              <Text
+                style={[styles.headerSubtitle, dynamicStyles.textSecondary]}
+              >
+                {commissions.length} commission
+                {commissions.length > 1 ? "s" : ""} selected
               </Text>
-              <Text style={styles.mainAmount}>
-                {formatCurrency(commissionAmount)}
+              <Text style={styles.totalAmount}>
+                {formatCurrency(totalAmount)}
               </Text>
             </View>
 
@@ -311,6 +317,59 @@ export default function CommissionPaymentModal({
               )}
             </View>
 
+            {/* Employee Breakdown */}
+            <ScrollView
+              style={styles.employeeList}
+              contentContainerStyle={styles.employeeListContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={[styles.sectionLabel, dynamicStyles.textSecondary]}>
+                Payment Breakdown
+              </Text>
+              {Object.entries(employeeTotals).map(([name, data]) => {
+                const initials = name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2);
+                return (
+                  <View
+                    key={name}
+                    style={[styles.employeeRow, dynamicStyles.card]}
+                  >
+                    <View style={styles.employeeAvatar}>
+                      <Text style={styles.employeeInitials}>{initials}</Text>
+                    </View>
+                    <View style={styles.employeeInfo}>
+                      <Text
+                        style={[styles.employeeName, dynamicStyles.text]}
+                        numberOfLines={1}
+                      >
+                        {name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.employeeCount,
+                          dynamicStyles.textSecondary,
+                        ]}
+                      >
+                        {data.count} commission{data.count > 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.employeeAmount,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      {formatCurrency(data.amount)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
               {hasInsufficientBalance && navigation ? (
@@ -333,7 +392,7 @@ export default function CommissionPaymentModal({
                       { color: theme.colors.warning },
                     ]}
                   >
-                    Top Up Wallet
+                    Top Up
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -373,7 +432,7 @@ export default function CommissionPaymentModal({
                       size={20}
                       color={theme.colors.white}
                     />
-                    <Text style={styles.primaryButtonText}>Pay Now</Text>
+                    <Text style={styles.primaryButtonText}>Pay All</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -390,8 +449,8 @@ export default function CommissionPaymentModal({
           setShowAuthModal(false);
           processPayment();
         }}
-        amount={commissionAmount}
-        recipientName={employeeName}
+        amount={totalAmount}
+        recipientName={`${commissions.length} employee${commissions.length > 1 ? "s" : ""}`}
       />
 
       <PINSetupModal
@@ -419,7 +478,8 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    maxWidth: 380,
+    maxWidth: 400,
+    maxHeight: "80%",
     borderRadius: 24,
     paddingBottom: theme.spacing.lg,
     borderWidth: 1,
@@ -436,44 +496,38 @@ const styles = StyleSheet.create({
   headerSection: {
     alignItems: "center",
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  iconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: theme.spacing.sm,
   },
-  avatarText: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: "bold",
-    color: theme.colors.white,
     fontFamily: theme.fonts.bold,
   },
-  employeeName: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    marginBottom: 4,
-  },
-  amountLabel: {
-    fontSize: 13,
+  headerSubtitle: {
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
-    marginBottom: 4,
+    marginTop: 2,
   },
-  mainAmount: {
-    fontSize: 32,
+  totalAmount: {
+    fontSize: 28,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     color: theme.colors.primary,
+    marginTop: theme.spacing.xs,
   },
   balanceSummary: {
     marginHorizontal: theme.spacing.lg,
     borderRadius: 16,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   balanceRow: {
     flexDirection: "row",
@@ -518,9 +572,12 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontFamily: theme.fonts.medium,
   },
-  paymentMethodSection: {
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+  employeeList: {
+    maxHeight: 150,
+    marginHorizontal: theme.spacing.lg,
+  },
+  employeeListContent: {
+    paddingBottom: theme.spacing.sm,
   },
   sectionLabel: {
     fontSize: 12,
@@ -528,6 +585,52 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: theme.spacing.sm,
+  },
+  employeeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: theme.spacing.xs,
+  },
+  employeeAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary + "20",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  employeeInitials: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.bold,
+  },
+  employeeInfo: {
+    flex: 1,
+    marginLeft: theme.spacing.sm,
+  },
+  employeeName: {
+    fontSize: 14,
+    fontWeight: "500",
+    fontFamily: theme.fonts.medium,
+  },
+  employeeCount: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+  },
+  employeeAmount: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  paymentMethodSection: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   methodButtons: {
     flexDirection: "row",
@@ -538,17 +641,17 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderRadius: 14,
     borderWidth: 1,
-    gap: 6,
+    gap: 4,
   },
   methodButtonActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   methodLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },

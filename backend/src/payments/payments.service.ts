@@ -13,7 +13,8 @@ import {
   PaymentType,
 } from './entities/payment.entity';
 import { InitiatePaymentDto } from './dto/payment.dto';
-import { MtnMomoService } from './services/mtn-momo.service';
+// import { MtnMomoService } from './services/mtn-momo.service'; // Commented out - using Airtel Money
+import { AirtelMoneyService } from './services/airtel-money.service';
 import { CustomersService } from '../customers/customers.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WalletsService } from '../wallets/wallets.service';
@@ -27,7 +28,8 @@ export class PaymentsService {
   constructor(
     @InjectRepository(Payment)
     private paymentsRepository: Repository<Payment>,
-    private mtnMomoService: MtnMomoService,
+    private airtelMoneyService: AirtelMoneyService,
+    // private mtnMomoService: MtnMomoService, // Commented out - using Airtel Money
     private customersService: CustomersService,
     private notificationsService: NotificationsService,
     private walletsService: WalletsService,
@@ -55,12 +57,23 @@ export class PaymentsService {
       customerId = customer.id;
     }
 
-    // Validate phone number for mobile money
-    if (dto.method === PaymentMethod.MTN_MOMO && dto.phoneNumber) {
-      if (!this.mtnMomoService.validateRwandanPhoneNumber(dto.phoneNumber)) {
-        throw new BadRequestException('Invalid MTN Rwanda phone number');
+    // Validate phone number for Airtel Money
+    if (dto.method === PaymentMethod.AIRTEL_MONEY && dto.phoneNumber) {
+      if (
+        !this.airtelMoneyService.validateRwandanPhoneNumber(dto.phoneNumber)
+      ) {
+        throw new BadRequestException(
+          'Invalid Airtel Money phone number (must be 072X or 073X)',
+        );
       }
     }
+
+    // Validate phone number for MTN MoMo (commented out - using Airtel Money)
+    // if (dto.method === PaymentMethod.MTN_MOMO && dto.phoneNumber) {
+    //   if (!this.mtnMomoService.validateRwandanPhoneNumber(dto.phoneNumber)) {
+    //     throw new BadRequestException('Invalid MTN Rwanda phone number');
+    //   }
+    // }
 
     // Create payment record
     const payment = this.paymentsRepository.create({
@@ -69,7 +82,7 @@ export class PaymentsService {
       userId: user.id, // Always store userId for wallet updates
       status: PaymentStatus.PENDING,
       phoneNumber: dto.phoneNumber
-        ? this.mtnMomoService.formatPhoneNumber(dto.phoneNumber)
+        ? this.airtelMoneyService.formatPhoneNumber(dto.phoneNumber)
         : undefined,
       // Store userId in metadata as backup
       metadata:
@@ -79,13 +92,13 @@ export class PaymentsService {
     const savedPayment = await this.paymentsRepository.save(payment);
 
     // Initiate payment with provider
-    if (dto.method === PaymentMethod.MTN_MOMO) {
+    if (dto.method === PaymentMethod.AIRTEL_MONEY) {
       try {
-        const result = await this.mtnMomoService.requestPayment({
+        const result = await this.airtelMoneyService.requestPayment({
           phoneNumber: savedPayment.phoneNumber!,
           amount: dto.amount,
           externalId: savedPayment.id,
-          payerMessage: dto.description || 'URUTI Salon Payment',
+          payerMessage: dto.description || 'URUTI Wallet Top-up',
         });
 
         savedPayment.externalReference = result.referenceId;
@@ -96,13 +109,40 @@ export class PaymentsService {
         this.pollPaymentStatus(savedPayment.id, result.referenceId);
       } catch (error) {
         savedPayment.status = PaymentStatus.FAILED;
-        savedPayment.failureReason = 'Failed to initiate payment';
+        savedPayment.failureReason =
+          error.message || 'Failed to initiate Airtel Money payment';
         await this.paymentsRepository.save(savedPayment);
         throw new BadRequestException(
-          'Failed to initiate payment with MTN MoMo',
+          'Failed to initiate payment with Airtel Money',
         );
       }
-    } else if (dto.method === PaymentMethod.WALLET) {
+    }
+    // MTN MoMo integration (commented out - using Airtel Money)
+    // else if (dto.method === PaymentMethod.MTN_MOMO) {
+    //   try {
+    //     const result = await this.mtnMomoService.requestPayment({
+    //       phoneNumber: savedPayment.phoneNumber!,
+    //       amount: dto.amount,
+    //       externalId: savedPayment.id,
+    //       payerMessage: dto.description || 'URUTI Salon Payment',
+    //     });
+    //
+    //     savedPayment.externalReference = result.referenceId;
+    //     savedPayment.status = PaymentStatus.PROCESSING;
+    //     await this.paymentsRepository.save(savedPayment);
+    //
+    //     // Start polling for status
+    //     this.pollPaymentStatus(savedPayment.id, result.referenceId);
+    //   } catch (error) {
+    //     savedPayment.status = PaymentStatus.FAILED;
+    //     savedPayment.failureReason = 'Failed to initiate payment';
+    //     await this.paymentsRepository.save(savedPayment);
+    //     throw new BadRequestException(
+    //       'Failed to initiate payment with MTN MoMo',
+    //     );
+    //   }
+    // }
+    else if (dto.method === PaymentMethod.WALLET) {
       // Handle wallet payment - for top-ups, this shouldn't be used
       // For payments from wallet, deduct from wallet
       savedPayment.status = PaymentStatus.COMPLETED;
@@ -127,13 +167,26 @@ export class PaymentsService {
       attempts++;
 
       try {
-        const result =
-          await this.mtnMomoService.checkPaymentStatus(referenceId);
         const payment = await this.paymentsRepository.findOne({
           where: { id: paymentId },
         });
 
         if (!payment) return;
+
+        // Check payment status based on provider
+        let result;
+        if (payment.method === PaymentMethod.AIRTEL_MONEY) {
+          result =
+            await this.airtelMoneyService.checkPaymentStatus(referenceId);
+        }
+        // MTN MoMo (commented out - using Airtel Money)
+        // else if (payment.method === PaymentMethod.MTN_MOMO) {
+        //   result = await this.mtnMomoService.checkPaymentStatus(referenceId);
+        // }
+        else {
+          this.logger.warn(`Unknown payment method: ${payment.method}`);
+          return;
+        }
 
         if (result.status === 'SUCCESSFUL') {
           payment.status = PaymentStatus.COMPLETED;
@@ -149,15 +202,34 @@ export class PaymentsService {
 
           // Send success notification
           try {
-            await this.notificationsService.sendNotification(
-              payment.customer?.user?.id,
-              payment.customerId,
-              undefined,
-              'in_app' as any,
-              'payment' as any,
-              'Payment Successful',
-              `Your payment of ${payment.amount} RWF was successful`,
-            );
+            // Get userId for notification (customer user or direct userId for wallet top-ups)
+            const notificationUserId =
+              payment.customer?.user?.id ||
+              payment.userId ||
+              payment.metadata?.userId;
+
+            if (notificationUserId) {
+              await this.notificationsService.sendNotification(
+                notificationUserId,
+                payment.customerId,
+                undefined,
+                'in_app' as any,
+                'payment' as any,
+                payment.type === PaymentType.WALLET_TOPUP
+                  ? 'Wallet Top-up Successful'
+                  : 'Payment Successful',
+                payment.type === PaymentType.WALLET_TOPUP
+                  ? `Your wallet has been topped up with ${payment.amount} RWF`
+                  : `Your payment of ${payment.amount} RWF was successful`,
+                undefined, // scheduledFor
+                {
+                  paymentId: payment.id,
+                  paymentType: payment.type,
+                  paymentMethod: payment.method,
+                  amount: payment.amount,
+                },
+              );
+            }
           } catch (notifError) {
             this.logger.warn('Failed to send payment success notification');
           }
@@ -173,15 +245,34 @@ export class PaymentsService {
 
           // Send failure notification
           try {
-            await this.notificationsService.sendNotification(
-              payment.customer?.user?.id,
-              payment.customerId,
-              undefined,
-              'in_app' as any,
-              'payment' as any,
-              'Payment Failed',
-              `Your payment of ${payment.amount} RWF failed: ${result.reason}`,
-            );
+            // Get userId for notification (customer user or direct userId for wallet top-ups)
+            const notificationUserId =
+              payment.customer?.user?.id ||
+              payment.userId ||
+              payment.metadata?.userId;
+
+            if (notificationUserId) {
+              await this.notificationsService.sendNotification(
+                notificationUserId,
+                payment.customerId,
+                undefined,
+                'in_app' as any,
+                'payment' as any,
+                payment.type === PaymentType.WALLET_TOPUP
+                  ? 'Wallet Top-up Failed'
+                  : 'Payment Failed',
+                payment.type === PaymentType.WALLET_TOPUP
+                  ? `Wallet top-up of ${payment.amount} RWF failed: ${result.reason}`
+                  : `Your payment of ${payment.amount} RWF failed: ${result.reason}`,
+                undefined, // scheduledFor
+                {
+                  paymentId: payment.id,
+                  paymentType: payment.type,
+                  paymentMethod: payment.method,
+                  amount: payment.amount,
+                },
+              );
+            }
           } catch (notifError) {
             this.logger.warn('Failed to send payment failed notification');
           }
@@ -265,14 +356,37 @@ export class PaymentsService {
       payment.status === PaymentStatus.PROCESSING &&
       payment.externalReference
     ) {
-      const result = await this.mtnMomoService.checkPaymentStatus(
-        payment.externalReference,
-      );
+      // Check payment status based on provider
+      let result;
+      if (payment.method === PaymentMethod.AIRTEL_MONEY) {
+        result = await this.airtelMoneyService.checkPaymentStatus(
+          payment.externalReference,
+        );
+      }
+      // MTN MoMo (commented out - using Airtel Money)
+      // else if (payment.method === PaymentMethod.MTN_MOMO) {
+      //   result = await this.mtnMomoService.checkPaymentStatus(
+      //     payment.externalReference,
+      //   );
+      // }
+      else {
+        this.logger.warn(
+          `Unknown payment method for status check: ${payment.method}`,
+        );
+        return payment;
+      }
 
       if (result.status === 'SUCCESSFUL') {
         payment.status = PaymentStatus.COMPLETED;
         payment.completedAt = new Date();
+        payment.metadata = {
+          ...payment.metadata,
+          financialTransactionId: result.financialTransactionId,
+        };
         await this.paymentsRepository.save(payment);
+
+        // Update wallet balance for top-up payments
+        await this.handleWalletUpdate(payment);
       } else if (result.status === 'FAILED') {
         payment.status = PaymentStatus.FAILED;
         payment.failureReason = result.reason;
@@ -377,9 +491,11 @@ export class PaymentsService {
           WalletTransactionType.DEPOSIT,
           payment.amount,
           `Top-up via ${payment.method}`,
+          'payment', // referenceType
+          payment.id, // referenceId
         );
         this.logger.log(
-          `Wallet topped up: ${payment.amount} RWF for user ${userId}`,
+          `Wallet topped up: ${payment.amount} RWF for user ${userId} (Payment ID: ${payment.id})`,
         );
       } else if (payment.type === PaymentType.APPOINTMENT) {
         // Appointment payment from wallet would be a withdrawal

@@ -8,9 +8,56 @@ interface RequestOptions {
   headers?: Record<string, string>;
   requireAuth?: boolean;
   isLoginRequest?: boolean; // Set to true for login endpoints to get proper credential error messages
+  cache?: boolean; // Enable caching for this request
+  cacheDuration?: number; // Cache duration in milliseconds (default: 5 minutes)
+}
+
+// Simple in-memory cache for API responses
+interface CacheEntry {
+  data: any;
+  timestamp: number;
 }
 
 class ApiService {
+  private cache: Map<string, CacheEntry> = new Map();
+  private pendingRequests: Map<string, Promise<any>> = new Map();
+  
+  /**
+   * Get cached data if available and not expired
+   */
+  private getCachedData(key: string, cacheDuration: number = 300000): any | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    const now = Date.now();
+    if (now - entry.timestamp > cacheDuration) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+  
+  /**
+   * Store data in cache
+   */
+  private setCachedData(key: string, data: any): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+    });
+  }
+  
+  /**
+   * Clear cache for a specific key or all cache
+   */
+  clearCache(key?: string): void {
+    if (key) {
+      this.cache.delete(key);
+    } else {
+      this.cache.clear();
+    }
+  }
   /**
    * Get authentication headers
    * Automatically includes Bearer token for authenticated requests
@@ -103,23 +150,57 @@ class ApiService {
   }
 
   /**
-   * GET request
+   * GET request with caching and request deduplication
    */
   async get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { requireAuth = true } = options;
+    const { requireAuth = true, cache = false, cacheDuration = 300000 } = options;
+    const cacheKey = `GET:${endpoint}`;
+    
+    // Check cache if enabled
+    if (cache) {
+      const cachedData = this.getCachedData(cacheKey, cacheDuration);
+      if (cachedData !== null) {
+        console.log(`[API Cache Hit] ${endpoint}`);
+        return cachedData;
+      }
+    }
+    
+    // Check if there's already a pending request for this endpoint (request deduplication)
+    const pendingRequest = this.pendingRequests.get(cacheKey);
+    if (pendingRequest) {
+      console.log(`[API Request Dedup] ${endpoint}`);
+      return pendingRequest;
+    }
+    
     const headers = await this.getHeaders(requireAuth);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const requestPromise = fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'GET',
         headers: {
           ...headers,
           ...options.headers,
         },
-      });
-
-      return this.handleResponse<T>(response);
+      }).then(response => this.handleResponse<T>(response));
+      
+      // Store pending request
+      this.pendingRequests.set(cacheKey, requestPromise);
+      
+      const data = await requestPromise;
+      
+      // Cache the result if caching is enabled
+      if (cache) {
+        this.setCachedData(cacheKey, data);
+      }
+      
+      // Remove from pending requests
+      this.pendingRequests.delete(cacheKey);
+      
+      return data;
     } catch (error: any) {
+      // Remove from pending requests on error
+      this.pendingRequests.delete(cacheKey);
+      
       if (error.message?.includes('Network')) {
         throw new Error('Network error. Please check your connection.');
       }

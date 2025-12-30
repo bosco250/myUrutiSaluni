@@ -54,6 +54,22 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { phone } });
   }
 
+  async findNamesByIds(
+    userIds: string[],
+  ): Promise<Array<{ id: string; fullName: string }>> {
+    if (!userIds || userIds.length === 0) {
+      return [];
+    }
+    const users = await this.usersRepository.find({
+      where: userIds.map((id) => ({ id })),
+      select: ['id', 'fullName'],
+    });
+    return users.map((user) => ({
+      id: user.id,
+      fullName: user.fullName || 'Unknown',
+    }));
+  }
+
   async update(id: string, updateData: Partial<User>): Promise<User> {
     await this.usersRepository.update(id, updateData);
     return this.findOne(id);

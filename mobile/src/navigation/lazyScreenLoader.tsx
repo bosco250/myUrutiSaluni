@@ -22,23 +22,35 @@ interface LazyScreenProps {
 
 /**
  * Loading fallback component shown while screen is loading
+ * Returns null to avoid double loaders - let the screen handle its own loading state
  */
-const ScreenLoadingFallback = () => (
-  <View style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color={theme.colors.primary} />
-  </View>
-);
+const ScreenLoadingFallback = () => null;
 
 /**
- * Creates a lazy-loaded screen component
+ * Creates a lazy-loaded screen component with error handling
  *
  * @param importFn - Function that returns a promise resolving to the screen component
  * @returns Lazy-loaded screen component wrapped with Suspense
+ *
+ * Note: We use null as fallback to avoid double loaders.
+ * Each screen handles its own loading state internally.
  */
 export function createLazyScreen<T extends LazyScreenProps>(
   importFn: () => Promise<{ default: ComponentType<T> }>
 ): ComponentType<T> {
-  const LazyComponent = React.lazy(importFn);
+  const LazyComponent = React.lazy(() =>
+    importFn().catch((error) => {
+      console.error("Error loading lazy screen:", error);
+      // Return a minimal error component without loader
+      return {
+        default: ((props: any) => (
+          <View style={styles.errorContainer}>
+            <ActivityIndicator size="large" color={theme.colors.error} />
+          </View>
+        )) as ComponentType<T>,
+      };
+    })
+  );
 
   const LazyScreenWrapper = (props: T) => (
     <Suspense fallback={<ScreenLoadingFallback />}>
@@ -46,13 +58,13 @@ export function createLazyScreen<T extends LazyScreenProps>(
     </Suspense>
   );
 
-  LazyScreenWrapper.displayName = `LazyScreen(${LazyComponent.displayName || "Component"})`;
+  LazyScreenWrapper.displayName = `LazyScreen(Component)`;
 
   return LazyScreenWrapper;
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",

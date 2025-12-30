@@ -1,97 +1,108 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { theme } from "../theme";
+
+// ============================================================================
+// PERFORMANCE OPTIMIZATION: Load ALL screens at startup
+// Bundle once at startup → Navigate instantly forever
+// No lazy loading = No bundling delays on navigation
+// ============================================================================
+
+// Import ALL screens directly for instant navigation
 import RoleBasedHome from "../screens/RoleBasedHome";
 import NotificationsScreen from "../screens/NotificationsScreen";
-import { createLazyScreen } from "./lazyScreenLoader";
-import {
-  ExploreScreen,
-  ServiceDetailScreen,
-  AllServicesScreen,
-  SalonDetailScreen,
-} from "../screens/explore";
+import { ExploreScreen } from "../screens/explore";
+import { BookingsScreen } from "../screens/booking";
+import { ProfileScreen } from "../screens/profile";
+import { StaffDashboardScreen } from "../screens/staff";
+import { OwnerDashboardScreen } from "../screens/owner";
+import { AdminDashboardScreen } from "../screens/admin";
+
+// Explore screens
+import ServiceDetailScreen from "../screens/explore/ServiceDetailScreen";
+import AllServicesScreen from "../screens/explore/AllServicesScreen";
+import SalonDetailScreen from "../screens/explore/SalonDetailScreen";
 import EmployeeListScreen from "../screens/explore/EmployeeListScreen";
 import EmployeeDetailScreen from "../screens/explore/EmployeeDetailScreen";
-import {
-  BookingsScreen,
-  AppointmentDetailScreen,
-  BookingFlowScreen,
-} from "../screens/booking";
-import { ProfileScreen } from "../screens/profile";
+
+// Booking screens
+import AppointmentDetailScreen from "../screens/booking/AppointmentDetailScreen";
+import BookingFlowScreen from "../screens/booking/BookingFlowScreen";
+
+// Quick action screens
 import FavoritesScreen from "../screens/favorites/FavoritesScreen";
-import {
-  SearchScreen,
-  AIFaceScanScreen,
-  AIConsultantScreen,
-  RecommendationDetailScreen,
-  LoyaltyScreen,
-  WalletScreen,
-  OffersScreen,
-  ChatListScreen,
-  ChatScreen,
-  ChatUserSearchScreen,
-} from "../screens/quickActions";
+import SearchScreen from "../screens/quickActions/SearchScreen";
+import AIFaceScanScreen from "../screens/quickActions/AIFaceScanScreen";
+import AIConsultantScreen from "../screens/quickActions/AIConsultantScreen";
+import RecommendationDetailScreen from "../screens/quickActions/RecommendationDetailScreen";
+import LoyaltyScreen from "../screens/quickActions/LoyaltyScreen";
+import WalletScreen from "../screens/quickActions/WalletScreen";
+import OffersScreen from "../screens/quickActions/OffersScreen";
+import ChatListScreen from "../screens/quickActions/ChatListScreen";
+import ChatScreen from "../screens/quickActions/ChatScreen";
+import ChatUserSearchScreen from "../screens/quickActions/ChatUserSearchScreen";
+
+// Review & Payment screens
 import ReviewScreen from "../screens/reviews/ReviewScreen";
 import PaymentScreen from "../screens/payment/PaymentScreen";
 import PaymentHistoryScreen from "../screens/payment/PaymentHistoryScreen";
 import WithdrawScreen from "../screens/payment/WithdrawScreen";
-import {
-  MembershipInfoScreen,
-  MembershipApplicationScreen,
-  ApplicationSuccessScreen,
-} from "../screens/membership";
-import {
-  StaffDashboardScreen,
-  MyScheduleScreen,
-  AttendanceScreen,
-  CreateAppointmentScreen,
-} from "../screens/staff";
-import {
-  OwnerDashboardScreen,
-  MoreMenuScreen,
-  CreateSalonScreen,
-  SalonAppointmentsScreen,
-  OperationsScreen,
-} from "../screens/owner";
-import { AdminDashboardScreen, SalonManagementScreen } from "../screens/admin";
-import {
-  SalonListScreen,
-  SalonDetailScreen as OwnerSalonDetailScreen,
-  EmployeeDetailScreen as OwnerEmployeeDetailScreen,
-  AddEmployeeScreen,
-  AddServiceScreen,
-  AddProductScreen,
-  EditServiceScreen,
-  EditSalonScreen,
-  StockManagementScreen,
-  CustomerManagementScreen,
-  CustomerDetailScreen,
-} from "../screens/salon";
-import {
-  SalesScreen,
-  SalesHistoryScreen,
-  CommissionsScreen,
-  CommissionDetailScreen,
-  SaleDetailScreen,
-} from "../screens/sales";
-import { BusinessAnalyticsScreen } from "../screens/analytics";
-import { SalonSettingsScreen } from "../screens/settings";
-import {
-  FinancialReportsScreen,
-  ProfitLossReportScreen,
-  ExpenseBreakdownScreen,
-  RevenueByServiceScreen,
-} from "../screens/reports";
-import UnifiedWorkLogScreen from "../screens/workLog/UnifiedWorkLogScreen";
-import { theme } from "../theme";
 
-// Lazy load heavy screens to improve startup performance
-// These screens are only loaded when actually navigated to, not on app startup
-const FinanceScreen = createLazyScreen(
-  () => import("../screens/finance/FinanceScreen")
-);
-const LoanRepaymentScreen = createLazyScreen(
-  () => import("../screens/finance/LoanRepaymentScreen")
-);
+// Membership screens
+import MembershipInfoScreen from "../screens/membership/MembershipInfoScreen";
+import MembershipApplicationScreen from "../screens/membership/MembershipApplicationScreen";
+import ApplicationSuccessScreen from "../screens/membership/ApplicationSuccessScreen";
+
+// Staff screens
+import MyScheduleScreen from "../screens/staff/MyScheduleScreen";
+import AttendanceScreen from "../screens/staff/AttendanceScreen";
+import CreateAppointmentScreen from "../screens/staff/CreateAppointmentScreen";
+
+// Owner screens
+import MoreMenuScreen from "../screens/owner/MoreMenuScreen";
+import CreateSalonScreen from "../screens/owner/CreateSalonScreen";
+import SalonAppointmentsScreen from "../screens/owner/SalonAppointmentsScreen";
+import OperationsScreen from "../screens/owner/OperationsScreen";
+
+// Admin screens
+import SalonManagementScreen from "../screens/admin/SalonManagementScreen";
+
+// Salon management screens
+import SalonListScreen from "../screens/salon/SalonListScreen";
+import OwnerSalonDetailScreen from "../screens/salon/SalonDetailScreen";
+import OwnerEmployeeDetailScreen from "../screens/salon/EmployeeDetailScreen";
+import AddEmployeeScreen from "../screens/salon/AddEmployeeScreen";
+import AddServiceScreen from "../screens/salon/AddServiceScreen";
+import AddProductScreen from "../screens/salon/AddProductScreen";
+import EditServiceScreen from "../screens/salon/EditServiceScreen";
+import EditSalonScreen from "../screens/salon/EditSalonScreen";
+import StockManagementScreen from "../screens/salon/StockManagementScreen";
+import CustomerManagementScreen from "../screens/salon/CustomerManagementScreen";
+import CustomerDetailScreen from "../screens/salon/CustomerDetailScreen";
+
+// Sales screens
+import SalesScreen from "../screens/sales/SalesScreen";
+import SalesHistoryScreen from "../screens/sales/SalesHistoryScreen";
+import CommissionsScreen from "../screens/sales/CommissionsScreen";
+import CommissionDetailScreen from "../screens/sales/CommissionDetailScreen";
+import SaleDetailScreen from "../screens/sales/SaleDetailScreen";
+
+// Analytics & Settings
+import BusinessAnalyticsScreen from "../screens/analytics/BusinessAnalyticsScreen";
+import SalonSettingsScreen from "../screens/settings/SalonSettingsScreen";
+
+// Reports screens
+import FinancialReportsScreen from "../screens/reports/FinancialReportsScreen";
+import ProfitLossReportScreen from "../screens/reports/ProfitLossReportScreen";
+import ExpenseBreakdownScreen from "../screens/reports/ExpenseBreakdownScreen";
+import RevenueByServiceScreen from "../screens/reports/RevenueByServiceScreen";
+
+// Work log screens
+import UnifiedWorkLogScreen from "../screens/workLog/UnifiedWorkLogScreen";
+
+// Finance screens
+import FinanceScreen from "../screens/finance/FinanceScreen";
+import LoanRepaymentScreen from "../screens/finance/LoanRepaymentScreen";
 
 /**
  * Screen router helper
@@ -262,7 +273,12 @@ export const renderScreen = (
       );
 
     case "Withdraw":
-      return <WithdrawScreen navigation={navigation} />;
+      return (
+        <WithdrawScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
 
     // Membership screens
     case "MembershipInfo":

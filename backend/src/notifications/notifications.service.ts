@@ -49,6 +49,7 @@ export class NotificationsService {
     title: string,
     body: string,
     scheduledFor?: Date,
+    metadata?: Record<string, any>,
   ): Promise<Notification> {
     const notification = this.notificationsRepository.create({
       userId,
@@ -62,6 +63,7 @@ export class NotificationsService {
       status: scheduledFor
         ? NotificationStatus.PENDING
         : NotificationStatus.PENDING,
+      metadata: metadata || {},
     });
 
     const saved = await this.notificationsRepository.save(notification);

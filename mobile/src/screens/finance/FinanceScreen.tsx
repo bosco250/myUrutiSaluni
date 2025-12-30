@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,15 @@ import {
   RefreshControl,
   StatusBar,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../../theme';
-import { useTheme } from '../../context';
-import { api } from '../../services/api';
-import { salesService } from '../../services/sales';
-import { salonService } from '../../services/salon';
-import { Loader } from '../../components/common';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { theme } from "../../theme";
+import { useTheme } from "../../context";
+import { api } from "../../services/api";
+import { salesService } from "../../services/sales";
+import { salonService } from "../../services/salon";
+import { Loader } from "../../components/common";
 
 interface FinanceScreenProps {
   navigation: {
@@ -71,7 +71,7 @@ interface EmployeePerformance {
   revenue: number;
 }
 
-type TimePeriod = 'today' | 'week' | 'month';
+type TimePeriod = "today" | "week" | "month";
 
 export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   const { isDark } = useTheme();
@@ -79,8 +79,8 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
-  
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("week");
+
   // Data states
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [loan, setLoan] = useState<LoanData | null>(null);
@@ -104,10 +104,10 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
     },
     card: {
       backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      shadowColor: isDark ? 'transparent' : theme.colors.black,
+      shadowColor: isDark ? "transparent" : theme.colors.black,
     },
     cardDark: {
-      backgroundColor: isDark ? '#1C1C1E' : '#1C1C1E',
+      backgroundColor: isDark ? "#1C1C1E" : "#1C1C1E",
     },
     border: {
       borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
@@ -117,41 +117,53 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     periodButton: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+      backgroundColor: isDark
+        ? theme.colors.gray800
+        : theme.colors.backgroundSecondary,
     },
     periodButtonActive: {
       backgroundColor: theme.colors.primary,
     },
     metricCard: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+      backgroundColor: isDark
+        ? theme.colors.gray800
+        : theme.colors.backgroundSecondary,
     },
   };
 
   // Format currency
-  const formatCurrency = (amount: number, currency: string = 'RWF') => {
-    return `${currency} ${amount.toLocaleString()}`;
+  const formatCurrency = (
+    amount: number | string | null | undefined,
+    currency: string = "RWF"
+  ) => {
+    // Ensure amount is converted to number
+    const numAmount =
+      typeof amount === "number"
+        ? amount
+        : Number(String(amount || 0).replace(/[^0-9.-]/g, "")) || 0;
+    return `${currency} ${numAmount.toLocaleString()}`;
   };
 
   // Get date range based on period
   const getDateRange = useCallback((period: TimePeriod) => {
     const now = new Date();
     let startDate: Date;
-    
+
     switch (period) {
-      case 'today':
+      case "today":
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
-      case 'week':
+      case "week":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
-      case 'month':
+      case "month":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
     }
-    
+
     return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: now.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: now.toISOString().split("T")[0],
     };
   }, []);
 
@@ -164,7 +176,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         return salons[0].id;
       }
     } catch (error) {
-      console.error('Error fetching salon:', error);
+      console.error("Error fetching salon:", error);
     }
     return null;
   }, []);
@@ -172,18 +184,30 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Fetch wallet data
   const fetchWallet = useCallback(async () => {
     try {
-      const response = await api.get<any>('/wallets/me');
+      const response = await api.get<any>("/wallets/me");
+      // Ensure all numeric values are properly converted (decimal from DB comes as string)
+      const balance =
+        response?.balance !== undefined && response?.balance !== null
+          ? Number(String(response.balance).replace(/[^0-9.-]/g, "")) || 0
+          : 0;
+      const pendingBalance =
+        response?.pendingBalance !== undefined &&
+        response?.pendingBalance !== null
+          ? Number(String(response.pendingBalance).replace(/[^0-9.-]/g, "")) ||
+            0
+          : 0;
+
       setWallet({
-        balance: Number(response?.balance) || 0,
-        currency: response?.currency || 'RWF',
-        pendingBalance: Number(response?.pendingBalance) || 0,
+        balance,
+        currency: response?.currency || "RWF",
+        pendingBalance,
       });
     } catch (error) {
-      console.error('Error fetching wallet:', error);
+      console.error("Error fetching wallet:", error);
       // Mock data for development
       setWallet({
         balance: 5240500,
-        currency: 'RWF',
+        currency: "RWF",
         pendingBalance: 350000,
       });
     }
@@ -193,50 +217,56 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   const fetchLoan = useCallback(async () => {
     // Static demo data - backend integration will be done later
     setLoan({
-      id: 'loan-demo',
+      id: "loan-demo",
       totalAmount: 1500000,
       remainingAmount: 450000,
       nextPaymentAmount: 450000,
-      nextPaymentDate: '2024-12-25',
+      nextPaymentDate: "2024-12-25",
       daysUntilDue: 5,
       progress: 70,
     });
   }, []);
 
   // Fetch financial summary
-  const fetchSummary = useCallback(async (currentSalonId: string | null) => {
-    try {
-      const { startDate, endDate } = getDateRange(timePeriod);
-      
-      // Fetch sales analytics
-      const analytics = await salesService.getSalesAnalytics(
-        currentSalonId || undefined,
-        startDate,
-        endDate
-      );
-      
-      // Fetch pending commissions for payouts
-      const commissions = await salesService.getCommissions({ paid: false });
-      const pendingPayouts = commissions.reduce((sum, c) => sum + Number(c.amount), 0);
-      
-      setSummary({
-        totalRevenue: analytics?.summary?.totalRevenue || 0,
-        pendingPayouts,
-        outstandingPayments: 0, // From unpaid invoices if available
-        revenueChange: 12.5, // Would need previous period data for real calculation
-      });
-      
-      // Set top services and products
-      if (analytics?.topServices) {
-        setTopServices(analytics.topServices.slice(0, 3).map((s: any) => ({
-          id: s.serviceId,
-          name: s.serviceName,
-          count: s.count,
-          revenue: s.revenue,
-        })));
-      }
-      
-      /*
+  const fetchSummary = useCallback(
+    async (currentSalonId: string | null) => {
+      try {
+        const { startDate, endDate } = getDateRange(timePeriod);
+
+        // Fetch sales analytics
+        const analytics = await salesService.getSalesAnalytics(
+          currentSalonId || undefined,
+          startDate,
+          endDate
+        );
+
+        // Fetch pending commissions for payouts
+        const commissions = await salesService.getCommissions({ paid: false });
+        const pendingPayouts = commissions.reduce(
+          (sum, c) => sum + Number(c.amount),
+          0
+        );
+
+        setSummary({
+          totalRevenue: analytics?.summary?.totalRevenue || 0,
+          pendingPayouts,
+          outstandingPayments: 0, // From unpaid invoices if available
+          revenueChange: 12.5, // Would need previous period data for real calculation
+        });
+
+        // Set top services and products
+        if (analytics?.topServices) {
+          setTopServices(
+            analytics.topServices.slice(0, 3).map((s: any) => ({
+              id: s.serviceId,
+              name: s.serviceName,
+              count: s.count,
+              revenue: s.revenue,
+            }))
+          );
+        }
+
+        /*
       if (analytics?.topProducts) {
         setTopProducts(analytics.topProducts.slice(0, 3).map((p: any) => ({
           id: p.productId,
@@ -246,34 +276,36 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         })));
       }
       */
-    } catch (error: any) {
-      console.error('Error fetching summary:', error);
-      Alert.alert(
-        'Connection Error',
-        `Failed to fetch dashboard data: ${error.message || 'Unknown error'}`,
-        [{ text: 'OK' }]
-      );
-      // Mock data
-      setSummary({
-        totalRevenue: 2450000,
-        pendingPayouts: 320000,
-        outstandingPayments: 150000,
-        revenueChange: 12.5,
-      });
-      setTopServices([
-        { id: '1', name: 'Hair Styling', count: 45, revenue: 675000 },
-        { id: '2', name: 'Manicure', count: 38, revenue: 380000 },
-        { id: '3', name: 'Facial Treatment', count: 22, revenue: 440000 },
-      ]);
-      /*
+      } catch (error: any) {
+        console.error("Error fetching summary:", error);
+        Alert.alert(
+          "Connection Error",
+          `Failed to fetch dashboard data: ${error.message || "Unknown error"}`,
+          [{ text: "OK" }]
+        );
+        // Mock data
+        setSummary({
+          totalRevenue: 2450000,
+          pendingPayouts: 320000,
+          outstandingPayments: 150000,
+          revenueChange: 12.5,
+        });
+        setTopServices([
+          { id: "1", name: "Hair Styling", count: 45, revenue: 675000 },
+          { id: "2", name: "Manicure", count: 38, revenue: 380000 },
+          { id: "3", name: "Facial Treatment", count: 22, revenue: 440000 },
+        ]);
+        /*
       setTopProducts([
         { id: '1', name: 'Hair Oil', count: 28, revenue: 140000 },
         { id: '2', name: 'Shampoo', count: 22, revenue: 88000 },
         { id: '3', name: 'Conditioner', count: 18, revenue: 72000 },
       ]);
       */
-    }
-  }, [timePeriod, getDateRange]);
+      }
+    },
+    [timePeriod, getDateRange]
+  );
 
   // Fetch payment method stats
   const fetchPaymentMethods = useCallback(async () => {
@@ -282,12 +314,33 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       // Using mock data for now
       // const total = 2450000;
       setPaymentMethods([
-        { method: 'mobile_money', label: 'Mobile Money', amount: 1470000, percentage: 60, color: '#FFD700', icon: 'phone-android' },
-        { method: 'cash', label: 'Cash', amount: 612500, percentage: 25, color: '#4CAF50', icon: 'payments' },
-        { method: 'card', label: 'Card', amount: 367500, percentage: 15, color: '#2196F3', icon: 'credit-card' },
+        {
+          method: "mobile_money",
+          label: "Mobile Money",
+          amount: 1470000,
+          percentage: 60,
+          color: "#FFD700",
+          icon: "phone-android",
+        },
+        {
+          method: "cash",
+          label: "Cash",
+          amount: 612500,
+          percentage: 25,
+          color: "#4CAF50",
+          icon: "payments",
+        },
+        {
+          method: "card",
+          label: "Card",
+          amount: 367500,
+          percentage: 15,
+          color: "#2196F3",
+          icon: "credit-card",
+        },
       ]);
     } catch (error) {
-      console.error('Error fetching payment methods:', error);
+      console.error("Error fetching payment methods:", error);
     }
   }, []);
 
@@ -296,31 +349,50 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
     try {
       // Would fetch from analytics endpoint
       setTopEmployees([
-        { id: '1', name: 'Marie Claire', sales: 45, revenue: 675000 },
-        { id: '2', name: 'Jean Baptiste', sales: 38, revenue: 570000 },
-        { id: '3', name: 'Alice Uwimana', sales: 32, revenue: 480000 },
+        { id: "1", name: "Marie Claire", sales: 45, revenue: 675000 },
+        { id: "2", name: "Jean Baptiste", sales: 38, revenue: 570000 },
+        { id: "3", name: "Alice Uwimana", sales: 32, revenue: 480000 },
       ]);
     } catch (error) {
-      console.error('Error fetching employee performance:', error);
+      console.error("Error fetching employee performance:", error);
     }
   }, []);
 
-  // Load all data
+  // Load all data with progressive loading
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      // PERFORMANCE: Load critical data first, then secondary data
       const currentSalonId = await fetchSalonId();
+      
+      // Step 1: Load critical data (wallet, summary) - show UI faster
       await Promise.all([
         fetchWallet(),
-        fetchLoan(),
         fetchSummary(currentSalonId),
+      ]);
+      
+      setLoading(false); // Show UI with critical data
+      
+      // Step 2: Load secondary data in background (non-blocking)
+      Promise.all([
+        fetchLoan(),
         fetchPaymentMethods(),
         fetchEmployeePerformance(),
-      ]);
-    } finally {
+      ]).catch((error) => {
+        console.error("Error loading secondary finance data:", error);
+      });
+    } catch (error) {
+      console.error("Error loading finance data:", error);
       setLoading(false);
     }
-  }, [fetchSalonId, fetchWallet, fetchLoan, fetchSummary, fetchPaymentMethods, fetchEmployeePerformance]);
+  }, [
+    fetchSalonId,
+    fetchWallet,
+    fetchLoan,
+    fetchSummary,
+    fetchPaymentMethods,
+    fetchEmployeePerformance,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -343,18 +415,54 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
 
   // Quick action cards data
   const quickActions = [
-    { id: 'sales', label: 'New Sale', icon: 'point-of-sale', screen: 'Sales', color: theme.colors.primary },
-    { id: 'history', label: 'Sales History', icon: 'receipt-long', screen: 'SalesHistory', color: '#4CAF50' },
-    { id: 'commissions', label: 'Commissions', icon: 'people', screen: 'Commissions', color: '#9C27B0' },
-    { id: 'analytics', label: 'Analytics', icon: 'analytics', screen: 'BusinessAnalytics', color: '#2196F3' },
-    { id: 'reports', label: 'Reports', icon: 'assessment', screen: 'FinancialReports', color: '#00BFA5' },
-    { id: 'payments', label: 'Payments', icon: 'history', screen: 'PaymentHistory', color: '#607D8B' },
+    {
+      id: "sales",
+      label: "New Sale",
+      icon: "point-of-sale",
+      screen: "Sales",
+      color: theme.colors.primary,
+    },
+    {
+      id: "history",
+      label: "Sales History",
+      icon: "receipt-long",
+      screen: "SalesHistory",
+      color: "#4CAF50",
+    },
+    {
+      id: "commissions",
+      label: "Commissions",
+      icon: "people",
+      screen: "Commissions",
+      color: "#9C27B0",
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: "analytics",
+      screen: "BusinessAnalytics",
+      color: "#2196F3",
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      icon: "assessment",
+      screen: "FinancialReports",
+      color: "#00BFA5",
+    },
+    {
+      id: "payments",
+      label: "Payments",
+      icon: "history",
+      screen: "PaymentHistory",
+      color: "#607D8B",
+    },
   ];
 
   // Render period selector
   const renderPeriodSelector = () => (
     <View style={styles.periodSelector}>
-      {(['today', 'week', 'month'] as TimePeriod[]).map((period) => {
+      {(["today", "week", "month"] as TimePeriod[]).map((period) => {
         const isActive = timePeriod === period;
         return (
           <TouchableOpacity
@@ -369,10 +477,16 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
             <Text
               style={[
                 styles.periodButtonText,
-                isActive ? styles.periodButtonTextActive : dynamicStyles.textSecondary,
+                isActive
+                  ? styles.periodButtonTextActive
+                  : dynamicStyles.textSecondary,
               ]}
             >
-              {period === 'today' ? 'Today' : period === 'week' ? 'This Week' : 'This Month'}
+              {period === "today"
+                ? "Today"
+                : period === "week"
+                  ? "This Week"
+                  : "This Month"}
             </Text>
           </TouchableOpacity>
         );
@@ -385,24 +499,66 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
     <View style={[styles.walletCard, dynamicStyles.cardDark]}>
       <View style={styles.walletHeader}>
         <View style={styles.walletIconContainer}>
-          <MaterialIcons name="account-balance-wallet" size={24} color={theme.colors.primary} />
+          <MaterialIcons
+            name="account-balance-wallet"
+            size={24}
+            color={theme.colors.primary}
+          />
         </View>
-        <TouchableOpacity
-          style={styles.topUpButton}
-          onPress={() => navigation.navigate('Payment', { type: 'wallet_topup' })}
-        >
-          <Text style={styles.topUpButtonText}>Top Up</Text>
-        </TouchableOpacity>
+        <View style={styles.walletActionButtons}>
+          <TouchableOpacity
+            style={[styles.walletActionButton, styles.withdrawButton]}
+            onPress={() =>
+              navigation.navigate("Withdraw", {
+                onSuccess: () => {
+                  // Refresh wallet balance after successful withdrawal
+                  fetchWallet();
+                },
+              })
+            }
+          >
+            <MaterialIcons
+              name="arrow-upward"
+              size={16}
+              color={theme.colors.error}
+            />
+            <Text style={styles.withdrawButtonText}>Withdraw</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.walletActionButton, styles.topUpButton]}
+            onPress={() =>
+              navigation.navigate("Payment", {
+                type: "wallet_topup",
+                onSuccess: () => {
+                  // Refresh wallet balance after successful top-up
+                  fetchWallet();
+                },
+              })
+            }
+          >
+            <MaterialIcons
+              name="arrow-downward"
+              size={16}
+              color={theme.colors.white}
+            />
+            <Text style={styles.topUpButtonText}>Top Up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      
+
       <Text style={styles.walletLabel}>Wallet Balance</Text>
       <Text style={styles.walletBalance}>
         {formatCurrency(wallet?.balance || 0, wallet?.currency)}
       </Text>
-      
+
       <TouchableOpacity
         style={styles.viewTransactionsButton}
-        onPress={() => navigation.navigate('PaymentHistory')}
+        onPress={() =>
+          navigation.navigate("PaymentHistory", {
+            mode: "wallet",
+            title: "Wallet History",
+          })
+        }
       >
         <Text style={styles.viewTransactionsText}>View Transactions</Text>
       </TouchableOpacity>
@@ -412,40 +568,59 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Render active loan card
   const renderLoanCard = () => {
     if (!loan) return null;
-    
+
     return (
       <View style={[styles.loanCard, dynamicStyles.card]}>
         <View style={styles.loanHeader}>
           <View style={styles.loanIconContainer}>
-            <MaterialIcons name="credit-score" size={20} color={theme.colors.primary} />
+            <MaterialIcons
+              name="credit-score"
+              size={20}
+              color={theme.colors.primary}
+            />
           </View>
-          <Text style={[styles.loanTitle, dynamicStyles.text]}>Active Loan</Text>
+          <Text style={[styles.loanTitle, dynamicStyles.text]}>
+            Active Loan
+          </Text>
         </View>
-        
+
         <View style={styles.loanDetails}>
-          <Text style={[styles.loanLabel, dynamicStyles.textSecondary]}>Next Repayment</Text>
+          <Text style={[styles.loanLabel, dynamicStyles.textSecondary]}>
+            Next Repayment
+          </Text>
           <View style={styles.loanAmountRow}>
             <Text style={[styles.loanAmount, dynamicStyles.text]}>
-              {formatCurrency(loan.nextPaymentAmount, 'RWF')}
+              {formatCurrency(loan.nextPaymentAmount, "RWF")}
             </Text>
-            <Text style={[
-              styles.loanDueDate,
-              loan.daysUntilDue <= 5 ? styles.loanDueSoon : dynamicStyles.textSecondary
-            ]}>
+            <Text
+              style={[
+                styles.loanDueDate,
+                loan.daysUntilDue <= 5
+                  ? styles.loanDueSoon
+                  : dynamicStyles.textSecondary,
+              ]}
+            >
               Due in {loan.daysUntilDue} days
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.progressContainer}>
           <View style={[styles.progressBar, dynamicStyles.border]}>
-            <View style={[styles.progressFill, { width: `${loan.progress}%` }]} />
+            <View
+              style={[styles.progressFill, { width: `${loan.progress}%` }]}
+            />
           </View>
         </View>
-        
+
         <TouchableOpacity
           style={styles.repayButton}
-          onPress={() => navigation.navigate('LoanRepayment', { loanId: loan.id, amount: loan.nextPaymentAmount })}
+          onPress={() =>
+            navigation.navigate("LoanRepayment", {
+              loanId: loan.id,
+              amount: loan.nextPaymentAmount,
+            })
+          }
         >
           <Text style={styles.repayButtonText}>Repay Now</Text>
         </TouchableOpacity>
@@ -456,48 +631,72 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Render financial summary
   const renderSummary = () => (
     <View style={styles.summarySection}>
-      <Text style={[styles.sectionTitle, dynamicStyles.text]}>Financial Summary</Text>
+      <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+        Financial Summary
+      </Text>
       {renderPeriodSelector()}
-      
+
       <View style={styles.summaryCards}>
-        <View style={[styles.summaryCard, dynamicStyles.metricCard]}>
-          <MaterialIcons name="trending-up" size={24} color="#4CAF50" />
-          <Text style={[styles.summaryCardLabel, dynamicStyles.textSecondary]}>Total Revenue</Text>
-          <Text style={[styles.summaryCardValue, dynamicStyles.text]}>
-            {formatCurrency(summary?.totalRevenue || 0)}
-          </Text>
-          {summary?.revenueChange !== undefined && (
-            <View style={styles.changeIndicator}>
-              <MaterialIcons 
-                name={summary.revenueChange >= 0 ? 'arrow-upward' : 'arrow-downward'} 
-                size={12} 
-                color={summary.revenueChange >= 0 ? '#4CAF50' : '#F44336'} 
-              />
-              <Text style={[
-                styles.changeText,
-                { color: summary.revenueChange >= 0 ? '#4CAF50' : '#F44336' }
-              ]}>
-                {Math.abs(summary.revenueChange).toFixed(1)}%
-              </Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={[styles.summaryCard, dynamicStyles.metricCard]}>
-          <MaterialIcons name="schedule" size={24} color="#FF9800" />
-          <Text style={[styles.summaryCardLabel, dynamicStyles.textSecondary]}>Pending Payouts</Text>
-          <Text style={[styles.summaryCardValue, dynamicStyles.text]}>
-            {formatCurrency(summary?.pendingPayouts || 0)}
-          </Text>
-        </View>
-        
-        <View style={[styles.summaryCard, dynamicStyles.metricCard]}>
-          <MaterialIcons name="warning" size={24} color="#F44336" />
-          <Text style={[styles.summaryCardLabel, dynamicStyles.textSecondary]}>Outstanding</Text>
-          <Text style={[styles.summaryCardValue, dynamicStyles.text]}>
-            {formatCurrency(summary?.outstandingPayments || 0)}
-          </Text>
-        </View>
+        {[
+          {
+            key: "revenue",
+            icon: "trending-up",
+            iconColor: "#4CAF50",
+            label: "Total Revenue",
+            value: summary?.totalRevenue || 0,
+            change: summary?.revenueChange,
+          },
+          {
+            key: "payouts",
+            icon: "schedule",
+            iconColor: "#FF9800",
+            label: "Pending Payouts",
+            value: summary?.pendingPayouts || 0,
+          },
+          {
+            key: "outstanding",
+            icon: "warning",
+            iconColor: "#F44336",
+            label: "Outstanding",
+            value: summary?.outstandingPayments || 0,
+          },
+        ].map((card) => (
+          <View
+            key={card.key}
+            style={[styles.summaryCard, dynamicStyles.metricCard]}
+          >
+            <MaterialIcons
+              name={card.icon as any}
+              size={24}
+              color={card.iconColor}
+            />
+            <Text
+              style={[styles.summaryCardLabel, dynamicStyles.textSecondary]}
+            >
+              {card.label}
+            </Text>
+            <Text style={[styles.summaryCardValue, dynamicStyles.text]}>
+              {formatCurrency(card.value)}
+            </Text>
+            {card.change !== undefined && (
+              <View style={styles.changeIndicator}>
+                <MaterialIcons
+                  name={card.change >= 0 ? "arrow-upward" : "arrow-downward"}
+                  size={12}
+                  color={card.change >= 0 ? "#4CAF50" : "#F44336"}
+                />
+                <Text
+                  style={[
+                    styles.changeText,
+                    { color: card.change >= 0 ? "#4CAF50" : "#F44336" },
+                  ]}
+                >
+                  {Math.abs(card.change).toFixed(1)}%
+                </Text>
+              </View>
+            )}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -505,19 +704,37 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Render quick actions
   const renderQuickActions = () => (
     <View style={styles.quickActionsSection}>
-      <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
+      <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+        Quick Actions
+      </Text>
       <View style={styles.quickActionsGrid}>
         {quickActions.map((action) => (
           <TouchableOpacity
             key={action.id}
             style={[styles.quickActionCard, dynamicStyles.quickActionCard]}
-            onPress={() => navigation.navigate(action.screen, salonId ? { salonId } : undefined)}
+            onPress={() =>
+              navigation.navigate(
+                action.screen,
+                salonId ? { salonId } : undefined
+              )
+            }
             activeOpacity={0.7}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
-              <MaterialIcons name={action.icon as any} size={24} color={action.color} />
+            <View
+              style={[
+                styles.quickActionIcon,
+                { backgroundColor: `${action.color}20` },
+              ]}
+            >
+              <MaterialIcons
+                name={action.icon as any}
+                size={24}
+                color={action.color}
+              />
             </View>
-            <Text style={[styles.quickActionLabel, dynamicStyles.text]}>{action.label}</Text>
+            <Text style={[styles.quickActionLabel, dynamicStyles.text]}>
+              {action.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -527,13 +744,15 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Render payment methods breakdown
   const renderPaymentMethods = () => (
     <View style={styles.metricsSection}>
-      <Text style={[styles.sectionTitle, dynamicStyles.text]}>Revenue by Payment Method</Text>
+      <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+        Revenue by Payment Method
+      </Text>
       <View style={[styles.metricsCard, dynamicStyles.card]}>
         {paymentMethods.map((method, index) => {
           const isLast = index >= paymentMethods.length - 1;
           return (
-            <View 
-              key={method.method} 
+            <View
+              key={method.method}
               style={[
                 styles.paymentMethodRow,
                 !isLast && styles.paymentMethodBorder,
@@ -541,20 +760,46 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
               ]}
             >
               <View style={styles.paymentMethodInfo}>
-                <View style={[styles.paymentMethodIcon, { backgroundColor: `${method.color}20` }]}>
-                  <MaterialIcons name={method.icon as any} size={20} color={method.color} />
+                <View
+                  style={[
+                    styles.paymentMethodIcon,
+                    { backgroundColor: `${method.color}20` },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={method.icon as any}
+                    size={20}
+                    color={method.color}
+                  />
                 </View>
                 <View>
-                  <Text style={[styles.paymentMethodLabel, dynamicStyles.text]}>{method.label}</Text>
-                  <Text style={[styles.paymentMethodAmount, dynamicStyles.textSecondary]}>
+                  <Text style={[styles.paymentMethodLabel, dynamicStyles.text]}>
+                    {method.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.paymentMethodAmount,
+                      dynamicStyles.textSecondary,
+                    ]}
+                  >
                     {formatCurrency(method.amount)}
                   </Text>
                 </View>
               </View>
               <View style={styles.paymentMethodPercentage}>
-                <Text style={[styles.percentageText, { color: method.color }]}>{method.percentage}%</Text>
+                <Text style={[styles.percentageText, { color: method.color }]}>
+                  {method.percentage}%
+                </Text>
                 <View style={styles.percentageBar}>
-                  <View style={[styles.percentageFill, { width: `${method.percentage}%`, backgroundColor: method.color }]} />
+                  <View
+                    style={[
+                      styles.percentageFill,
+                      {
+                        width: `${method.percentage}%`,
+                        backgroundColor: method.color,
+                      },
+                    ]}
+                  />
                 </View>
               </View>
             </View>
@@ -567,13 +812,19 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Render top performers section
   const renderTopPerformers = () => (
     <View style={styles.metricsSection}>
-      <Text style={[styles.sectionTitle, dynamicStyles.text]}>Top Performers</Text>
-      
+      <Text style={[styles.sectionTitle, dynamicStyles.text]}>
+        Top Performers
+      </Text>
+
       {/* Top Services */}
-      <View style={[styles.metricsCard, dynamicStyles.card, styles.topItemsCard]}>
+      <View
+        style={[styles.metricsCard, dynamicStyles.card, styles.topItemsCard]}
+      >
         <View style={styles.topItemsHeader}>
           <MaterialIcons name="spa" size={20} color={theme.colors.primary} />
-          <Text style={[styles.topItemsTitle, dynamicStyles.text]}>Top Services</Text>
+          <Text style={[styles.topItemsTitle, dynamicStyles.text]}>
+            Top Services
+          </Text>
         </View>
         {topServices.map((service, index) => (
           <View key={service.id} style={styles.topItemRow}>
@@ -581,32 +832,62 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
               <Text style={styles.rankText}>{index + 1}</Text>
             </View>
             <View style={styles.topItemInfo}>
-              <Text style={[styles.topItemName, dynamicStyles.text]}>{service.name}</Text>
-              <Text style={[styles.topItemCount, dynamicStyles.textSecondary]}>{service.count} bookings</Text>
+              <Text style={[styles.topItemName, dynamicStyles.text]}>
+                {service.name}
+              </Text>
+              <Text style={[styles.topItemCount, dynamicStyles.textSecondary]}>
+                {service.count} bookings
+              </Text>
             </View>
-            <Text style={[styles.topItemRevenue, dynamicStyles.text]}>{formatCurrency(service.revenue)}</Text>
+            <Text style={[styles.topItemRevenue, dynamicStyles.text]}>
+              {formatCurrency(service.revenue)}
+            </Text>
           </View>
         ))}
       </View>
-      
+
       {/* Top Employees */}
-      <View style={[styles.metricsCard, dynamicStyles.card, styles.topItemsCard]}>
+      <View
+        style={[styles.metricsCard, dynamicStyles.card, styles.topItemsCard]}
+      >
         <View style={styles.topItemsHeader}>
           <MaterialIcons name="emoji-events" size={20} color="#FFD700" />
-          <Text style={[styles.topItemsTitle, dynamicStyles.text]}>Top Employees</Text>
+          <Text style={[styles.topItemsTitle, dynamicStyles.text]}>
+            Top Employees
+          </Text>
         </View>
         {topEmployees.map((employee, index) => {
           const isFirst = index === 0;
           return (
             <View key={employee.id} style={styles.topItemRow}>
-              <View style={[styles.topItemRank, isFirst ? styles.topItemRankGold : null]}>
-                <Text style={[styles.rankText, isFirst ? styles.rankTextGold : null]}>{index + 1}</Text>
+              <View
+                style={[
+                  styles.topItemRank,
+                  isFirst ? styles.topItemRankGold : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rankText,
+                    isFirst ? styles.rankTextGold : null,
+                  ]}
+                >
+                  {index + 1}
+                </Text>
               </View>
               <View style={styles.topItemInfo}>
-                <Text style={[styles.topItemName, dynamicStyles.text]}>{employee.name}</Text>
-                <Text style={[styles.topItemCount, dynamicStyles.textSecondary]}>{employee.sales} sales</Text>
+                <Text style={[styles.topItemName, dynamicStyles.text]}>
+                  {employee.name}
+                </Text>
+                <Text
+                  style={[styles.topItemCount, dynamicStyles.textSecondary]}
+                >
+                  {employee.sales} sales
+                </Text>
               </View>
-              <Text style={[styles.topItemRevenue, dynamicStyles.text]}>{formatCurrency(employee.revenue)}</Text>
+              <Text style={[styles.topItemRevenue, dynamicStyles.text]}>
+                {formatCurrency(employee.revenue)}
+              </Text>
             </View>
           );
         })}
@@ -616,22 +897,30 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
-        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <SafeAreaView
+        style={[styles.container, dynamicStyles.container]}
+        edges={["top"]}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         <Loader fullscreen message="Loading financial data..." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={["top"]}
+    >
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>Financial Center</Text>
+        <Text style={[styles.headerTitle, dynamicStyles.text]}>
+          Financial Center
+        </Text>
       </View>
-      
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -644,25 +933,25 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         }
       >
         {/* Wallet Balance Card */}
-        {renderWalletCard()}
-        
+        <View key="wallet-card">{renderWalletCard()}</View>
+
         {/* Active Loan Card */}
-        {renderLoanCard()}
-        
+        {loan && <View key="loan-card">{renderLoanCard()}</View>}
+
         {/* Financial Summary */}
-        {renderSummary()}
-        
+        <View key="summary">{renderSummary()}</View>
+
         {/* Quick Actions */}
-        {renderQuickActions()}
-        
+        <View key="quick-actions">{renderQuickActions()}</View>
+
         {/* Payment Methods Breakdown */}
-        {renderPaymentMethods()}
-        
+        <View key="payment-methods">{renderPaymentMethods()}</View>
+
         {/* Top Performers */}
-        {renderTopPerformers()}
-        
+        <View key="top-performers">{renderTopPerformers()}</View>
+
         {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
+        <View key="bottom-spacing" style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -679,14 +968,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-    textAlign: 'center',
+    textAlign: "center",
   },
   scrollContent: {
     padding: theme.spacing.lg,
   },
-  
+
   // Wallet Card Styles
   walletCard: {
     borderRadius: 16,
@@ -694,33 +983,53 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   walletHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: theme.spacing.md,
   },
   walletIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(200, 155, 104, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(200, 155, 104, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  topUpButton: {
-    backgroundColor: '#3A3A3C',
-    paddingHorizontal: theme.spacing.md,
+  walletActionButtons: {
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+  },
+  walletActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: 20,
+    gap: 4,
+  },
+  withdrawButton: {
+    backgroundColor: "rgba(244, 67, 54, 0.15)",
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+  },
+  withdrawButtonText: {
+    color: theme.colors.error,
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  topUpButton: {
+    backgroundColor: "#3A3A3C",
   },
   topUpButtonText: {
     color: theme.colors.white,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   walletLabel: {
-    color: '#8E8E93',
+    color: "#8E8E93",
     fontSize: 14,
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.regular,
@@ -728,7 +1037,7 @@ const styles = StyleSheet.create({
   walletBalance: {
     color: theme.colors.white,
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.lg,
   },
@@ -736,15 +1045,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderRadius: 25,
     paddingVertical: theme.spacing.sm + 2,
-    alignItems: 'center',
+    alignItems: "center",
   },
   viewTransactionsText: {
     color: theme.colors.white,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
-  
+
   // Loan Card Styles
   loanCard: {
     borderRadius: 16,
@@ -756,22 +1065,22 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   loanHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: theme.spacing.md,
   },
   loanIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(200, 155, 104, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(200, 155, 104, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: theme.spacing.sm,
   },
   loanTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   loanDetails: {
@@ -783,13 +1092,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
   loanAmountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   loanAmount: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
   },
   loanDueDate: {
@@ -797,8 +1106,8 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   loanDueSoon: {
-    color: '#FF3B30',
-    fontWeight: '600',
+    color: "#FF3B30",
+    fontWeight: "600",
   },
   progressContainer: {
     marginVertical: theme.spacing.md,
@@ -806,38 +1115,38 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E5E5EA',
-    overflow: 'hidden',
+    backgroundColor: "#E5E5EA",
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 4,
     backgroundColor: theme.colors.primary,
   },
   repayButton: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     borderRadius: 25,
     paddingVertical: theme.spacing.sm + 2,
-    alignItems: 'center',
+    alignItems: "center",
   },
   repayButtonText: {
     color: theme.colors.white,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
-  
+
   // Section Styles
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.md,
   },
-  
+
   // Period Selector
   periodSelector: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: theme.spacing.md,
     gap: theme.spacing.xs,
   },
@@ -845,7 +1154,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: theme.spacing.sm,
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   periodButtonText: {
     fontSize: 13,
@@ -853,77 +1162,77 @@ const styles = StyleSheet.create({
   },
   periodButtonTextActive: {
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  
+
   // Summary Cards
   summarySection: {
     marginBottom: theme.spacing.lg,
   },
   summaryCards: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: theme.spacing.sm,
   },
   summaryCard: {
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   summaryCardLabel: {
     fontSize: 11,
     marginTop: theme.spacing.xs,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: theme.fonts.regular,
   },
   summaryCardValue: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
   },
   changeIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: theme.spacing.xs,
   },
   changeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 2,
     fontFamily: theme.fonts.medium,
   },
-  
+
   // Quick Actions
   quickActionsSection: {
     marginBottom: theme.spacing.lg,
   },
   quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: theme.spacing.sm,
   },
   quickActionCard: {
-    width: '31%',
+    width: "31%",
     padding: theme.spacing.md,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
   },
   quickActionIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: theme.spacing.xs,
   },
   quickActionLabel: {
     fontSize: 11,
-    textAlign: 'center',
+    textAlign: "center",
     fontFamily: theme.fonts.medium,
   },
-  
+
   // Metrics Section
   metricsSection: {
     marginBottom: theme.spacing.lg,
@@ -937,30 +1246,30 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   paymentMethodRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: theme.spacing.sm,
   },
   paymentMethodBorder: {
     borderBottomWidth: 1,
   },
   paymentMethodInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   paymentMethodIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: theme.spacing.sm,
   },
   paymentMethodLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     fontFamily: theme.fonts.medium,
   },
   paymentMethodAmount: {
@@ -968,74 +1277,74 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
   paymentMethodPercentage: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     width: 80,
   },
   percentageText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.bold,
   },
   percentageBar: {
-    width: '100%',
+    width: "100%",
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: "#E5E5EA",
     marginTop: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   percentageFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
-  
+
   // Top Items
   topItemsCard: {
     marginBottom: theme.spacing.md,
   },
   topItemsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: theme.spacing.md,
     gap: theme.spacing.xs,
   },
   topItemsTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   topItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: theme.spacing.sm,
   },
   topItemRank: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#E5E5EA',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E5E5EA",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: theme.spacing.sm,
   },
   topItemRankGold: {
-    backgroundColor: '#FFD700',
+    backgroundColor: "#FFD700",
   },
   rankText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.bold,
   },
   rankTextGold: {
-    color: '#7B6C00',
+    color: "#7B6C00",
   },
   topItemInfo: {
     flex: 1,
   },
   topItemName: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     fontFamily: theme.fonts.medium,
   },
   topItemCount: {
@@ -1044,10 +1353,10 @@ const styles = StyleSheet.create({
   },
   topItemRevenue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.bold,
   },
-  
+
   bottomSpacing: {
     height: 100,
   },

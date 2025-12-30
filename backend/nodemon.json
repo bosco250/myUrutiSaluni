@@ -1,11 +1,17 @@
 {
-  "watch": ["src"],
+  "watch": [
+    "src"
+  ],
   "ext": "ts",
-  "ignore": ["src/**/*.spec.ts", "dist"],
+  "ignore": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "dist"
+  ],
   "exec": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
   "signal": "SIGTERM",
-  "verbose": true,
+  "verbose": false,
   "restartable": "rs",
-  "delay": 3000,
-  "killTimeout": 8000
+  "delay": 500,
+  "killTimeout": 3000
 }

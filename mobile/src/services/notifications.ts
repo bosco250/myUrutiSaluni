@@ -52,7 +52,11 @@ class NotificationsService {
       const queryString = queryParams.toString();
       const endpoint = `/notifications${queryString ? `?${queryString}` : ""}`;
 
-      const response = await api.get<NotificationsResponse>(endpoint);
+      // PERFORMANCE: Cache notifications for 30 seconds (they update frequently)
+      const response = await api.get<NotificationsResponse>(endpoint, {
+        cache: true,
+        cacheDuration: 30000
+      });
       return response;
     } catch (error: any) {
       console.error("Error fetching notifications:", error);
@@ -65,8 +69,10 @@ class NotificationsService {
    */
   async getUnreadCount(): Promise<number> {
     try {
+      // PERFORMANCE: Cache unread count for 30 seconds
       const response = await api.get<any>(
-        "/notifications/unread-count"
+        "/notifications/unread-count",
+        { cache: true, cacheDuration: 30000 }
       );
       // Handle different response formats
       if (typeof response === 'number') {

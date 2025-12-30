@@ -13,6 +13,10 @@ import { CustomersService } from '../customers/customers.service';
 import { SalonsService } from '../salons/salons.service';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationChannel,
+  NotificationType,
+} from '../notifications/entities/notification.entity';
 import { User } from '../users/entities/user.entity';
 
 @Injectable()
@@ -79,10 +83,15 @@ export class ReviewsService {
         salon.ownerId,
         undefined,
         undefined,
-        'in_app' as any,
-        'review' as any,
+        NotificationChannel.IN_APP,
+        NotificationType.REVIEW,
         'New Review',
         `${customer.user.fullName} left a ${createReviewDto.rating}-star review`,
+        undefined,
+        {
+          reviewId: savedReview.id,
+          salonId: createReviewDto.salonId,
+        },
       );
     } catch (error) {
       // Don't fail if notification fails

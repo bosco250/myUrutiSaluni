@@ -63,6 +63,18 @@ export class UsersController {
     return this.usersService.findOne(user.id);
   }
 
+  @Post('names')
+  @ApiOperation({
+    summary: 'Get user names by IDs (for commission transactions)',
+    description:
+      'Allows fetching user names for commission-related transactions. Returns only id and fullName.',
+  })
+  async getUserNames(@Body() body: { userIds: string[] }) {
+    // Allow salon owners and employees to fetch names for commission transactions
+    // This is needed for displaying "Paid to" / "Paid by" in wallet history
+    return this.usersService.findNamesByIds(body.userIds || []);
+  }
+
   @Get(':id')
   @Roles(
     UserRole.SUPER_ADMIN,

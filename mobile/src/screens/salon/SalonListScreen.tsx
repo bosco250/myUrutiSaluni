@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   RefreshControl,
   StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { theme } from '../../theme';
-import { useTheme, useAuth } from '../../context';
-import { salonService, SalonDetails } from '../../services/salon';
-import { Loader } from '../../components/common';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { theme } from "../../theme";
+import { useTheme, useAuth } from "../../context";
+import { salonService, SalonDetails } from "../../services/salon";
+import { Loader } from "../../components/common";
 
 interface SalonListScreenProps {
   navigation: {
@@ -21,7 +21,9 @@ interface SalonListScreenProps {
   };
 }
 
-const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
+const SalonListScreen = React.memo(function SalonListScreen({
+  navigation,
+}: SalonListScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
   const [salons, setSalons] = useState<SalonDetails[]>([]);
@@ -48,17 +50,27 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
   const loadSalons = useCallback(async () => {
     try {
       setError(null);
-      // Get all salons for this owner
-      const response = await salonService.getSalonByOwnerId(user?.id?.toString() || '');
+
+      // PERFORMANCE: Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 10000)
+      );
+
+      // Get all salons for this owner with timeout
+      const response = await Promise.race([
+        salonService.getSalonByOwnerId(user?.id?.toString() || ""),
+        timeoutPromise,
+      ]);
+
       // The API might return a single salon or array
       if (response) {
-        setSalons([response]);
+        setSalons([response as any]);
       } else {
         setSalons([]);
       }
     } catch (err: any) {
-      console.error('Error loading salons:', err);
-      setError(err.message || 'Failed to load salons');
+      console.error("Error loading salons:", err);
+      setError(err.message || "Failed to load salons");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,11 +88,11 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
+      case "active":
         return theme.colors.success;
-      case 'inactive':
+      case "inactive":
         return theme.colors.warning;
-      case 'pending_approval':
+      case "pending_approval":
         return theme.colors.error;
       default:
         return theme.colors.textSecondary;
@@ -89,12 +101,12 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'Active';
-      case 'inactive':
-        return 'Inactive';
-      case 'pending_approval':
-        return 'Pending';
+      case "active":
+        return "Active";
+      case "inactive":
+        return "Inactive";
+      case "pending_approval":
+        return "Pending";
       default:
         return status;
     }
@@ -104,7 +116,12 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
     <TouchableOpacity
       key={salon.id}
       style={[styles.salonCard, dynamicStyles.card]}
-      onPress={() => navigation.navigate('OwnerSalonDetail', { salonId: salon.id, salonName: salon.name })}
+      onPress={() =>
+        navigation.navigate("OwnerSalonDetail", {
+          salonId: salon.id,
+          salonName: salon.name,
+        })
+      }
       activeOpacity={0.7}
     >
       {/* Salon Image/Logo */}
@@ -117,38 +134,79 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
       {/* Salon Info */}
       <View style={styles.salonInfo}>
         <View style={styles.salonHeader}>
-          <Text style={[styles.salonName, dynamicStyles.text]} numberOfLines={1}>
+          <Text
+            style={[styles.salonName, dynamicStyles.text]}
+            numberOfLines={1}
+          >
             {salon.name}
           </Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(salon.status) + '20' }]}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(salon.status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(salon.status) }]}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(salon.status) + "20" },
+            ]}
+          >
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: getStatusColor(salon.status) },
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(salon.status) },
+              ]}
+            >
               {getStatusLabel(salon.status)}
             </Text>
           </View>
         </View>
 
         <View style={styles.locationRow}>
-          <MaterialIcons name="location-on" size={14} color={theme.colors.textSecondary} />
-          <Text style={[styles.locationText, dynamicStyles.textSecondary]} numberOfLines={1}>
-            {salon.address || 'No address set'}
+          <MaterialIcons
+            name="location-on"
+            size={14}
+            color={theme.colors.textSecondary}
+          />
+          <Text
+            style={[styles.locationText, dynamicStyles.textSecondary]}
+            numberOfLines={1}
+          >
+            {salon.address || "No address set"}
           </Text>
         </View>
 
         {/* Quick Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <MaterialIcons name="people" size={16} color={theme.colors.primary} />
-            <Text style={[styles.statText, dynamicStyles.textSecondary]}>0 Employees</Text>
+            <MaterialIcons
+              name="people"
+              size={16}
+              color={theme.colors.primary}
+            />
+            <Text style={[styles.statText, dynamicStyles.textSecondary]}>
+              0 Employees
+            </Text>
           </View>
           <View style={styles.statItem}>
-            <MaterialIcons name="event" size={16} color={theme.colors.primary} />
-            <Text style={[styles.statText, dynamicStyles.textSecondary]}>0 Bookings</Text>
+            <MaterialIcons
+              name="event"
+              size={16}
+              color={theme.colors.primary}
+            />
+            <Text style={[styles.statText, dynamicStyles.textSecondary]}>
+              0 Bookings
+            </Text>
           </View>
         </View>
       </View>
 
-      <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} />
+      <MaterialIcons
+        name="chevron-right"
+        size={24}
+        color={theme.colors.textSecondary}
+      />
     </TouchableOpacity>
   );
 
@@ -163,12 +221,14 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
       </Text>
       <TouchableOpacity
         style={styles.createFirstButton}
-        onPress={() => navigation.navigate('CreateSalon')}
+        onPress={() => navigation.navigate("CreateSalon")}
         activeOpacity={0.8}
       >
         <View style={styles.createFirstButtonInner}>
           <MaterialIcons name="add" size={20} color={theme.colors.white} />
-          <Text style={styles.createFirstButtonText}>Create Your First Salon</Text>
+          <Text style={styles.createFirstButtonText}>
+            Create Your First Salon
+          </Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -176,9 +236,17 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
 
   const renderError = () => (
     <View style={styles.errorState}>
-      <MaterialIcons name="error-outline" size={48} color={theme.colors.error} />
-      <Text style={[styles.errorTitle, dynamicStyles.text]}>Something went wrong</Text>
-      <Text style={[styles.errorSubtitle, dynamicStyles.textSecondary]}>{error}</Text>
+      <MaterialIcons
+        name="error-outline"
+        size={48}
+        color={theme.colors.error}
+      />
+      <Text style={[styles.errorTitle, dynamicStyles.text]}>
+        Something went wrong
+      </Text>
+      <Text style={[styles.errorSubtitle, dynamicStyles.textSecondary]}>
+        {error}
+      </Text>
       <TouchableOpacity style={styles.retryButton} onPress={loadSalons}>
         <Text style={styles.retryButtonText}>Try Again</Text>
       </TouchableOpacity>
@@ -186,9 +254,12 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={["top"]}
+    >
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>My Salons</Text>
@@ -220,17 +291,23 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
           ) : (
             <>
               {salons.map(renderSalonCard)}
-              
+
               {/* Add More Card */}
               <TouchableOpacity
                 style={[styles.addMoreCard, dynamicStyles.card]}
-                onPress={() => navigation.navigate('CreateSalon')}
+                onPress={() => navigation.navigate("CreateSalon")}
                 activeOpacity={0.7}
               >
                 <View style={styles.addMoreIcon}>
-                  <MaterialIcons name="add" size={24} color={theme.colors.primary} />
+                  <MaterialIcons
+                    name="add"
+                    size={24}
+                    color={theme.colors.primary}
+                  />
                 </View>
-                <Text style={[styles.addMoreText, { color: theme.colors.primary }]}>
+                <Text
+                  style={[styles.addMoreText, { color: theme.colors.primary }]}
+                >
                   Add New Salon
                 </Text>
               </TouchableOpacity>
@@ -243,7 +320,7 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
       {!loading && salons.length > 0 && (
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => navigation.navigate('CreateSalon')}
+          onPress={() => navigation.navigate("CreateSalon")}
           activeOpacity={0.8}
         >
           <View style={styles.fabInner}>
@@ -253,7 +330,7 @@ const SalonListScreen = ({ navigation }: SalonListScreenProps) => {
       )}
     </SafeAreaView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -261,12 +338,11 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: 60,
     paddingBottom: theme.spacing.md,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     marginBottom: 4,
   },
@@ -282,8 +358,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   salonCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: theme.spacing.md,
     borderRadius: 16,
     borderWidth: 1,
@@ -301,29 +377,29 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: theme.colors.primary,
   },
   salonInfo: {
     flex: 1,
   },
   salonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
   salonName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
     flex: 1,
     marginRight: theme.spacing.sm,
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -336,12 +412,12 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   locationText: {
@@ -351,12 +427,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: theme.spacing.md,
   },
   statText: {
@@ -365,57 +441,57 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   addMoreCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: theme.spacing.lg,
     borderRadius: 16,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
   },
   addMoreIcon: {
     marginRight: theme.spacing.sm,
   },
   addMoreText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
   },
   emptyIconContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primary + "20",
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.sm,
   },
   emptySubtitle: {
     fontSize: 14,
     fontFamily: theme.fonts.regular,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: theme.spacing.xl,
     marginBottom: theme.spacing.xl,
   },
   createFirstButton: {
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   createFirstButtonInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.primary,
@@ -424,19 +500,19 @@ const styles = StyleSheet.create({
   createFirstButtonText: {
     color: theme.colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
     marginLeft: theme.spacing.sm,
   },
   errorState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: theme.spacing.xl,
   },
   errorTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -444,7 +520,7 @@ const styles = StyleSheet.create({
   errorSubtitle: {
     fontSize: 14,
     fontFamily: theme.fonts.regular,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: theme.spacing.lg,
   },
   retryButton: {
@@ -456,11 +532,11 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: theme.colors.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     right: theme.spacing.lg,
     bottom: 30,
     borderRadius: 28,
@@ -474,8 +550,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: theme.colors.primary,
   },
 });

@@ -157,7 +157,11 @@ class SalonService {
    * Get salon details by ID
    */
   async getSalonDetails(salonId: string): Promise<SalonDetails> {
-    const response = await api.get<SalonDetails>(`/salons/${salonId}`);
+    // PERFORMANCE: Cache salon details for 5 minutes
+    const response = await api.get<SalonDetails>(`/salons/${salonId}`, { 
+      cache: true, 
+      cacheDuration: 300000 
+    });
     return response;
   }
 
@@ -179,8 +183,11 @@ class SalonService {
    */
   async getSalonByOwnerId(userId: string): Promise<SalonDetails | null> {
     try {
-      // The /salons endpoint returns only the owner's salons when called by salon_owner role
-      const response = await api.get<SalonDetails[]>(`/salons`);
+      // PERFORMANCE: Cache salon data for 5 minutes (rarely changes)
+      const response = await api.get<SalonDetails[]>(`/salons`, {
+        cache: true,
+        cacheDuration: 300000 // 5 minutes
+      });
       // Return the first salon owned by this user
       if (response && response.length > 0) {
         return response[0];
@@ -244,7 +251,11 @@ class SalonService {
    * Get all employees for a salon
    */
   async getEmployees(salonId: string): Promise<SalonEmployee[]> {
-    const response = await api.get<SalonEmployee[]>(`/salons/${salonId}/employees`);
+    // PERFORMANCE: Cache employees for 2 minutes
+    const response = await api.get<SalonEmployee[]>(`/salons/${salonId}/employees`, {
+      cache: true,
+      cacheDuration: 120000
+    });
     return response;
   }
 
@@ -308,8 +319,11 @@ class SalonService {
    */
   async getBusinessMetrics(salonId: string): Promise<BusinessMetrics> {
     try {
-      // Try dedicated metrics endpoint first
-      const response = await api.get<BusinessMetrics>(`/salons/${salonId}/metrics`);
+      // PERFORMANCE: Cache metrics for 2 minutes (updates frequently)
+      const response = await api.get<BusinessMetrics>(`/salons/${salonId}/metrics`, {
+        cache: true,
+        cacheDuration: 120000 // 2 minutes
+      });
       return response;
     } catch {
       try {
@@ -445,12 +459,17 @@ class SalonService {
 
   /**
    * Assign/reassign appointment to employee
+   * Note: This uses the updateAppointment endpoint with salonEmployeeId
+   * Use appointmentsService.updateAppointment() directly instead
+   * @deprecated Use appointmentsService.updateAppointment() with salonEmployeeId
    */
   async assignAppointment(appointmentId: string, employeeId: string): Promise<any> {
-    const response = await api.patch<any>(`/appointments/${appointmentId}/assign`, {
-      employeeId,
+    // Use the appointments service update method instead
+    // Using dynamic import to avoid circular dependency
+    const { appointmentsService } = await import('./appointments');
+    return appointmentsService.updateAppointment(appointmentId, {
+      salonEmployeeId: employeeId,
     });
-    return response;
   }
 
   /**
@@ -458,7 +477,11 @@ class SalonService {
    */
   async getServices(salonId: string): Promise<any[]> {
     const params = new URLSearchParams({ salonId }).toString();
-    const response = await api.get<any>(`/services?${params}`);
+    // PERFORMANCE: Cache services for 3 minutes
+    const response = await api.get<any>(`/services?${params}`, {
+      cache: true,
+      cacheDuration: 180000
+    });
     // Handle wrapped response { data: [...] } or direct array [...]
     const rawServices = Array.isArray(response) ? response : (response.data || []);
     
@@ -560,7 +583,11 @@ class SalonService {
   async getProducts(salonId: string): Promise<SalonProduct[]> {
     // Note: Use /inventory/stock-levels to get calculated stock, similar to Web
     const params = new URLSearchParams({ salonId }).toString();
-    const response = await api.get<SalonProduct[]>(`/inventory/stock-levels?${params}`);
+    // PERFORMANCE: Cache products for 1 minute (stock changes frequently)
+    const response = await api.get<SalonProduct[]>(`/inventory/stock-levels?${params}`, {
+      cache: true,
+      cacheDuration: 60000
+    });
     return Array.isArray(response) ? response : (response as any).data || [];
   }
 

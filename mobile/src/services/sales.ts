@@ -98,11 +98,17 @@ export interface Commission {
   createdAt: string;
   metadata?: {
     source?: 'sale' | 'appointment';
+    saleId?: string;
+    appointmentId?: string;
+    serviceId?: string;
+    productId?: string;
+    [key: string]: any;
   };
   salonEmployee?: {
     id: string;
     salonId?: string;
     user?: {
+      id?: string;
       fullName: string;
       email?: string;
     };

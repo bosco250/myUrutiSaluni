@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useAuth } from '../../context';
 import { useTheme } from '../../context';
-import { salonService, BusinessMetrics } from '../../services/salon';
+import { salonService, BusinessMetrics, SalonDetails } from '../../services/salon';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import { api } from '../../services/api';
 import { Loader } from '../../components/common';
@@ -64,13 +64,20 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
       setLoading(true);
       if (!user?.id) return;
 
-      // Step 1: Check membership status first
+      // PERFORMANCE OPTIMIZATION: Load all data in parallel with timeout
+      const timeout = (ms: number) => new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), ms)
+      );
+
+      // Step 1: Check membership status with timeout (5 seconds)
       try {
-        const membershipResponse = await api.get('/memberships/status');
+        const membershipResponse = await Promise.race([
+          api.get('/memberships/status', { cache: true, cacheDuration: 60000 }),
+          timeout(5000)
+        ]);
         const { application } = membershipResponse as any;
         
         if (!application) {
-          // No application exists - user needs to apply for membership
           setMembershipStatus('none');
           return;
         }
@@ -85,57 +92,67 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
           return;
         }
         
-        // Application is approved
         setMembershipStatus('approved');
       } catch (membershipError: any) {
         console.error('[OwnerDashboard] Error checking membership:', membershipError);
-        // If 404, user has no application
-        if (membershipError?.response?.status === 404 || membershipError?.message?.includes('404')) {
+        // If 404 or timeout, assume no membership
+        if (membershipError?.response?.status === 404 || 
+            membershipError?.message?.includes('404') ||
+            membershipError?.message?.includes('timeout')) {
           setMembershipStatus('none');
           return;
         }
-        // For other errors, assume no membership and let them apply
         setMembershipStatus('none');
         return;
       }
 
-      // Step 2: If membership is approved, check for salon
-      const salon = await salonService.getSalonByOwnerId(String(user.id));
+      // Step 2: Get salon with timeout (5 seconds)
+      const salonResponse = await Promise.race([
+        salonService.getSalonByOwnerId(String(user.id)),
+        timeout(5000)
+      ]).catch((err) => {
+        console.error('[OwnerDashboard] Error getting salon:', err);
+        return null;
+      });
+
+      const salon = salonResponse as SalonDetails | null;
+
       if (!salon?.id) {
         setHasSalon(false);
+        setLoading(false);
         return;
       }
 
       setHasSalon(true);
+      setLoading(false); // Show UI immediately with salon info
 
-      // Step 3: Get business metrics
-      const businessMetrics = await salonService.getBusinessMetrics(salon.id);
-      
-      // Step 4: Get employee count if staffPerformance is empty
-      if (!businessMetrics.staffPerformance || businessMetrics.staffPerformance.length === 0) {
-        try {
-          const employees = await salonService.getEmployees(salon.id);
-          // Create minimal staff performance entries for counting
-          businessMetrics.staffPerformance = employees.map((emp: any) => ({
-            employeeId: emp.id,
-            employeeName: emp.user?.fullName || 'Employee',
-            appointments: 0,
-            revenue: 0,
-            rating: 0,
-          }));
-        } catch {
-          // Ignore employee fetch errors
+      // Step 3: Load metrics and employees in parallel in background
+      Promise.all([
+        salonService.getBusinessMetrics(salon.id).catch(() => null),
+        salonService.getEmployees(salon.id).catch(() => [])
+      ]).then(([businessMetrics, employees]) => {
+        if (businessMetrics) {
+          // Add employee count if staffPerformance is empty
+          if (!businessMetrics.staffPerformance || businessMetrics.staffPerformance.length === 0) {
+            businessMetrics.staffPerformance = employees.map((emp: any) => ({
+              employeeId: emp.id,
+              employeeName: emp.user?.fullName || 'Employee',
+              appointments: 0,
+              revenue: 0,
+              rating: 0,
+            }));
+          }
+          setMetrics(businessMetrics);
         }
-      }
-      
-      setMetrics(businessMetrics);
+      }).catch((error) => {
+        console.error('[OwnerDashboard] Error loading metrics:', error);
+      });
+
     } catch (error: any) {
       console.error('[OwnerDashboard] Error loading dashboard data:', error);
-      // If error is 404 or no salons, show onboarding
       if (error?.message?.includes('404') || error?.message?.includes('not found')) {
         setHasSalon(false);
       }
-    } finally {
       setLoading(false);
     }
   }, [user?.id]);
@@ -646,7 +663,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 
             <TouchableOpacity 
               style={[styles.quickActionCard, dynamicStyles.card]}
-              onPress={() => navigation.navigate('Bookings')}
+              onPress={() => navigation.navigate('SalonAppointments')}
               activeOpacity={0.7}
             >
               <View style={[styles.quickActionIcon, { 

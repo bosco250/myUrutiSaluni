@@ -11,6 +11,7 @@ import {
   ForbiddenException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
@@ -29,6 +30,8 @@ import { CustomersService } from '../customers/customers.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentsController {
+  private readonly logger = new Logger(AppointmentsController.name);
+
   constructor(
     private readonly appointmentsService: AppointmentsService,
     private readonly salonsService: SalonsService,
@@ -213,16 +216,37 @@ export class AppointmentsController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
+      this.logger.log(
+        `[AppointmentsController] Finding appointments for ${user.role} (userId: ${user.id})`,
+      );
+
       const salons = await this.salonsService.findByOwnerId(user.id);
       const salonIds = salons.map((s) => s.id);
+
+      this.logger.log(
+        `[AppointmentsController] Found ${salons.length} salon(s) for owner ${user.id}: ${salonIds.join(', ') || 'none'}`,
+      );
+
+      if (salonIds.length === 0) {
+        this.logger.warn(
+          `[AppointmentsController] User ${user.id} (${user.role}) has no salons associated`,
+        );
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
           'You can only access appointments for your own salon',
         );
       }
+
       // Filter by user's salon IDs
       const salonAppointments =
         await this.appointmentsService.findBySalonIds(salonIds);
+
+      this.logger.log(
+        `[AppointmentsController] Found ${salonAppointments.length} appointment(s) for salon owner ${user.id}`,
+      );
 
       // If employee, also include appointments where they are preferred
       if (user.role === UserRole.SALON_EMPLOYEE) {

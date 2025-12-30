@@ -65,6 +65,44 @@ export default function CommissionDetailScreen({
     },
   };
 
+  const fetchServiceOrProductData = useCallback(async (commissionData: Commission) => {
+    // If we already have service/product name from saleItem, use it
+    if (commissionData.saleItem?.service?.name) {
+      setServiceData({ name: commissionData.saleItem.service.name, type: 'service' });
+      return;
+    }
+    if (commissionData.saleItem?.product?.name) {
+      setServiceData({ name: commissionData.saleItem.product.name, type: 'product' });
+      return;
+    }
+
+    // Otherwise, fetch from metadata
+    const serviceId = (commissionData.metadata as any)?.serviceId;
+    const productId = (commissionData.metadata as any)?.productId;
+
+    if (!serviceId && !productId) {
+      return;
+    }
+
+    try {
+      setLoadingServiceData(true);
+      
+      if (serviceId) {
+        const service = await exploreService.getServiceById(serviceId);
+        setServiceData({ name: service.name, type: 'service' });
+      } else if (productId) {
+        const product: any = await api.get(`/inventory/products/${productId}`);
+        const productData = product?.data || product;
+        setServiceData({ name: productData?.name || 'Product', type: 'product' });
+      }
+    } catch (err: any) {
+      console.error('Error fetching service/product:', err);
+      // Don't set error, just leave serviceData as null
+    } finally {
+      setLoadingServiceData(false);
+    }
+  }, []);
+
   const loadCommissionDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -94,14 +132,14 @@ export default function CommissionDetailScreen({
         if (commissionEmployeeId && !commissionEmployeeUserId) {
           // If we have employee ID but no user ID, try to verify via salon employees
           try {
-            const salonsResponse = await api.get('/salons');
-            const salons = Array.isArray(salonsResponse) ? salonsResponse : salonsResponse?.data || [];
+            const salonsResponse: any = await api.get('/salons');
+            const salons = Array.isArray(salonsResponse) ? salonsResponse : (salonsResponse?.data || []);
             
             let found = false;
             for (const salon of salons) {
               try {
-                const empResponse = await api.get(`/salons/${salon.id}/employees`);
-                const employees = Array.isArray(empResponse) ? empResponse : empResponse?.data || [];
+                const empResponse: any = await api.get(`/salons/${salon.id}/employees`);
+                const employees = Array.isArray(empResponse) ? empResponse : (empResponse?.data || []);
                 const userEmployee = employees.find(
                   (emp: any) => emp.id === commissionEmployeeId && String(emp.userId) === String(user.id)
                 );
@@ -136,44 +174,6 @@ export default function CommissionDetailScreen({
       setLoading(false);
     }
   }, [commissionId, isEmployee, user?.id, fetchServiceOrProductData]);
-
-  const fetchServiceOrProductData = useCallback(async (commissionData: Commission) => {
-    // If we already have service/product name from saleItem, use it
-    if (commissionData.saleItem?.service?.name) {
-      setServiceData({ name: commissionData.saleItem.service.name, type: 'service' });
-      return;
-    }
-    if (commissionData.saleItem?.product?.name) {
-      setServiceData({ name: commissionData.saleItem.product.name, type: 'product' });
-      return;
-    }
-
-    // Otherwise, fetch from metadata
-    const serviceId = commissionData.metadata?.serviceId;
-    const productId = commissionData.metadata?.productId;
-
-    if (!serviceId && !productId) {
-      return;
-    }
-
-    try {
-      setLoadingServiceData(true);
-      
-      if (serviceId) {
-        const service = await exploreService.getServiceById(serviceId);
-        setServiceData({ name: service.name, type: 'service' });
-      } else if (productId) {
-        const product = await api.get(`/inventory/products/${productId}`);
-        const productData = product?.data || product;
-        setServiceData({ name: productData?.name || 'Product', type: 'product' });
-      }
-    } catch (err: any) {
-      console.error('Error fetching service/product:', err);
-      // Don't set error, just leave serviceData as null
-    } finally {
-      setLoadingServiceData(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!initialCommission) {

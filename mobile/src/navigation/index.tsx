@@ -5,6 +5,8 @@ import {
   StyleSheet,
   BackHandler,
   Alert,
+  Text,
+  TouchableOpacity,
 } from "react-native";
 import AuthNavigator from "./AuthNavigator";
 import WelcomeScreen from "../screens/WelcomeScreen";
@@ -317,13 +319,13 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
 
   const handleNavigate = useCallback((screen: string, params?: any) => {
     const targetScreen = screen as MainScreen;
-    
+
     // Ensure we have a valid screen
     if (!targetScreen) {
       console.warn("handleNavigate called with invalid screen:", screen);
       return;
     }
-    
+
     const historyItem: HistoryItem = {
       name: targetScreen,
       params: params || {},
@@ -336,7 +338,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       // For detail screens, add to history
       setScreenHistory((prev) => [...prev, historyItem]);
     }
-    
+
     // Update current screen - this is critical for rendering the correct screen
     setCurrentScreen(targetScreen);
     setScreenParams(params || {});
@@ -379,8 +381,8 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     }
   };
 
-  // Handle tab press - role aware
-  const handleTabPress = (tabId: string) => {
+  // Handle tab press - role aware - memoized to prevent re-renders
+  const handleTabPress = React.useCallback((tabId: string) => {
     // Map tab ID to screen based on role
     const tabs = getNavigationTabsForRole(user?.role);
     const tab = tabs.find((t) => t.id === tabId);
@@ -392,7 +394,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
 
     // Map Screen enum to MainScreen string - use explicit mapping to avoid enum toString() issues
     let targetScreen: MainScreen = "Home"; // Default fallback
-    
+
     if (tab.screen === Screen.STAFF_DASHBOARD) {
       targetScreen = "StaffDashboard";
     } else if (tab.screen === Screen.OWNER_DASHBOARD) {
@@ -439,19 +441,42 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     // This ensures currentScreen is set before activeTab sync runs
     handleNavigate(targetScreen);
     setActiveTab(tabId);
-  };
+  }, [user?.role, handleNavigate]);
 
   // Show loading state while checking authentication
-  if (isLoading) {
+  // Add timeout to prevent infinite loading
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    // If loading takes more than 5 seconds, force proceed
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn("Auth loading timeout - proceeding anyway");
+        setLoadingTimeout(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
+  // If loading timeout occurred, proceed as if not loading
+  const shouldShowLoading = isLoading && !loadingTimeout;
+
+  if (shouldShowLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text
+          style={[styles.loadingText, { color: theme.colors.textSecondary }]}
+        >
+          Loading...
+        </Text>
       </View>
     );
   }
 
-  // Show network error screen when not connected
-  if (!isConnected && !isLoading) {
+  // Show network error screen when not connected (but allow if loading timed out)
+  if (!isConnected && !shouldShowLoading) {
     return (
       <NetworkErrorScreen onRetry={checkConnection} isRetrying={isChecking} />
     );
@@ -466,18 +491,61 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
   if (isAuthenticated) {
     const screenToShow = currentScreen || "Home";
 
-    return (
-      <View style={{ flex: 1 }}>
-        {renderScreen(screenToShow, handleNavigate, handleGoBack, screenParams)}
+    try {
+      return (
+        <View style={{ flex: 1 }}>
+          {renderScreen(
+            screenToShow,
+            handleNavigate,
+            handleGoBack,
+            screenParams
+          )}
 
-        {/* Bottom Navigation */}
-        <BottomNavigation
-          activeTab={activeTab}
-          onTabPress={handleTabPress}
-          unreadNotificationCount={unreadNotificationCount}
-        />
-      </View>
-    );
+          {/* Bottom Navigation */}
+          <BottomNavigation
+            activeTab={activeTab}
+            onTabPress={handleTabPress}
+            unreadNotificationCount={unreadNotificationCount}
+          />
+        </View>
+      );
+    } catch (error) {
+      console.error("Error rendering screen:", error);
+      // Fallback to Home screen if there's an error
+      return (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.error,
+              fontSize: 16,
+              marginBottom: 10,
+            }}
+          >
+            Error loading screen
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setCurrentScreen("Home");
+              setScreenParams({});
+            }}
+            style={{
+              backgroundColor: theme.colors.primary,
+              padding: 12,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: theme.colors.white }}>Go to Home</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
   }
 
   // Not authenticated - show auth screens
@@ -527,5 +595,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: theme.colors.background,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
   },
 });

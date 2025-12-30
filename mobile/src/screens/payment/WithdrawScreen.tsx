@@ -21,6 +21,11 @@ interface WithdrawScreenProps {
     navigate: (screen: string, params?: any) => void;
     goBack: () => void;
   };
+  route?: {
+    params?: {
+      onSuccess?: () => void;
+    };
+  };
 }
 
 interface WalletInfo {
@@ -30,7 +35,10 @@ interface WalletInfo {
 
 const QUICK_AMOUNTS = [5000, 10000, 20000, 50000];
 
-export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
+export default function WithdrawScreen({
+  navigation,
+  route,
+}: WithdrawScreenProps) {
   const { isDark } = useTheme();
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,9 +75,14 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
     try {
       setLoading(true);
       const response = await api.get<any>("/wallets/me");
+      // Ensure proper number conversion (decimal from DB comes as string)
+      const balance =
+        response?.balance !== undefined && response?.balance !== null
+          ? Number(String(response.balance).replace(/[^0-9.-]/g, "")) || 0
+          : 0;
       setWallet({
-        balance: Number(response.balance) || 0,
-        currency: response.currency || "RWF",
+        balance,
+        currency: response?.currency || "RWF",
       });
     } catch (error) {
       console.error("Error fetching wallet:", error);
@@ -86,7 +99,7 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
 
   const handleWithdraw = async () => {
     const numAmount = parseFloat(amount);
-    
+
     if (!numAmount || numAmount <= 0) {
       Alert.alert("Invalid Amount", "Please enter a valid amount");
       return;
@@ -98,30 +111,87 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
     }
 
     if (wallet && numAmount > wallet.balance) {
-      Alert.alert("Insufficient Balance", "You don't have enough balance for this withdrawal");
+      Alert.alert(
+        "Insufficient Balance",
+        "You don't have enough balance for this withdrawal"
+      );
       return;
     }
 
-    if (!phoneNumber || phoneNumber.length < 9) {
-      Alert.alert("Phone Required", "Please enter a valid phone number");
+    // Validate Airtel Money phone number (72X or 73X)
+    const cleanPhone = phoneNumber.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length < 9) {
+      Alert.alert(
+        "Phone Required",
+        "Please enter a valid Airtel Money number (072X or 073X)"
+      );
+      return;
+    }
+
+    // Validate phone number format
+    if (!/^(72|73)\d{7}$/.test(cleanPhone)) {
+      Alert.alert(
+        "Invalid Number",
+        "Please enter a valid Airtel Money number starting with 72 or 73"
+      );
       return;
     }
 
     setSubmitting(true);
     try {
+      // Format phone number to international format (25072XXXXXXX)
+      const formattedPhone = cleanPhone.startsWith("250")
+        ? cleanPhone
+        : cleanPhone.startsWith("0")
+          ? "250" + cleanPhone.substring(1)
+          : "250" + cleanPhone;
+
       // Call withdraw API
-      await api.post("/wallets/withdraw", {
+      const res: any = await api.post("/wallets/withdraw", {
         amount: numAmount,
-        phoneNumber: phoneNumber,
+        phoneNumber: formattedPhone,
       });
+      const transactionId = res?.transaction?.id;
 
       Alert.alert(
         "Withdrawal Requested",
-        `${numAmount.toLocaleString()} RWF will be sent to ${phoneNumber}. This may take a few minutes.`,
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        `${numAmount.toLocaleString()} RWF will be sent to ${formattedPhone}. This may take a few minutes.`,
+        [
+          ...(transactionId
+            ? [
+                {
+                  text: "Track Status",
+                  onPress: () => {
+                    // Refresh wallet if onSuccess callback is provided
+                    if (route?.params?.onSuccess) {
+                      route.params.onSuccess();
+                    }
+                    navigation.navigate("PaymentHistory", {
+                      mode: "wallet",
+                      title: "Wallet History",
+                      highlightTransactionId: transactionId,
+                    });
+                  },
+                },
+              ]
+            : []),
+          {
+            text: "OK",
+            onPress: () => {
+              // Refresh wallet if onSuccess callback is provided
+              if (route?.params?.onSuccess) {
+                route.params.onSuccess();
+              }
+              navigation.goBack();
+            },
+          },
+        ]
       );
     } catch (error: any) {
-      Alert.alert("Withdrawal Failed", error.message || "Unable to process withdrawal. Please try again.");
+      Alert.alert(
+        "Withdrawal Failed",
+        error.message || "Unable to process withdrawal. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +209,8 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
   }
 
   const numAmount = parseFloat(amount) || 0;
-  const isValidAmount = numAmount >= 1000 && (!wallet || numAmount <= wallet.balance);
+  const isValidAmount =
+    numAmount >= 1000 && (!wallet || numAmount <= wallet.balance);
 
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]}>
@@ -234,16 +305,21 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
             <Text style={[styles.phonePrefix, dynamicStyles.text]}>+250</Text>
             <TextInput
               style={[styles.phoneInput, { color: dynamicStyles.text.color }]}
-              placeholder="74X XXX XXX"
+              placeholder="72X XXX XXX"
               placeholderTextColor={theme.colors.textTertiary}
               value={phoneNumber}
-              onChangeText={setPhoneNumber}
+              onChangeText={(text) => {
+                // Remove all non-digits and limit to 9 digits
+                const cleaned = text.replace(/\D/g, "");
+                const limited = cleaned.slice(0, 9);
+                setPhoneNumber(limited);
+              }}
               keyboardType="phone-pad"
-              maxLength={12}
+              maxLength={9}
             />
           </View>
           <Text style={[styles.hint, dynamicStyles.textSecondary]}>
-            Airtel Money number
+            Enter your Airtel Money number (072X or 073X)
           </Text>
         </View>
 
@@ -262,7 +338,9 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
               <Text style={[styles.summaryLabel, dynamicStyles.textSecondary]}>
                 Fee
               </Text>
-              <Text style={[styles.summaryValue, { color: theme.colors.success }]}>
+              <Text
+                style={[styles.summaryValue, { color: theme.colors.success }]}
+              >
                 Free
               </Text>
             </View>
@@ -294,7 +372,8 @@ export default function WithdrawScreen({ navigation }: WithdrawScreenProps) {
             <>
               <MaterialIcons name="arrow-upward" size={20} color="#FFFFFF" />
               <Text style={styles.withdrawButtonText}>
-                Withdraw {numAmount > 0 ? `${numAmount.toLocaleString()} RWF` : ''}
+                Withdraw{" "}
+                {numAmount > 0 ? `${numAmount.toLocaleString()} RWF` : ""}
               </Text>
             </>
           )}

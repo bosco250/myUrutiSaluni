@@ -186,6 +186,18 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     }
   }, [editingSalon]);
 
+  const getCurrentLocation = useCallback(async () => {
+    try {
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+      setFormData(prev => ({ ...prev, latitude, longitude }));
+      setMapRegion(prev => ({ ...prev, latitude, longitude }));
+      await reverseGeocodeLocation(latitude, longitude);
+    } catch {
+      console.error('Error getting location');
+    }
+  }, []);
+
   const requestLocationPermission = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     setLocationPermission(status === 'granted');
@@ -203,18 +215,6 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       prefillForm();
     }
   }, [mode, editingSalon, prefillForm]);
-
-  const getCurrentLocation = useCallback(async () => {
-    try {
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-      setFormData(prev => ({ ...prev, latitude, longitude }));
-      setMapRegion(prev => ({ ...prev, latitude, longitude }));
-      await reverseGeocodeLocation(latitude, longitude);
-    } catch {
-      console.error('Error getting location');
-    }
-  }, []);
 
   const reverseGeocodeLocation = async (latitude: number, longitude: number) => {
     try {

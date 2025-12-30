@@ -64,23 +64,34 @@ export function PushNotificationProvider({
   // Register for push notifications
   const registerForPushNotifications = useCallback(async () => {
     try {
+      console.log("📱 Starting push notification registration...");
       const token =
         await pushNotificationsService.registerForPushNotificationsAsync();
 
       if (token) {
+        console.log("✅ Push token obtained:", token.substring(0, 30) + "...");
         setExpoPushToken(token);
 
         // Send token to backend
+        console.log("📤 Registering push token with backend...");
         const registered =
           await pushNotificationsService.registerTokenWithBackend(token);
         setIsRegistered(registered);
 
         if (registered) {
-          console.log("🔔 Push notifications fully set up");
+          console.log("🔔 Push notifications fully set up and registered");
+        } else {
+          console.warn(
+            "⚠️ Push token obtained but backend registration failed"
+          );
         }
+      } else {
+        console.warn(
+          "⚠️ Failed to obtain push token (may be Expo Go or simulator)"
+        );
       }
     } catch (error) {
-      console.error("Error registering for push notifications:", error);
+      console.error("❌ Error registering for push notifications:", error);
     }
   }, []);
 

@@ -697,6 +697,18 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.sm,
     letterSpacing: 0.5,
   },
+  clockInBtn: {
+    // Additional styles for clock in button
+  },
+  clockOutBtn: {
+    // Additional styles for clock out button
+  },
+  statusIn: {
+    borderColor: '#34C759',
+  },
+  statusOut: {
+    borderColor: '#FF3B30',
+  },
   
   // History
   historySection: {
@@ -760,6 +772,14 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     textAlign: 'center',
     marginTop: theme.spacing.sm,
+  },
+  emptyIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   
   // Modal

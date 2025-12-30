@@ -50,6 +50,8 @@ export enum NotificationType {
   MEMBERSHIP_STATUS = 'membership_status',
   SYSTEM_ALERT = 'system_alert',
   SECURITY_ALERT = 'security_alert',
+  // Review events
+  REVIEW = 'review',
 }
 
 export enum NotificationStatus {

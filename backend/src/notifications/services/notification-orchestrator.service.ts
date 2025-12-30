@@ -528,6 +528,7 @@ export class NotificationOrchestratorService {
       [NotificationType.EMPLOYEE_ASSIGNED]: 'briefcase',
       [NotificationType.SYSTEM_ALERT]: 'alert-circle',
       [NotificationType.SECURITY_ALERT]: 'shield-alert',
+      [NotificationType.REVIEW]: 'star',
     };
 
     return iconMap[type] || 'bell';
@@ -565,6 +566,7 @@ export class NotificationOrchestratorService {
       [NotificationType.MEMBERSHIP_STATUS]: 'high',
       [NotificationType.SYSTEM_ALERT]: 'medium',
       [NotificationType.SECURITY_ALERT]: 'critical',
+      [NotificationType.REVIEW]: 'medium',
     };
 
     return priorityMap[type] || 'medium';
@@ -627,6 +629,7 @@ export class NotificationOrchestratorService {
         this.handleMembershipStatus.bind(this),
       [NotificationType.SYSTEM_ALERT]: this.handleSystemAlert.bind(this),
       [NotificationType.SECURITY_ALERT]: this.handleSecurityAlert.bind(this),
+      [NotificationType.REVIEW]: this.handleReview.bind(this),
     };
 
     return handlers[type];
@@ -1062,6 +1065,20 @@ export class NotificationOrchestratorService {
       title: 'Security Alert',
       message: context.message || 'A security alert has been issued.',
       variables: {},
+    };
+  }
+
+  private async handleReview(context: NotificationContext) {
+    return {
+      title: 'New Review',
+      message:
+        context.message ||
+        `You have received a new review${context.customerName ? ` from ${context.customerName}` : ''}.`,
+      variables: {
+        customerName: context.customerName || '',
+        salonName: context.salonName || 'Salon',
+        rating: context.rating || '',
+      },
     };
   }
 }

@@ -38,10 +38,16 @@ export function useUnreadNotifications() {
       }
     };
 
-    fetchUnreadCount();
+    // Defer initial fetch to not block app startup
+    const initialTimeout = setTimeout(fetchUnreadCount, 500);
+    
     // Refresh count every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, [isAuthenticated]);
 
   return unreadCount;

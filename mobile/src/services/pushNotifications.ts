@@ -1,20 +1,20 @@
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-import { api } from './api';
+import * as Device from "expo-device";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+import { api } from "./api";
 
 // Check if running in Expo Go (where push notifications are not supported)
-const isExpoGo = Constants.executionEnvironment === 'storeClient';
+const isExpoGo = Constants.executionEnvironment === "storeClient";
 
 // Conditionally import expo-notifications to avoid errors in Expo Go
-let Notifications: typeof import('expo-notifications') | null = null;
+let Notifications: typeof import("expo-notifications") | null = null;
 let notificationsAvailable = false;
 
 try {
   if (!isExpoGo) {
     // Only import if not in Expo Go
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    Notifications = require('expo-notifications');
+    Notifications = require("expo-notifications");
     notificationsAvailable = Notifications !== null;
   }
 } catch {
@@ -30,23 +30,23 @@ if (Notifications && notificationsAvailable && !isExpoGo) {
       // Always show notification in system tray, even when app is in foreground
       // This mimics WhatsApp behavior - notifications always visible
       return {
-        shouldShowAlert: true,      // Show alert/banner
-        shouldPlaySound: true,       // Play sound
-        shouldSetBadge: true,        // Update badge count
-        shouldShowBanner: true,      // Show banner at top
-        shouldShowList: true,        // Show in notification list
+        shouldShowAlert: true, // Show alert/banner
+        shouldPlaySound: true, // Play sound
+        shouldSetBadge: true, // Update badge count
+        shouldShowBanner: true, // Show banner at top
+        shouldShowList: true, // Show in notification list
       };
     },
   });
-  
+
   // Set notification presentation options for iOS
-  if (Platform.OS === 'ios') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'Default',
+  if (Platform.OS === "ios") {
+    Notifications.setNotificationChannelAsync("default", {
+      name: "Default",
       importance: Notifications.AndroidImportance.MAX,
-      sound: 'default',
+      sound: "default",
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#C89B68',
+      lightColor: "#C89B68",
     });
   }
 }
@@ -58,6 +58,7 @@ export interface PushNotificationData {
   paymentId?: string;
   customerId?: string;
   salonId?: string;
+  reviewId?: string;
   [key: string]: any;
 }
 
@@ -72,7 +73,9 @@ class PushNotificationsService {
     // Return null if running in Expo Go or if notifications module is not available
     if (isExpoGo || !Notifications || !notificationsAvailable) {
       if (isExpoGo) {
-        console.log('Push notifications are not available in Expo Go. Use a development build instead.');
+        console.log(
+          "Push notifications are not available in Expo Go. Use a development build instead."
+        );
       }
       return null;
     }
@@ -81,30 +84,32 @@ class PushNotificationsService {
 
     // Must be a physical device for push notifications
     if (!Device.isDevice) {
-      console.log('Push notifications require a physical device');
+      console.log("Push notifications require a physical device");
       return null;
     }
 
     try {
       // Check existing permissions
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       // Request permissions if not granted
-      if (existingStatus !== 'granted') {
+      if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
 
-      if (finalStatus !== 'granted') {
-        console.log('Push notification permission denied');
+      if (finalStatus !== "granted") {
+        console.warn("⚠️ Push notification permission denied by user");
         return null;
       }
 
       // Get Expo push token
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId 
-        ?? Constants.easConfig?.projectId;
-      
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        Constants.easConfig?.projectId;
+
       if (!projectId) {
         // For development, use experienceId
         const tokenResponse = await Notifications.getExpoPushTokenAsync();
@@ -117,14 +122,15 @@ class PushNotificationsService {
       }
 
       this.expoPushToken = token;
-      console.log('📱 Expo Push Token:', token);
-    } catch (error) {
-      console.error('Error getting push token:', error);
+      console.log("📱 Expo Push Token:", token);
+    } catch (error: any) {
+      console.error("❌ Error getting push token:", error?.message || error);
+      console.error("Error details:", error);
       return null;
     }
 
     // Set up Android notification channel
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       await this.setupAndroidChannels();
     }
 
@@ -142,56 +148,58 @@ class PushNotificationsService {
 
     try {
       // Default channel for general notifications - MAX importance for immediate visibility
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'UrutiSaluni Notifications',
-        description: 'Important notifications from UrutiSaluni',
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "UrutiSaluni Notifications",
+        description: "Important notifications from UrutiSaluni",
         importance: Notifications.AndroidImportance.MAX, // Highest priority - always visible
         vibrationPattern: [0, 250, 250, 250], // Vibrate pattern
-        lightColor: '#C89B68', // LED color
-        sound: 'default', // Default notification sound
+        lightColor: "#C89B68", // LED color
+        sound: "default", // Default notification sound
         enableVibrate: true,
         showBadge: true,
       });
 
       // Appointments channel - MAX importance for critical appointment updates
-      await Notifications.setNotificationChannelAsync('appointments', {
-        name: 'Appointments',
-        description: 'Notifications about your appointments',
+      await Notifications.setNotificationChannelAsync("appointments", {
+        name: "Appointments",
+        description: "Notifications about your appointments",
         importance: Notifications.AndroidImportance.MAX, // Highest priority
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#C89B68',
-        sound: 'default',
+        lightColor: "#C89B68",
+        sound: "default",
         enableVibrate: true,
         showBadge: true,
       });
 
       // Sales & Payments channel - MAX importance for financial updates
-      await Notifications.setNotificationChannelAsync('payments', {
-        name: 'Payments & Sales',
-        description: 'Notifications about payments and sales',
+      await Notifications.setNotificationChannelAsync("payments", {
+        name: "Payments & Sales",
+        description: "Notifications about payments and sales",
         importance: Notifications.AndroidImportance.MAX, // Highest priority
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#C89B68',
-        sound: 'default',
+        lightColor: "#C89B68",
+        sound: "default",
         enableVibrate: true,
         showBadge: true,
       });
 
       // Promotions & Loyalty channel - HIGH importance (still very visible)
-      await Notifications.setNotificationChannelAsync('promotions', {
-        name: 'Promotions & Rewards',
-        description: 'Notifications about loyalty points and promotions',
+      await Notifications.setNotificationChannelAsync("promotions", {
+        name: "Promotions & Rewards",
+        description: "Notifications about loyalty points and promotions",
         importance: Notifications.AndroidImportance.HIGH, // High priority
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#C89B68',
-        sound: 'default',
+        lightColor: "#C89B68",
+        sound: "default",
         enableVibrate: true,
         showBadge: true,
       });
-      
-      console.log('✅ Android notification channels configured with MAX importance');
+
+      console.log(
+        "✅ Android notification channels configured with MAX importance"
+      );
     } catch (error) {
-      console.error('Error setting up Android notification channels:', error);
+      console.error("Error setting up Android notification channels:", error);
     }
   }
 
@@ -199,28 +207,46 @@ class PushNotificationsService {
    * Send the push token to the backend for storage
    * Includes retry logic for network issues (like WhatsApp reconnection)
    */
-  async registerTokenWithBackend(token: string, retries: number = 3): Promise<boolean> {
+  async registerTokenWithBackend(
+    token: string,
+    retries: number = 3
+  ): Promise<boolean> {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        await api.post('/notifications/push-token', {
+        const response = await api.post("/notifications/push-token", {
           expoPushToken: token,
         });
-        console.log('✅ Push token registered with backend');
+        console.log("✅ Push token registered with backend successfully");
+        console.log("📋 Backend response:", response);
         return true;
       } catch (error: any) {
         const isLastAttempt = attempt === retries;
-        const errorMessage = error.message || 'Unknown error';
-        
+        const errorMessage = error.message || "Unknown error";
+        const errorStatus = error.status || "N/A";
+
+        console.error(
+          `❌ Push token registration failed (attempt ${attempt}/${retries}):`,
+          {
+            message: errorMessage,
+            status: errorStatus,
+            token: token.substring(0, 30) + "...",
+          }
+        );
+
         if (isLastAttempt) {
-          console.error(`❌ Failed to register push token after ${retries} attempts:`, errorMessage);
+          console.error(
+            `❌ Failed to register push token after ${retries} attempts. Error: ${errorMessage} (Status: ${errorStatus})`
+          );
           // Don't give up - will retry on next app open or network reconnect
           return false;
         }
-        
+
         // Wait before retrying (exponential backoff)
         const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-        console.log(`⚠️ Token registration failed (attempt ${attempt}/${retries}), retrying in ${waitTime}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        console.log(
+          `⏳ Retrying token registration in ${waitTime}ms... (attempt ${attempt + 1}/${retries})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
     return false;
@@ -236,16 +262,16 @@ class PushNotificationsService {
   /**
    * Add a listener for notifications received while app is in foreground
    */
-  addNotificationReceivedListener(
-    callback: (notification: any) => void
-  ): { remove: () => void } {
+  addNotificationReceivedListener(callback: (notification: any) => void): {
+    remove: () => void;
+  } {
     if (!Notifications || !notificationsAvailable || isExpoGo) {
       return { remove: () => {} };
     }
     try {
       return Notifications.addNotificationReceivedListener(callback);
     } catch (error) {
-      console.error('Error adding notification received listener:', error);
+      console.error("Error adding notification received listener:", error);
       return { remove: () => {} };
     }
   }
@@ -253,16 +279,16 @@ class PushNotificationsService {
   /**
    * Add a listener for when user interacts with a notification (taps it)
    */
-  addNotificationResponseReceivedListener(
-    callback: (response: any) => void
-  ): { remove: () => void } {
+  addNotificationResponseReceivedListener(callback: (response: any) => void): {
+    remove: () => void;
+  } {
     if (!Notifications || !notificationsAvailable || isExpoGo) {
       return { remove: () => {} };
     }
     try {
       return Notifications.addNotificationResponseReceivedListener(callback);
     } catch (error) {
-      console.error('Error adding notification response listener:', error);
+      console.error("Error adding notification response listener:", error);
       return { remove: () => {} };
     }
   }
@@ -270,68 +296,130 @@ class PushNotificationsService {
   /**
    * Get the navigation target based on notification type
    */
-  getNavigationTarget(data: PushNotificationData): { screen: string; params: any } {
-    const type = data.type || '';
+  getNavigationTarget(data: PushNotificationData): {
+    screen: string;
+    params: any;
+  } {
+    const type = data.type || "";
 
     // Appointment notifications
-    if (type.startsWith('appointment_')) {
-      if (type === 'appointment_cancelled') {
-        return { screen: 'Bookings', params: {} };
+    if (type.startsWith("appointment_")) {
+      if (type === "appointment_cancelled") {
+        return { screen: "Bookings", params: {} };
       }
       if (data.appointmentId) {
         return {
-          screen: 'AppointmentDetail',
+          screen: "AppointmentDetail",
           params: { appointmentId: data.appointmentId },
         };
       }
-      return { screen: 'Bookings', params: {} };
+      return { screen: "Bookings", params: {} };
     }
 
     // Sale notifications - navigate to SaleDetail for receipt
-    if (type.startsWith('sale_') || type === 'sale_completed') {
+    if (type.startsWith("sale_") || type === "sale_completed") {
       if (data.saleId) {
         return {
-          screen: 'SaleDetail',
+          screen: "SaleDetail",
           params: { saleId: data.saleId },
         };
       }
       // Fallback: navigate to SalesHistory if no saleId
       return {
-        screen: 'SalesHistory',
+        screen: "SalesHistory",
         params: {},
       };
     }
 
-    // Payment notifications - navigate to PaymentHistory
-    if (type.startsWith('payment_')) {
+    // Payment notifications - navigate based on payment type
+    if (type.startsWith("payment_") || type === "payment") {
+      const paymentType = data.paymentType;
+
+      // Wallet top-up: go to Finance (shows updated balance)
+      if (paymentType === "wallet_topup" || paymentType === "WALLET_TOPUP") {
+        return { screen: "Finance", params: {} };
+      }
+
+      // Wallet withdrawal: go to wallet history and highlight the transaction
+      if (
+        paymentType === "wallet_withdrawal" ||
+        paymentType === "WALLET_WITHDRAWAL"
+      ) {
+        return {
+          screen: "PaymentHistory",
+          params: {
+            mode: "wallet",
+            title: "Wallet History",
+            highlightTransactionId:
+              data.walletTransactionId || data.transactionId || data.id,
+          },
+        };
+      }
+
+      // Other payments: go to payment history (default mode is "payment")
       return {
-        screen: 'PaymentHistory',
-        params: { highlightPaymentId: data.paymentId },
+        screen: "PaymentHistory",
+        params: {
+          highlightPaymentId: data.paymentId,
+        },
       };
     }
 
     // Commission notifications
-    if (type.startsWith('commission_') || type === 'commission_earned' || type === 'commission_paid') {
-      return { screen: 'Commissions', params: {} };
+    if (
+      type.startsWith("commission_") ||
+      type === "commission_earned" ||
+      type === "commission_paid"
+    ) {
+      return { screen: "Commissions", params: {} };
     }
 
     // Loyalty notifications
-    if (type.startsWith('points_') || type === 'reward_available' || type === 'vip_status_achieved') {
-      return { screen: 'Loyalty', params: {} };
+    if (
+      type.startsWith("points_") ||
+      type === "reward_available" ||
+      type === "vip_status_achieved"
+    ) {
+      return { screen: "Loyalty", params: {} };
     }
 
     // Inventory notifications (for salon owners)
-    if (type === 'low_stock_alert' || type === 'out_of_stock' || type === 'stock_replenished') {
-      return { screen: 'InventoryManagement', params: {} };
+    if (
+      type === "low_stock_alert" ||
+      type === "out_of_stock" ||
+      type === "stock_replenished"
+    ) {
+      return { screen: "InventoryManagement", params: {} };
     }
 
     // Salon notifications
-    if (type === 'salon_update' && data.salonId) {
-      return { screen: 'SalonDetail', params: { salonId: data.salonId } };
+    if (type === "salon_update" && data.salonId) {
+      return { screen: "SalonDetail", params: { salonId: data.salonId } };
+    }
+
+    // Review notifications - navigate to salon detail with reviewId
+    // Review notifications are sent to salon owners, so use OwnerSalonDetail
+    if (
+      type === "review" ||
+      type.toLowerCase() === "review" ||
+      type.startsWith("review_") ||
+      type.toLowerCase().includes("review")
+    ) {
+      if (data.salonId) {
+        const params: any = { salonId: data.salonId };
+        if (data.reviewId) {
+          params.reviewId = String(data.reviewId); // Ensure it's a string
+        }
+        console.log("Push notification - navigating to OwnerSalonDetail with params:", params);
+        return {
+          screen: "OwnerSalonDetail",
+          params,
+        };
+      }
     }
 
     // Default: go to notifications screen
-    return { screen: 'Notifications', params: {} };
+    return { screen: "Notifications", params: {} };
   }
 
   /**
@@ -344,7 +432,7 @@ class PushNotificationsService {
     seconds: number = 1
   ): Promise<string> {
     if (!Notifications || !notificationsAvailable || isExpoGo) {
-      return '';
+      return "";
     }
     try {
       const id = await Notifications.scheduleNotificationAsync({
@@ -352,9 +440,9 @@ class PushNotificationsService {
           title,
           body,
           data: data as Record<string, unknown>,
-          sound: 'default',
+          sound: "default",
         },
-        trigger: { 
+        trigger: {
           seconds,
           repeats: false,
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -362,8 +450,8 @@ class PushNotificationsService {
       });
       return id;
     } catch (error) {
-      console.error('Error scheduling notification:', error);
-      return '';
+      console.error("Error scheduling notification:", error);
+      return "";
     }
   }
 
@@ -377,7 +465,7 @@ class PushNotificationsService {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
     } catch (error) {
-      console.error('Error canceling notifications:', error);
+      console.error("Error canceling notifications:", error);
     }
   }
 
@@ -391,7 +479,7 @@ class PushNotificationsService {
     try {
       return await Notifications.getBadgeCountAsync();
     } catch (error) {
-      console.error('Error getting badge count:', error);
+      console.error("Error getting badge count:", error);
       return 0;
     }
   }
@@ -406,7 +494,7 @@ class PushNotificationsService {
     try {
       await Notifications.setBadgeCountAsync(count);
     } catch (error) {
-      console.error('Error setting badge count:', error);
+      console.error("Error setting badge count:", error);
     }
   }
 
@@ -420,7 +508,7 @@ class PushNotificationsService {
     try {
       await Notifications.setBadgeCountAsync(0);
     } catch (error) {
-      console.error('Error clearing badge:', error);
+      console.error("Error clearing badge:", error);
     }
   }
 }

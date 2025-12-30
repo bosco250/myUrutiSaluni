@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Modal,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -36,6 +37,22 @@ interface WalletTransaction {
   metadata?: Record<string, any>;
 }
 
+type WalletDirectionFilter = "all" | "in" | "out";
+type WalletCategoryFilter =
+  | "all"
+  | "topup"
+  | "commission_payment"
+  | "commission_earned"
+  | "withdrawal"
+  | "fee"
+  | "loan"
+  | "refund"
+  | "transfer";
+
+type WalletListItem =
+  | { kind: "header"; id: string; title: string }
+  | { kind: "tx"; id: string; tx: WalletTransaction };
+
 interface PaymentHistoryScreenProps {
   navigation: {
     navigate: (screen: string, params?: any) => void;
@@ -44,6 +61,7 @@ interface PaymentHistoryScreenProps {
   route?: {
     params?: {
       highlightPaymentId?: string;
+      highlightTransactionId?: string;
       mode?: "wallet" | "payment";
       title?: string;
     };
@@ -56,6 +74,7 @@ export default function PaymentHistoryScreen({
 }: PaymentHistoryScreenProps) {
   const { isDark } = useTheme();
   const highlightPaymentId = route?.params?.highlightPaymentId;
+  const highlightTransactionId = route?.params?.highlightTransactionId;
   const mode = route?.params?.mode || "payment";
   const customTitle = route?.params?.title;
 
@@ -63,12 +82,28 @@ export default function PaymentHistoryScreen({
   const [walletTransactions, setWalletTransactions] = useState<
     WalletTransaction[]
   >([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletCurrency, setWalletCurrency] = useState<string>("RWF");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [total, setTotal] = useState(0);
   const [selectedTransaction, setSelectedTransaction] =
     useState<WalletTransaction | null>(null);
   const [showTransactionDetail, setShowTransactionDetail] = useState(false);
+  const [didAutoOpenHighlightedTx, setDidAutoOpenHighlightedTx] =
+    useState(false);
+
+  // Wallet history UX (filters/search)
+  const [walletDirection, setWalletDirection] =
+    useState<WalletDirectionFilter>("all");
+  const [walletCategory, setWalletCategory] =
+    useState<WalletCategoryFilter>("all");
+  const [walletQuery, setWalletQuery] = useState<string>("");
+
+  // Cache for fetched user names (userId -> fullName)
+  const [userNamesCache, setUserNamesCache] = useState<Record<string, string>>(
+    {}
+  );
 
   const dynamicStyles = {
     container: {
@@ -92,7 +127,109 @@ export default function PaymentHistoryScreen({
     } else {
       fetchPayments();
     }
-  }, [mode]);
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-open highlighted wallet transaction (e.g., from withdrawal notification)
+  useEffect(() => {
+    if (mode !== "wallet") return;
+    if (!highlightTransactionId) return;
+    if (didAutoOpenHighlightedTx) return;
+    if (!walletTransactions || walletTransactions.length === 0) return;
+
+    const tx = walletTransactions.find((t) => t.id === highlightTransactionId);
+    if (tx) {
+      setSelectedTransaction(tx);
+      setShowTransactionDetail(true);
+      setDidAutoOpenHighlightedTx(true);
+    }
+  }, [
+    mode,
+    highlightTransactionId,
+    didAutoOpenHighlightedTx,
+    walletTransactions,
+  ]);
+
+  // Fetch missing user names from API for transactions that don't have them in metadata
+  // Defined early so it can be called from fetchWalletTransactions
+  const fetchMissingUserNames = async (transactions: WalletTransaction[]) => {
+    const userIdsToFetch = new Set<string>();
+
+    // Collect all user IDs that need names
+    for (const tx of transactions) {
+      const md = tx.metadata || {};
+      if (md.commissionId) {
+        // For commission payments (owner's view)
+        if (
+          md.employeeUserId &&
+          !md.employeeName &&
+          !userNamesCache[md.employeeUserId]
+        ) {
+          userIdsToFetch.add(md.employeeUserId);
+        }
+        // For commission earned (employee's view)
+        if (
+          md.salonOwnerId &&
+          !md.salonOwnerName &&
+          !userNamesCache[md.salonOwnerId]
+        ) {
+          userIdsToFetch.add(md.salonOwnerId);
+        }
+      }
+    }
+
+    // Fetch names for all missing users in a single batch request
+    if (userIdsToFetch.size > 0) {
+      try {
+        const userIdsArray = Array.from(userIdsToFetch);
+        const response: any = await api.post("/users/names", {
+          userIds: userIdsArray,
+        });
+        const users = response?.data || response || [];
+
+        // Update cache and transactions with fetched names
+        const newCache: Record<string, string> = {};
+        for (const user of users) {
+          if (user?.id && user?.fullName) {
+            newCache[user.id] = user.fullName;
+          }
+        }
+
+        if (Object.keys(newCache).length > 0) {
+          setUserNamesCache((prev) => ({ ...prev, ...newCache }));
+
+          // Update transactions with fetched names
+          setWalletTransactions((prev) =>
+            prev.map((tx) => {
+              const md = tx.metadata || {};
+              const updatedMetadata = { ...md };
+              let hasChanges = false;
+
+              if (
+                md.employeeUserId &&
+                newCache[md.employeeUserId] &&
+                !md.employeeName
+              ) {
+                updatedMetadata.employeeName = newCache[md.employeeUserId];
+                hasChanges = true;
+              }
+              if (
+                md.salonOwnerId &&
+                newCache[md.salonOwnerId] &&
+                !md.salonOwnerName
+              ) {
+                updatedMetadata.salonOwnerName = newCache[md.salonOwnerId];
+                hasChanges = true;
+              }
+
+              return hasChanges ? { ...tx, metadata: updatedMetadata } : tx;
+            })
+          );
+        }
+      } catch (error) {
+        console.warn("Failed to fetch user names:", error);
+      }
+    }
+  };
 
   const fetchPayments = async () => {
     try {
@@ -123,6 +260,14 @@ export default function PaymentHistoryScreen({
       }
 
       if (wallet?.id) {
+        // Ensure balance is converted to number (decimal from DB comes as string)
+        const walletBalanceNum =
+          wallet?.balance !== undefined && wallet?.balance !== null
+            ? Number(String(wallet.balance).replace(/[^0-9.-]/g, "")) || 0
+            : 0;
+
+        setWalletBalance(walletBalanceNum);
+        setWalletCurrency(wallet?.currency || "RWF");
         try {
           const transactionsResponse: any = await api.get(
             `/wallets/${wallet.id}/transactions`
@@ -144,10 +289,13 @@ export default function PaymentHistoryScreen({
 
           // Transactions are ordered newest first (DESC), so we work backwards
           // Calculate balances if not provided
-          let runningBalance = Number(wallet.balance) || 0;
+          // Start with current wallet balance for the most recent transaction
+          let runningBalance = walletBalanceNum;
 
           const transactions = transactionsData.map((t: any) => {
-            const amount = Number(t.amount) || 0;
+            // Ensure amount is converted to number (decimal from DB comes as string)
+            const amount =
+              Number(String(t.amount || 0).replace(/[^0-9.-]/g, "")) || 0;
             const transactionType =
               t.transactionType || t.transaction_type || "unknown";
             const isDebit = [
@@ -158,49 +306,112 @@ export default function PaymentHistoryScreen({
             ].includes(transactionType);
 
             // Use provided balances if available, otherwise calculate
-            let balanceAfter: number | null = null;
-            let balanceBefore: number | null = null;
+            // Ensure all balance values are converted to numbers
+            let balanceAfter: number | undefined = undefined;
+            let balanceBefore: number | undefined = undefined;
 
             if (t.balanceAfter !== undefined && t.balanceAfter !== null) {
-              balanceAfter = Number(t.balanceAfter);
+              balanceAfter =
+                Number(String(t.balanceAfter).replace(/[^0-9.-]/g, "")) || 0;
             } else if (
               t.balance_after !== undefined &&
               t.balance_after !== null
             ) {
-              balanceAfter = Number(t.balance_after);
+              balanceAfter =
+                Number(String(t.balance_after).replace(/[^0-9.-]/g, "")) || 0;
             }
 
             if (t.balanceBefore !== undefined && t.balanceBefore !== null) {
-              balanceBefore = Number(t.balanceBefore);
+              balanceBefore =
+                Number(String(t.balanceBefore).replace(/[^0-9.-]/g, "")) || 0;
             } else if (
               t.balance_before !== undefined &&
               t.balance_before !== null
             ) {
-              balanceBefore = Number(t.balance_before);
+              balanceBefore =
+                Number(String(t.balance_before).replace(/[^0-9.-]/g, "")) || 0;
             }
 
             // If balances not provided, calculate from running balance
-            // Since transactions are newest first, balanceAfter should equal runningBalance
-            if (balanceAfter === null) {
+            // Since transactions are newest first, the first transaction's balanceAfter should equal current wallet balance
+            // For subsequent transactions, we calculate backwards
+            if (balanceAfter === undefined && balanceBefore === undefined) {
+              // Both missing: calculate from running balance
+              // balanceAfter = runningBalance (this transaction's balance after)
               balanceAfter = runningBalance;
-            }
-
-            if (balanceBefore === null) {
-              // Calculate: balanceBefore = balanceAfter - transaction (reverse the transaction)
+              // balanceBefore = balanceAfter - transaction (reverse the transaction)
+              balanceBefore = isDebit
+                ? balanceAfter + amount // For debits, add back to get before
+                : balanceAfter - amount; // For credits, subtract to get before
+            } else if (
+              balanceAfter === undefined &&
+              balanceBefore !== undefined
+            ) {
+              // Only balanceAfter missing: calculate from balanceBefore
+              balanceAfter = isDebit
+                ? balanceBefore - amount // For debits, subtract amount
+                : balanceBefore + amount; // For credits, add amount
+            } else if (
+              balanceAfter !== undefined &&
+              balanceBefore === undefined
+            ) {
+              // Only balanceBefore missing: calculate from balanceAfter
               balanceBefore = isDebit
                 ? balanceAfter + amount // For debits, add back to get before
                 : balanceAfter - amount; // For credits, subtract to get before
             }
 
+            // Validate: balanceAfter should equal runningBalance for the first (newest) transaction
+            // For subsequent transactions, balanceAfter should equal the previous transaction's balanceBefore
+            if (
+              balanceAfter !== undefined &&
+              Math.abs(balanceAfter - runningBalance) > 0.01
+            ) {
+              // If there's a discrepancy, use the calculated values
+              // This handles cases where database values might be incorrect
+              console.warn(
+                `Balance mismatch for transaction ${t.id}: balanceAfter (${balanceAfter}) != runningBalance (${runningBalance}). Using calculated values.`
+              );
+            }
+
+            // Ensure balanceBefore is defined before using it
+            if (balanceBefore === undefined) {
+              // Fallback: calculate from balanceAfter if available, otherwise use runningBalance
+              balanceBefore =
+                balanceAfter !== undefined
+                  ? isDebit
+                    ? balanceAfter + amount
+                    : balanceAfter - amount
+                  : runningBalance;
+            }
+
             // Update running balance for next (older) transaction
             runningBalance = balanceBefore;
+
+            // Parse metadata if it's a string (TypeORM simple-json can return as string)
+            let parsedMetadata: Record<string, any> = {};
+            if (t.metadata) {
+              if (typeof t.metadata === "string") {
+                try {
+                  parsedMetadata = JSON.parse(t.metadata);
+                } catch (e) {
+                  console.warn("Failed to parse metadata:", e, t.metadata);
+                  parsedMetadata = {};
+                }
+              } else if (typeof t.metadata === "object") {
+                parsedMetadata = t.metadata;
+              }
+            }
+
+            // Note: employeeName and salonOwnerName will be undefined for old transactions
+            // created before we added name storage. New transactions will have these fields.
 
             return {
               id: t.id || String(Date.now()) + Math.random(),
               walletId: t.walletId || wallet.id,
               transactionType,
               amount,
-              description: t.description || "",
+              description: t.description || t.description || "",
               createdAt:
                 t.createdAt || t.created_at || new Date().toISOString(),
               updatedAt: t.updatedAt || t.updated_at,
@@ -211,23 +422,30 @@ export default function PaymentHistoryScreen({
               status: t.status,
               balanceBefore,
               balanceAfter,
-              metadata: t.metadata || {},
+              metadata: parsedMetadata,
             };
           });
 
           setWalletTransactions(transactions);
           setTotal(transactions.length);
+
+          // Fetch missing employee/owner names for commission transactions (async, non-blocking)
+          fetchMissingUserNames(transactions).catch((err) =>
+            console.warn("Failed to fetch user names:", err)
+          );
         } catch (error: any) {
           console.error("Error fetching wallet transactions:", error);
           setWalletTransactions([]);
           setTotal(0);
         }
       } else {
+        setWalletBalance(null);
         setWalletTransactions([]);
         setTotal(0);
       }
     } catch (error: any) {
       console.error("Error fetching wallet:", error);
+      setWalletBalance(null);
       setWalletTransactions([]);
       setTotal(0);
     } finally {
@@ -271,6 +489,147 @@ export default function PaymentHistoryScreen({
     }
   };
 
+  const formatMoney = (amount: number | string | null | undefined) => {
+    // Ensure amount is converted to number
+    const numAmount =
+      typeof amount === "number"
+        ? amount
+        : Number(String(amount || 0).replace(/[^0-9.-]/g, "")) || 0;
+    const safe = Number.isFinite(numAmount) ? numAmount : 0;
+    return `${safe.toLocaleString()} ${walletCurrency || "RWF"}`;
+  };
+
+  const getWalletDateGroupLabel = (dateString: string) => {
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return "Unknown Date";
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const isDebitTransaction = (type: string): boolean => {
+    // Debit transactions reduce wallet balance
+    return ["withdrawal", "transfer", "fee", "loan_repayment"].includes(type);
+  };
+
+  const matchesWalletCategory = (
+    tx: WalletTransaction,
+    category: WalletCategoryFilter
+  ) => {
+    if (category === "all") return true;
+    const type = (tx.transactionType || "unknown").toLowerCase();
+    const md = tx.metadata || {};
+    const isCommissionPayment = type === "transfer" && !!md?.commissionId;
+
+    switch (category) {
+      case "topup":
+        return type === "deposit";
+      case "commission_payment":
+        return isCommissionPayment;
+      case "commission_earned":
+        return type === "commission";
+      case "withdrawal":
+        return type === "withdrawal";
+      case "fee":
+        return type === "fee";
+      case "loan":
+        return type.startsWith("loan_");
+      case "refund":
+        return type === "refund";
+      case "transfer":
+        return type === "transfer" && !isCommissionPayment;
+      default:
+        return true;
+    }
+  };
+
+  const filteredWalletTransactions = useMemo(() => {
+    const q = walletQuery.trim().toLowerCase();
+
+    return walletTransactions.filter((tx) => {
+      const type = (tx.transactionType || "unknown").toLowerCase();
+      const isDebit = isDebitTransaction(type);
+      const md = tx.metadata || {};
+
+      if (walletDirection === "in" && isDebit) return false;
+      if (walletDirection === "out" && !isDebit) return false;
+
+      if (!matchesWalletCategory(tx, walletCategory)) return false;
+
+      if (!q) return true;
+      // Include cached names in search
+      const employeeName =
+        md.employeeName ||
+        (md.employeeUserId ? userNamesCache[md.employeeUserId] : "");
+      const salonOwnerName =
+        md.salonOwnerName ||
+        (md.salonOwnerId ? userNamesCache[md.salonOwnerId] : "");
+
+      const hay = [
+        tx.description || "",
+        tx.referenceType || "",
+        tx.referenceId || "",
+        tx.transactionReference || "",
+        type,
+        // Most useful "counterparty" fields for search
+        employeeName,
+        salonOwnerName,
+        md.employeeUserId || "",
+        md.salonOwnerId || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [
+    walletTransactions,
+    walletDirection,
+    walletCategory,
+    walletQuery,
+    userNamesCache,
+  ]);
+
+  const walletTotals = useMemo(() => {
+    let credits = 0;
+    let debits = 0;
+    for (const tx of filteredWalletTransactions) {
+      const type = (tx.transactionType || "unknown").toLowerCase();
+      // Ensure amount is converted to number (decimal from DB comes as string)
+      const amt = Number(String(tx.amount || 0).replace(/[^0-9.-]/g, "")) || 0;
+      if (isDebitTransaction(type)) debits += amt;
+      else credits += amt;
+    }
+    return {
+      count: filteredWalletTransactions.length,
+      credits,
+      debits,
+      net: credits - debits,
+    };
+  }, [filteredWalletTransactions]);
+
+  const walletListItems: WalletListItem[] = useMemo(() => {
+    const items: WalletListItem[] = [];
+    let lastGroup: string | null = null;
+
+    for (const tx of filteredWalletTransactions) {
+      const label = getWalletDateGroupLabel(tx.createdAt);
+      if (label !== lastGroup) {
+        lastGroup = label;
+        items.push({ kind: "header", id: `h:${label}`, title: label });
+      }
+      items.push({ kind: "tx", id: `t:${tx.id}`, tx });
+    }
+
+    return items;
+  }, [filteredWalletTransactions]);
+
   const getTypeIcon = (type: Payment["type"]): string => {
     switch (type) {
       case "wallet_topup":
@@ -301,7 +660,18 @@ export default function PaymentHistoryScreen({
     }
   };
 
-  const getTransactionTypeLabel = (type: string): string => {
+  const getTransactionTypeLabel = (
+    type: string,
+    metadata?: Record<string, any>
+  ): string => {
+    // Check metadata for more specific labels
+    if (type === "transfer" && metadata?.commissionId) {
+      return "Commission Payment";
+    }
+    if (type === "transfer" && metadata?.batchPayment) {
+      return "Batch Commission Payment";
+    }
+
     switch (type) {
       case "deposit":
         return "Wallet Top-up";
@@ -317,6 +687,8 @@ export default function PaymentHistoryScreen({
         return "Fee";
       case "loan_repayment":
         return "Loan Repayment";
+      case "loan_disbursement":
+        return "Loan Disbursement";
       default:
         return "Transaction";
     }
@@ -329,7 +701,7 @@ export default function PaymentHistoryScreen({
       case "withdrawal":
         return "remove-circle";
       case "transfer":
-        return "swap-horiz";
+        return "account-balance-wallet"; // Better icon for commission payments
       case "commission":
         return "trending-up";
       case "refund":
@@ -338,13 +710,11 @@ export default function PaymentHistoryScreen({
         return "money-off";
       case "loan_repayment":
         return "account-balance";
+      case "loan_disbursement":
+        return "account-balance-wallet";
       default:
         return "payment";
     }
-  };
-
-  const isDebitTransaction = (type: string): boolean => {
-    return ["withdrawal", "transfer", "fee", "loan_repayment"].includes(type);
   };
 
   const renderPaymentItem = ({ item }: { item: Payment }) => {
@@ -458,14 +828,35 @@ export default function PaymentHistoryScreen({
     item: WalletTransaction;
   }) => {
     try {
+      const isHighlighted = item.id === highlightTransactionId;
       const isDebit = isDebitTransaction(item.transactionType);
       const iconName = getTransactionTypeIcon(item.transactionType);
       const iconColor = isDebit ? theme.colors.error : theme.colors.success;
-      const amount = Number(item.amount) || 0;
+      // Ensure amount is converted to number (decimal from DB comes as string)
+      const amount =
+        Number(String(item.amount || 0).replace(/[^0-9.-]/g, "")) || 0;
+      const md = item.metadata || {};
+      // Use cached names if metadata doesn't have them
+      const employeeName =
+        md.employeeName ||
+        (md.employeeUserId ? userNamesCache[md.employeeUserId] : null);
+      const salonOwnerName =
+        md.salonOwnerName ||
+        (md.salonOwnerId ? userNamesCache[md.salonOwnerId] : null);
+      const isCommissionPayment =
+        (item.transactionType || "").toLowerCase() === "transfer" &&
+        !!md?.commissionId;
+      const isCommissionEarned =
+        (item.transactionType || "").toLowerCase() === "commission" &&
+        !!md?.commissionId;
 
       return (
         <TouchableOpacity
-          style={[styles.paymentItem, dynamicStyles.card]}
+          style={[
+            styles.paymentItem,
+            dynamicStyles.card,
+            isHighlighted && styles.highlightedItem,
+          ]}
           onPress={() => {
             setSelectedTransaction(item);
             setShowTransactionDetail(true);
@@ -484,7 +875,7 @@ export default function PaymentHistoryScreen({
           <View style={styles.paymentDetails}>
             <View style={styles.paymentTypeRow}>
               <Text style={[styles.paymentType, dynamicStyles.text]}>
-                {getTransactionTypeLabel(item.transactionType)}
+                {getTransactionTypeLabel(item.transactionType, item.metadata)}
               </Text>
               {item.status && (
                 <View
@@ -509,6 +900,22 @@ export default function PaymentHistoryScreen({
             <Text style={[styles.paymentDate, dynamicStyles.textSecondary]}>
               {formatDate(item.createdAt)}
             </Text>
+            {isCommissionPayment && !!employeeName && (
+              <Text
+                style={[styles.paymentDesc, dynamicStyles.textSecondary]}
+                numberOfLines={1}
+              >
+                Paid to: {employeeName}
+              </Text>
+            )}
+            {isCommissionEarned && !!salonOwnerName && (
+              <Text
+                style={[styles.paymentDesc, dynamicStyles.textSecondary]}
+                numberOfLines={1}
+              >
+                Paid by: {salonOwnerName}
+              </Text>
+            )}
             {item.description && (
               <Text
                 style={[styles.paymentDesc, dynamicStyles.textSecondary]}
@@ -527,7 +934,7 @@ export default function PaymentHistoryScreen({
               ]}
             >
               {isDebit ? "-" : "+"}
-              {amount.toLocaleString()} RWF
+              {formatMoney(amount)}
             </Text>
             <MaterialIcons
               name="chevron-right"
@@ -549,6 +956,26 @@ export default function PaymentHistoryScreen({
       );
     }
   };
+
+  const walletFilterChips: {
+    key: WalletCategoryFilter;
+    label: string;
+    icon: string;
+  }[] = [
+    { key: "all", label: "All", icon: "list" },
+    { key: "topup", label: "Top-ups", icon: "add-circle" },
+    { key: "commission_payment", label: "Commission Pay", icon: "swap-horiz" },
+    {
+      key: "commission_earned",
+      label: "Commission Earned",
+      icon: "trending-up",
+    },
+    { key: "withdrawal", label: "Withdrawals", icon: "remove-circle" },
+    { key: "fee", label: "Fees", icon: "money-off" },
+    { key: "loan", label: "Loans", icon: "account-balance" },
+    { key: "refund", label: "Refunds", icon: "undo" },
+    { key: "transfer", label: "Transfers", icon: "swap-horiz" },
+  ];
 
   if (loading) {
     return (
@@ -589,7 +1016,196 @@ export default function PaymentHistoryScreen({
       </View>
 
       {/* Summary */}
-      {mode !== "wallet" && (
+      {mode === "wallet" ? (
+        <View style={[styles.walletSummaryCard, dynamicStyles.card]}>
+          <View style={styles.walletSummaryTopRow}>
+            <Text
+              style={[styles.walletSummaryLabel, dynamicStyles.textSecondary]}
+            >
+              Current Balance
+            </Text>
+            <View style={styles.walletDirectionPills}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setWalletDirection("all")}
+                style={[
+                  styles.directionPill,
+                  walletDirection === "all" && styles.directionPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.directionPillText,
+                    walletDirection === "all" && styles.directionPillTextActive,
+                  ]}
+                >
+                  All
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setWalletDirection("in")}
+                style={[
+                  styles.directionPill,
+                  walletDirection === "in" && styles.directionPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.directionPillText,
+                    walletDirection === "in" && styles.directionPillTextActive,
+                  ]}
+                >
+                  In
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setWalletDirection("out")}
+                style={[
+                  styles.directionPill,
+                  walletDirection === "out" && styles.directionPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.directionPillText,
+                    walletDirection === "out" && styles.directionPillTextActive,
+                  ]}
+                >
+                  Out
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={[styles.walletSummaryBalance, dynamicStyles.text]}>
+            {walletBalance === null ? "—" : formatMoney(walletBalance)}
+          </Text>
+
+          <View style={styles.walletSummaryStatsRow}>
+            <View style={styles.walletStat}>
+              <Text
+                style={[styles.walletStatLabel, dynamicStyles.textSecondary]}
+              >
+                Credits
+              </Text>
+              <Text
+                style={[
+                  styles.walletStatValue,
+                  { color: theme.colors.success },
+                ]}
+              >
+                +{formatMoney(walletTotals.credits)}
+              </Text>
+            </View>
+            <View style={styles.walletStatDivider} />
+            <View style={styles.walletStat}>
+              <Text
+                style={[styles.walletStatLabel, dynamicStyles.textSecondary]}
+              >
+                Debits
+              </Text>
+              <Text
+                style={[styles.walletStatValue, { color: theme.colors.error }]}
+              >
+                -{formatMoney(walletTotals.debits)}
+              </Text>
+            </View>
+            <View style={styles.walletStatDivider} />
+            <View style={styles.walletStat}>
+              <Text
+                style={[styles.walletStatLabel, dynamicStyles.textSecondary]}
+              >
+                Count
+              </Text>
+              <Text style={[styles.walletStatValue, dynamicStyles.text]}>
+                {walletTotals.count}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.walletSearchRow}>
+            <View
+              style={[
+                styles.walletSearchInputWrap,
+                { borderColor: dynamicStyles.card.borderColor },
+              ]}
+            >
+              <MaterialIcons
+                name="search"
+                size={18}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <TextInput
+                value={walletQuery}
+                onChangeText={setWalletQuery}
+                placeholder="Search by description / reference..."
+                placeholderTextColor={dynamicStyles.textSecondary.color}
+                style={[styles.walletSearchInput, dynamicStyles.text]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {!!walletQuery && (
+                <TouchableOpacity
+                  onPress={() => setWalletQuery("")}
+                  style={styles.walletSearchClear}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialIcons
+                    name="close"
+                    size={18}
+                    color={dynamicStyles.textSecondary.color}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.walletChipRow}
+          >
+            {walletFilterChips.map((chip) => {
+              const active = walletCategory === chip.key;
+              return (
+                <TouchableOpacity
+                  key={chip.key}
+                  activeOpacity={0.85}
+                  onPress={() => setWalletCategory(chip.key)}
+                  style={[
+                    styles.walletChip,
+                    { borderColor: dynamicStyles.card.borderColor },
+                    active && styles.walletChipActive,
+                  ]}
+                >
+                  <MaterialIcons
+                    name={chip.icon as any}
+                    size={16}
+                    color={
+                      active
+                        ? theme.colors.white
+                        : dynamicStyles.textSecondary.color
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.walletChipText,
+                      active
+                        ? styles.walletChipTextActive
+                        : { color: dynamicStyles.textSecondary.color },
+                    ]}
+                  >
+                    {chip.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : (
         <View style={[styles.summaryCard, dynamicStyles.card]}>
           <Text style={[styles.summaryLabel, dynamicStyles.textSecondary]}>
             Total Transactions
@@ -602,13 +1218,29 @@ export default function PaymentHistoryScreen({
 
       {/* Payment/Transaction List */}
       {mode === "wallet" ? (
-        <FlatList<WalletTransaction>
-          data={walletTransactions}
-          renderItem={renderWalletTransactionItem}
+        <FlatList<WalletListItem>
+          data={walletListItems}
+          renderItem={({ item }) => {
+            if (item.kind === "header") {
+              return (
+                <View style={styles.walletGroupHeader}>
+                  <Text
+                    style={[
+                      styles.walletGroupHeaderText,
+                      dynamicStyles.textSecondary,
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                </View>
+              );
+            }
+            return renderWalletTransactionItem({ item: item.tx });
+          }}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContent,
-            walletTransactions.length === 0 && styles.emptyListContent,
+            walletListItems.length === 0 && styles.emptyListContent,
           ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -633,7 +1265,7 @@ export default function PaymentHistoryScreen({
                 <Text
                   style={[styles.emptySubtext, dynamicStyles.textSecondary]}
                 >
-                  Your wallet transactions will appear here
+                  Try changing filters or clearing search
                 </Text>
               </View>
             ) : null
@@ -771,7 +1403,7 @@ export default function PaymentHistoryScreen({
                     <TouchableOpacity
                       activeOpacity={1}
                       onPress={(e) => e.stopPropagation()}
-                      style={{ width: "100%", height: "100%" }}
+                      style={{ width: "100%" }}
                     >
                       <View
                         style={[
@@ -796,6 +1428,7 @@ export default function PaymentHistoryScreen({
                           }}
                           dynamicStyles={dynamicStyles}
                           isDark={isDark}
+                          userNamesCache={userNamesCache}
                         />
                       </View>
                     </TouchableOpacity>
@@ -816,11 +1449,13 @@ function TransactionDetailView({
   onClose,
   dynamicStyles,
   isDark,
+  userNamesCache,
 }: {
   transaction: WalletTransaction;
   onClose: () => void;
   dynamicStyles: any;
   isDark: boolean;
+  userNamesCache: Record<string, string>;
 }) {
   if (!transaction) {
     return (
@@ -870,13 +1505,30 @@ function TransactionDetailView({
     }
   })();
   const iconColor = isDebit ? theme.colors.error : theme.colors.success;
-  const amount = Number(transaction.amount) || 0;
-  const balanceBefore = transaction.balanceBefore
-    ? Number(transaction.balanceBefore)
-    : null;
-  const balanceAfter = transaction.balanceAfter
-    ? Number(transaction.balanceAfter)
-    : null;
+  // Ensure amount is converted to number (decimal from DB comes as string)
+  const amount =
+    Number(String(transaction.amount || 0).replace(/[^0-9.-]/g, "")) || 0;
+  const md = transaction.metadata || {};
+  // Use cached names if metadata doesn't have them
+  const employeeName =
+    md.employeeName ||
+    (md.employeeUserId ? userNamesCache[md.employeeUserId] : null);
+  const salonOwnerName =
+    md.salonOwnerName ||
+    (md.salonOwnerId ? userNamesCache[md.salonOwnerId] : null);
+  const txTypeLower = (transaction.transactionType || "unknown").toLowerCase();
+  const isCommissionPayment = txTypeLower === "transfer" && !!md?.commissionId; // owner paying employee
+  const isCommissionEarned = txTypeLower === "commission" && !!md?.commissionId; // employee receiving commission
+  // Ensure balance values are converted to numbers (decimal from DB comes as string)
+  const balanceBefore =
+    transaction.balanceBefore !== undefined &&
+    transaction.balanceBefore !== null
+      ? Number(String(transaction.balanceBefore).replace(/[^0-9.-]/g, "")) || 0
+      : undefined;
+  const balanceAfter =
+    transaction.balanceAfter !== undefined && transaction.balanceAfter !== null
+      ? Number(String(transaction.balanceAfter).replace(/[^0-9.-]/g, "")) || 0
+      : undefined;
 
   const formatDate = (dateString: string) => {
     try {
@@ -911,7 +1563,18 @@ function TransactionDetailView({
     }
   };
 
-  const getTransactionTypeLabel = (type: string): string => {
+  const getTransactionTypeLabel = (
+    type: string,
+    metadata?: Record<string, any>
+  ): string => {
+    // Check metadata for more specific labels
+    if (type === "transfer" && metadata?.commissionId) {
+      return "Commission Payment";
+    }
+    if (type === "transfer" && metadata?.batchPayment) {
+      return "Batch Commission Payment";
+    }
+
     switch (type) {
       case "deposit":
         return "Wallet Top-up";
@@ -927,6 +1590,8 @@ function TransactionDetailView({
         return "Fee";
       case "loan_repayment":
         return "Loan Repayment";
+      case "loan_disbursement":
+        return "Loan Disbursement";
       default:
         return "Transaction";
     }
@@ -964,18 +1629,48 @@ function TransactionDetailView({
     }
   };
 
-  // Clean description to remove IDs
+  // Build description from metadata if description is empty or generic
   const cleanDescription = (() => {
     let desc = transaction.description || "";
-    desc = desc.replace(
-      /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
-      ""
+
+    // If description is empty or just contains IDs, build a better one from metadata
+    if (!desc || desc.match(/Commission\s*(ID|payment)/i)) {
+      // For commission payments, create a human-readable description
+      if (transaction.transactionType === "transfer" && md.commissionId) {
+        if (employeeName) {
+          desc = `Commission payment to ${employeeName}`;
+        } else {
+          desc = "Commission payment to employee";
+        }
+      } else if (
+        transaction.transactionType === "commission" &&
+        md.commissionId
+      ) {
+        if (salonOwnerName) {
+          desc = `Commission earned from ${salonOwnerName}`;
+        } else {
+          desc = "Commission earned";
+        }
+      }
+    }
+
+    // Clean up IDs from description if it exists
+    if (desc) {
+      desc = desc.replace(
+        /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+        ""
+      );
+      desc = desc.replace(/\bID:\s*\w+\b/gi, "");
+      desc = desc.replace(/\bTransaction\s*ID[:\s]*\w+/gi, "");
+      desc = desc.replace(/\bCommission\s*ID[:\s]*\w+/gi, "");
+      desc = desc.replace(/\bSale\s*Item[:\s]*\w+/gi, "");
+      desc = desc.replace(/,\s*,/g, ",").replace(/^\s*,\s*|\s*,\s*$/g, "");
+    }
+
+    return (
+      desc.trim() ||
+      getTransactionTypeLabel(transaction.transactionType, transaction.metadata)
     );
-    desc = desc.replace(/\bID:\s*\w+\b/gi, "");
-    desc = desc.replace(/\bTransaction\s*ID[:\s]*\w+/gi, "");
-    desc = desc.replace(/\bCommission\s*ID[:\s]*\w+/gi, "");
-    desc = desc.replace(/\bSale\s*Item[:\s]*\w+/gi, "");
-    return desc.trim() || getTransactionTypeLabel(transaction.transactionType);
   })();
 
   // For other transaction types, show full details
@@ -998,12 +1693,13 @@ function TransactionDetailView({
       <ScrollView
         showsVerticalScrollIndicator={true}
         contentContainerStyle={{
-          paddingBottom: theme.spacing.xl * 2,
+          paddingBottom: theme.spacing.md,
           paddingHorizontal: 0,
         }}
-        style={{ flex: 1 }}
+        style={{ maxHeight: "100%" }}
+        nestedScrollEnabled={true}
       >
-        {/* Transaction Icon & Type */}
+        {/* Compact Header with Icon, Type, Amount */}
         <View style={styles.detailIconSection}>
           <View
             style={[
@@ -1011,98 +1707,52 @@ function TransactionDetailView({
               { backgroundColor: iconColor + "20" },
             ]}
           >
-            <MaterialIcons name={iconName as any} size={48} color={iconColor} />
+            <MaterialIcons name={iconName as any} size={32} color={iconColor} />
           </View>
           <Text style={[styles.detailTypeLabel, dynamicStyles.text]}>
-            {getTransactionTypeLabel(transaction.transactionType)}
+            {getTransactionTypeLabel(
+              transaction.transactionType,
+              transaction.metadata
+            )}
+          </Text>
+          <Text
+            style={[
+              styles.amountValue,
+              { color: iconColor, marginTop: 4, fontSize: 20 },
+            ]}
+          >
+            {isDebit ? "-" : "+"}
+            {amount.toLocaleString()} RWF
           </Text>
           <Text style={[styles.detailDate, dynamicStyles.textSecondary]}>
             {formatDate(transaction.createdAt)}
           </Text>
         </View>
 
-        {/* Amount Card */}
-        <View
-          style={[styles.amountCard, { backgroundColor: iconColor + "10" }]}
-        >
-          <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
-            Transaction Amount
-          </Text>
-          <Text style={[styles.amountValue, { color: iconColor }]}>
-            {isDebit ? "-" : "+"}
-            {amount.toLocaleString()} RWF
-          </Text>
-        </View>
-
-        {/* Balance Information */}
-        {(balanceBefore !== null || balanceAfter !== null) && (
+        {/* Compact Balance Information */}
+        {(balanceBefore !== undefined || balanceAfter !== undefined) && (
           <View style={[styles.balanceSection, dynamicStyles.card]}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-              Balance Information
-            </Text>
-
-            {balanceBefore !== null && (
+            {balanceBefore !== undefined && (
               <View style={styles.balanceRow}>
-                <View style={styles.balanceLabelContainer}>
-                  <MaterialIcons
-                    name="account-balance-wallet"
-                    size={20}
-                    color={dynamicStyles.textSecondary.color}
-                  />
-                  <Text
-                    style={[styles.balanceLabel, dynamicStyles.textSecondary]}
-                  >
-                    Balance Before
-                  </Text>
-                </View>
+                <Text
+                  style={[styles.balanceLabel, dynamicStyles.textSecondary]}
+                >
+                  Balance Before
+                </Text>
                 <Text style={[styles.balanceValue, dynamicStyles.text]}>
                   {balanceBefore.toLocaleString()} RWF
                 </Text>
               </View>
             )}
-
-            <View style={styles.balanceRow}>
-              <View style={styles.balanceLabelContainer}>
-                <MaterialIcons
-                  name="arrow-forward"
-                  size={20}
-                  color={iconColor}
-                />
+            {balanceAfter !== undefined && (
+              <View style={[styles.balanceRow, styles.newBalanceRow]}>
                 <Text
                   style={[styles.balanceLabel, dynamicStyles.textSecondary]}
                 >
-                  Transaction
+                  Balance After
                 </Text>
-              </View>
-              <Text style={[styles.balanceValue, { color: iconColor }]}>
-                {isDebit ? "-" : "+"}
-                {amount.toLocaleString()} RWF
-              </Text>
-            </View>
-
-            {balanceAfter !== null && (
-              <View style={[styles.balanceRow, styles.newBalanceRow]}>
-                <View style={styles.balanceLabelContainer}>
-                  <MaterialIcons
-                    name="account-balance-wallet"
-                    size={20}
-                    color={theme.colors.success}
-                  />
-                  <Text
-                    style={[
-                      styles.balanceLabel,
-                      { color: theme.colors.success, fontWeight: "600" },
-                    ]}
-                  >
-                    New Balance
-                  </Text>
-                </View>
                 <Text
-                  style={[
-                    styles.balanceValue,
-                    styles.newBalanceValue,
-                    { color: theme.colors.success },
-                  ]}
+                  style={[styles.balanceValue, { color: theme.colors.success }]}
                 >
                   {balanceAfter.toLocaleString()} RWF
                 </Text>
@@ -1111,143 +1761,137 @@ function TransactionDetailView({
           </View>
         )}
 
-        {/* Description */}
-        {cleanDescription && (
-          <View style={[styles.descriptionSection, dynamicStyles.card]}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-              Description
-            </Text>
-            <Text style={[styles.descriptionText, dynamicStyles.textSecondary]}>
-              {cleanDescription}
-            </Text>
-          </View>
-        )}
-
-        {/* Transaction Info */}
+        {/* Compact Transaction Info */}
         <View style={[styles.infoSection, dynamicStyles.card]}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-            Transaction Information
-          </Text>
-
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-              Type
-            </Text>
-            <Text style={[styles.infoValue, dynamicStyles.text]}>
-              {getTransactionTypeLabel(transaction.transactionType)}
-            </Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-              Date & Time
-            </Text>
-            <Text style={[styles.infoValue, dynamicStyles.text]}>
-              {formatDate(transaction.createdAt)}
-            </Text>
-          </View>
-
           {transaction.status && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
                 Status
               </Text>
-              <View style={styles.statusContainer}>
-                <View
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: getStatusColor(transaction.status) + "20",
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor:
-                        getStatusColor(transaction.status) + "20",
-                    },
+                    styles.statusText,
+                    { color: getStatusColor(transaction.status) },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: getStatusColor(transaction.status) },
-                    ]}
-                  >
-                    {getStatusLabel(transaction.status)}
-                  </Text>
-                </View>
+                  {getStatusLabel(transaction.status)}
+                </Text>
               </View>
             </View>
           )}
 
-          {transaction.referenceType && (
+          {/* Counterparty / commission context */}
+          {isCommissionPayment && employeeName && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-                Reference Type
+                Paid to
+              </Text>
+              <Text
+                style={[
+                  styles.infoValue,
+                  dynamicStyles.text,
+                  { flex: 1, textAlign: "right" },
+                ]}
+                numberOfLines={1}
+              >
+                {employeeName}
+              </Text>
+            </View>
+          )}
+
+          {isCommissionEarned && salonOwnerName && (
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
+                Paid by
+              </Text>
+              <Text
+                style={[
+                  styles.infoValue,
+                  dynamicStyles.text,
+                  { flex: 1, textAlign: "right" },
+                ]}
+                numberOfLines={1}
+              >
+                {salonOwnerName}
+              </Text>
+            </View>
+          )}
+
+          {!!md.paymentMethod && (
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
+                Method
               </Text>
               <Text style={[styles.infoValue, dynamicStyles.text]}>
-                {transaction.referenceType}
+                {String(md.paymentMethod).replace(/_/g, " ")}
               </Text>
             </View>
           )}
 
-          {transaction.referenceId && (
+          {!!md.paymentReference && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-                Reference ID
+                Reference
               </Text>
               <Text
                 style={[
                   styles.infoValue,
                   dynamicStyles.text,
                   styles.referenceId,
+                  { flex: 1, textAlign: "right" },
                 ]}
                 numberOfLines={1}
               >
-                {transaction.referenceId}
+                {String(md.paymentReference)}
               </Text>
             </View>
           )}
 
-          {transaction.transactionReference && (
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-                Transaction Reference
-              </Text>
-              <Text
-                style={[
-                  styles.infoValue,
-                  dynamicStyles.text,
-                  styles.referenceId,
-                ]}
-                numberOfLines={1}
-              >
-                {transaction.transactionReference}
-              </Text>
-            </View>
-          )}
-
-          {transaction.updatedAt &&
-            transaction.updatedAt !== transaction.createdAt && (
+          {cleanDescription &&
+            cleanDescription !==
+              getTransactionTypeLabel(
+                transaction.transactionType,
+                transaction.metadata
+              ) && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-                  Last Updated
+                  Description
                 </Text>
-                <Text style={[styles.infoValue, dynamicStyles.text]}>
-                  {formatDate(transaction.updatedAt)}
+                <Text
+                  style={[
+                    styles.infoValue,
+                    dynamicStyles.text,
+                    { flex: 1, textAlign: "right" },
+                  ]}
+                >
+                  {cleanDescription}
                 </Text>
               </View>
             )}
 
-          {transaction.id && (
+          {transaction.transactionReference && (
             <View style={styles.infoRow}>
               <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>
-                Transaction ID
+                Reference
               </Text>
               <Text
                 style={[
                   styles.infoValue,
                   dynamicStyles.text,
                   styles.referenceId,
+                  { flex: 1, textAlign: "right" },
                 ]}
                 numberOfLines={1}
               >
-                {transaction.id}
+                {transaction.transactionReference}
               </Text>
             </View>
           )}
@@ -1292,6 +1936,133 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
+  },
+  walletSummaryCard: {
+    margin: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  walletSummaryTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.sm,
+  },
+  walletSummaryLabel: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+  },
+  walletSummaryBalance: {
+    fontSize: 22,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+    marginTop: theme.spacing.xs,
+  },
+  walletSummaryStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.sm,
+  },
+  walletStat: {
+    flex: 1,
+  },
+  walletStatDivider: {
+    width: 1,
+    height: 26,
+    backgroundColor: theme.colors.borderLight,
+    opacity: 0.6,
+  },
+  walletStatLabel: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+  },
+  walletStatValue: {
+    marginTop: 2,
+    fontSize: 13,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+  },
+  walletDirectionPills: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  directionPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "transparent",
+  },
+  directionPillActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  directionPillText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.textSecondary,
+  },
+  directionPillTextActive: {
+    color: theme.colors.white,
+  },
+  walletSearchRow: {
+    marginTop: theme.spacing.sm,
+  },
+  walletSearchInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 8,
+  },
+  walletSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    paddingVertical: 0,
+  },
+  walletSearchClear: {
+    paddingLeft: theme.spacing.xs,
+  },
+  walletChipRow: {
+    marginTop: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+    gap: theme.spacing.xs,
+  },
+  walletChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  walletChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  walletChipText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+  },
+  walletChipTextActive: {
+    color: theme.colors.white,
+  },
+  walletGroupHeader: {
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.xs,
+  },
+  walletGroupHeaderText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
   },
   summaryLabel: {
     fontSize: 14,
@@ -1421,14 +2192,13 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: "90%",
     maxWidth: 500,
-    height: "90%",
-    justifyContent: "flex-end",
+    maxHeight: "80%",
+    justifyContent: "center",
     alignItems: "center",
-    paddingBottom: theme.spacing.md,
   },
   modalContent: {
     borderRadius: 24,
-    height: "100%",
+    maxHeight: "100%",
     shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -1438,16 +2208,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   detailContainer: {
-    flex: 1,
-    height: "100%",
     backgroundColor: theme.colors.background,
+    maxHeight: "100%",
   },
   detailHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },
@@ -1461,18 +2230,19 @@ const styles = StyleSheet.create({
   },
   detailIconSection: {
     alignItems: "center",
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
   },
   detailIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
   },
   detailTypeLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
     fontFamily: theme.fonts.bold,
     marginBottom: theme.spacing.xs,
@@ -1499,9 +2269,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.bold,
   },
   balanceSection: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.sm,
     borderRadius: 12,
     borderWidth: 1,
   },
@@ -1515,16 +2285,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },
   newBalanceRow: {
     borderBottomWidth: 0,
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 2,
-    borderTopColor: theme.colors.success + "40",
+    paddingTop: 8,
   },
   balanceLabelContainer: {
     flexDirection: "row",
@@ -1558,9 +2325,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   infoSection: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.sm,
     borderRadius: 12,
     borderWidth: 1,
   },
@@ -1568,7 +2335,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },

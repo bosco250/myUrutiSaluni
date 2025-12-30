@@ -115,6 +115,59 @@ export default function AIConsultantScreen({
     },
   };
 
+  const analyzePhoto = useCallback(async (photoToAnalyze?: string) => {
+    const photoToUse = photoToAnalyze || photoUri;
+    if (!photoToUse) {
+      setError("No photo to analyze");
+      setLoading(false);
+      return;
+    }
+
+    // Reset cancellation flag
+    cancelRequestRef.current = false;
+    setIsCancelled(false);
+
+    try {
+      setAnalyzing(true);
+      setError(null);
+
+      // Call real AI service
+      const analysis = await aiService.analyzeFace(photoToUse);
+
+      // Check if cancelled before updating state
+      if (cancelRequestRef.current) {
+        return;
+      }
+
+      // Analysis already includes imageUrl from backend
+      setFaceAnalysis(analysis);
+
+      // Cache the analysis results
+      try {
+        await AsyncStorage.setItem(
+          CACHED_ANALYSIS_KEY,
+          JSON.stringify(analysis)
+        );
+      } catch (error) {
+        console.error("Error saving analysis to cache:", error);
+      }
+    } catch (error: any) {
+      // Check if cancelled
+      if (cancelRequestRef.current) {
+        return;
+      }
+      console.error("Error analyzing face:", error);
+      setError(error.message || "Failed to analyze face. Please try again.");
+      // Show fallback mock data on error
+      setFaceAnalysis(mockFaceAnalysis);
+    } finally {
+      if (!cancelRequestRef.current) {
+        setAnalyzing(false);
+        setLoading(false);
+      }
+    }
+  }, [photoUri]);
+
   useEffect(() => {
     const loadPhotoAndAnalyze = async () => {
       let shouldAnalyze = false;
@@ -201,59 +254,6 @@ export default function AIConsultantScreen({
 
     loadPhotoAndAnalyze();
   }, [photoUri, analyzePhoto]);
-
-  const analyzePhoto = useCallback(async (photoToAnalyze?: string) => {
-    const photoToUse = photoToAnalyze || photoUri;
-    if (!photoToUse) {
-      setError("No photo to analyze");
-      setLoading(false);
-      return;
-    }
-
-    // Reset cancellation flag
-    cancelRequestRef.current = false;
-    setIsCancelled(false);
-
-    try {
-      setAnalyzing(true);
-      setError(null);
-
-      // Call real AI service
-      const analysis = await aiService.analyzeFace(photoToUse);
-
-      // Check if cancelled before updating state
-      if (cancelRequestRef.current) {
-        return;
-      }
-
-      // Analysis already includes imageUrl from backend
-      setFaceAnalysis(analysis);
-
-      // Cache the analysis results
-      try {
-        await AsyncStorage.setItem(
-          CACHED_ANALYSIS_KEY,
-          JSON.stringify(analysis)
-        );
-      } catch (error) {
-        console.error("Error saving analysis to cache:", error);
-      }
-    } catch (error: any) {
-      // Check if cancelled
-      if (cancelRequestRef.current) {
-        return;
-      }
-      console.error("Error analyzing face:", error);
-      setError(error.message || "Failed to analyze face. Please try again.");
-      // Show fallback mock data on error
-      setFaceAnalysis(mockFaceAnalysis);
-    } finally {
-      if (!cancelRequestRef.current) {
-        setAnalyzing(false);
-        setLoading(false);
-      }
-    }
-  }, [photoUri]);
 
   const handleCancelAnalysis = () => {
     cancelRequestRef.current = true;

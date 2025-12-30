@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { theme } from "../theme";
 
 export enum AppointmentStatus {
   PENDING = "pending",
@@ -45,6 +46,7 @@ export interface Appointment {
   };
   customer?: {
     id: string;
+    phone?: string;
     user?: {
       fullName: string;
       email: string;
@@ -67,7 +69,7 @@ export interface CreateAppointmentDto {
 export interface TimeSlot {
   startTime: string;
   endTime: string;
-  available: boolean | string;  // API may return boolean or string
+  available: boolean | string; // API may return boolean or string
   reason?: string;
   price?: number;
 }
@@ -124,27 +126,51 @@ class AppointmentsService {
    * Backend automatically filters by user's salon based on authentication
    * Supports filtering by "my appointments" for employees
    */
-  async getSalonAppointments(filters?: { myAppointments?: boolean; salonId?: string }): Promise<Appointment[]> {
+  async getSalonAppointments(filters?: {
+    myAppointments?: boolean;
+    salonId?: string;
+  }): Promise<Appointment[]> {
     try {
       const params = new URLSearchParams();
-      if (filters?.myAppointments) params.append('myAppointments', 'true');
-      if (filters?.salonId) params.append('salonId', filters.salonId);
+      if (filters?.myAppointments) params.append("myAppointments", "true");
+      if (filters?.salonId) params.append("salonId", filters.salonId);
 
-      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const queryString = params.toString() ? `?${params.toString()}` : "";
       const response = await api.get<any>(`/appointments${queryString}`);
-      
+
       let appointments: Appointment[] = [];
-      
+
+      // Handle different response formats
       if (response) {
         if (Array.isArray(response)) {
           appointments = response;
         } else if (response.data && Array.isArray(response.data)) {
           appointments = response.data;
+        } else if (
+          response.appointments &&
+          Array.isArray(response.appointments)
+        ) {
+          appointments = response.appointments;
+        } else if (typeof response === "object" && !response.data) {
+          // If response is an object but not an array, log it for debugging
+          console.warn(
+            "[AppointmentsService] Unexpected response format:",
+            response
+          );
+          appointments = [];
         }
       }
-      
+
+      console.log(
+        `[AppointmentsService] Loaded ${appointments.length} appointment(s) for salon`
+      );
+
       return appointments;
     } catch (error: any) {
+      console.error(
+        "[AppointmentsService] Error fetching salon appointments:",
+        error
+      );
       if (error.status === 403 || error.status === 404) {
         return [];
       }
@@ -167,18 +193,23 @@ class AppointmentsService {
       if (serviceId) {
         queryString += `&serviceId=${encodeURIComponent(serviceId)}`;
       }
-      
+
       const response = await api.get<any>(
         `/appointments/availability/${employeeId}/slots${queryString}`
       );
-      
+
       let slots: TimeSlot[] = [];
-      
+
       // Extract slots - handle all possible response structures
-      if (response && typeof response === 'object') {
+      if (response && typeof response === "object") {
         if ((response as any).data && Array.isArray((response as any).data)) {
           slots = (response as any).data;
-        } else if ((response as any).data && typeof (response as any).data === 'object' && (response as any).data.data && Array.isArray((response as any).data.data)) {
+        } else if (
+          (response as any).data &&
+          typeof (response as any).data === "object" &&
+          (response as any).data.data &&
+          Array.isArray((response as any).data.data)
+        ) {
           slots = (response as any).data.data;
         } else if (Array.isArray(response)) {
           slots = response;
@@ -190,10 +221,10 @@ class AppointmentsService {
         .filter((slot) => slot && slot.startTime && slot.endTime)
         .map((slot) => {
           let available = true;
-          if (typeof slot.available === 'boolean') {
+          if (typeof slot.available === "boolean") {
             available = slot.available;
-          } else if (typeof slot.available === 'string') {
-            available = slot.available.toLowerCase() === 'true';
+          } else if (typeof slot.available === "string") {
+            available = slot.available.toLowerCase() === "true";
           }
 
           return {
@@ -285,7 +316,7 @@ class AppointmentsService {
         suggestions?: TimeSlot[];
         reason?: string;
       }>("/appointments/availability/validate", data);
-      
+
       // Handle wrapped response
       if ((response as any).data) {
         return (response as any).data;
@@ -435,24 +466,25 @@ class AppointmentsService {
 
   /**
    * Get status color for appointment
+   * Uses theme colors for consistency
    */
   getStatusColor(status: AppointmentStatus): string {
     switch (status) {
       case AppointmentStatus.CONFIRMED:
-        return "#4CAF50";
+        return theme.colors.success;
       case AppointmentStatus.BOOKED:
-        return "#2196F3";
+        return theme.colors.info;
       case AppointmentStatus.PENDING:
-        return "#FF9800";
+        return theme.colors.warning;
       case AppointmentStatus.IN_PROGRESS:
-        return "#9C27B0";
+        return theme.colors.secondary;
       case AppointmentStatus.COMPLETED:
-        return "#607D8B";
+        return theme.colors.gray500;
       case AppointmentStatus.CANCELLED:
       case AppointmentStatus.NO_SHOW:
-        return "#F44336";
+        return theme.colors.error;
       default:
-        return "#757575";
+        return theme.colors.textSecondary;
     }
   }
 }

@@ -77,8 +77,10 @@ class ReviewsService {
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.offset) params.append('offset', filters.offset.toString());
 
+    // PERFORMANCE: Cache reviews for 2 minutes (they don't change frequently)
     return api.get<{ reviews: Review[]; total: number; averageRating: number }>(
-      `/reviews?${params.toString()}`
+      `/reviews?${params.toString()}`,
+      { cache: true, cacheDuration: 120000 }
     );
   }
 

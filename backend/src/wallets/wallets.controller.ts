@@ -14,7 +14,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { CreateWalletTransactionDto } from './dto/create-wallet-transaction.dto';
-import { WalletTransactionType } from './entities/wallet-transaction.entity';
 
 @ApiTags('Wallets')
 @ApiBearerAuth()
@@ -43,19 +42,17 @@ export class WalletsController {
       throw new BadRequestException('Phone number is required');
     }
 
-    const wallet = await this.walletsService.getOrCreateWallet(user.id);
+    return this.walletsService.requestWithdrawal({
+      userId: user.id,
+      amount: body.amount,
+      phoneNumber: body.phoneNumber,
+    });
+  }
 
-    if (Number(wallet.balance) < body.amount) {
-      throw new BadRequestException('Insufficient balance');
-    }
-
-    // Create withdrawal transaction
-    return this.walletsService.createTransaction(
-      wallet.id,
-      WalletTransactionType.WITHDRAWAL,
-      body.amount,
-      `Withdrawal to ${body.phoneNumber}`,
-    );
+  @Get('transactions/:transactionId')
+  @ApiOperation({ summary: 'Get wallet transaction by ID' })
+  getTransactionById(@Param('transactionId') transactionId: string) {
+    return this.walletsService.getWalletTransactionById(transactionId);
   }
 
   @Get(':userId')
