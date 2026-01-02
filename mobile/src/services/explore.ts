@@ -12,6 +12,9 @@ export interface Service {
   durationMinutes: number;
   basePrice: number;
   isActive: boolean;
+  images?: string[];
+  category?: string;
+  targetGender?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -19,6 +22,9 @@ export interface Service {
     id: string;
     name: string;
     ownerId: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
   };
 }
 

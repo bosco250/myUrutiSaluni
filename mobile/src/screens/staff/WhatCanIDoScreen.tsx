@@ -6,7 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePermissions } from '../../context/PermissionContext';
 import {
@@ -120,20 +122,36 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={isLoading} onRefresh={refreshPermissions} />
-      }
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>What Can I Do?</Text>
-        <Text style={styles.subtitle}>
-          {activeSalon?.salonName || 'Your capabilities'} •{' '}
-          {permissions.length} active permissions
-        </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Top Header with Back Button */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation?.goBack?.()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>My Access Control</Text>
+        <View style={styles.placeholder} />
       </View>
+
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refreshPermissions} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>What Can I Do?</Text>
+          <Text style={styles.subtitle}>
+            {activeSalon?.salonName || 'Your capabilities'} •{' '}
+            {permissions.length} active permissions
+          </Text>
+        </View>
 
       {/* Owner/Admin Badge */}
       {(isOwner || isAdmin) && (
@@ -334,15 +352,45 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.footer} />
-    </ScrollView>
+        <View style={styles.footer} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  placeholder: {
+    width: 40,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     padding: 20,

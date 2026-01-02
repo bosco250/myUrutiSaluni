@@ -1124,18 +1124,13 @@ const styles = StyleSheet.create({
     paddingBottom: theme.componentSpacing.screenPaddingLarge,
   },
 
-  // Header
+  // Header - Compact, no shadows
   header: {
-    paddingTop: theme.componentSpacing.screenPadding,
+    paddingTop: theme.spacing.md,
     paddingHorizontal: theme.componentSpacing.screenPadding,
-    paddingBottom: theme.componentSpacing.screenPaddingLarge + 50,
+    paddingBottom: 60, // Reduced for compact design
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
   },
   topBar: {
     flexDirection: "row",
@@ -1224,39 +1219,34 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 12,
     marginHorizontal: theme.spacing.xs,
     alignItems: "center",
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
     borderWidth: 1,
   },
   statIconContainer: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   statValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "700",
     fontFamily: theme.fontFamilies.bold,
-    marginBottom: 4,
+    marginBottom: 2,
     letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 9,
     textAlign: "center",
     fontFamily: theme.fontFamilies.medium,
     fontWeight: "600",
-    letterSpacing: 0.5,
-    lineHeight: 14,
+    letterSpacing: 0.3,
+    lineHeight: 12,
   },
 
   // Section
@@ -1297,15 +1287,10 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     width: "48.5%",
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    borderRadius: 20,
+    padding: 14,
     borderWidth: 1,
-    minHeight: 120,
+    minHeight: 100,
   },
   quickActionHeader: {
     flexDirection: "row",
@@ -1357,16 +1342,11 @@ const styles = StyleSheet.create({
 
   // Schedule Card
   scheduleCard: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    minHeight: 100,
+    minHeight: 90,
   },
   scheduleCardLeft: {
     flexDirection: "row",
@@ -1438,12 +1418,12 @@ const styles = StyleSheet.create({
 
   // Empty State
   emptyCard: {
-    borderRadius: 16,
-    padding: 40,
+    borderRadius: 20,
+    padding: 32,
     alignItems: "center",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderStyle: "dashed",
-    minHeight: 200,
+    minHeight: 160,
     justifyContent: "center",
   },
   emptyText: {

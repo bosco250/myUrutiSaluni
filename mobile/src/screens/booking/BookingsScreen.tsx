@@ -35,7 +35,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
   const { user } = useAuth();
 
   // Calendar state
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Appointments state
@@ -142,41 +142,40 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
     setRefreshing(false);
   };
 
-  const handlePreviousMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
+  const handlePreviousWeek = () => {
+    const newDate = new Date(currentWeek);
+    newDate.setDate(currentWeek.getDate() - 7);
+    setCurrentWeek(newDate);
   };
 
-  const handleNextMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    );
+  const handleNextWeek = () => {
+    const newDate = new Date(currentWeek);
+    newDate.setDate(currentWeek.getDate() + 7);
+    setCurrentWeek(newDate);
   };
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
   };
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
+  const getWeekDays = (centerDate: Date): Date[] => {
+    const days: Date[] = [];
+    const startOfWeek = new Date(centerDate);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day; // Get Sunday of this week
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
 
-    const days: (Date | null)[] = [];
-
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      days.push(date);
     }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day));
-    }
-
     return days;
+  };
+
+  const getDayName = (date: Date): string => {
+    return date.toLocaleDateString("en-US", { weekday: "short" });
   };
 
   const isToday = (date: Date | null) => {
@@ -389,7 +388,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
     },
   };
 
-  const days = getDaysInMonth(currentDate);
+  const weekDays = getWeekDays(currentWeek);
   const filterTabs: { id: FilterTab; label: string; count: number }[] = [
     {
       id: "all",
@@ -530,99 +529,76 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Calendar */}
+        {/* Compact Week Calendar */}
         <View style={[styles.calendarContainer, dynamicStyles.card]}>
-          <View style={styles.monthHeader}>
+          <View style={styles.weekDaysContainer}>
             <TouchableOpacity
-              onPress={handlePreviousMonth}
-              style={styles.monthButton}
+              style={styles.weekNavButton}
+              onPress={handlePreviousWeek}
               activeOpacity={0.7}
             >
               <MaterialIcons
                 name="chevron-left"
-                size={24}
-                color={dynamicStyles.text.color}
+                size={22}
+                color={theme.colors.primary}
               />
             </TouchableOpacity>
-            <Text style={[styles.monthText, dynamicStyles.text]}>
-              {currentDate.toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </Text>
-            <TouchableOpacity
-              onPress={handleNextMonth}
-              style={styles.monthButton}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name="chevron-right"
-                size={24}
-                color={dynamicStyles.text.color}
-              />
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.daysOfWeek}>
-            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-              <Text key={day} style={[styles.dayOfWeek, dynamicStyles.text]}>
-                {day}
-              </Text>
-            ))}
-          </View>
-
-          <View style={styles.calendarGrid}>
-            {days.map((date, index) => {
-              if (!date) {
-                return (
-                  <View key={`empty-${index}`} style={styles.calendarDay} />
-                );
-              }
-
-              const isSelectedDate = isSelected(date);
-              const isTodayDate = isToday(date);
+            {weekDays.map((date, index) => {
+              const count = getAppointmentsForDate(date);
+              const dateIsToday = isToday(date);
+              const dateIsSelected = isSelected(date);
               const isPastDate = isPast(date);
-              const appointmentCount = getAppointmentsForDate(date);
-              const hasAppointments = appointmentCount > 0;
 
               return (
                 <TouchableOpacity
-                  key={date.toISOString()}
+                  key={index}
                   style={[
-                    styles.calendarDay,
-                    isSelectedDate && styles.selectedDay,
-                    isTodayDate && !isSelectedDate && styles.todayDay,
+                    styles.weekDay,
+                    dateIsSelected && styles.weekDaySelected,
+                    dateIsToday && !dateIsSelected && styles.weekDayToday,
                   ]}
-                  onPress={() => !isPastDate && handleDateSelect(date)}
-                  disabled={isPastDate}
+                  onPress={() => handleDateSelect(date)}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
-                      styles.dayText,
+                      styles.weekDayName,
+                      dynamicStyles.textSecondary,
+                      dateIsSelected && styles.weekDayNameSelected,
+                      dateIsToday && !dateIsSelected && styles.weekDayNameToday,
+                    ]}
+                  >
+                    {getDayName(date)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.weekDayNumber,
                       dynamicStyles.text,
-                      isSelectedDate && styles.selectedDayText,
-                      isPastDate && styles.pastDayText,
-                      isTodayDate && !isSelectedDate && styles.todayDayText,
+                      dateIsSelected && styles.weekDayNumberSelected,
+                      isPastDate && styles.weekDayNumberPast,
+                      dateIsToday && !dateIsSelected && styles.weekDayNumberToday,
                     ]}
                   >
                     {date.getDate()}
                   </Text>
-                  {hasAppointments && !isPastDate && (
+                  {count > 0 && (
                     <View
                       style={[
-                        styles.appointmentDot,
-                        isSelectedDate && styles.appointmentDotSelected,
+                        styles.weekAppointmentDot,
+                        dateIsSelected && styles.weekAppointmentDotSelected,
+                        count > 1 && styles.weekAppointmentDotWithCount,
+                        (count > 1 && dateIsSelected) && { backgroundColor: theme.colors.white }
                       ]}
                     >
-                      {appointmentCount > 1 && (
+                      {count > 1 && (
                         <Text
                           style={[
-                            styles.appointmentDotText,
-                            isSelectedDate && styles.appointmentDotTextSelected,
+                            styles.weekAppointmentDotText,
+                            dateIsSelected && styles.weekAppointmentDotTextSelected,
                           ]}
                         >
-                          {appointmentCount > 9 ? "9+" : appointmentCount}
+                          {count}
                         </Text>
                       )}
                     </View>
@@ -630,6 +606,25 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                 </TouchableOpacity>
               );
             })}
+
+            <TouchableOpacity
+              style={styles.weekNavButton}
+              onPress={handleNextWeek}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name="chevron-right"
+                size={22}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Month/Year Label below or above? Above looks better for context */}
+          <View style={{ marginTop: theme.spacing.sm, alignItems: 'center' }}>
+            <Text style={[styles.monthText, dynamicStyles.text, { fontSize: 13, opacity: 0.7 }]}>
+              {currentWeek.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </Text>
           </View>
         </View>
 
@@ -649,19 +644,21 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
 
           {filteredAppointments.length === 0 ? (
             <View style={[styles.emptyCard, dynamicStyles.card]}>
-              <MaterialIcons
-                name={
-                  selectedDate !== null
-                    ? "event-busy"
-                    : selectedFilter === "completed"
-                      ? "check-circle-outline"
-                      : selectedFilter === "cancelled"
-                        ? "cancel"
-                        : "event-busy"
-                }
-                size={48}
-                color={dynamicStyles.textSecondary.color}
-              />
+              <View style={[styles.appointmentIconContainer, { width: 64, height: 64, borderRadius: 32, marginBottom: theme.spacing.md }]}>
+                <MaterialIcons
+                  name={
+                    selectedDate !== null
+                      ? "event-busy"
+                      : selectedFilter === "completed"
+                        ? "check-circle-outline"
+                        : selectedFilter === "cancelled"
+                          ? "cancel"
+                          : "event-busy"
+                  }
+                  size={32}
+                  color={theme.colors.primary}
+                />
+              </View>
               <Text style={[styles.emptyText, dynamicStyles.text]}>
                 {selectedDate !== null
                   ? `No appointments on ${selectedDate.toLocaleDateString(
@@ -717,7 +714,11 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
               {filteredAppointments.map((appointment) => (
                 <TouchableOpacity
                   key={appointment.id}
-                  style={[styles.appointmentCard, dynamicStyles.card]}
+                  style={[
+                    styles.appointmentCard, 
+                    dynamicStyles.card,
+                    { borderLeftColor: appointmentsService.getStatusColor(appointment.status) }
+                  ]}
                   activeOpacity={0.7}
                   onPress={() =>
                     navigation?.navigate("AppointmentDetail", {
@@ -738,7 +739,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                     </View>
                     <View style={styles.appointmentInfo}>
                       <Text
-                        style={[styles.appointmentService, dynamicStyles.text]}
+                        style={[styles.appointmentService, dynamicStyles.text, { fontSize: 16 }]}
                       >
                         {appointment.service?.name || "Service"}
                       </Text>
@@ -746,6 +747,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                         style={[
                           styles.appointmentSalon,
                           dynamicStyles.textSecondary,
+                          { marginTop: 1 }
                         ]}
                       >
                         {appointment.salon?.name || "Salon"}
@@ -790,16 +792,16 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                       <MaterialIcons
                         name="event"
                         size={14}
-                        color={dynamicStyles.textSecondary.color}
+                        color={theme.colors.primary}
                       />
                       <Text
                         style={[
                           styles.appointmentDateTime,
-                          dynamicStyles.textSecondary,
+                          dynamicStyles.text,
+                          { fontWeight: '600' }
                         ]}
                       >
-                        Scheduled: {formatDateLabel(appointment.scheduledStart)}{" "}
-                        {formatTime(appointment.scheduledStart)}
+                        {formatDateLabel(appointment.scheduledStart)} at {formatTime(appointment.scheduledStart)}
                       </Text>
                     </View>
 
@@ -833,7 +835,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                     {appointment.salonEmployee?.user?.fullName && (
                       <View style={styles.appointmentEmployee}>
                         <MaterialIcons
-                          name="person"
+                          name="face"
                           size={14}
                           color={dynamicStyles.textSecondary.color}
                         />
@@ -851,7 +853,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                     {appointment.serviceAmount && (
                       <View style={styles.appointmentPrice}>
                         <MaterialIcons
-                          name="attach-money"
+                          name="payments"
                           size={14}
                           color={theme.colors.primary}
                         />
@@ -861,7 +863,7 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
                             { color: theme.colors.primary },
                           ]}
                         >
-                          ${Number(appointment.serviceAmount).toFixed(2)}
+                          RWF {Number(appointment.serviceAmount).toLocaleString()}
                         </Text>
                       </View>
                     )}
@@ -901,8 +903,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: 18,
+    borderRadius: 20,
     gap: theme.spacing.xs,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   newBookingButtonText: {
     color: theme.colors.white,
@@ -948,12 +955,14 @@ const styles = StyleSheet.create({
   filterTab: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm - 2,
+    borderRadius: 25,
     backgroundColor: theme.colors.backgroundSecondary,
-    marginRight: theme.spacing.xs,
-    gap: theme.spacing.xs / 2,
+    marginRight: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   filterTabActive: {
     shadowColor: theme.colors.primary,
@@ -992,18 +1001,16 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   calendarContainer: {
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    borderRadius: 12,
-    paddingTop: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
-    paddingBottom: theme.spacing.xs,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+    borderRadius: 20,
+    paddingTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.backgroundSecondary + "50",
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   monthHeader: {
     flexDirection: "row",
@@ -1035,68 +1042,93 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
   },
-  calendarDay: {
-    width: "14.28%",
-    aspectRatio: 1,
-    justifyContent: "center",
+  weekDaysContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    borderRadius: 8,
+    justifyContent: "space-between",
   },
-  selectedDay: {
+  weekNavButton: {
+    padding: theme.spacing.xs,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weekDay: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+    borderRadius: 12,
+    marginHorizontal: 2,
+    position: "relative",
+  },
+  weekDayToday: {
+    backgroundColor: theme.colors.primary + "15",
+  },
+  weekDaySelected: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 8,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
-  todayDay: {
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: 8,
+  weekDayName: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginBottom: 4,
+    fontFamily: theme.fonts.medium,
+    textTransform: "uppercase",
+    opacity: 0.6,
   },
-  dayText: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-  },
-  selectedDayText: {
+  weekDayNameSelected: {
     color: theme.colors.white,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    opacity: 1,
   },
-  todayDayText: {
+  weekDayNameToday: {
     color: theme.colors.primary,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    opacity: 1,
   },
-  pastDayText: {
+  weekDayNumber: {
+    fontSize: 16,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+  },
+  weekDayNumberSelected: {
+    color: theme.colors.white,
+  },
+  weekDayNumberToday: {
+    color: theme.colors.primary,
+  },
+  weekDayNumberPast: {
     opacity: 0.3,
   },
-  appointmentDot: {
+  weekAppointmentDot: {
     position: "absolute",
-    bottom: 2,
+    top: 4,
+    right: 4,
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: theme.colors.primary,
   },
-  appointmentDotSelected: {
+  weekAppointmentDotSelected: {
     backgroundColor: theme.colors.white,
   },
-  appointmentDotText: {
+  weekAppointmentDotWithCount: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  weekAppointmentDotText: {
     fontSize: 8,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
     color: theme.colors.white,
-    position: "absolute",
-    bottom: -2,
-    right: -4,
-    minWidth: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.primary,
     textAlign: "center",
-    lineHeight: 12,
-    paddingHorizontal: 2,
   },
-  appointmentDotTextSelected: {
-    backgroundColor: theme.colors.white,
+  weekAppointmentDotTextSelected: {
     color: theme.colors.primary,
   },
   section: {
@@ -1123,15 +1155,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   appointmentCard: {
-    borderRadius: 12,
-    padding: theme.spacing.sm + 2,
-    marginBottom: theme.spacing.sm,
+    borderRadius: 20,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    borderLeftWidth: 3,
+    shadowRadius: 8,
+    elevation: 3,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderLeftWidth: 4,
     borderLeftColor: theme.colors.primary,
   },
   appointmentHeader: {
@@ -1141,10 +1174,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   appointmentIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.primaryLight + "20",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary + "10",
     justifyContent: "center",
     alignItems: "center",
   },

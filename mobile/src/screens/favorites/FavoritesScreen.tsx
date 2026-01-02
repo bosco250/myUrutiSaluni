@@ -8,6 +8,7 @@ import {
   Image,
   RefreshControl,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -31,10 +32,11 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   // Dynamic styles
-  const bgColor = isDark ? theme.colors.gray900 : theme.colors.background;
-  const cardColor = isDark ? theme.colors.gray800 : theme.colors.white;
+  const bgColor = isDark ? theme.colors.backgroundDark : theme.colors.background;
+  const cardColor = isDark ? theme.colors.gray900 : theme.colors.white;
   const textColor = isDark ? theme.colors.white : theme.colors.text;
   const subTextColor = isDark ? theme.colors.gray400 : theme.colors.textSecondary;
+  const dividerColor = isDark ? theme.colors.gray800 : theme.colors.borderLight;
 
   const loadFavorites = useCallback(async () => {
     try {
@@ -61,8 +63,8 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
 
   const handleRemoveFavorite = async (favoriteId: string, employeeName: string) => {
     Alert.alert(
-      'Remove Favorite',
-      `Remove ${employeeName} from your favorites?`,
+      'Remove from Favorites?',
+      `Are you sure you want to remove ${employeeName}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -85,8 +87,6 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
   };
 
   const handleRebook = (employee: FavoriteEmployee) => {
-    // Navigate to BookingFlow with salonId and pre-selected employeeId
-    // The booking flow will show service selection first, then proceed with the employee pre-selected
     navigation?.navigate('BookingFlow', {
       salonId: employee.employee.salonId,
       employeeId: employee.salonEmployeeId,
@@ -101,14 +101,17 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
   };
 
   if (loading) {
-    return <Loader fullscreen message="Loading favorites..." />;
+    return (
+        <View style={[styles.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
+            <Loader message="Loading favorites..." />
+        </View>
+    );
   }
 
   const renderFavoriteCard = (favorite: FavoriteEmployee) => {
     const employee = favorite.employee;
     const isRemoving = removingId === favorite.id;
 
-    // Skip rendering if employee data is not available
     if (!employee || !employee.user) {
       return null;
     }
@@ -118,64 +121,93 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
         key={favorite.id}
         style={[
           styles.favoriteCard,
-          { backgroundColor: cardColor, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight },
+          { 
+            backgroundColor: cardColor, 
+            borderColor: isDark ? theme.colors.gray800 : 'transparent',
+            // Elevation/Shadow only in light mode for cleanliness, stroke in dark mode
+            shadowOpacity: isDark ? 0 : 0.08,
+            borderWidth: isDark ? 1 : 0,
+          },
           isRemoving && styles.removingCard,
         ]}
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.profileSection}>
-            <View style={[styles.profileImageContainer, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.backgroundSecondary }]}>
-              {employee.user.profileImage ? (
-                <Image source={{ uri: employee.user.profileImage }} style={styles.profileImage} />
-              ) : (
-                <MaterialIcons name="person" size={32} color={theme.colors.primary} />
-              )}
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={[styles.employeeName, { color: textColor }]} numberOfLines={1}>
-                {employee.user.fullName}
-              </Text>
-              <Text style={[styles.specialization, { color: subTextColor }]} numberOfLines={1}>
-                {employee.specialization || 'Stylist'} • {employee.salon?.name || 'Salon'}
-              </Text>
-              {employee.rating && (
-                <View style={styles.ratingRow}>
-                  <MaterialIcons name="star" size={14} color="#FFB800" />
-                  <Text style={styles.ratingText}>{employee.rating.toFixed(1)}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[styles.favoriteButton, isRemoving && styles.favoriteButtonDisabled]}
-            onPress={() => handleRemoveFavorite(favorite.id, employee.user.fullName)}
-            disabled={isRemoving}
-          >
-            <MaterialIcons
-              name="favorite"
-              size={24}
-              color={isRemoving ? theme.colors.gray400 : theme.colors.error}
-            />
-          </TouchableOpacity>
-        </View>
+        <View style={styles.cardContent}>
+            {/* Top Row: Image + Info + Heart */}
+            <View style={styles.cardHeaderRow}>
+                <TouchableOpacity 
+                    activeOpacity={0.8}
+                    onPress={() => handleViewProfile(favorite)}
+                    style={styles.imageContainer}
+                >
+                    {employee.user.profileImage ? (
+                        <Image source={{ uri: employee.user.profileImage }} style={styles.profileImage} />
+                    ) : (
+                        <View style={[styles.placeholderImage, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}>
+                             <MaterialIcons name="person" size={28} color={theme.colors.primary} />
+                        </View>
+                    )}
+                    {/* Online/Status Indicator can go here */}
+                </TouchableOpacity>
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.rebookButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => handleRebook(favorite)}
-            activeOpacity={0.8}
-            disabled={isRemoving}
-          >
-            <Text style={styles.rebookButtonText}>Rebook</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.profileButton, { borderColor: isDark ? theme.colors.gray600 : theme.colors.border }]}
-            onPress={() => handleViewProfile(favorite)}
-            activeOpacity={0.8}
-            disabled={isRemoving}
-          >
-            <Text style={[styles.profileButtonText, { color: textColor }]}>Profile</Text>
-          </TouchableOpacity>
+                <View style={styles.infoContainer}>
+                    <View style={styles.nameRow}>
+                        <Text style={[styles.employeeName, { color: textColor }]} numberOfLines={1}>
+                            {employee.user.fullName}
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.favoriteButton]}
+                            onPress={() => handleRemoveFavorite(favorite.id, employee.user.fullName)}
+                            disabled={isRemoving}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <MaterialIcons
+                                name="favorite"
+                                size={22}
+                                color={isRemoving ? theme.colors.gray400 : theme.colors.error}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    <Text style={[styles.roleText, { color: subTextColor }]} numberOfLines={1}>
+                        {employee.specialization || 'Professional Stylist'}
+                    </Text>
+                    <Text style={[styles.salonText, { color: theme.colors.primary }]} numberOfLines={1}>
+                        {employee.salon?.name || 'Salon'}
+                    </Text>
+
+                    {employee.rating && (
+                        <View style={styles.ratingContainer}>
+                            <MaterialIcons name="star" size={14} color="#FFB800" />
+                            <Text style={[styles.ratingText, { color: textColor }]}>{employee.rating.toFixed(1)}</Text>
+                            <Text style={[styles.ratingCount, { color: subTextColor }]}>(50+ Reviews)</Text> 
+                        </View>
+                    )}
+                </View>
+            </View>
+
+            {/* Divider */}
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+            {/* Actions Row */}
+            <View style={styles.actionsRow}>
+                <TouchableOpacity
+                    style={[styles.actionButton, styles.secondaryButton, { borderColor: isDark ? theme.colors.gray700 : theme.colors.border }]}
+                    onPress={() => handleViewProfile(favorite)}
+                    activeOpacity={0.7}
+                    disabled={isRemoving}
+                >
+                    <Text style={[styles.actionButtonTextSecondary, { color: textColor }]}>View Profile</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                    style={[styles.actionButton, styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={() => handleRebook(favorite)}
+                    activeOpacity={0.8}
+                    disabled={isRemoving}
+                >
+                    <Text style={[styles.actionButtonTextPrimary]}>Book Now</Text>
+                </TouchableOpacity>
+            </View>
         </View>
       </View>
     );
@@ -183,17 +215,18 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color={textColor} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      
+      {/* Modern Header */}
+      <View style={[styles.header, { borderBottomColor: dividerColor }]}>
+        <TouchableOpacity 
+            onPress={() => navigation?.goBack?.()} 
+            style={[styles.backButton, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary }]}
+        >
+          <MaterialIcons name="arrow-back" size={20} color={textColor} />
         </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={[styles.headerTitle, { color: textColor }]}>Favorites</Text>
-          <Text style={[styles.headerSubtitle, { color: subTextColor }]}>
-            Your top professionals
-          </Text>
-        </View>
-        <View style={{ width: 40 }} />
+        <Text style={[styles.headerTitle, { color: textColor }]}>Favorites</Text>
+        <View style={styles.headerRightPlaceholder} /> 
       </View>
 
       <ScrollView
@@ -210,24 +243,29 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
       >
         {favorites.length === 0 ? (
           <View style={styles.emptyState}>
-            <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary }]}>
-              <MaterialIcons name="favorite-border" size={64} color={isDark ? theme.colors.gray600 : theme.colors.textSecondary} />
+             {/* Illustrated Empty State */}
+            <View style={[styles.emptyIconCircle, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray50 }]}>
+               <MaterialIcons name="favorite" size={40} color={theme.colors.gray300} style={{ opacity: 0.5 }} />
+               <View style={[styles.emptyIconOverlay, { backgroundColor: theme.colors.background }]}>
+                  <MaterialIcons name="favorite-border" size={64} color={theme.colors.primary} />
+               </View>
             </View>
+
             <Text style={[styles.emptyTitle, { color: textColor }]}>No Favorites Yet</Text>
             <Text style={[styles.emptyMessage, { color: subTextColor }]}>
-              Add your favorite stylists for quick access and easy rebooking
+              Save your top stylists here for quick access.
             </Text>
             <TouchableOpacity
-              style={[styles.exploreButton, { backgroundColor: theme.colors.primary }]}
+              style={[styles.exploreButton, { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary }]}
               onPress={() => navigation?.navigate('Explore')}
-              activeOpacity={0.8}
+              activeOpacity={0.9}
             >
-              <MaterialIcons name="explore" size={20} color="#FFFFFF" />
-              <Text style={styles.exploreButtonText}>Explore Stylists</Text>
+              <Text style={styles.exploreButtonText}>Find Professionals</Text>
+              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.favoritesContainer}>
+          <View style={styles.listContainer}>
             {favorites.map(renderFavoriteCard)}
           </View>
         )}
@@ -244,179 +282,207 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    // No border bottom by default for cleaner look, handled dynamically
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTextContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     fontFamily: theme.fonts.bold,
-    marginBottom: 2,
   },
-  headerSubtitle: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
+  headerRightPlaceholder: {
+    width: 40,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
-  favoritesContainer: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
+  listContainer: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.md,
   },
   favoriteCard: {
+    borderRadius: 20,
+    marginBottom: theme.spacing.xs,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  cardContent: {
+    padding: 12,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imageContainer: {
+    marginRight: theme.spacing.md,
+  },
+  profileImage: {
+    width: 48,
+    height: 48,
     borderRadius: 16,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  removingCard: {
-    opacity: 0.5,
+  placeholderImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardHeader: {
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.sm,
-  },
-  profileSection: {
-    flexDirection: 'row',
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  profileImageContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.sm,
-    overflow: 'hidden',
-  },
-  profileImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  profileInfo: {
-    flex: 1,
-    justifyContent: 'center',
+    marginBottom: 4,
   },
   employeeName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     fontFamily: theme.fonts.bold,
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
-  specialization: {
+  roleText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+    marginBottom: 2,
+  },
+  salonText: {
     fontSize: 13,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.medium,
     marginBottom: 4,
   },
-  ratingRow: {
+  ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   ratingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFB800',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+  },
+  ratingCount: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
   favoriteButton: {
-    padding: 8,
+    padding: 4,
   },
-  favoriteButtonDisabled: {
+  divider: {
+    height: 1,
+    marginVertical: theme.spacing.md,
     opacity: 0.5,
   },
-  actionButtons: {
+  actionsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
-  rebookButton: {
+  actionButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rebookButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  primaryButton: {
+    // bg handled inline
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  actionButtonTextPrimary: {
+    color: '#FFF',
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
-  profileButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  profileButtonText: {
-    fontSize: 15,
+  actionButtonTextSecondary: {
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
+  },
+  removingCard: {
+    opacity: 0.6,
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
-    paddingTop: 60,
+    marginTop: -40, // Visual center correction
   },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  emptyIconCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
+    position: 'relative',
+  },
+  emptyIconOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     fontFamily: theme.fonts.bold,
     marginBottom: 12,
+    textAlign: 'center',
   },
   emptyMessage: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: theme.fonts.regular,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
     marginBottom: 32,
+    maxWidth: 280,
   },
   exploreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   exploreButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
 });

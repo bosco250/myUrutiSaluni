@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsBoolean,
+  IsObject,
   Min,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -42,4 +43,22 @@ export class CreateServiceDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  targetGender?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Additional service metadata (category, targetGender, etc.)',
+  })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, any>;
 }

@@ -104,10 +104,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderRadius: theme.sizes.radius.md,
-    paddingHorizontal: theme.componentSpacing.inputHorizontal - 2,
-    paddingVertical: theme.componentSpacing.inputVertical - 4,
-    minHeight: 40,
+    borderRadius: 16,
+    paddingHorizontal: theme.spacing.md,
+    height: 54,
   },
   inputContainerFocused: {
     borderWidth: 2,

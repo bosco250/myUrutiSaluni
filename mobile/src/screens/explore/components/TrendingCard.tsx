@@ -1,84 +1,133 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../../theme";
 
 interface TrendingCardProps {
-  image: any; // Kept for compatibility but not used
+  image?: string | null;
   category: string;
   title: string;
   onPress?: () => void;
 }
 
+const CATEGORY_CONFIG: Record<string, { icon: keyof typeof MaterialIcons.glyphMap, color: string }> = {
+  Hair: { icon: "content-cut", color: "#FF6B6B" },
+  Nails: { icon: "spa", color: "#4ECDC4" },
+  Face: { icon: "face", color: "#FFE66D" },
+  Massage: { icon: "self-improvement", color: "#6B5B95" },
+  Barber: { icon: "content-cut", color: "#95A5A6" },
+  Makeup: { icon: "brush", color: "#FF9FF3" },
+  Other: { icon: "star", color: "#A8E6CF" },
+};
+
 export default function TrendingCard({
+  image,
   category,
   title,
   onPress,
 }: TrendingCardProps) {
-  // const { isDark } = useTheme();
+  // Determine fallback config based on category or default to 'Other'
+  // Use loose matching
+  const catKey = Object.keys(CATEGORY_CONFIG).find(k => category.includes(k)) || 'Other';
+  const config = CATEGORY_CONFIG[catKey];
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <View
-        style={[
-          styles.placeholderImage,
-          { backgroundColor: theme.colors.primaryLight },
-        ]}
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={onPress} 
+      activeOpacity={0.9} 
+    >
+      {image ? (
+        <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+      ) : (
+        <View style={[styles.placeholderContainer, { backgroundColor: config.color }]}>
+            <View style={styles.iconCircle}>
+                <MaterialIcons name={config.icon} size={40} color="#FFF" />
+            </View>
+        </View>
+      )}
+      
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.85)']}
+        style={styles.overlay}
       >
-        <MaterialIcons name="spa" size={48} color={theme.colors.primary} />
-      </View>
-      <View style={styles.overlay}>
-        <View style={styles.categoryTag}>
+        <View style={styles.categoryBadge}>
           <Text style={styles.categoryText}>{category}</Text>
         </View>
-        <Text style={styles.title}>{title}</Text>
-      </View>
+        <Text style={styles.title} numberOfLines={2}>{title}</Text>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 280,
-    height: 200,
-    borderRadius: 16,
-    marginRight: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    overflow: "hidden",
-    position: "relative",
+    width: 260,
+    height: 180,
+    borderRadius: 20,
+    marginRight: 16,
+    overflow: 'hidden', // Ensures image/gradient respects border radius
+    backgroundColor: theme.colors.backgroundSecondary,
+    
+    // Shadow
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
-  placeholderImage: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  placeholderContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.9,
+  },
+  iconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
   },
   overlay: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.overlayLight,
+    padding: 16,
+    paddingTop: 60, // Gradient height
+    justifyContent: 'flex-end',
   },
-  categoryTag: {
-    alignSelf: "flex-start",
-    backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   categoryText: {
-    color: theme.colors.text,
+    color: '#FFF',
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '700',
+    letterSpacing: 0.5,
     fontFamily: theme.fonts.medium,
   },
   title: {
-    color: theme.colors.white,
+    color: '#FFF',
     fontSize: 18,
-    fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-  },
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  }
 });

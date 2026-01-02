@@ -6,6 +6,15 @@ import { EmployeePermission } from "../constants/employeePermissions";
 import { salonService } from "../services/salon";
 import { useState, useEffect } from "react";
 
+// ===== GLOBAL SINGLETON LOCK =====
+// This prevents multiple component instances from fetching permissions simultaneously
+// Without this, BottomNavigation + navigation/index + other screens all try to fetch at once
+// creating exponential API call explosion that crashes the database
+let globalLoadingLock = false;
+let globalCachedSalonId: string | null = null;
+let globalCachedEmployeeId: string | null = null;
+let globalLoadPromise: Promise<{ salonId: string; employeeId: string } | null> | null = null;
+
 interface UseEmployeePermissionCheckOptions {
   salonId?: string;
   employeeId?: string;
@@ -29,169 +38,116 @@ export const useEmployeePermissionCheck = (
   >(employeeId);
   const [isLoadingEmployee, setIsLoadingEmployee] = useState(false);
 
+
+  // Clear state immediately when user logs out to prevent API calls
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setCurrentSalonId(undefined);
+      setCurrentEmployeeId(undefined);
+      setIsLoadingEmployee(false);
+      // CRITICAL: Clear global cache on logout to prevent stale data
+      globalCachedSalonId = null;
+      globalCachedEmployeeId = null;
+      globalLoadingLock = false;
+      globalLoadPromise = null;
+    }
+  }, [isAuthenticated, user]);
+
   // Auto-fetch salon and employee IDs if not provided
   useEffect(() => {
-    const loadEmployeeData = async () => {
-      // Don't make API calls if user is not authenticated
-      if (!isAuthenticated || !user) {
-        return;
+    // Early exit if not authenticated - prevents any API calls
+    if (!isAuthenticated || !user) {
+      return;
+    }
+
+    // Only for employees
+    if (user?.role !== UserRole.SALON_EMPLOYEE) {
+      return;
+    }
+
+    // Skip if autoFetch is disabled
+    if (!autoFetch) {
+      return;
+    }
+
+    // CRITICAL: Use global cache if already loaded to prevent duplicate API calls
+    if (globalCachedSalonId && globalCachedEmployeeId) {
+      if (!currentSalonId || !currentEmployeeId) {
+        setCurrentSalonId(globalCachedSalonId);
+        setCurrentEmployeeId(globalCachedEmployeeId);
       }
+      return;
+    }
 
-      // Only run if we don't have both IDs and haven't started loading
-      if (
-        user?.role === UserRole.SALON_EMPLOYEE &&
-        (!currentSalonId || !currentEmployeeId) &&
-        !isLoadingEmployee
-      ) {
-        setIsLoadingEmployee(true);
-        try {
-          // First, try the API endpoint to get all employee records for current user
-          try {
-            const employeeRecords =
-              await salonService.getEmployeeRecordsByUserId(String(user.id));
-
-            if (employeeRecords && employeeRecords.length > 0) {
-              // CRITICAL: Check which employee record has permissions
-              // An employee can have multiple records across different salons
-              // We want to use the one that has permissions granted
-              const { employeePermissionsService } = await import(
-                "../services/employeePermissions"
-              );
-
-              // Filter to only active employees first
-              const activeEmployees = employeeRecords.filter(
-                (emp) => emp.isActive
-              );
-
-              // Check permissions for all employees in parallel (more efficient)
-              const permissionChecks = await Promise.allSettled(
-                activeEmployees.map(async (employee) => {
-                  try {
-                    const permissions =
-                      await employeePermissionsService.getEmployeePermissions(
-                        employee.salonId,
-                        employee.id
-                      );
-                    const activePermissions = permissions.filter(
-                      (p) => p.isActive
-                    );
-                    return {
-                      employee,
-                      activePermissions,
-                      count: activePermissions.length,
-                    };
-                  } catch (error) {
-                    return {
-                      employee,
-                      activePermissions: [],
-                      count: 0,
-                      error,
-                    };
-                  }
-                })
-              );
-
-              // Find employee with most permissions (or any with permissions)
-              let bestEmployee: { employee: any; count: number } | null = null;
-
-              for (const result of permissionChecks) {
-                if (result.status === "fulfilled") {
-                  const { employee, count } = result.value;
-
-                  if (count > 0) {
-                    // Prefer employee with more permissions
-                    if (!bestEmployee || count > bestEmployee.count) {
-                      bestEmployee = { employee, count };
-                    }
-                  }
-                }
-              }
-
-              if (bestEmployee) {
-                // Found employee record with permissions - use this one!
-                setCurrentSalonId(bestEmployee.employee.salonId);
-                setCurrentEmployeeId(bestEmployee.employee.id);
-                return; // Found employee record with permissions, stop searching
-              }
-
-              // If no employee record has permissions, use the first active one
-              const activeEmployee =
-                employeeRecords.find((emp) => emp.isActive) ||
-                employeeRecords[0];
-              if (activeEmployee) {
-                setCurrentSalonId(activeEmployee.salonId);
-                setCurrentEmployeeId(activeEmployee.id);
-                return;
-              }
-            }
-          } catch {
-            // Silently try fallback
-          }
-
-          // Fallback: Try to get all salons and find where user is employee
-          const allSalons = await salonService.getAllSalons().catch(() => []);
-
-          // Try each salon to find employee record
-          for (const salon of allSalons) {
-            try {
-              const employee = await salonService.getCurrentEmployee(salon.id);
-              if (employee && String(employee.userId) === String(user.id)) {
-                setCurrentSalonId(employee.salonId);
-                setCurrentEmployeeId(employee.id);
-                return; // Found employee record, stop searching
-              }
-            } catch {
-              // Continue to next salon
-              continue;
-            }
-          }
-
-          // Last resort: Try to get employees from any salon
-          if (!currentSalonId && allSalons.length > 0) {
-            for (const salon of allSalons) {
-              try {
-                const employees = await salonService
-                  .getEmployees(salon.id)
-                  .catch(() => []);
-                const employee = employees.find(
-                  (emp: any) => String(emp.userId) === String(user.id)
-                );
-                if (employee) {
-                  setCurrentSalonId(employee.salonId);
-                  setCurrentEmployeeId(employee.id);
-                  return;
-                }
-              } catch {
-                continue;
-              }
-            }
-          }
-        } catch (error: any) {
-          console.error("❌ Error loading employee data:", error);
-
-          // Handle session expiration (401 error)
-          if (error?.status === 401 || error?.isSessionExpired) {
-            // Don't set error state, just stop loading
-            // The permissions hook will handle logout
-            setIsLoadingEmployee(false);
-            return;
-          }
-        } finally {
-          setIsLoadingEmployee(false);
+    // CRITICAL: If another instance is already loading, wait for it
+    if (globalLoadingLock && globalLoadPromise) {
+      globalLoadPromise.then((result) => {
+        if (result) {
+          setCurrentSalonId(result.salonId);
+          setCurrentEmployeeId(result.employeeId);
         }
+        setIsLoadingEmployee(false);
+      });
+      return;
+    }
+
+    // Skip if we already have values
+    if (currentSalonId && currentEmployeeId) {
+      return;
+    }
+
+    // ACQUIRE GLOBAL LOCK - Only one instance does the actual fetching
+    globalLoadingLock = true;
+    setIsLoadingEmployee(true);
+
+    const loadEmployeeData = async (): Promise<{ salonId: string; employeeId: string } | null> => {
+      try {
+        // Get employee records directly - simpler, one API call
+        const employeeRecords = await salonService.getEmployeeRecordsByUserId(String(user.id));
+
+        if (employeeRecords && employeeRecords.length > 0) {
+          // Find first active employee - skip the expensive permission checks
+          // The permission system will handle checking permissions separately
+          const activeEmployee = employeeRecords.find((emp) => emp.isActive) || employeeRecords[0];
+          
+          if (activeEmployee) {
+            return {
+              salonId: activeEmployee.salonId,
+              employeeId: activeEmployee.id,
+            };
+          }
+        }
+
+        return null;
+      } catch (error: any) {
+        console.error("❌ Error loading employee data:", error);
+        return null;
       }
     };
 
-    if (
-      autoFetch &&
-      isAuthenticated &&
-      user?.id &&
-      user?.role === UserRole.SALON_EMPLOYEE
-    ) {
-      loadEmployeeData();
-    }
+    // Create promise and store it globally so other instances can wait for it
+    globalLoadPromise = loadEmployeeData();
+
+    globalLoadPromise
+      .then((result) => {
+        if (result) {
+          // Update global cache
+          globalCachedSalonId = result.salonId;
+          globalCachedEmployeeId = result.employeeId;
+          // Update local state
+          setCurrentSalonId(result.salonId);
+          setCurrentEmployeeId(result.employeeId);
+        }
+      })
+      .finally(() => {
+        // RELEASE GLOBAL LOCK
+        globalLoadingLock = false;
+        globalLoadPromise = null;
+        setIsLoadingEmployee(false);
+      });
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, user?.role, autoFetch, isAuthenticated]); // Removed currentSalonId, currentEmployeeId, and isLoadingEmployee to prevent infinite loop
+  }, [user?.id, user?.role, autoFetch, isAuthenticated]);
 
   const {
     hasPermission,
@@ -202,7 +158,8 @@ export const useEmployeePermissionCheck = (
   } = useEmployeePermissions({
     salonId: currentSalonId,
     employeeId: currentEmployeeId,
-    autoFetch: true, // Enable auto-fetch when salonId and employeeId are available
+    // CRITICAL: Only enable auto-fetch when BOTH IDs are available to prevent loops
+    autoFetch: !!(currentSalonId && currentEmployeeId),
   });
 
   // Check if user is owner (owners have all permissions)

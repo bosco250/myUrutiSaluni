@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
+import { usePermissions } from '../../context/PermissionContext';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import { useEmployeePermissionCheck } from '../../hooks/useEmployeePermissionCheck';
 import { EmployeePermission } from '../../constants/employeePermissions';
-import { salonService } from '../../services/salon';
 import { UserRole, getRoleName } from '../../constants/roles';
 
 // Profile image placeholder
@@ -211,31 +211,22 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   const { user, logout } = useAuth();
   const unreadNotificationCount = useUnreadNotifications();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { checkPermission, isOwner, isAdmin, salonId: employeeSalonId } = useEmployeePermissionCheck();
-  const [salonName, setSalonName] = useState<string | null>(null);
+  
+  // Get cached permission data - this is instant, no API calls needed!
+  const { activeSalon, isOwner, isAdmin } = usePermissions();
+  
+  // Also get checkPermission from hook for backward compatibility
+  const { checkPermission } = useEmployeePermissionCheck();
+  
+  // Get salon info from cached activeSalon - instant access!
+  const employeeSalonId = activeSalon?.salonId;
+  const salonName = activeSalon?.salonName;
 
-  // Fetch salon name for employees
-  useEffect(() => {
-    const fetchSalonName = async () => {
-      if (employeeSalonId && user?.role === UserRole.SALON_EMPLOYEE) {
-        try {
-          const salons = await salonService.getAllSalons();
-          const salon = salons.find(s => s.id === employeeSalonId);
-          if (salon?.name) {
-            setSalonName(salon.name);
-          }
-        } catch (error) {
-          console.error('Error fetching salon name:', error);
-        }
-      }
-    };
-    fetchSalonName();
-  }, [employeeSalonId, user?.role]);
 
-  // Dynamic styles for dark/light mode (matching OperationsScreen pattern)
+  // Dynamic styles for dark/light mode
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : "#F8F9FA",
     },
     text: {
       color: isDark ? theme.colors.white : theme.colors.text,
@@ -244,16 +235,16 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
       color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+      borderWidth: 1,
     },
     header: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : "#F8F9FA",
     },
     divider: {
       backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
-    // Button styles matching OperationsScreen
     primaryButton: {
       backgroundColor: theme.colors.primary,
     },
@@ -263,6 +254,9 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     outlineButtonText: {
       color: isDark ? theme.colors.white : theme.colors.text,
     },
+    iconBg: {
+      backgroundColor: isDark ? theme.colors.gray900 + "80" : theme.colors.backgroundSecondary,
+    }
   };
 
   // Helper to generate light background from color
@@ -270,8 +264,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
 
   const menuSections = useMemo(() => getMenuSections(unreadNotificationCount, isDark), [unreadNotificationCount, isDark]);
 
-  // Add "My Salon" section for employees with permissions
-  // Use employeeSalonId check instead of salonName to avoid render delay
+  // Dashboard section for employees
   const employeeSalonSection = useMemo(() => {
     return (employeeSalonId && user?.role === UserRole.SALON_EMPLOYEE) ? {
       title: 'Dashboard',
@@ -279,11 +272,10 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
         {
           id: 'my-salon',
           icon: 'dashboard',
-          label: salonName || 'My Salon Workspace', // Fallback while loading
-          description: 'Go to main dashboard',
-          screen: 'EmployeeSalonDashboard', // Navigate to employee-specific dashboard with all permitted features
+          label: salonName || 'My Workspace',
+          description: 'Manage your tasks & schedule',
+          screen: 'EmployeeSalonDashboard',
           iconColor: theme.colors.primary,
-          // Show this if employee has any management permissions
           requiredPermissions: [
             EmployeePermission.MANAGE_PRODUCTS,
             EmployeePermission.MANAGE_SERVICES,
@@ -297,63 +289,36 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     } : null;
   }, [employeeSalonId, user?.role, salonName]);
 
-  // Combine all sections, adding employee salon section if it exists
   const allMenuSections = useMemo(() => employeeSalonSection 
     ? [employeeSalonSection, ...menuSections]
     : menuSections, [employeeSalonSection, menuSections]);
 
-  // Filter menu items based on permissions
   const filteredMenuSections = useMemo(() => {
     return allMenuSections.map(section => ({
       ...section,
       items: section.items.filter(item => {
-        // Owner-only items: only visible to owners and admins
-        if (item.ownerOnly) {
-          return isOwner || isAdmin;
-        }
-        
-        // Owners and admins see everything (except owner-only items already handled above)
+        if (item.ownerOnly) return isOwner || isAdmin;
         if (isOwner || isAdmin) return true;
-        
-        // If no permissions required, show it
         if (!item.requiredPermissions || item.requiredPermissions.length === 0) return true;
-        
-        // Check if user has any of the required permissions
         return item.requiredPermissions.some(perm => checkPermission(perm));
       })
-    })).filter(section => section.items.length > 0); // Remove empty sections
+    })).filter(section => section.items.length > 0);
   }, [allMenuSections, isOwner, isAdmin, checkPermission]);
 
   const handleMenuPress = (screen: string) => {
-    // Screens that require salonId parameter
     const screensNeedingSalonId = [
-      'AddProduct',
-      'AddService', 
-      'StockManagement',
-      'SalonSettings',
-      'SalonAppointments',
-      'CustomerManagement',
-      'Sales',
-      'StaffManagement',
-      'EmployeePermissions',
-      'Operations', // Added for employee salon access
+      'AddProduct', 'AddService', 'StockManagement', 'SalonSettings',
+      'SalonAppointments', 'CustomerManagement', 'Sales', 'StaffManagement',
+      'EmployeePermissions', 'Operations'
     ];
-    
-    // For employees, use the salonId from their employee record (from hook)
-    // For owners, let the screen fetch their own salon
-    const salonIdToPass = employeeSalonId;
-    
-    // Navigate with salonId if the screen needs it and we have one
-    if (screensNeedingSalonId.includes(screen) && salonIdToPass) {
-      navigation.navigate(screen, { salonId: salonIdToPass });
+    if (screensNeedingSalonId.includes(screen) && employeeSalonId) {
+      navigation.navigate(screen, { salonId: employeeSalonId });
     } else {
       navigation.navigate(screen);
     }
   };
 
-  const handleLogout = () => {
-    setShowLogoutModal(true);
-  };
+  const handleLogout = () => setShowLogoutModal(true);
 
   const confirmLogout = async () => {
     setShowLogoutModal(false);
@@ -366,19 +331,17 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     }
   };
 
-  const cancelLogout = () => {
-    setShowLogoutModal(false);
-  };
+  const cancelLogout = () => setShowLogoutModal(false);
 
   const renderMenuItem = (item: MenuItem) => (
     <TouchableOpacity
       key={item.id}
-      style={[styles.menuItem, dynamicStyles.card, { borderWidth: 0 }]}
+      style={styles.menuItem}
       onPress={() => handleMenuPress(item.screen)}
       activeOpacity={0.7}
     >
       <View style={[styles.menuIconContainer, { backgroundColor: getLightBg(item.iconColor) }]}>
-        <MaterialIcons name={item.icon as any} size={22} color={item.iconColor} />
+        <MaterialIcons name={item.icon as any} size={20} color={item.iconColor} />
       </View>
       <View style={styles.menuItemContent}>
         <Text style={[styles.menuItemLabel, dynamicStyles.text]}>{item.label}</Text>
@@ -396,10 +359,17 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
             </Text>
           </View>
         )}
-        <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
+        <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
       </View>
     </TouchableOpacity>
   );
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
 
   return (
     <SafeAreaView 
@@ -412,106 +382,99 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={[styles.header, dynamicStyles.header]}>
-          <Text style={[styles.headerTitle, dynamicStyles.text]}>More</Text>
+        {/* Personalized Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.greetingText, dynamicStyles.textSecondary]}>{getGreeting()},</Text>
+            <Text style={[styles.userNameText, dynamicStyles.text]}>
+              {user?.fullName?.split(' ')[0] || getRoleName(user?.role)}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={[styles.notificationIcon, dynamicStyles.iconBg]}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <MaterialIcons name="notifications-none" size={24} color={dynamicStyles.text.color} />
+            {unreadNotificationCount > 0 && <View style={styles.dot} />}
+          </TouchableOpacity>
         </View>
 
-        {/* User Profile Card */}
+        {/* Profile Card */}
         <TouchableOpacity
           style={[styles.profileCard, dynamicStyles.card]}
           onPress={() => navigation.navigate('Profile')}
           activeOpacity={0.7}
         >
-          <View style={styles.profileImageContainer}>
-            <Image source={profileImage} style={styles.profileImage} />
-          </View>
+          <Image source={profileImage} style={styles.profileImage} />
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, dynamicStyles.text]}>
               {user?.fullName || getRoleName(user?.role)}
             </Text>
-            <Text style={[styles.profileRole, dynamicStyles.textSecondary]}>
-              {getRoleName(user?.role)}
-            </Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleBadgeText}>{getRoleName(user?.role)}</Text>
+            </View>
           </View>
-          <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
+          <MaterialIcons name="keyboard-arrow-right" size={24} color={dynamicStyles.textSecondary.color} />
         </TouchableOpacity>
 
-        {/* Menu Sections - Filtered by permissions */}
-        {filteredMenuSections.map((section, sectionIndex) => (
+        {/* Menu Sections */}
+        {filteredMenuSections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={[styles.sectionTitle, dynamicStyles.textSecondary]}>
               {section.title}
             </Text>
             <View style={[styles.sectionCard, dynamicStyles.card]}>
               {section.items.map((item, index) => (
-                <React.Fragment key={item.id}>
+                <View key={item.id}>
                   {renderMenuItem(item)}
                   {index < section.items.length - 1 && (
                     <View style={[styles.itemDivider, dynamicStyles.divider]} />
                   )}
-                </React.Fragment>
+                </View>
               ))}
             </View>
           </View>
         ))}
 
-        {/* Logout Button */}
+        {/* Logout */}
         <TouchableOpacity
-          style={[styles.logoutButton, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor }]}
+          style={[styles.logoutButton, dynamicStyles.card]}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
           <View style={[styles.menuIconContainer, { backgroundColor: getLightBg(theme.colors.error) }]}>
-            <MaterialIcons name="exit-to-app" size={22} color={theme.colors.error} />
+            <MaterialIcons name="logout" size={20} color={theme.colors.error} />
           </View>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        {/* Version Info */}
         <Text style={[styles.versionText, dynamicStyles.textSecondary]}>
-          Version 1.0.0
+          Version 1.2.0 • Uruti
         </Text>
 
-        {/* Bottom Spacing */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Logout Confirmation Modal */}
-      <Modal
-        visible={showLogoutModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelLogout}
-      >
+      {/* Logout Modal */}
+      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={cancelLogout}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, dynamicStyles.card]}>
+          <View style={[styles.modalContent, dynamicStyles.card, { borderWidth: 0 }]}>
             <View style={styles.modalIconContainer}>
-              <MaterialIcons name="exit-to-app" size={40} color={theme.colors.error} />
+              <MaterialIcons name="logout" size={32} color={theme.colors.error} />
             </View>
-            <Text style={[styles.modalTitle, dynamicStyles.text]}>Log Out</Text>
+            <Text style={[styles.modalTitle, dynamicStyles.text]}>Confirm Logout</Text>
             <Text style={[styles.modalMessage, dynamicStyles.textSecondary]}>
-              Are you sure you want to log out of your account?
+              Are you sure you want to exit your account?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.cancelButton,
-                  dynamicStyles.outlineButtonBorder,
-                  { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary },
-                ]}
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: isDark ? theme.colors.gray700 : "#F1F3F5" }]}
                 onPress={cancelLogout}
-                activeOpacity={0.7}
               >
-                <Text style={[styles.cancelButtonText, dynamicStyles.outlineButtonText]}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, dynamicStyles.text]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmLogout}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.confirmButtonText}>Log Out</Text>
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={confirmLogout}>
+                <Text style={styles.confirmButtonText}>Logout</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -529,78 +492,100 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
   },
   header: {
-    paddingHorizontal: theme.spacing.lg,
-    // paddingTop: theme.spacing.xs,
-    paddingBottom: theme.spacing.xs,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.xs,
+  },
+  greetingText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    marginBottom: 2,
+  },
+  userNameText: {
+    fontSize: 24,
+    fontFamily: theme.fonts.bold,
+    fontWeight: 'bold',
+  },
+  notificationIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
+  dot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.error,
+    borderWidth: 2,
+    borderColor: '#F8F9FA',
   },
-
-  // Profile Card
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  profileImageContainer: {
-    marginRight: theme.spacing.md,
+    borderRadius: 24,
+    marginBottom: theme.spacing.xl,
   },
   profileImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginRight: theme.spacing.md,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: theme.fonts.bold,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  roleBadgeText: {
+    fontSize: 12,
+    color: theme.colors.primary,
     fontFamily: theme.fonts.medium,
-    marginBottom: 2,
   },
-  profileRole: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-  },
-
-  // Sections
   section: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   sectionTitle: {
     fontSize: 13,
+    fontFamily: theme.fonts.bold,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: theme.spacing.sm,
+    letterSpacing: 1,
+    marginBottom: theme.spacing.md,
+    marginLeft: theme.spacing.xs,
   },
   sectionCard: {
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 24,
     overflow: 'hidden',
   },
-
-  // Menu Items
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
   },
   menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
@@ -609,136 +594,112 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuItemLabel: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 15,
     fontFamily: theme.fonts.medium,
-    marginBottom: 2,
+    fontWeight: '500',
   },
   menuItemDescription: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+    marginTop: 1,
   },
   menuItemRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
   },
   itemDivider: {
     height: 1,
-    marginLeft: 72, // Align with text start
+    marginHorizontal: theme.spacing.md,
+    opacity: 0.5,
   },
-
-  // Badge
   badge: {
     backgroundColor: theme.colors.error,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: theme.spacing.xs,
   },
   badgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontSize: 10,
     fontFamily: theme.fonts.bold,
   },
-
-  // Logout
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.sm,
     padding: theme.spacing.md,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 24,
+    marginTop: theme.spacing.sm,
   },
   logoutText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 15,
+    fontFamily: theme.fonts.bold,
+    fontWeight: 'bold',
     color: theme.colors.error,
-    fontFamily: theme.fonts.medium,
-    flex: 1,
   },
-
-  // Version
   versionText: {
     textAlign: 'center',
     fontSize: 12,
-    fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
+    opacity: 0.6,
   },
-
-  // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: theme.colors.overlay,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.lg,
+    padding: theme.spacing.xl,
   },
   modalContent: {
     width: '100%',
-    maxWidth: 340,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: theme.spacing.xl,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
   },
   modalIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${theme.colors.error}1A`,
-    alignItems: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.error + '15',
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
     fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.sm,
+    fontWeight: 'bold',
+    marginBottom: theme.spacing.xs,
   },
   modalMessage: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
-    fontFamily: theme.fonts.regular,
     marginBottom: theme.spacing.xl,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-    width: '100%',
+    gap: theme.spacing.md,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 14,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   cancelButton: {
     borderWidth: 1,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    borderColor: 'transparent',
   },
   confirmButton: {
     backgroundColor: theme.colors.error,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#FFF',
+    fontSize: 14,
+    fontFamily: theme.fonts.bold,
+  },
+  cancelButtonText: {
+    fontSize: 14,
     fontFamily: theme.fonts.medium,
   },
 });

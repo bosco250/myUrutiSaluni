@@ -46,6 +46,13 @@ interface FormData {
   registrationNumber: string;
   latitude?: number;
   longitude?: number;
+  // New fields
+  businessTypes: string[]; // Array to allow multiple selections
+  targetClientele: string; // 'men' | 'women' | 'both' - radio button
+  openingDate: string;
+  numberOfEmployees: string;
+  licenseNumber: string;
+  taxId: string;
 }
 
 interface FormErrors {
@@ -80,7 +87,25 @@ const DEFAULT_WORKING_HOURS: WorkingHours = {
   sunday: { isOpen: false, openTime: '09:00', closeTime: '15:00' },
 };
 
-const STEPS = ['Basic Info', 'Location', 'Hours', 'Contact'];
+const STEPS = ['Basic Info', 'Location', 'Business', 'Contact'];
+
+// Business Type Options
+const BUSINESS_TYPES = [
+  { value: 'hair_salon', label: 'Hair Salon' },
+  { value: 'beauty_spa', label: 'Beauty Spa' },
+  { value: 'nail_salon', label: 'Nail Salon' },
+  { value: 'barbershop', label: 'Barbershop' },
+  { value: 'full_service', label: 'Full Service' },
+  { value: 'mobile', label: 'Mobile Service' },
+  { value: 'other', label: 'Other' },
+];
+
+// Target Clientele Options
+const TARGET_CLIENTELE = [
+  { value: 'men', label: 'Men', icon: 'male' as const },
+  { value: 'women', label: 'Women', icon: 'female' as const },
+  { value: 'both', label: 'Both', icon: 'people' as const },
+];
 
 export default function CreateSalonScreen({ navigation, route }: CreateSalonScreenProps) {
   const { user } = useAuth();
@@ -101,6 +126,13 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     email: user?.email || '',
     website: '',
     registrationNumber: '',
+    // New fields
+    businessTypes: [], // Array for multiple selection
+    targetClientele: '',
+    openingDate: '',
+    numberOfEmployees: '',
+    licenseNumber: '',
+    taxId: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [, setLocationPermission] = useState(false);
@@ -154,6 +186,22 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       registrationNumber: editingSalon.registrationNumber || '',
       latitude: editingSalon.latitude,
       longitude: editingSalon.longitude,
+      // Prefill new fields from settings
+      // Handle backward compatibility: web uses businessType (string), mobile uses businessTypes (array)
+      businessTypes: (() => {
+        const settings = editingSalon.settings;
+        if (settings?.businessTypes && Array.isArray(settings.businessTypes)) {
+          return settings.businessTypes; // New format (array)
+        } else if (settings?.businessType && typeof settings.businessType === 'string') {
+          return [settings.businessType]; // Old format (single string from web) - convert to array
+        }
+        return [];
+      })(),
+      targetClientele: editingSalon.settings?.targetClientele || '',
+      openingDate: editingSalon.settings?.openingDate || '',
+      numberOfEmployees: editingSalon.settings?.numberOfEmployees?.toString() || '',
+      licenseNumber: editingSalon.settings?.licenseNumber || '',
+      taxId: editingSalon.settings?.taxId || '',
     });
 
     if (editingSalon.latitude && editingSalon.longitude) {
@@ -334,6 +382,13 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
         country: 'Rwanda',
         settings: {
           workingHours: workingHours,
+          // New fields added to settings
+          businessTypes: formData.businessTypes.length > 0 ? formData.businessTypes : undefined,
+          targetClientele: formData.targetClientele || undefined,
+          openingDate: formData.openingDate || undefined,
+          numberOfEmployees: formData.numberOfEmployees ? parseInt(formData.numberOfEmployees, 10) : undefined,
+          licenseNumber: formData.licenseNumber.trim() || undefined,
+          taxId: formData.taxId.trim() || undefined,
         },
       };
 
@@ -543,6 +598,99 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
         icon: 'store',
         required: true,
       })}
+
+      {/* Business Type Picker */}
+      <View style={styles.inputGroup}>
+        <View style={styles.labelRow}>
+          <Text style={[styles.inputLabel, dynamicStyles.text]}>
+            Business Type <Text style={{ color: theme.colors.error }}>*</Text>
+          </Text>
+        </View>
+        <View style={[styles.pickerContainer, dynamicStyles.input, errors.businessTypes && styles.inputError]}>
+          <MaterialIcons name="business" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
+            {BUSINESS_TYPES.map((type) => {
+              const isSelected = formData.businessTypes.includes(type.value);
+              return (
+                <TouchableOpacity
+                  key={type.value}
+                  style={[
+                    styles.pickerOption,
+                    isSelected && styles.pickerOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setFormData(prev => {
+                      const currentTypes = prev.businessTypes;
+                      if (currentTypes.includes(type.value)) {
+                        // Remove if already selected
+                        return { ...prev, businessTypes: currentTypes.filter(t => t !== type.value) };
+                      } else {
+                        // Add if not selected
+                        return { ...prev, businessTypes: [...currentTypes, type.value] };
+                      }
+                    });
+                    if (errors.businessTypes) setErrors(prev => ({ ...prev, businessTypes: '' }));
+                  }}
+                >
+                  <MaterialIcons
+                    name={isSelected ? 'check-box' : 'check-box-outline-blank'}
+                    size={18}
+                    color={isSelected ? '#FFFFFF' : dynamicStyles.textSecondary.color}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[
+                    styles.pickerOptionText,
+                    dynamicStyles.text,
+                    isSelected && styles.pickerOptionTextSelected,
+                  ]}>
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+        {errors.businessTypes && <Text style={styles.errorText}>{errors.businessTypes}</Text>}
+      </View>
+
+      {/* Target Clientele Checkboxes */}
+      <View style={styles.inputGroup}>
+        <View style={styles.labelRow}>
+          <Text style={[styles.inputLabel, dynamicStyles.text]}>
+            Target Clientele <Text style={{ color: theme.colors.error }}>*</Text>
+          </Text>
+        </View>
+        <View style={styles.checkboxRow}>
+          {TARGET_CLIENTELE.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.checkboxOption,
+                dynamicStyles.input,
+                formData.targetClientele === option.value && styles.checkboxOptionSelected,
+              ]}
+              onPress={() => {
+                setFormData(prev => ({ ...prev, targetClientele: option.value }));
+                if (errors.targetClientele) setErrors(prev => ({ ...prev, targetClientele: '' }));
+              }}
+            >
+              <MaterialIcons
+                name={formData.targetClientele === option.value ? 'check-circle' : 'radio-button-unchecked'}
+                size={22}
+                color={formData.targetClientele === option.value ? theme.colors.primary : dynamicStyles.textSecondary.color}
+              />
+              <Text style={[
+                styles.checkboxLabel,
+                dynamicStyles.text,
+                formData.targetClientele === option.value && { color: theme.colors.primary, fontWeight: '600' },
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {errors.targetClientele && <Text style={styles.errorText}>{errors.targetClientele}</Text>}
+      </View>
 
       {renderInputField('Registration Number', 'registrationNumber', {
         placeholder: 'Business Registration Number',
@@ -793,7 +941,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : StatusBar.currentHeight! + 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : StatusBar.currentHeight!,
     paddingBottom: 24,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -1075,5 +1223,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  // New styles for Business Type Picker
+  pickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  pickerScroll: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  pickerOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(150, 150, 150, 0.1)',
+    marginRight: 8,
+  },
+  pickerOptionSelected: {
+    backgroundColor: theme.colors.primary,
+  },
+  pickerOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  pickerOptionTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  // New styles for Target Clientele Checkboxes
+  checkboxRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  checkboxOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  checkboxOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: 'rgba(128, 74, 216, 0.1)',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

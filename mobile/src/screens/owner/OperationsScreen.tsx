@@ -29,6 +29,9 @@ interface ServiceItem {
   duration: number; // in minutes
   commission: number; // percentage
   price: number;
+  description?: string;
+  isActive?: boolean;
+  metadata?: any;
 }
 
 // Mock data for check-ins
@@ -113,6 +116,9 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
           duration: service.duration || service.durationMinutes || 30,
           commission: service.commissionRate || 0,
           price: service.price || service.basePrice || 0,
+          description: service.description,
+          isActive: service.isActive,
+          metadata: service.metadata,
         }));
         setServices(mappedServices);
 
@@ -264,7 +270,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                     styles.serviceRow,
                     index < services.length - 1 && [styles.serviceRowBorder, { borderBottomColor: dynamicStyles.divider.backgroundColor }],
                   ]}
-                  onPress={() => navigation.navigate('EditService', { salonId, serviceId: service.id })}
+                  onPress={() => navigation.navigate('EditService', { salonId, service, mode: 'edit' })}
                   activeOpacity={0.7}
                 >
                   <View style={styles.serviceInfo}>

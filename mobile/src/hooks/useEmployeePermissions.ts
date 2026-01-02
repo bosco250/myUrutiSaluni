@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   employeePermissionsService,
@@ -15,6 +15,15 @@ interface UseEmployeePermissionsOptions {
   autoFetch?: boolean;
 }
 
+// CRITICAL: Global deduplication to prevent multiple hook instances from making duplicate calls
+// Now stores the actual data so we only rate-limit when we have valid cached results
+const globalFetchCache = new Map<string, { 
+  timestamp: number; 
+  promise: Promise<EmployeePermissionData[]> | null;
+  data: EmployeePermissionData[] | null; // Store actual data for instant access
+}>();
+const MIN_REFETCH_INTERVAL = 5000; // 5 seconds minimum between fetches for same key
+
 export const useEmployeePermissions = (options: UseEmployeePermissionsOptions = {}) => {
   const { user, logout, isAuthenticated } = useAuth();
   const { salonId, employeeId, autoFetch = false } = options;
@@ -23,6 +32,10 @@ export const useEmployeePermissions = (options: UseEmployeePermissionsOptions = 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false); // Track session expiration to prevent retries
+  
+  // CRITICAL: Track if fetch has already been triggered for these IDs to prevent duplicates
+  const hasFetchedRef = useRef<string | null>(null);
+  const isFetchingRef = useRef(false);
 
   /**
    * Check if employee has specific permission
@@ -53,6 +66,7 @@ export const useEmployeePermissions = (options: UseEmployeePermissionsOptions = 
 
   /**
    * Fetch permissions for an employee
+   * CRITICAL: Uses global cache and rate limiting to prevent infinite API call loops
    */
   const fetchPermissions = useCallback(async () => {
     // Don't make API calls if user is not authenticated
@@ -70,14 +84,62 @@ export const useEmployeePermissions = (options: UseEmployeePermissionsOptions = 
       return;
     }
 
+    // CRITICAL: Create a unique cache key for this fetch
+    const cacheKey = `${salonId}:${employeeId}`;
+    
+    // Check if we've already fetched for these IDs recently
+    const cached = globalFetchCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < MIN_REFETCH_INTERVAL) {
+      // Only rate-limit if we have cached data OR an in-flight promise
+      if (cached.data || cached.promise) {
+        console.log(`⏳ Skipping permission fetch for ${cacheKey} - rate limited`);
+        // If there's cached data, use it immediately
+        if (cached.data) {
+          setPermissions(cached.data);
+          return;
+        }
+        // If there's an in-flight request, wait for it
+        if (cached.promise) {
+          try {
+            const data = await cached.promise;
+            setPermissions(data);
+          } catch {
+            // Ignore - will be handled by the original request
+          }
+          return;
+        }
+      }
+      // No cached data, allow fetch to proceed even within rate limit
+    }
+
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log(`🔒 Skipping permission fetch for ${cacheKey} - already fetching`);
+      return;
+    }
+
+    isFetchingRef.current = true;
+
     try {
       setLoading(true);
       setError(null);
-      const data = await employeePermissionsService.getEmployeePermissions(
+      
+      // Create the promise and cache it
+      const fetchPromise = employeePermissionsService.getEmployeePermissions(
         salonId,
         employeeId,
       );
+      
+      globalFetchCache.set(cacheKey, { timestamp: now, promise: fetchPromise, data: null });
+      
+      const data = await fetchPromise;
       setPermissions(data);
+      
+      // Update cache with completed fetch
+      globalFetchCache.set(cacheKey, { timestamp: Date.now(), promise: null, data: data });
+      hasFetchedRef.current = cacheKey;
     } catch (err: any) {
       // Handle session expiration (401 error)
       if (err?.status === 401 || err?.isSessionExpired) {
@@ -97,6 +159,7 @@ export const useEmployeePermissions = (options: UseEmployeePermissionsOptions = 
       setPermissions([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [salonId, employeeId, sessionExpired, logout, isAuthenticated, user]);
 
@@ -184,13 +247,20 @@ export const useEmployeePermissions = (options: UseEmployeePermissionsOptions = 
   useEffect(() => {
     // Only auto-fetch if user is authenticated
     if (autoFetch && isAuthenticated && user) {
+      // CRITICAL: Check if we've already fetched for these exact IDs to prevent loops
+      const currentKey = `${salonId}:${employeeId}`;
+      if (hasFetchedRef.current === currentKey) {
+        return; // Already fetched for these IDs
+      }
+      
       if (employeeId && salonId) {
         fetchPermissions();
       } else if (user?.role === 'salon_employee' && salonId) {
         fetchMyPermissions();
       }
     }
-  }, [autoFetch, employeeId, salonId, user?.role, isAuthenticated, user, fetchPermissions, fetchMyPermissions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetch, employeeId, salonId, user?.role, isAuthenticated]);
 
   return {
     permissions,

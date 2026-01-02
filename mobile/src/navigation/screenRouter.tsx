@@ -60,6 +60,7 @@ import CreateAppointmentScreen from "../screens/staff/CreateAppointmentScreen";
 import MyPermissionsScreen from "../screens/staff/MyPermissionsScreen";
 import WhatCanIDoScreen from "../screens/staff/WhatCanIDoScreen";
 import EmployeeSalonDashboard from "../screens/staff/EmployeeSalonDashboard";
+import EmployeeContractScreen from "../screens/profile/EmployeeContractScreen";
 
 // Owner screens
 import MoreMenuScreen from "../screens/owner/MoreMenuScreen";
@@ -119,18 +120,24 @@ export const renderScreen = (
   handleGoBack: () => void,
   screenParams: any
 ): React.ReactElement => {
-  const navigation = { navigate: handleNavigate, goBack: handleGoBack };
+  const navigation = {
+    navigate: handleNavigate,
+    goBack: handleGoBack,
+    addListener: (event: string, callback: () => void) => {
+      return () => {};
+    },
+  };
 
   switch (screenName) {
     // Main screens
     case "Home":
-      return <RoleBasedHome navigation={{ navigate: handleNavigate }} />;
+      return <RoleBasedHome navigation={navigation} />;
 
     case "Bookings":
       return <BookingsScreen navigation={navigation} />;
 
     case "Explore":
-      return <ExploreScreen navigation={{ navigate: handleNavigate }} />;
+      return <ExploreScreen navigation={navigation} />;
 
     case "Notifications":
       return <NotificationsScreen navigation={navigation} />;
@@ -143,13 +150,13 @@ export const renderScreen = (
 
     // Role-specific dashboards
     case "StaffDashboard":
-      return <StaffDashboardScreen navigation={{ navigate: handleNavigate }} />;
+      return <StaffDashboardScreen navigation={navigation} />;
 
     case "OwnerDashboard":
-      return <OwnerDashboardScreen navigation={{ navigate: handleNavigate }} />;
+      return <OwnerDashboardScreen navigation={navigation} />;
 
     case "AdminDashboard":
-      return <AdminDashboardScreen navigation={{ navigate: handleNavigate }} />;
+      return <AdminDashboardScreen navigation={navigation} />;
 
     // Booking screens
     case "AppointmentDetail":
@@ -295,14 +302,14 @@ export const renderScreen = (
     case "ApplicationSuccess":
       return (
         <ApplicationSuccessScreen
-          navigation={{ navigate: handleNavigate }}
+          navigation={navigation}
           route={{ params: screenParams }}
         />
       );
 
     // Owner More Menu screen
     case "MoreMenu":
-      return <MoreMenuScreen navigation={{ navigate: handleNavigate }} />;
+      return <MoreMenuScreen navigation={navigation} />;
 
     // Create Salon screen
     case "CreateSalon":
@@ -326,7 +333,7 @@ export const renderScreen = (
 
     // Salon Management screens (for salon owners)
     case "SalonList":
-      return <SalonListScreen navigation={{ navigate: handleNavigate }} />;
+      return <SalonListScreen navigation={navigation} />;
 
     case "OwnerSalonDetail":
       return (
@@ -464,6 +471,9 @@ export const renderScreen = (
         />
       );
 
+    case "EmployeeContract":
+      return <EmployeeContractScreen navigation={navigation} />;
+
     // Business Analytics screen
     case "BusinessAnalytics":
       return (
@@ -481,7 +491,7 @@ export const renderScreen = (
     // Salon Management screens
     case "SalonManagement":
       return (
-        <SalonManagementScreen navigation={{ navigate: handleNavigate }} />
+        <SalonManagementScreen navigation={navigation} />
       );
 
     case "UserManagement":

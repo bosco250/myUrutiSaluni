@@ -183,45 +183,32 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header with Artistic Elements */}
+        {/* Profile Header */}
         <View style={styles.profileHeader}>
-          {/* Decorative Background Circles */}
-          <View style={styles.decorativeCircle1} />
-          <View style={styles.decorativeCircle2} />
-          <View style={styles.decorativeCircle3} />
+          <View style={styles.profileHeaderContent}>
+            <View style={styles.profileImageContainer}>
+              <View style={styles.profileImageGlow} />
+              <Image source={profileImage} style={styles.profileImage} />
+            </View>
 
-          <View style={styles.profileImageContainer}>
-            {/* Profile Image Glow Effect */}
-            <View style={styles.profileImageGlow} />
-            <View style={styles.profileImageShadow} />
-            <Image source={profileImage} style={styles.profileImage} />
+            <View style={styles.profileInfoContainer}>
+              <Text style={[styles.profileName, dynamicStyles.text]}>
+                {userName}
+              </Text>
+              {displayRole ? (
+                <View style={[styles.roleBadge, { backgroundColor: theme.colors.primary + "15" }]}>
+                  <Text style={[styles.roleBadgeText, { color: theme.colors.primary }]}>
+                    {displayRole}
+                  </Text>
+                </View>
+              ) : null}
+              {userEmail ? (
+                <Text style={[styles.profileEmail, dynamicStyles.textSecondary]}>
+                  {userEmail}
+                </Text>
+              ) : null}
+            </View>
           </View>
-
-          <Text
-            style={[styles.profileName, { color: dynamicStyles.text.color }]}
-          >
-            {userName}
-          </Text>
-          {displayRole ? (
-            <Text
-              style={[
-                styles.profileTitle,
-                { color: dynamicStyles.textSecondary.color },
-              ]}
-            >
-              {displayRole}
-            </Text>
-          ) : null}
-          {userEmail ? (
-            <Text
-              style={[
-                styles.profileEmail,
-                { color: dynamicStyles.textSecondary.color },
-              ]}
-            >
-              {userEmail}
-            </Text>
-          ) : null}
         </View>
 
         {/* Preferences Section Card */}
@@ -449,7 +436,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={[styles.sectionCard, styles.ownerCard]}>
             <View style={styles.ownerCardHeader}>
               <View style={styles.ownerIconContainer}>
-                <MaterialIcons name="business" size={24} color={theme.colors.primary} />
+                <MaterialIcons name="business" size={28} color={theme.colors.primary} />
               </View>
               <View style={styles.ownerTextContainer}>
                 <Text style={[styles.ownerTitle, dynamicStyles.text]}>
@@ -466,27 +453,24 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               onPress={() => navigation?.navigate("MembershipApplication")}
             >
               <Text style={styles.ownerApplyButtonText}>Apply Now</Text>
-              <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
+              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Log Out Button with Artistic Styling */}
+        {/* Log Out Button */}
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <View style={styles.logoutButtonGlow} />
           <View style={styles.logoutButtonContent}>
+            <MaterialIcons
+              name="exit-to-app"
+              size={22}
+              color={theme.colors.error}
+            />
             <Text style={styles.logoutButtonText}>Log Out</Text>
-            <View style={styles.logoutIconContainer}>
-              <MaterialIcons
-                name="exit-to-app"
-                size={18}
-                color={theme.colors.error}
-              />
-            </View>
           </View>
         </TouchableOpacity>
 
@@ -546,107 +530,74 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.xs,
   },
   profileHeader: {
-    alignItems: "center",
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    position: "relative",
-    overflow: "hidden",
-    marginBottom: theme.spacing.xs,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
-  decorativeCircle1: {
-    position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.colors.primaryLight,
-    opacity: 0.1,
-    top: 10,
-    right: -30,
-    zIndex: 0,
-  },
-  decorativeCircle2: {
-    position: "absolute",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: theme.colors.primary,
-    opacity: 0.08,
-    top: 40,
-    left: -15,
-    zIndex: 0,
-  },
-  decorativeCircle3: {
-    position: "absolute",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.primaryLight,
-    opacity: 0.15,
-    bottom: 20,
-    right: 15,
-    zIndex: 0,
+  profileHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
   },
   profileImageContainer: {
-    marginBottom: theme.spacing.xs,
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,
   },
   profileImageGlow: {
     position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: theme.colors.primary,
-    opacity: 0.12,
-  },
-  profileImageShadow: {
-    position: "absolute",
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: theme.colors.backgroundSecondary,
+    opacity: 0.1,
   },
   profileImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: theme.colors.backgroundSecondary,
-    zIndex: 1,
+    borderWidth: 3,
+    borderColor: theme.colors.white,
+  },
+  profileInfoContainer: {
+    flex: 1,
   },
   profileName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: theme.colors.text,
-    marginBottom: 2,
+    fontSize: 22,
+    fontWeight: "800",
+    fontFamily: theme.fonts.bold,
+    marginBottom: 4,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  roleBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
   },
-  profileTitle: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
-  },
   profileEmail: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
-    marginTop: 2,
+    opacity: 0.8,
   },
   sectionCard: {
-    backgroundColor: theme.colors.background,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    borderRadius: 12,
-    padding: theme.spacing.sm + 2,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    borderRadius: 20,
+    padding: theme.spacing.md,
     borderWidth: 1,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   sectionHeader: {
     marginBottom: theme.spacing.xs,
@@ -697,43 +648,79 @@ const styles = StyleSheet.create({
     marginVertical: theme.spacing.xs / 2,
   },
   logoutButton: {
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-    borderRadius: 10,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+    borderRadius: 20,
     overflow: "hidden",
-    position: "relative",
     borderWidth: 1.5,
-    borderColor: theme.colors.error + "30",
-  },
-  logoutButtonGlow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    borderColor: theme.colors.error + "20",
+    backgroundColor: theme.colors.error + "05",
   },
   logoutButtonContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "transparent",
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    justifyContent: "center",
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   logoutButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: theme.colors.error,
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.bold,
   },
-  logoutIconContainer: {
-    width: 28,
-    height: 28,
+  ownerCard: {
+    borderWidth: 2,
+    borderColor: theme.colors.primary + "30",
+    backgroundColor: theme.colors.primary + "05",
+  },
+  ownerCardHeader: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  ownerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary + "15",
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ownerTextContainer: {
+    flex: 1,
+  },
+  ownerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+    marginBottom: 4,
+  },
+  ownerDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: theme.fonts.regular,
+  },
+  ownerApplyButton: {
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(255, 59, 48, 0.1)",
-    alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  ownerApplyButtonText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
   // Modal styles
   modalOverlay: {
@@ -807,55 +794,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#FFFFFF",
-    fontFamily: theme.fonts.medium,
-  },
-  // Become an Owner styles
-  ownerCard: {
-    borderWidth: 1,
-    borderColor: theme.colors.primary + "30",
-    backgroundColor: theme.colors.primary + "08",
-  },
-  ownerCardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: theme.spacing.sm,
-  },
-  ownerIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary + "15",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.sm,
-  },
-  ownerTextContainer: {
-    flex: 1,
-  },
-  ownerTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    marginBottom: 2,
-  },
-  ownerDescription: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: theme.fonts.regular,
-  },
-  ownerApplyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 8,
-    gap: 6,
-  },
-  ownerApplyButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
     fontFamily: theme.fonts.medium,
   },
 });

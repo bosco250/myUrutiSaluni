@@ -14,6 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
+import { usePermissions } from "../../context/PermissionContext";
 import { salonService } from "../../services/salon";
 import { api } from "../../services/api";
 import { Loader } from "../../components/common";
@@ -69,6 +70,7 @@ export default function EmployeeContractScreen({
 }: EmployeeContractScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
+  const { availableSalons} = usePermissions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [contracts, setContracts] = useState<EmployeeContractData[]>([]);
@@ -96,39 +98,37 @@ export default function EmployeeContractScreen({
     try {
       setLoading(true);
 
-      const salons = await salonService.getMySalons();
       const employeeContracts: EmployeeContractData[] = [];
-
-      if (salons.length > 0) {
-        for (const salon of salons) {
+      
+      // PRIORITY 1: Use availableSalons from PermissionContext (most reliable for employees)
+      // This data is already loaded when the employee logs in
+      if (availableSalons && availableSalons.length > 0) {
+        console.log("📋 Loading contracts from availableSalons:", availableSalons.length, "salons");
+        
+        for (const salonInfo of availableSalons) {
           try {
-            const employee = await salonService.getCurrentEmployee(salon.id);
+            // Try to get employee details from the salon
+            const employee = await salonService.getCurrentEmployee(salonInfo.salonId);
+            
             if (employee) {
-              // Fetch salon details with owner info
-              let salonWithOwner = salon;
+              // Fetch full salon details
+              let salonDetails: any = null;
+              let ownerData: any = null;
+              
               try {
-                const salonDetails = await salonService.getSalonDetails(
-                  salon.id
-                );
-                if (salonDetails.ownerId) {
+                salonDetails = await salonService.getSalonDetails(salonInfo.salonId);
+                if (salonDetails?.ownerId) {
                   try {
-                    const ownerResponse = await api.get(
-                      `/users/${salonDetails.ownerId}`
-                    );
-                    salonWithOwner = {
-                      ...salonDetails,
-                    } as any;
-                    (salonWithOwner as any).owner =
-                      (ownerResponse as any)?.data || ownerResponse;
+                    const ownerResponse = await api.get(`/users/${salonDetails.ownerId}`);
+                    ownerData = (ownerResponse as any)?.data || ownerResponse;
                   } catch {
-                    // Owner fetch failed, continue without owner details
+                    // Continue without owner details
                   }
                 }
               } catch {
-                // Salon details fetch failed, use basic salon info
+                // Use basic info from availableSalons
               }
 
-              const ownerData = (salonWithOwner as any).owner;
               employeeContracts.push({
                 ...employee,
                 user: {
@@ -139,24 +139,120 @@ export default function EmployeeContractScreen({
                   metadata: (user as any).metadata || {},
                 },
                 salon: {
-                  id: salonWithOwner.id,
-                  name: salonWithOwner.name,
-                  address: salonWithOwner.address,
-                  ownerId: salonWithOwner.ownerId,
+                  id: salonInfo.salonId,
+                  name: salonDetails?.name || salonInfo.salonName || "Salon",
+                  address: salonDetails?.address || "",
+                  ownerId: salonDetails?.ownerId,
                   owner: ownerData,
+                },
+              } as EmployeeContractData);
+            } else {
+              // Even if getCurrentEmployee fails, create a basic contract entry
+              // This ensures employees see something rather than nothing
+              console.log("⚠️ No employee record found for salon:", salonInfo.salonId, "creating basic entry");
+              
+              let salonDetails: any = null;
+              try {
+                salonDetails = await salonService.getSalonDetails(salonInfo.salonId);
+              } catch {
+                // Use basic info
+              }
+
+              employeeContracts.push({
+                salonId: salonInfo.salonId,
+                userId: String(user.id),
+                isActive: true,
+                user: {
+                  id: String(user.id),
+                  fullName: user.fullName || "",
+                  email: user.email,
+                  phone: user.phone,
+                  metadata: (user as any).metadata || {},
+                },
+                salon: {
+                  id: salonInfo.salonId,
+                  name: salonDetails?.name || salonInfo.salonName || "Salon",
+                  address: salonDetails?.address || "",
+                  ownerId: salonDetails?.ownerId,
                 },
               } as EmployeeContractData);
             }
           } catch (error: any) {
-            if (error?.response?.status !== 404) {
-              console.log(
-                `Could not fetch employee data for salon ${salon.id}:`,
-                error?.message
-              );
+            console.log(`Could not load contract for salon ${salonInfo.salonId}:`, error?.message);
+            // Still add a basic entry so the employee sees something
+            employeeContracts.push({
+              salonId: salonInfo.salonId,
+              userId: String(user.id),
+              isActive: true,
+              user: {
+                id: String(user.id),
+                fullName: user.fullName || "",
+                email: user.email,
+                phone: user.phone,
+                metadata: (user as any).metadata || {},
+              },
+              salon: {
+                id: salonInfo.salonId,
+                name: salonInfo.salonName || "Salon",
+                address: "",
+              },
+            } as EmployeeContractData);
+          }
+        }
+      }
+      
+      // PRIORITY 2: If no contracts found from PermissionContext, try getMySalons API
+      if (employeeContracts.length === 0) {
+        console.log("📋 availableSalons empty, trying getMySalons API");
+        const salons = await salonService.getMySalons();
+
+        if (salons.length > 0) {
+          for (const salon of salons) {
+            try {
+              const employee = await salonService.getCurrentEmployee(salon.id);
+              if (employee) {
+                let salonWithOwner = salon;
+                try {
+                  const salonDetails = await salonService.getSalonDetails(salon.id);
+                  if (salonDetails.ownerId) {
+                    try {
+                      const ownerResponse = await api.get(`/users/${salonDetails.ownerId}`);
+                      salonWithOwner = { ...salonDetails } as any;
+                      (salonWithOwner as any).owner = (ownerResponse as any)?.data || ownerResponse;
+                    } catch {
+                      // Continue without owner details
+                    }
+                  }
+                } catch {
+                  // Use basic salon info
+                }
+
+                const ownerData = (salonWithOwner as any).owner;
+                employeeContracts.push({
+                  ...employee,
+                  user: {
+                    id: String(user.id),
+                    fullName: user.fullName || "",
+                    email: user.email,
+                    phone: user.phone,
+                    metadata: (user as any).metadata || {},
+                  },
+                  salon: {
+                    id: salonWithOwner.id,
+                    name: salonWithOwner.name,
+                    address: salonWithOwner.address,
+                    ownerId: salonWithOwner.ownerId,
+                    owner: ownerData,
+                  },
+                } as EmployeeContractData);
+              }
+            } catch (error: any) {
+              if (error?.response?.status !== 404) {
+                console.log(`Could not fetch employee data for salon ${salon.id}:`, error?.message);
+              }
             }
           }
         }
-      } else {
         try {
           const allSalonsResponse: any = await api.get("/salons");
           const allSalons =
@@ -226,7 +322,7 @@ export default function EmployeeContractScreen({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user, selectedSalonId]);
+  }, [user, selectedSalonId, availableSalons]);
 
   useEffect(() => {
     loadContractData();
@@ -585,9 +681,9 @@ export default function EmployeeContractScreen({
 
         {selectedContract && (
           <>
-            {/* Contract Header with Gradient */}
+            {/* Contract Header with Modern Gradient */}
             <LinearGradient
-              colors={[theme.colors.primary, theme.colors.primaryDark]}
+              colors={[theme.colors.primary, theme.colors.primary + "E6"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.contractHeader}
@@ -596,8 +692,8 @@ export default function EmployeeContractScreen({
                 <View style={styles.contractHeaderIcon}>
                   <MaterialIcons
                     name="description"
-                    size={32}
-                    color={theme.colors.white}
+                    size={28}
+                    color={theme.colors.primary}
                   />
                 </View>
                 <View style={styles.contractHeaderText}>
@@ -611,9 +707,7 @@ export default function EmployeeContractScreen({
                 style={[
                   styles.statusBadge,
                   {
-                    backgroundColor: selectedContract.isActive
-                      ? theme.colors.overlay
-                      : theme.colors.overlay,
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
                   },
                 ]}
               >
@@ -622,8 +716,8 @@ export default function EmployeeContractScreen({
                     styles.statusDot,
                     {
                       backgroundColor: selectedContract.isActive
-                        ? theme.colors.success
-                        : theme.colors.error,
+                        ? "#4ADE80"
+                        : "#F87171",
                     },
                   ]}
                 />
@@ -1371,107 +1465,113 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   contractHeader: {
-    borderRadius: theme.spacing.md + theme.spacing.xs,
+    borderRadius: 24,
     padding: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: theme.spacing.xs },
-    shadowOpacity: 0.15,
-    shadowRadius: theme.spacing.sm,
-    elevation: 6,
+    marginBottom: theme.spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    elevation: 8,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   contractHeaderContent: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: theme.spacing.md,
+    flex: 1,
   },
   contractHeaderIcon: {
-    width: theme.touchTargets.large,
-    height: theme.touchTargets.large,
-    borderRadius: theme.touchTargets.large / 2,
-    backgroundColor: theme.colors.gray100,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: theme.spacing.md,
-    opacity: 0.3,
   },
   contractHeaderText: {
     flex: 1,
   },
   contractTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    color: theme.colors.white,
-    marginBottom: 4,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    opacity: 0.9,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   contractSalon: {
-    fontSize: 16,
-    fontFamily: theme.fonts.medium,
-    color: theme.colors.white,
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+    fontFamily: theme.fonts.bold,
   },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: theme.spacing.sm + theme.spacing.xs,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.spacing.md + theme.spacing.xs,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginLeft: theme.spacing.sm,
   },
   statusDot: {
-    width: theme.spacing.sm,
-    height: theme.spacing.sm,
-    borderRadius: theme.spacing.xs,
-    marginRight: theme.spacing.sm,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
   statusText: {
-    color: theme.colors.white,
-    fontFamily: theme.fonts.medium,
+    color: "#FFFFFF",
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   section: {
+    borderRadius: 20,
     padding: theme.spacing.lg,
-    borderRadius: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: theme.spacing.xs / 2 },
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: theme.spacing.xs,
-    elevation: 2,
+    shadowRadius: 10,
+    elevation: 3,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: theme.colors.primaryLight,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    marginLeft: theme.spacing.sm,
-  },
-  infoRow: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    borderBottomColor: theme.colors.borderLight + "50",
   },
-  infoLabel: {
-    fontSize: 13,
-    fontFamily: theme.fonts.medium,
-    marginBottom: 4,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    fontFamily: theme.fonts.bold,
+    marginLeft: theme.spacing.sm,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
+  infoRow: {
+    marginBottom: theme.spacing.md,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    opacity: 0.5,
+  },
   infoValue: {
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: "600",
     fontFamily: theme.fonts.medium,
-    lineHeight: 22,
   },
   infoNote: {
     fontSize: 12,

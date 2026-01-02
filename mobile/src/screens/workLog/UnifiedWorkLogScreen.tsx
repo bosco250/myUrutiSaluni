@@ -27,10 +27,7 @@ import {
   formatDuration,
   formatDate,
   generateCalendarDaysForMonth,
-  getPreviousWeek,
-  getNextWeek,
   CalendarDay,
-  getMonthName,
 } from "../../utils/dateHelpers";
 import { formatCurrency, formatCompactCurrency } from "../../utils/formatting";
 import { CalendarStrip } from "../../components/common/CalendarStrip";
@@ -65,7 +62,6 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   const cardColor = isDark ? theme.colors.gray800 : theme.colors.background;
   const textColor = isDark ? theme.colors.white : theme.colors.text;
   const subTextColor = isDark ? theme.colors.gray400 : theme.colors.textSecondary;
-  const navBtnColor = isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary;
 
   const [viewMode, setViewMode] = useState<ViewMode>("tasks");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -300,7 +296,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
       setRefreshing(false);
       loadingRef.current = false;
     }
-  }, [employeeId, selectedDate, viewMode, appointments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, selectedDate, viewMode]);
 
   // Initial load and when key dependencies change
   useEffect(() => {
@@ -318,7 +315,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [employeeId, selectedDate, viewMode, fetchData, salons.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, selectedDate, viewMode, salons.length]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -640,7 +638,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                 {isCompleted
                   ? "Done"
                   : isInProgress
-                    ? "In Progress"
+                    ? "Active"
                     : "Pending"}
               </Text>
             </View>
@@ -648,15 +646,17 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         <View style={styles.customerRow}>
-          <MaterialIcons name="person" size={14} color={theme.colors.primary} />
+          <View style={[styles.customerIconContainer, { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.backgroundSecondary }]}>
+            <MaterialIcons name="person" size={12} color={theme.colors.primary} />
+          </View>
           <Text style={[styles.customerName, { color: textColor }]}>{task.customerName}</Text>
         </View>
 
         <View style={styles.taskDetails}>
           <View style={styles.taskDetailItem}>
             <MaterialIcons
-              name="access-time"
-              size={13}
+              name="schedule"
+              size={14}
               color={subTextColor}
             />
             <Text style={[styles.taskDetailText, { color: subTextColor }]}>
@@ -669,13 +669,17 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
             <Text style={[styles.taskPrice, { color: theme.colors.primary }]}>
               {formatCurrency(task.serviceAmount)}
             </Text>
-            {task.commissionAmount && task.commissionAmount > 0 && (
-              <Text style={[styles.commissionText, { color: subTextColor }]}>
-                +{formatCurrency(task.commissionAmount)} commission
-              </Text>
-            )}
           </View>
         </View>
+
+        {task.commissionAmount && task.commissionAmount > 0 && (
+          <View style={[styles.commissionBadge, { backgroundColor: theme.colors.success + '10' }]}>
+            <MaterialIcons name="payments" size={12} color={theme.colors.success} />
+            <Text style={styles.commissionBadgeText}>
+              Earned {formatCurrency(task.commissionAmount)}
+            </Text>
+          </View>
+        )}
 
         {/* Start Service button - Only visible for salon owners, not employees */}
         {task.type === "appointment" && isPending && user?.role?.toLowerCase() === 'salon_owner' && (
@@ -870,87 +874,60 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     );
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]} edges={["top"]}>
-        {/* Header with Week Navigation */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.navButton, { backgroundColor: navBtnColor }]}
-            onPress={() => setSelectedDate(getPreviousWeek(selectedDate))}
-          >
-            <MaterialIcons name="chevron-left" size={28} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: textColor }]}>My Work</Text>
-            <Text style={[styles.headerSubtitle, { color: subTextColor }]}>
-              {getMonthName(selectedDate)} {selectedDate.getFullYear()}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.navButton, { backgroundColor: navBtnColor }]}
-            onPress={() => setSelectedDate(getNextWeek(selectedDate))}
-          >
-            <MaterialIcons name="chevron-right" size={28} color={theme.colors.primary} />
-          </TouchableOpacity>
+      <View style={styles.premiumHeader}>
+        <View>
+          <Text style={[styles.greetingText, { color: subTextColor }]}>{getGreeting()},</Text>
+          <Text style={[styles.userNameText, { color: textColor }]}>
+            {user?.fullName?.split(' ')[0] || "Employee"}
+          </Text>
         </View>
+        <TouchableOpacity 
+          style={[styles.headerIcon, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary }]}
+          onPress={() => navigation?.navigate("Notifications")}
+        >
+          <MaterialIcons name="notifications-none" size={24} color={textColor} />
+        </TouchableOpacity>
+      </View>
 
-        {/* View Mode Tabs */}
-        <View style={[styles.tabContainer, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary }]}>
-          <TouchableOpacity
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, viewMode === "tasks" && styles.activeTab]}
+          onPress={() => setViewMode("tasks")}
+        >
+          <Text
             style={[
-              styles.tab, 
-              viewMode === "tasks" && styles.tabActive,
-              viewMode === "tasks" && { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.background }
+              styles.tabText,
+              { color: viewMode === "tasks" ? theme.colors.primary : subTextColor },
             ]}
-            onPress={() => setViewMode("tasks")}
           >
-            <MaterialIcons
-              name="task-alt"
-              size={20}
-              color={
-                viewMode === "tasks"
-                  ? theme.colors.primary
-                  : subTextColor
-              }
-            />
-            <Text
-              style={[
-                styles.tabText,
-                viewMode === "tasks" && styles.tabTextActive,
-                { color: viewMode === "tasks" ? theme.colors.primary : subTextColor }
-              ]}
-            >
-              Tasks
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+            Tasks
+          </Text>
+          {viewMode === "tasks" && <View style={styles.activeTabIndicator} />}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, viewMode === "worklog" && styles.activeTab]}
+          onPress={() => setViewMode("worklog")}
+        >
+          <Text
             style={[
-              styles.tab, 
-              viewMode === "worklog" && styles.tabActive,
-              viewMode === "worklog" && { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.background }
+              styles.tabText,
+              { color: viewMode === "worklog" ? theme.colors.primary : subTextColor },
             ]}
-            onPress={() => setViewMode("worklog")}
           >
-            <MaterialIcons
-              name="history"
-              size={20}
-              color={
-                viewMode === "worklog"
-                  ? theme.colors.primary
-                  : subTextColor
-              }
-            />
-            <Text
-              style={[
-                styles.tabText,
-                viewMode === "worklog" && styles.tabTextActive,
-                { color: viewMode === "worklog" ? theme.colors.primary : subTextColor }
-              ]}
-            >
-              Work Log
-            </Text>
-          </TouchableOpacity>
-        </View>
+            Work Log
+          </Text>
+          {viewMode === "worklog" && <View style={styles.activeTabIndicator} />}
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         style={{ flex: 1 }}
@@ -965,34 +942,27 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           />
         }
       >
-        {/* Salon Selector - Only show if employee works in multiple salons */}
+        {/* Salon Selector */}
         {salons.length > 1 && (
           <TouchableOpacity 
             style={[
               styles.salonCard, 
-              styles.salonCardCompact,
               { 
                 backgroundColor: cardColor,
                 borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-                shadowColor: isDark ? '#000000' : '#000000',
               }
             ]}
             onPress={() => setShowSalonPicker(true)}
             activeOpacity={0.7}
           >
-            <View style={[styles.salonIconContainer, styles.salonIconContainerCompact, { backgroundColor: theme.colors.primary + '15' }]}>
+            <View style={[styles.salonIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
               <FontAwesome5 name="store" size={18} color={theme.colors.primary} />
             </View>
             <View style={styles.salonInfo}>
-              <Text style={[styles.salonLabel, styles.salonLabelCompact, { color: subTextColor }]}>Current Workplace</Text>
-              <Text style={[styles.salonName, styles.salonNameCompact, { color: textColor }]} numberOfLines={1}>
+              <Text style={[styles.salonLabel, { color: subTextColor }]}>Current workplace</Text>
+              <Text style={[styles.salonName, { color: textColor }]} numberOfLines={1}>
                 {selectedSalon?.name || 'Select Salon'}
               </Text>
-              {selectedSalon?.city && (
-                <Text style={[styles.salonAddress, styles.salonAddressCompact, { color: subTextColor }]} numberOfLines={1}>
-                  {selectedSalon.city}
-                </Text>
-              )}
             </View>
             <MaterialIcons name="keyboard-arrow-down" size={20} color={subTextColor} />
           </TouchableOpacity>
@@ -1005,7 +975,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           onDateSelect={setSelectedDate}
         />
 
-        {/* Statistics (Work Log only) */}
+        {/* Statistics */}
         {viewMode === "worklog" && workLogDay && (
           <View style={styles.statsContainer}>
             {workLogStats.map((stat) => (
@@ -1014,16 +984,12 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           </View>
         )}
 
-        {/* Clock In/Out Status (Work Log only) */}
+        {/* Clock In/Out Status */}
         {viewMode === "worklog" && workLogDay && workLogDay.clockIn && (
-          <View style={[styles.clockStatusCard, { backgroundColor: cardColor }]}>
+          <View style={[styles.clockStatusCard, { backgroundColor: cardColor, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]}>
             <View style={styles.clockStatusRow}>
               <View style={styles.clockStatusItem}>
-                <MaterialIcons
-                  name="login"
-                  size={20}
-                  color={theme.colors.success}
-                />
+                <MaterialIcons name="login" size={20} color={theme.colors.success} />
                 <Text style={[styles.clockStatusLabel, { color: subTextColor }]}>Clocked In</Text>
                 <Text style={[styles.clockStatusTime, { color: textColor }]}>
                   {formatTime(workLogDay.clockIn)}
@@ -1031,11 +997,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
               </View>
               {workLogDay.clockOut ? (
                 <View style={styles.clockStatusItem}>
-                  <MaterialIcons
-                    name="logout"
-                    size={20}
-                    color={theme.colors.error}
-                  />
+                  <MaterialIcons name="logout" size={20} color={theme.colors.error} />
                   <Text style={[styles.clockStatusLabel, { color: subTextColor }]}>Clock Out</Text>
                   <Text style={[styles.clockStatusTime, { color: textColor }]}>
                     {formatTime(workLogDay.clockOut)}
@@ -1045,12 +1007,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
                 <View style={styles.clockStatusItem}>
                   <View style={styles.workingIndicator} />
                   <Text style={[styles.clockStatusLabel, { color: subTextColor }]}>Status</Text>
-                  <Text
-                    style={[
-                      styles.clockStatusTime,
-                      { color: theme.colors.warning },
-                    ]}
-                  >
+                  <Text style={[styles.clockStatusTime, { color: theme.colors.warning }]}>
                     Working...
                   </Text>
                 </View>
@@ -1059,72 +1016,26 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           </View>
         )}
 
-        {/* Filter Tabs (Tasks only) */}
+        {/* Filter Tabs */}
         {viewMode === "tasks" && (
           <View style={styles.filterContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterScroll}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
               {[
-                {
-                  id: "all" as TaskFilter,
-                  label: "All",
-                  count: taskStats.total,
-                },
-                {
-                  id: "pending" as TaskFilter,
-                  label: "Pending",
-                  count: taskStats.pending,
-                },
-                {
-                  id: "in_progress" as TaskFilter,
-                  label: "Active",
-                  count: taskStats.inProgress,
-                },
-                {
-                  id: "completed" as TaskFilter,
-                  label: "Done",
-                  count: taskStats.completed,
-                },
+                { id: "all" as TaskFilter, label: "All", count: taskStats.total },
+                { id: "pending" as TaskFilter, label: "Pending", count: taskStats.pending },
+                { id: "in_progress" as TaskFilter, label: "Active", count: taskStats.inProgress },
+                { id: "completed" as TaskFilter, label: "Done", count: taskStats.completed },
               ].map((option) => (
                 <TouchableOpacity
                   key={option.id}
-                  style={[
-                    styles.filterButton,
-                    taskFilter === option.id && styles.filterButtonActive,
-                  ]}
+                  style={[styles.filterButton, taskFilter === option.id && styles.filterButtonActive]}
                   onPress={() => setTaskFilter(option.id)}
                 >
-                  <Text
-                    style={[
-                      styles.filterButtonText,
-                      taskFilter === option.id && styles.filterButtonTextActive,
-                      { color: taskFilter === option.id ? "#FFFFFF" : textColor }
-                    ]}
-                  >
+                  <Text style={[styles.filterButtonText, { color: taskFilter === option.id ? "#FFFFFF" : textColor }]}>
                     {option.label}
                   </Text>
-                  <View
-                    style={[
-                      styles.filterCount,
-                      taskFilter === option.id && styles.filterCountActive,
-                      { 
-                        backgroundColor: taskFilter === option.id 
-                          ? "rgba(255,255,255,0.3)" 
-                          : (isDark ? theme.colors.gray700 : theme.colors.gray200)
-                      }
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterCountText,
-                        taskFilter === option.id &&
-                          styles.filterCountTextActive,
-                        { color: taskFilter === option.id ? "#FFFFFF" : subTextColor }
-                      ]}
-                    >
+                  <View style={[styles.filterCount, { backgroundColor: taskFilter === option.id ? "rgba(255,255,255,0.2)" : (isDark ? theme.colors.gray700 : theme.colors.gray200) }]}>
+                    <Text style={[styles.filterCountText, { color: taskFilter === option.id ? "#FFFFFF" : subTextColor }]}>
                       {option.count}
                     </Text>
                   </View>
@@ -1134,76 +1045,50 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           </View>
         )}
 
-        {/* Loading State */}
+        {/* Content */}
+        {!loading && !error && (
+          <View style={styles.contentContainer}>
+            {viewMode === "tasks" ? (
+              sortedTasks.length === 0 ? (
+                <EmptyState
+                  icon="task-alt"
+                  title="No tasks found"
+                  subtitle={`You don't have any ${taskFilter === "all" ? "" : taskFilter.replace("_", " ")} tasks for ${formatDateDisplay(selectedDate)}`}
+                />
+              ) : (
+                sortedTasks.map(renderTaskCard)
+              )
+            ) : (
+              workLogDay && workLogDay.entries.length > 0 ? (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: textColor }]}>Timeline</Text>
+                    <Text style={[styles.sectionStats, { color: subTextColor }]}>
+                      {workLogDay.entries.length} {workLogDay.entries.length === 1 ? "Entry" : "Entries"}
+                    </Text>
+                  </View>
+                  <View style={styles.timelineList}>
+                    {workLogDay.entries.map(renderTimelineEntry)}
+                  </View>
+                </>
+              ) : (
+                <EmptyState
+                  icon="work-outline"
+                  title="No Work Log"
+                  subtitle={workLogDay?.status === "not_worked" ? "You didn't work on this day." : "No activities recorded for this day."}
+                />
+              )
+            )}
+          </View>
+        )}
+
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: subTextColor }]}>Loading...</Text>
           </View>
-        )}
-
-        {/* Error State */}
-        {!loading && error && (
-          <View style={styles.errorContainer}>
-            <MaterialIcons
-              name="error-outline"
-              size={48}
-              color={theme.colors.error}
-            />
-            <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-              <Text style={styles.retryText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Content */}
-        {!loading && !error && (
-          <>
-            {viewMode === "tasks" ? (
-              <View style={styles.contentContainer}>
-                {sortedTasks.length === 0 ? (
-                  <EmptyState
-                    icon="task-alt"
-                    title="No tasks found"
-                    subtitle={`You don't have any ${taskFilter === "all" ? "" : taskFilter.replace("_", " ")} tasks for ${formatDateDisplay(selectedDate)}`}
-                  />
-                ) : (
-                  sortedTasks.map(renderTaskCard)
-                )}
-              </View>
-            ) : (
-              <View style={styles.contentContainer}>
-                {workLogDay && workLogDay.entries.length > 0 ? (
-                  <>
-                    <View style={styles.sectionHeader}>
-                      <Text style={[styles.sectionTitle, { color: textColor }]}>Timeline</Text>
-                      <Text style={[styles.sectionStats, { color: subTextColor }]}>
-                        {workLogDay.entries.length}{" "}
-                        {workLogDay.entries.length === 1 ? "Entry" : "Entries"}
-                      </Text>
-                    </View>
-                    <View style={styles.timelineList}>
-                      {workLogDay.entries.map(renderTimelineEntry)}
-                    </View>
-                  </>
-                ) : (
-                  <EmptyState
-                    icon="work-outline"
-                    title="No Work Log"
-                    subtitle={
-                      workLogDay?.status === "not_worked"
-                        ? "You didn't work on this day."
-                        : "No activities recorded for this day."
-                    }
-                  />
-                )}
-              </View>
-            )}
-          </>
         )}
       </ScrollView>
-      
+
       {renderSalonPicker()}
     </SafeAreaView>
   );
@@ -1212,184 +1097,174 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-  header: {
+  premiumHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
-  headerTitle: {
-    fontSize: 24,
+  greetingText: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  userNameText: {
+    fontSize: 22,
     fontWeight: "700",
-    color: theme.colors.text,
     letterSpacing: -0.5,
-    textAlign: "center",
   },
-  headerSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-    textAlign: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
-    borderRadius: 20,
-    backgroundColor: theme.colors.backgroundSecondary,
+    alignItems: "center",
   },
   tabContainer: {
     flexDirection: "row",
-    marginHorizontal: 20,
+    paddingHorizontal: 20,
     marginBottom: 20,
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: 4,
+    gap: 24,
   },
   tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: 8,
+    position: "relative",
   },
-  tabActive: {
-    backgroundColor: theme.colors.background,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  activeTab: {
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.textSecondary,
   },
-  tabTextActive: {
-    color: theme.colors.primary,
+  activeTabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 3,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  salonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 24,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+  },
+  salonIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  salonInfo: {
+    flex: 1,
+  },
+  salonLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  salonName: {
+    fontSize: 16,
+    fontWeight: "700",
   },
   statsContainer: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 24,
     gap: 12,
   },
   clockStatusCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
     marginHorizontal: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 24,
+    borderWidth: 1,
   },
   clockStatusRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
   },
   clockStatusItem: {
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    flex: 1,
   },
   clockStatusLabel: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
     fontWeight: "500",
   },
   clockStatusTime: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.text,
   },
   workingIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: theme.colors.warning,
   },
   filterContainer: {
-    marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   filterScroll: {
-    gap: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 20,
+    gap: 10,
   },
   filterButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "transparent",
-    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 8,
   },
   filterButtonActive: {
     backgroundColor: theme.colors.primary,
   },
   filterButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-  },
-  filterButtonTextActive: {
-    color: "#FFFFFF",
   },
   filterCount: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 8,
-    minWidth: 20,
+    borderRadius: 10,
+    minWidth: 24,
     alignItems: "center",
   },
-  filterCountActive: {
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
   filterCountText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  filterCountTextActive: {
-    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
   },
   contentContainer: {
     paddingHorizontal: 20,
   },
   taskCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 20,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
+    marginBottom: 16,
   },
   taskCardCompleted: {
-    opacity: 0.85,
+    opacity: 0.8,
   },
   taskHeader: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   taskTitleRow: {
     flexDirection: "row",
@@ -1398,108 +1273,128 @@ const styles = StyleSheet.create({
   },
   taskTitleContainer: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 12,
   },
   taskTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.text,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   typeBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
     alignSelf: "flex-start",
   },
   typeBadgeText: {
     fontSize: 10,
-    fontWeight: "500",
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   statusBadgeText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "800",
   },
   customerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 6,
+    marginBottom: 16,
+    gap: 10,
+  },
+  customerIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.primary + '15',
   },
   customerName: {
-    fontSize: 14,
-    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: "600",
   },
   taskDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
+    alignItems: "flex-end",
   },
   taskDetailItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 8,
+    marginBottom: 4,
   },
   taskDetailText: {
-    fontSize: 12,
+    fontSize: 14,
   },
   priceContainer: {
     alignItems: "flex-end",
   },
   taskPrice: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "800",
   },
-  commissionText: {
-    fontSize: 11,
-    marginTop: 2,
+  commissionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    marginTop: 12,
+    alignSelf: "flex-start",
+  },
+  commissionBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.success,
   },
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 6,
-    marginTop: 8,
-  },
-  actionButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
+    paddingVertical: 14,
+    borderRadius: 20,
+    gap: 10,
+    marginTop: 20,
   },
   actionButtonLoading: {
     opacity: 0.7,
+  },
+  actionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    marginBottom: 16,
+    marginBottom: 20,
+    marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
   },
   sectionStats: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "500",
   },
   timelineList: {
     paddingBottom: 20,
   },
   timelineItem: {
     flexDirection: "row",
-    marginBottom: 0,
-    minHeight: 100,
+    minHeight: 120,
   },
   timelineLeft: {
     alignItems: "center",
@@ -1511,84 +1406,70 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     marginTop: 6,
-    borderWidth: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 3,
+    backgroundColor: theme.colors.background,
   },
   timelineLine: {
     flex: 1,
     width: 2,
     marginTop: 4,
     marginBottom: 4,
+    borderRadius: 1,
   },
   timelineContent: {
     flex: 1,
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   timeText: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 10,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 12,
   },
   entryCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
   },
   entryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   entryTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
-    color: theme.colors.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: 12,
   },
   durationBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   durationText: {
     fontSize: 12,
     color: theme.colors.primary,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   entryDescription: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 12,
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 14,
   },
   earningsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginBottom: 8,
+    gap: 6,
   },
   earningsText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: theme.colors.success,
   },
   loadingContainer: {
-    paddingVertical: 60,
+    paddingVertical: 80,
     alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
   },
   errorContainer: {
     paddingVertical: 60,
@@ -1596,23 +1477,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   errorText: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 16,
+    fontSize: 15,
     textAlign: "center",
+    lineHeight: 22,
   },
   retryButton: {
-    marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+    marginTop: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
+    borderRadius: 20,
   },
   retryText: {
     color: "#FFFFFF",
-    fontWeight: "600",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    width: "100%",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  salonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  salonOptionInfo: {
+    flex: 1,
+  },
+  salonOptionName: {
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  salonOptionAddress: {
     fontSize: 14,
   },
-  // Empty State styles
+  modalCancelButton: {
+    marginTop: 12,
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 20,
+  },
+  modalCancelText: {
+    color: theme.colors.error,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+  // Empty State
   emptyStateContainer: {
     flex: 1,
     justifyContent: "center",
@@ -1651,129 +1582,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
-  },
-  // Salon Card
-  salonCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.md + 2,
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  salonIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.md,
-  },
-  salonInfo: {
-    flex: 1,
-  },
-  salonLabel: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
-    marginBottom: 4,
-  },
-  salonName: {
-    fontSize: 16,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
-    marginBottom: 2,
-  },
-  salonAddress: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
-  },
-  salonCardCompact: {
-    padding: 12,
-    marginBottom: 12,
-    borderRadius: 10,
-  },
-  salonIconContainerCompact: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  salonLabelCompact: {
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  salonNameCompact: {
-    fontSize: 14,
-    marginBottom: 1,
-  },
-  salonAddressCompact: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.lg,
-  },
-  modalContent: {
-    width: "100%",
-    borderRadius: 20,
-    padding: theme.spacing.lg,
-    maxHeight: "80%",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: theme.spacing.md,
-    fontFamily: theme.fonts.bold,
-  },
-  salonOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: 12,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  salonOptionInfo: {
-    flex: 1,
-  },
-  salonOptionName: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.semibold,
-    marginBottom: 2,
-  },
-  salonOptionAddress: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-  },
-  modalCancelButton: {
-    marginTop: theme.spacing.md,
-    alignItems: "center",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-  },
-  modalCancelText: {
-    color: theme.colors.error,
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.semibold,
   },
 });
 

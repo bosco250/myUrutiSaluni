@@ -216,258 +216,145 @@ export default function NotificationsScreen({
     try {
       const metadata = notification.metadata || {};
       // Check metadata first, then fallback to checking notification type
-      // Note: appointmentId might be in metadata or as a direct field (if backend includes it)
-      const appointmentId =
-        metadata.appointmentId || (notification as any).appointmentId;
-      const salonId = metadata.salonId || (notification as any).salonId;
+      const appointmentId = metadata.appointmentId || (notification as any).appointmentId;
+      const salonId = metadata.salonId || (notification as any).salonId || metadata.salon_id;
       const serviceId = metadata.serviceId || (notification as any).serviceId;
-      const employeeId =
-        metadata.employeeId || (notification as any).employeeId;
+      const employeeId = metadata.employeeId || (notification as any).employeeId || metadata.employee_id;
 
-      // Handle appointment-related notifications
-      if (notification.type?.startsWith("appointment_")) {
-        if (appointmentId) {
-          // Try to fetch appointment first to pass full data
-          try {
-            // Note: We need to get appointment by ID - check if there's a method for this
-            // For now, navigate with appointmentId - the screen will fetch it
-            navigation?.navigate("AppointmentDetail", {
-              appointmentId: appointmentId,
-            });
-          } catch (error) {
-            console.error("Error navigating to appointment:", error);
-            // Fallback: navigate to Bookings screen
-            navigation?.navigate("Bookings");
-          }
+      const notificationType = notification.type?.toLowerCase() || "";
+      
+      console.log("📱 Processing notification:", { 
+        type: notificationType, 
+        salonId, 
+        employeeId, 
+        userRole: user?.role 
+      });
+
+      // ============================================
+      // SPECIFIC TYPE HANDLERS (Check these FIRST!)
+      // ============================================
+
+      // 1️⃣ PERMISSION NOTIFICATIONS → WhatCanIDo / EmployeePermissions
+      if (notificationType === "permission_granted" || notificationType === "permission_revoked") {
+        if (user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE") {
+          console.log("🔐 Employee: navigating to WhatCanIDo");
+          navigation?.navigate("WhatCanIDo");
         } else {
-          // No appointmentId, just go to Bookings
+          console.log("👔 Owner: navigating to EmployeePermissions");
+          navigation?.navigate("EmployeePermissions", {
+            salonId: salonId,
+            employeeId: employeeId,
+          });
+        }
+        return;
+      }
+
+      // 2️⃣ EMPLOYEE HIRED/ASSIGNED → EmployeeContract
+      if (notificationType === "employee_assigned" || notificationType === "employee_hired" || notificationType === "new_job") {
+        if (user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE") {
+          console.log("📋 Employee: navigating to EmployeeContract");
+          navigation?.navigate("EmployeeContract", {
+            salonId: salonId,
+            employeeId: employeeId,
+          });
+        } else {
+          console.log("👔 Owner: navigating to EmployeeDetail");
+          navigation?.navigate("EmployeeDetail", {
+            salonId: salonId,
+            employeeId: employeeId,
+          });
+        }
+        return;
+      }
+
+      // 3️⃣ APPOINTMENT NOTIFICATIONS → AppointmentDetail / Bookings
+      if (notificationType.startsWith("appointment_")) {
+        if (appointmentId) {
+          navigation?.navigate("AppointmentDetail", { appointmentId });
+        } else {
           navigation?.navigate("Bookings");
         }
+        return;
       }
-      // Handle salon-related notifications
-      else if (
-        salonId &&
-        (notification.type === "salon_update" ||
-          notification.type === "employee_assigned")
-      ) {
-        navigation?.navigate("SalonDetail", {
-          salonId: salonId,
-        });
-      }
-      // Handle service-related notifications
-      else if (serviceId) {
-        navigation?.navigate("ServiceDetail", {
-          serviceId: serviceId,
-        });
-      }
-      // Handle employee-related notifications
-      else if (employeeId && salonId) {
-        navigation?.navigate("EmployeeDetail", {
-          employeeId: employeeId,
-          salonId: salonId,
-        });
-      }
-      // Handle commission notifications - go to Commissions screen
-      else if (
-        notification.type?.startsWith("commission_") ||
-        notification.type === "commission_earned" ||
-        notification.type === "commission_paid"
-      ) {
+
+      // 4️⃣ COMMISSION NOTIFICATIONS → Commissions
+      if (notificationType.startsWith("commission_") || notificationType === "commission_earned" || notificationType === "commission_paid") {
         navigation?.navigate("Commissions");
+        return;
       }
-      // Handle sale notifications - go to SaleDetail for receipt
-      else if (
-        notification.type?.startsWith("sale_") ||
-        notification.type === "sale_completed"
-      ) {
+
+      // 5️⃣ SALE NOTIFICATIONS → SaleDetail / SalesHistory
+      if (notificationType.startsWith("sale_") || notificationType === "sale_completed") {
         const saleId = metadata.saleId || (notification as any).saleId;
         if (saleId) {
-          navigation?.navigate("SaleDetail", {
-            saleId: saleId,
-          });
+          navigation?.navigate("SaleDetail", { saleId });
         } else {
-          // Fallback: navigate to SalesHistory if no saleId
           navigation?.navigate("SalesHistory");
         }
+        return;
       }
-      // Handle payment notifications - navigate based on payment type
-      else if (
-        notification.type?.startsWith("payment_") ||
-        notification.type === "payment"
-      ) {
-        const paymentType =
-          metadata.paymentType || (notification as any).paymentType;
-        const paymentId = metadata.paymentId || (notification as any).paymentId;
-        const walletTransactionId =
-          metadata.walletTransactionId ||
-          (notification as any).walletTransactionId;
 
-        // If it's a wallet top-up, navigate to Finance screen
+      // 6️⃣ PAYMENT NOTIFICATIONS → PaymentHistory / Finance / Wallet
+      if (notificationType.startsWith("payment_") || notificationType === "payment") {
+        const paymentType = metadata.paymentType || (notification as any).paymentType;
+        const paymentId = metadata.paymentId || (notification as any).paymentId;
+        const walletTransactionId = metadata.walletTransactionId;
+
         if (paymentType === "wallet_topup" || paymentType === "WALLET_TOPUP") {
           navigation?.navigate("Finance");
-        } else if (
-          paymentType === "wallet_withdrawal" ||
-          paymentType === "WALLET_WITHDRAWAL"
-        ) {
-          navigation?.navigate("PaymentHistory", {
-            mode: "wallet",
-            title: "Wallet History",
-            highlightTransactionId: walletTransactionId,
-          });
+        } else if (paymentType === "wallet_withdrawal" || paymentType === "WALLET_WITHDRAWAL") {
+          navigation?.navigate("PaymentHistory", { mode: "wallet", highlightTransactionId: walletTransactionId });
         } else {
-          // For other payments, navigate to PaymentHistory (default mode is "payment")
-          navigation?.navigate("PaymentHistory", {
-            highlightPaymentId: paymentId,
-          });
+          navigation?.navigate("PaymentHistory", { highlightPaymentId: paymentId });
         }
+        return;
       }
-      // Handle loyalty/points notifications - go to Loyalty screen
-      else if (
-        notification.type?.startsWith("points_") ||
-        notification.type === "points_earned" ||
-        notification.type === "points_redeemed" ||
-        notification.type === "reward_available" ||
-        notification.type === "vip_status_achieved"
-      ) {
-        navigation?.navigate("Loyalty");
-      }
-      // Handle review notifications - navigate to salon detail with reviewId
-      else if (
-        notification.type === "review" ||
-        notification.type?.toLowerCase() === "review" ||
-        notification.type?.startsWith("review_") ||
-        notification.type?.toLowerCase().includes("review")
-      ) {
-        const reviewSalonId =
-          metadata.salonId ||
-          (notification as any).salonId ||
-          metadata.salon_id;
-        const reviewId =
-          metadata.reviewId ||
-          (notification as any).reviewId ||
-          metadata.review_id;
-        console.log("Review notification clicked:", {
-          type: notification.type,
-          fullNotification: notification,
-          metadata,
-          reviewSalonId,
-          reviewId,
-          userRole: user?.role,
-        });
-        if (reviewSalonId) {
-          const params: any = { salonId: reviewSalonId };
-          if (reviewId) {
-            params.reviewId = String(reviewId); // Ensure it's a string
-          }
-          
-          // Determine which screen to navigate to based on user role
-          // Salon owners use "OwnerSalonDetail", customers use "SalonDetail"
-          const targetScreen = 
-            user?.role === "salon_owner" || user?.role === "SALON_OWNER"
-              ? "OwnerSalonDetail"
-              : "SalonDetail";
-          
-          console.log("Navigating to", targetScreen, "with params:", params);
-          navigation?.navigate(targetScreen, params);
-        } else {
-          console.warn("No salonId found in review notification", {
-            metadata,
-            notification,
-          });
-        }
-      }
-      // Handle permission notifications
-      else if (
-        notification.type === "permission_granted" ||
-        notification.type === "permission_revoked"
-      ) {
-        const permissionSalonId =
-          metadata.salonId ||
-          (notification as any).salonId ||
-          metadata.salon_id;
-        const permissionEmployeeId =
-          metadata.employeeId ||
-          (notification as any).employeeId ||
-          metadata.employee_id;
 
-        // For employees: Navigate to screen where they can USE the permissions
-        // For owners: Navigate to permissions management screen
-        if (user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE") {
-          // Employee - navigate to where they can use permissions
-          if (notification.type === "permission_granted") {
-            // Get granted permissions from metadata
-            // CRITICAL: Backend sends:
-            // - metadata.grantedPermissions = array of CODES like ["MANAGE_APPOINTMENTS"]
-            // - permissions = array of DESCRIPTIONS like ["Create, update, and cancel..."]
-            // We need the CODES, not the descriptions!
-            let grantedPermissions: string[] = 
-              metadata.grantedPermissions || // This has the codes we need
-              (notification as any).grantedPermissions ||
-              [];
-            
-            console.log("🔍 Permission notification metadata:", {
-              grantedPermissions: metadata.grantedPermissions,
-              permissions: metadata.permissions,
-              selectedPermissions: grantedPermissions,
-            });
-            
-            // If permissions not in metadata, try to fetch from API
-            if (grantedPermissions.length === 0 && permissionSalonId && permissionEmployeeId) {
-              try {
-                console.log("📡 Fetching permissions from API for employee:", permissionEmployeeId);
-                // Dynamically import to avoid circular dependencies
-                const { employeePermissionsService } = await import("../services/employeePermissions");
-                const permissionsData = await employeePermissionsService.getEmployeePermissions(
-                  permissionSalonId,
-                  permissionEmployeeId
-                );
-                grantedPermissions = permissionsData
-                  .filter(p => p.isActive)
-                  .map(p => p.permissionCode);
-                console.log("✅ Fetched permissions from API:", grantedPermissions);
-              } catch (error) {
-                console.error("❌ Error fetching permissions for navigation:", error);
-              }
-            }
-            
-            
-            // Import helper function to get primary screen
-            // Use dynamic import to avoid circular dependencies
-             const { getPrimaryScreenFromPermissions } = await import("../utils/permissionNavigation");
-            
-            if (grantedPermissions.length > 0) {
-              // Navigate to the primary screen based on granted permissions
-              const primaryScreen = getPrimaryScreenFromPermissions(grantedPermissions as any);
-              console.log("🎯 Navigating employee to primary screen:", primaryScreen, "based on permission CODES:", grantedPermissions);
-              navigation?.navigate(primaryScreen);
-            } else {
-              // If permissions not available, navigate to MyPermissions to see them
-              console.log("⚠️ No permissions found, navigating to MyPermissions");
-              navigation?.navigate("MyPermissions");
-            }
-          } else {
-            // Permission revoked - show permissions screen
-            navigation?.navigate("MyPermissions");
-          }
-        } else {
-          // Owner/Admin - navigate to permissions management screen
-          if (permissionSalonId) {
-            navigation?.navigate("EmployeePermissions", {
-              salonId: permissionSalonId,
-              employeeId: permissionEmployeeId,
-            });
-          } else {
-            navigation?.navigate("EmployeePermissions");
-          }
+      // 7️⃣ LOYALTY/POINTS NOTIFICATIONS → Loyalty
+      if (notificationType.startsWith("points_") || ["points_earned", "points_redeemed", "reward_available", "vip_status_achieved"].includes(notificationType)) {
+        navigation?.navigate("Loyalty");
+        return;
+      }
+
+      // 8️⃣ REVIEW NOTIFICATIONS → SalonDetail / OwnerSalonDetail
+      if (notificationType === "review" || notificationType.includes("review")) {
+        const reviewId = metadata.reviewId || (notification as any).reviewId;
+        if (salonId) {
+          const targetScreen = (user?.role === "salon_owner" || user?.role === "SALON_OWNER") 
+            ? "OwnerSalonDetail" 
+            : "SalonDetail";
+          navigation?.navigate(targetScreen, { salonId, reviewId: String(reviewId || "") });
         }
+        return;
       }
-      // For other notifications, stay on notifications screen or navigate to relevant screen
-      else {
-        console.log(
-          "No specific navigation for notification type:",
-          notification.type
-        );
+
+      // 9️⃣ SALON UPDATE → SalonDetail
+      if (notificationType === "salon_update") {
+        if (salonId) {
+          navigation?.navigate("SalonDetail", { salonId });
+        }
+        return;
       }
+
+      // ============================================
+      // GENERIC FALLBACK HANDLERS (Based on IDs)
+      // ============================================
+
+      // Fallback: If we have serviceId, go to ServiceDetail
+      if (serviceId) {
+        navigation?.navigate("ServiceDetail", { serviceId });
+        return;
+      }
+
+      // Fallback: If we have appointmentId, go to AppointmentDetail
+      if (appointmentId) {
+        navigation?.navigate("AppointmentDetail", { appointmentId });
+        return;
+      }
+
+      // Last resort: Log unhandled type
+      console.log("⚠️ No specific navigation for notification type:", notificationType);
+
     } catch (error: any) {
       console.error("Error handling notification navigation:", error);
     }

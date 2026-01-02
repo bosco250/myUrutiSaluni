@@ -41,6 +41,12 @@ export class Service {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ length: 50, nullable: true })
+  category: string;
+
+  @Column({ name: 'target_gender', length: 20, nullable: true })
+  targetGender: string;
+
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 

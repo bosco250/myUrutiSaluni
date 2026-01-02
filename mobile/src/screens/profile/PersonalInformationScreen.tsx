@@ -194,21 +194,23 @@ export default function PersonalInformationScreen({
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          activeOpacity={0.7}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <>
-              <MaterialIcons name="check" size={20} color="#FFFFFF" />
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            activeOpacity={0.7}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <MaterialIcons name="check" size={20} color="#FFFFFF" />
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -243,7 +245,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl * 2,
+    paddingBottom: theme.spacing.xl,
   },
   profileSection: {
     alignItems: "center",
@@ -280,8 +282,8 @@ const styles = StyleSheet.create({
   },
   changePhotoText: {
     fontSize: 14,
-    fontWeight: "500",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   formContainer: {
     gap: theme.spacing.md,
@@ -289,14 +291,19 @@ const styles = StyleSheet.create({
   inputCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     padding: theme.spacing.md,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   inputIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginRight: theme.spacing.md,
@@ -305,31 +312,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    fontFamily: theme.fonts.medium,
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
     marginBottom: 4,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    opacity: 0.6,
   },
   input: {
     fontSize: 16,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.medium,
     padding: 0,
+    fontWeight: '600',
   },
   multilineInput: {
-    minHeight: 60,
+    minHeight: 80,
     textAlignVertical: "top",
+    paddingTop: 4,
+  },
+  footer: {
+    marginTop: theme.spacing.xl,
   },
   saveButton: {
     flexDirection: "row",
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: theme.spacing.xl,
     gap: theme.spacing.sm,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   saveButtonDisabled: {
     opacity: 0.7,
@@ -337,7 +354,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
 });

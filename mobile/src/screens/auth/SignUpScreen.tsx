@@ -9,8 +9,9 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Input, SegmentedControl } from "../../components";
-import { MailIcon, LockIcon, PersonIcon, PhoneIcon } from "../../components/common/Icons";
+import { MailIcon, LockIcon, PersonIcon, PhoneIcon, ChevronLeftIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
 import { useAuth, useTheme } from "../../context";
 
@@ -42,6 +43,10 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
       backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
     },
     border: {
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
+    },
+    backButton: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
     },
   };
@@ -142,28 +147,30 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const accountTypeIndex = accountTypes.indexOf(accountType);
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, dynamicStyles.container]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.content}>
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation?.goBack()}
-          >
-            <Text style={[styles.backButtonText, dynamicStyles.text]}>←</Text>
-          </TouchableOpacity>
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.title, dynamicStyles.text]}>Create Account</Text>
-            <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>Join Isimbi to start your journey</Text>
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Header with Back Button */}
+            <View style={styles.header}>
+              <TouchableOpacity
+                style={[styles.backButton, dynamicStyles.backButton]}
+                onPress={() => navigation?.goBack()}
+              >
+                <ChevronLeftIcon size={28} color={isDark ? theme.colors.white : theme.colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.title, dynamicStyles.text]}>Join Uruti</Text>
+              <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>
+                Start your journey with us today
+              </Text>
+            </View>
 
           {/* Form */}
           <View style={styles.form}>
@@ -244,9 +251,10 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -256,67 +264,88 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl,
   },
   content: {
-    paddingHorizontal: theme.spacing.lg,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.xs,
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontFamily: theme.fonts.bold,
+    paddingTop: theme.spacing.lg,
   },
   header: {
+    marginBottom: theme.spacing.xl,
+    alignItems: "flex-start",
+  },
+  backButton: {
     marginBottom: theme.spacing.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -4,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: theme.spacing.xs,
+    fontSize: 32,
+    fontWeight: "800",
+    marginBottom: theme.spacing.xs / 2,
     fontFamily: theme.fonts.bold,
   },
   subtitle: {
     fontSize: 16,
     fontFamily: theme.fonts.regular,
+    opacity: 0.6,
   },
   form: {
     width: "100%",
+    gap: theme.spacing.sm,
   },
   createButton: {
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    height: 56,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   termsContainer: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.sm,
   },
   termsText: {
-    fontSize: 12,
+    fontSize: 13,
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 20,
     fontFamily: theme.fonts.regular,
+    opacity: 0.6,
   },
   termsLink: {
     color: theme.colors.primary,
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.bold,
+    fontWeight: "600",
   },
   signInContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
   signInText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: theme.fonts.regular,
+    opacity: 0.8,
   },
   signInLink: {
     color: theme.colors.primary,
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
 });

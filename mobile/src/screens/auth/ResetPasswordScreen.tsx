@@ -10,8 +10,10 @@ import {
   Modal,
 } from "react-native";
 import { Button, Input } from "../../components";
-import { LockIcon } from "../../components/common/Icons";
+import { LockIcon, ChevronLeftIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
+import { useTheme } from "../../context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface ResetPasswordScreenProps {
   navigation?: {
@@ -23,6 +25,31 @@ interface ResetPasswordScreenProps {
 export default function ResetPasswordScreen({
   navigation,
 }: ResetPasswordScreenProps) {
+  const { isDark } = useTheme();
+
+  // Dynamic styles for dark/light mode support
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    text: {
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+    },
+    backButton: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
+    },
+    iconBackground: {
+      backgroundColor: isDark ? theme.colors.gray800 : "#F5E6D3",
+    },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+    }
+  };
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,19 +94,12 @@ export default function ResetPasswordScreen({
     navigation?.navigate("Login");
   };
 
-  const Wrapper = Platform.OS === "ios" ? KeyboardAvoidingView : View;
-  const wrapperProps =
-    Platform.OS === "ios"
-      ? {
-          style: styles.container,
-          behavior: "padding" as const,
-          keyboardVerticalOffset: 0,
-        }
-      : { style: styles.container };
-
   return (
-    <>
-      <Wrapper {...wrapperProps}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -87,25 +107,27 @@ export default function ResetPasswordScreen({
           bounces={false}
         >
           <View style={styles.content}>
-            {/* Back Button */}
-            <TouchableOpacity
-              style={styles.backButtonContainer}
-              onPress={() => navigation?.goBack()}
-            >
-              <Text style={styles.backButtonText}>←</Text>
-            </TouchableOpacity>
+            {/* Header with Back Button */}
+            <View style={styles.headerContainer}>
+              <TouchableOpacity
+                style={[styles.backButton, dynamicStyles.backButton]}
+                onPress={() => navigation?.goBack()}
+              >
+                <ChevronLeftIcon size={28} color={isDark ? theme.colors.white : theme.colors.text} />
+              </TouchableOpacity>
+            </View>
 
             {/* Lock Icon */}
             <View style={styles.iconContainer}>
-              <View style={styles.iconBackground}>
-                <LockIcon size={36} color="#A67C52" />
+              <View style={[styles.iconBackground, dynamicStyles.iconBackground]}>
+                <LockIcon size={40} color={isDark ? theme.colors.primary : "#A67C52"} />
               </View>
             </View>
 
-            {/* Header */}
+            {/* Header Text */}
             <View style={styles.header}>
-              <Text style={styles.title}>Create New Password</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, dynamicStyles.text]}>Create New Password</Text>
+              <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>
                 Your new password must be unique from those previously used.
               </Text>
             </View>
@@ -157,7 +179,7 @@ export default function ResetPasswordScreen({
             </View>
           </View>
         </ScrollView>
-      </Wrapper>
+      </KeyboardAvoidingView>
 
       {/* Success Modal */}
       <Modal
@@ -166,8 +188,8 @@ export default function ResetPasswordScreen({
         animationType="fade"
         onRequestClose={() => setShowSuccessModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, dynamicStyles.card]}>
             {/* Close Button */}
             <TouchableOpacity
               style={styles.closeButton}
@@ -178,16 +200,16 @@ export default function ResetPasswordScreen({
 
             {/* Success Icon */}
             <View style={styles.successIconContainer}>
-              <View style={styles.successIconCircle}>
+              <View style={[styles.successIconCircle, { backgroundColor: theme.colors.success + '15' }]}>
                 <Text style={styles.successCheckmark}>✓</Text>
               </View>
             </View>
 
             {/* Success Title */}
-            <Text style={styles.successTitle}>Password Changed!</Text>
+            <Text style={[styles.successTitle, dynamicStyles.text]}>Password Changed!</Text>
 
             {/* Success Message */}
-            <Text style={styles.successMessage}>
+            <Text style={[styles.successMessage, dynamicStyles.textSecondary]}>
               Your password has been changed successfully.
             </Text>
 
@@ -202,7 +224,7 @@ export default function ResetPasswordScreen({
           </View>
         </View>
       </Modal>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -212,34 +234,46 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingTop: 29, // theme.spacing.lg (24) + 20% = 29
-    paddingBottom: theme.spacing.xl * 3,
+    flexGrow: 1,
+    paddingBottom: theme.spacing.xl,
   },
   content: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
   },
-  backButtonContainer: {
-    alignSelf: "flex-start",
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.xs,
-    paddingLeft: 0,
+  headerContainer: {
+    marginBottom: theme.spacing.lg,
   },
-  backButtonText: {
-    fontSize: 28,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -4,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
     alignItems: "center",
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   iconBackground: {
     width: 100,
     height: 100,
-    borderRadius: 16,
+    borderRadius: 24,
     backgroundColor: "#F5E6D3",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   header: {
     marginBottom: theme.spacing.xl,
@@ -247,9 +281,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     fontFamily: theme.fonts.bold,
     textAlign: "center",
   },
@@ -260,36 +294,42 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     textAlign: "center",
     paddingHorizontal: theme.spacing.sm,
+    opacity: 0.6,
   },
   form: {
     width: "100%",
+    gap: theme.spacing.md,
   },
   buttonWrapper: {
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.md,
   },
   resetButton: {
-    marginTop: 0,
+    height: 56,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.lg,
   },
   modalContent: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: theme.spacing.xl,
     width: "100%",
-    maxWidth: 400,
+    maxWidth: 360,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
   },
   closeButton: {
     position: "absolute",
@@ -298,57 +338,56 @@ const styles = StyleSheet.create({
     padding: theme.spacing.xs,
   },
   closeButtonText: {
-    fontSize: 24,
-    color: theme.colors.textSecondary,
-    fontWeight: "300",
+    fontSize: 20,
+    opacity: 0.5,
   },
   successIconContainer: {
     marginBottom: theme.spacing.lg,
-    marginTop: theme.spacing.md,
   },
   successIconCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#E6F7EA",
     alignItems: "center",
     justifyContent: "center",
   },
   successCheckmark: {
-    fontSize: 48,
-    color: "#34C759",
-    fontWeight: "bold",
+    fontSize: 40,
+    color: theme.colors.success,
+    fontWeight: "800",
   },
   successTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: theme.spacing.sm,
     fontFamily: theme.fonts.bold,
     textAlign: "center",
   },
   successMessage: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
+    fontSize: 15,
     textAlign: "center",
     marginBottom: theme.spacing.xl,
-    lineHeight: 24,
+    lineHeight: 22,
     fontFamily: theme.fonts.regular,
+    opacity: 0.7,
   },
   backToLoginButton: {
     width: "100%",
+    height: 56,
+    borderRadius: 16,
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 48,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   backToLoginButtonText: {
     color: theme.colors.textInverse,
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
 });

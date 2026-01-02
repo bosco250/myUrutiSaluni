@@ -8,11 +8,18 @@ import {
   StatusBar,
   RefreshControl,
   Alert,
+  TextInput,
+  Keyboard,
+  Animated,
+  Easing,
+  Platform,
+  UIManager,
 } from "react-native";
+import { SERVICE_CATEGORIES, TARGET_CLIENTELE } from "../../constants/business";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
-import FilterButton from "./components/FilterButton";
+
 import TrendingCard from "./components/TrendingCard";
 import ServiceCard from "./components/ServiceCard";
 import SalonCard from "./components/SalonCard";
@@ -20,17 +27,38 @@ import AutoSlider from "./components/AutoSlider";
 import { exploreService, Service, Salon } from "../../services/explore";
 import { Loader } from "../../components/common";
 
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
+
 interface ExploreScreenProps {
   navigation?: {
     navigate: (screen: string, params?: any) => void;
   };
 }
 
-type FilterType = "For You" | "Hair" | "Nails" | "Facials" | "Oil";
+type FilterType = string;
 
 export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const { isDark } = useTheme();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("For You");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Animation for search expansion (0 = collapsed/title visible, 1 = expanded/search visible)
+  const searchAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+     Animated.timing(searchAnim, {
+       toValue: isSearching ? 1 : 0,
+       duration: 350,
+       useNativeDriver: false,
+       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+     }).start();
+  }, [isSearching, searchAnim]);
+
   const [allServices, setAllServices] = useState<Service[]>([]);
   const [trendingServices, setTrendingServices] = useState<Service[]>([]);
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -38,7 +66,11 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [showAllSalons, setShowAllSalons] = useState(false);
 
-  const filters: FilterType[] = ["For You", "Hair", "Nails", "Facials", "Oil"];
+  const filters = useMemo(() => [
+    "For You",
+    ...TARGET_CLIENTELE.map(t => t.label),
+    ...SERVICE_CATEGORIES.map(c => c.label)
+  ], []);
 
   useEffect(() => {
     fetchData();
@@ -69,42 +101,70 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     }
   };
 
-  // Filter services based on selected filter
+  // Filter services based on selected filter and search query
   const services = useMemo(() => {
-    if (selectedFilter === "For You") {
-      return allServices;
+    let result = allServices;
+
+    // 1. Filter by Search Query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (service) =>
+          service.name.toLowerCase().includes(query) ||
+          service.description?.toLowerCase().includes(query) ||
+          service.salon?.name?.toLowerCase().includes(query)
+      );
     }
 
-    // Filter by category from metadata or service name
+    // 2. Filter by Chip (Category/Gender)
+    if (selectedFilter === "For You") {
+      return result;
+    }
+
     const filterLower = selectedFilter.toLowerCase();
     
-    return allServices.filter((service) => {
-      // First try to match by category in metadata
-      const category = service.metadata?.category;
-      if (category) {
-        const categoryLower = String(category).toLowerCase();
-        if (categoryLower === filterLower || categoryLower.includes(filterLower)) {
-          return true;
-        }
-      }
-      
-      // Fallback: try to match by service name
-      const serviceNameLower = service.name.toLowerCase();
-      if (serviceNameLower.includes(filterLower)) {
-        return true;
-      }
-      
-      // Also check description if available
-      if (service.description) {
-        const descriptionLower = service.description.toLowerCase();
-        if (descriptionLower.includes(filterLower)) {
-          return true;
-        }
-      }
-      
+    return result.filter((service) => {
+      if (service.category?.toLowerCase() === filterLower) return true;
+      if (service.targetGender?.toLowerCase() === filterLower) return true;
+      if (service.metadata?.category?.toLowerCase() === filterLower) return true;
+      if (service.metadata?.targetGender?.toLowerCase() === filterLower) return true;
+      if (service.name.toLowerCase().includes(filterLower)) return true;
       return false;
     });
-  }, [selectedFilter, allServices]);
+  }, [selectedFilter, allServices, searchQuery]);
+
+  // Filter salons based on search and gender filter
+  const filteredSalons = useMemo(() => {
+    let result = salons;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(s => 
+        s.name.toLowerCase().includes(query) ||
+        s.address?.toLowerCase().includes(query) ||
+        s.city?.toLowerCase().includes(query)
+      );
+    }
+    
+    if (selectedFilter !== "For You") {
+        const filterLower = selectedFilter.toLowerCase();
+        // Simple gender filtering
+        if (filterLower === 'men') {
+            return result.filter(s => {
+                const target = s.settings?.targetClientele?.toLowerCase();
+                return !target || target === 'men' || target === 'both';
+            });
+        }
+        if (filterLower === 'women') {
+            return result.filter(s => {
+                const target = s.settings?.targetClientele?.toLowerCase();
+                return !target || target === 'women' || target === 'both';
+            });
+        }
+    }
+
+    return result;
+  }, [salons, searchQuery, selectedFilter]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -128,12 +188,6 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     });
   };
 
-
-  const handleSearch = () => {
-    // TODO: Navigate to search screen
-    console.log("Search pressed");
-  };
-
   const dynamicStyles = {
     container: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
@@ -153,45 +207,91 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: dynamicStyles.container.backgroundColor },
-        ]}
-      >
-        <View style={styles.headerTop}>
-          <Text style={[styles.discoverTitle, dynamicStyles.text]}>
-            Discover
-          </Text>
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={handleSearch}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons
-              name="search"
-              size={24}
-              color={dynamicStyles.text.color}
-            />
-          </TouchableOpacity>
+      {/* Header Area */}
+      <View style={[styles.header, { backgroundColor: dynamicStyles.container.backgroundColor }]}>
+         <View style={[styles.headerTop, { position: 'relative', height: 50 }]}>
+          {/* Title Area - Fades Out */}
+          <Animated.View style={{ 
+            opacity: searchAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0] }),
+            position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1
+          }}>
+             <View>
+                 <Text style={[styles.greetingText, dynamicStyles.textSecondary]}>Good evening,</Text>
+                 <Text style={[styles.discoverTitle, dynamicStyles.text]}>Discover</Text>
+             </View>
+          </Animated.View>
+
+          {/* Search Button (Target for opening) - Fades Out */}
+          <Animated.View style={{ 
+            opacity: searchAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0] }),
+            position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1
+          }}>
+             <TouchableOpacity 
+                style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}
+                onPress={() => setIsSearching(true)}
+             >
+                <MaterialIcons name="search" size={24} color={theme.colors.primary} />
+             </TouchableOpacity>
+          </Animated.View>
+
+          {/* Expandable Search Bar */}
+          <Animated.View style={[
+             styles.searchBarContainer, 
+             { 
+               backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100,
+               width: searchAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+               opacity: searchAnim.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 1, 1] }),
+               position: 'absolute', right: 0, top: 0, bottom: 0,
+               marginTop: 0, marginBottom: 0, 
+               overflow: 'hidden',
+               zIndex: isSearching ? 2 : 0
+             }
+          ]}>
+             <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} />
+             <TextInput
+                style={[styles.searchInput, { color: isDark ? theme.colors.white : theme.colors.text }]}
+                placeholder="Search salons, services..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onBlur={() => !searchQuery && setIsSearching(false)} 
+             />
+             <TouchableOpacity onPress={() => { setIsSearching(false); setSearchQuery(""); Keyboard.dismiss(); }}>
+                <MaterialIcons name="close" size={20} color={theme.colors.textSecondary} />
+             </TouchableOpacity>
+          </Animated.View>
         </View>
 
-        {/* Filter Buttons */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContainer}
-        >
-          {filters.map((filter) => (
-            <FilterButton
-              key={filter}
-              label={filter}
-              isSelected={selectedFilter === filter}
-              onPress={() => setSelectedFilter(filter)}
-            />
-          ))}
-        </ScrollView>
+        {/* Categories / Filters */}
+        <View style={styles.filtersWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContainer}
+          >
+            {filters.map((filter) => {
+              const isSelected = selectedFilter === filter;
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  onPress={() => setSelectedFilter(filter)}
+                  style={[
+                    styles.filterChip,
+                    isSelected ? styles.filterChipSelected : styles.filterChipUnselected,
+                    !isSelected && { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }
+                  ]}
+                >
+                  <Text style={[
+                     styles.filterChipText, 
+                     isSelected ? styles.filterChipTextSelected : { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary }
+                  ]}>
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+        </View>
       </View>
 
       {loading ? (
@@ -211,7 +311,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
             />
           }
         >
-          {/* Trending Now Section with Auto-Slider */}
+          {/* Trending Now Section */}
           {trendingServices.length > 0 && (
             <View style={styles.trendingSection}>
               <View style={styles.trendingSectionHeader}>
@@ -239,7 +339,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                 {trendingServices.map((service) => (
                   <TrendingCard
                     key={service.id}
-                    image={null}
+                    image={service.images?.[0] || null}
                     category={service.metadata?.category || "Service"}
                     title={service.name}
                     onPress={() => handleTrendingPress(service)}
@@ -304,15 +404,11 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalScroll}
               >
-                {services.map((service) => (
+                {services.slice(0, 10).map((service) => (
                   <View key={service.id} style={styles.serviceCardWrapper}>
                     <ServiceCard
-                      image={null}
-                      title={service.name}
-                      author={service.salon?.name || "Salon"}
-                      likes={0} // TODO: Add likes/favorites count from backend
+                      service={service}
                       onPress={() => handleServicePress(service)}
-                      onLike={() => console.log("Like pressed:", service.id)}
                     />
                   </View>
                 ))}
@@ -320,10 +416,10 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
             )}
           </View>
 
-          {/* All Salons Section */}
+          {/* Salons Section */}
           <View style={[styles.section, styles.salonsSection]}>
             <View style={[styles.sectionHeader, styles.salonsSectionHeader]}>
-              <View style={styles.sectionTitleContainer}>
+               <View style={styles.sectionTitleContainer}>
                 <MaterialIcons
                   name="store"
                   size={20}
@@ -335,7 +431,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
               </View>
             </View>
 
-            {salons.length === 0 ? (
+            {filteredSalons.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <MaterialIcons
                   name="store"
@@ -343,13 +439,13 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                   color={dynamicStyles.textSecondary.color}
                 />
                 <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-                  No salons available
+                  {searchQuery.trim() || selectedFilter !== 'For You' ? 'No salons match your criteria' : 'No salons available'}
                 </Text>
               </View>
             ) : (
               <>
                 <View style={styles.salonsGrid}>
-                  {(showAllSalons ? salons : salons.slice(0, 10)).map(
+                  {(showAllSalons ? filteredSalons : filteredSalons.slice(0, 10)).map(
                     (salon) => (
                       <SalonCard
                         key={salon.id}
@@ -359,7 +455,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                     )
                   )}
                 </View>
-                {salons.length > 10 && (
+                {filteredSalons.length > 10 && (
                   <TouchableOpacity
                     style={styles.viewAllButtonBottom}
                     onPress={() => {
@@ -516,5 +612,57 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     gap: theme.spacing.xs,
+  },
+  greetingText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+    marginBottom: 4,
+  },
+  searchIconBtn: {
+    padding: 10,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: theme.spacing.sm,
+    fontSize: 16,
+    fontFamily: theme.fonts.regular,
+    padding: 0,
+  },
+  filtersWrapper: {
+    marginTop: theme.spacing.xs,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+  },
+  filterChipSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterChipUnselected: {
+    // handled inline
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+  },
+  filterChipTextSelected: {
+    color: theme.colors.white,
   },
 });

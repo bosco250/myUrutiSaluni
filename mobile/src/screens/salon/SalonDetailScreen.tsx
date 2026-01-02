@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   StatusBar,
@@ -20,6 +21,7 @@ import {
   SalonEmployee,
   SalonProduct,
 } from "../../services/salon";
+import { appointmentsService } from "../../services/appointments";
 import { reviewsService, Review } from "../../services/reviews";
 import { Loader } from "../../components/common";
 
@@ -27,6 +29,7 @@ interface SalonDetailScreenProps {
   navigation: {
     navigate: (screen: string, params?: any) => void;
     goBack: () => void;
+    addListener: (event: string, callback: () => void) => () => void;
   };
   route: {
     params: {
@@ -50,8 +53,12 @@ interface Service {
   name: string;
   description?: string;
   price: number;
+  basePrice?: number;
   duration: number;
+  durationMinutes?: number;
   isActive: boolean;
+  category?: string;
+  targetGender?: string;
 }
 
 interface Appointment {
@@ -60,6 +67,7 @@ interface Appointment {
   customerName?: string;
   scheduledAt: string;
   status: string;
+  price?: number;
 }
 
 const SalonDetailScreen = React.memo(function SalonDetailScreen({
@@ -182,11 +190,49 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
             setProducts(productsData);
           }
 
-          if (activeTab === "overview" || activeTab === "bookings") {
-            const appointmentsData = await salonService
-              .getSalonAppointments(salonId, "upcoming")
+          if (activeTab === "overview") {
+            const appointmentsData = await appointmentsService
+              .getSalonAppointments({ salonId })
               .catch(() => []);
-            setAppointments(appointmentsData.slice(0, 5)); // Only first 5
+            
+            const upcoming = appointmentsData.filter((a: any) => 
+              new Date(a.scheduledStart).getTime() > Date.now() && 
+              a.status !== 'completed' && a.status !== 'cancelled'
+            );
+
+            const mapped = upcoming.slice(0, 5).map((apt: any) => ({
+              id: apt.id,
+              serviceName: apt.service?.name || "Service",
+              customerName: apt.customer?.user?.fullName || "Walk-in",
+              scheduledAt: apt.scheduledStart,
+              status: apt.status,
+              price: apt.serviceAmount || apt.service?.basePrice || 0,
+            }));
+            setAppointments(mapped);
+          }
+
+          if (activeTab === "bookings") {
+            // Fetch all bookings (history) for the table
+            const appointmentsData = await appointmentsService
+              .getSalonAppointments({ salonId })
+              .catch(() => []);
+            
+            // Map data to ensure properties match local Appointment interface
+            const mappedAppointments = appointmentsData.map((apt: any) => ({
+              id: apt.id,
+              serviceName: apt.service?.name || "Service",
+              customerName: apt.customer?.user?.fullName || "Walk-in",
+              scheduledAt: apt.scheduledStart,
+              status: apt.status,
+              price: apt.serviceAmount || apt.service?.basePrice || 0,
+            }));
+            
+            // Sort by date descending
+            mappedAppointments.sort((a: Appointment, b: Appointment) => 
+              new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
+            );
+
+            setAppointments(mappedAppointments);
           }
 
           if (activeTab === "reviews") {
@@ -215,7 +261,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
       return;
     }
     loadData();
-  }, [salonId, navigation]); // eslint-disable-line react-hooks/exhaustive-deps -- loadData intentionally excluded to prevent infinite loops
+  }, [salonId, navigation, loadData]);
 
   // Log when reviewId is present for debugging
   useEffect(() => {
@@ -752,7 +798,9 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
           </Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => navigation.navigate("AddService", { salonId })}
+            onPress={() =>
+              navigation.navigate("AddService", { salonId, onSave: loadData })
+            }
           >
             <View
               style={[
@@ -772,7 +820,11 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
               key={service.id}
               style={[styles.listCard, dynamicStyles.card]}
               onPress={() =>
-                navigation.navigate("EditService", { salonId, service })
+                navigation.navigate("EditService", {
+                  salonId,
+                  service,
+                  onSave: loadData,
+                })
               }
               activeOpacity={0.7}
             >
@@ -1032,66 +1084,123 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
     </View>
   );
 
+  const getBookingStatusColor = (status: string) => {
+    switch (status) {
+      case "completed": return theme.colors.success;
+      case "confirmed": return theme.colors.primary;
+      case "cancelled": return theme.colors.error;
+      case "no_show": return theme.colors.error;
+      case "pending": return theme.colors.warning;
+      case "in_progress": return theme.colors.info;
+      default: return theme.colors.textSecondary;
+    }
+  };
+
   const renderBookingsTab = () => (
     <View style={styles.tabContent}>
       {appointments.length === 0 ? (
-        <View style={styles.emptyTab}>
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+            />
+          }
+          contentContainerStyle={styles.emptyTab}
+        >
           <MaterialIcons
             name="event-available"
             size={48}
             color={theme.colors.textSecondary}
           />
           <Text style={[styles.emptyTabText, dynamicStyles.textSecondary]}>
-            No upcoming bookings
+            No bookings found
           </Text>
-        </View>
+        </ScrollView>
       ) : (
-        appointments.map((appointment) => (
-          <View
-            key={appointment.id}
-            style={[styles.listCard, dynamicStyles.card]}
-          >
-            <View
-              style={[
-                styles.serviceIcon,
-                { backgroundColor: theme.colors.warning + "20" },
-              ]}
-            >
-              <MaterialIcons
-                name="event"
-                size={20}
-                color={theme.colors.warning}
-              />
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={true}
+          persistentScrollbar={true}
+          contentContainerStyle={{ minWidth: 600, flexGrow: 1 }}
+        >
+          <View style={{ flex: 1, minWidth: 600 }}>
+            {/* Table Header */}
+            <View style={[styles.tableHeaderRow, dynamicStyles.card, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray50 }]}>
+              <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { width: 120 }]}>Date</Text>
+              <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { width: 140 }]}>Customer</Text>
+              <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { width: 140 }]}>Service</Text>
+              <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { width: 100 }]}>Status</Text>
+              <Text style={[styles.tableHeaderText, dynamicStyles.textSecondary, { width: 100, textAlign: 'right' }]}>Price</Text>
             </View>
-            <View style={styles.listCardInfo}>
-              <Text style={[styles.listCardTitle, dynamicStyles.text]}>
-                {appointment.serviceName || "Appointment"}
-              </Text>
-              <Text
-                style={[styles.listCardSubtitle, dynamicStyles.textSecondary]}
-              >
-                {appointment.customerName || "Customer"} •{" "}
-                {new Date(appointment.scheduledAt).toLocaleDateString()}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statusBadgeSmall,
-                { backgroundColor: theme.colors.warning + "20" },
-              ]}
-            >
-              <Text
-                style={{
-                  color: theme.colors.warning,
-                  fontSize: 11,
-                  fontFamily: theme.fonts.medium,
-                }}
-              >
-                {appointment.status}
-              </Text>
-            </View>
+
+            {/* Virtualized List for Rows */}
+            <FlatList
+              data={appointments}
+              keyExtractor={(item) => item.id}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={theme.colors.primary}
+                />
+              }
+              initialNumToRender={15}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              renderItem={({ item: appointment, index }) => (
+                <View 
+                  style={[
+                    styles.tableRow, 
+                    dynamicStyles.card,
+                    { borderBottomWidth: index === appointments.length - 1 ? 0 : 1, borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.gray100 }
+                  ]}
+                >
+                  <View style={[styles.tableCell, { width: 120 }]}>
+                     <Text style={[styles.tableCellText, dynamicStyles.text]}>
+                      {new Date(appointment.scheduledAt).toLocaleDateString()}
+                    </Text>
+                    <Text style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}>
+                      {new Date(appointment.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, { width: 140 }]}>
+                    <Text style={[styles.tableCellText, dynamicStyles.text]} numberOfLines={1}>
+                      {appointment.customerName || "Walk-in"}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, { width: 140 }]}>
+                    <Text style={[styles.tableCellText, dynamicStyles.text]} numberOfLines={1}>
+                      {appointment.serviceName || "Service"}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, { width: 100 }]}>
+                    <View style={[styles.statusBadgeSmall, { backgroundColor: getBookingStatusColor(appointment.status) + '20', alignSelf: 'flex-start' }]}>
+                      <Text style={{ 
+                        color: getBookingStatusColor(appointment.status), 
+                        fontSize: 11, 
+                        fontFamily: theme.fonts.medium,
+                        textTransform: 'capitalize' 
+                      }}>
+                        {appointment.status.replace('_', ' ')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableCell, { width: 100, alignItems: 'flex-end' }]}>
+                    <Text style={[styles.tableCellText, dynamicStyles.text, { fontWeight: '600' }]}>
+                      {appointment.price ? `${appointment.price.toLocaleString()} RWF` : '-'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            />
           </View>
-        ))
+        </ScrollView>
       )}
     </View>
   );
@@ -1228,19 +1337,36 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
   );
 
   const renderTabContent = () => {
+    const CommonScrollView = ({ children }: { children: React.ReactNode }) => (
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
+    );
+
     switch (activeTab) {
       case "overview":
-        return renderOverviewTab();
+        return <CommonScrollView>{renderOverviewTab()}</CommonScrollView>;
       case "employees":
-        return renderEmployeesTab();
+        return <CommonScrollView>{renderEmployeesTab()}</CommonScrollView>;
       case "services":
-        return renderServicesTab();
+        return <CommonScrollView>{renderServicesTab()}</CommonScrollView>;
       case "products":
-        return renderProductsTab();
+        return <CommonScrollView>{renderProductsTab()}</CommonScrollView>;
       case "bookings":
         return renderBookingsTab();
       case "reviews":
-        return renderReviewsTab();
+        return <CommonScrollView>{renderReviewsTab()}</CommonScrollView>;
       default:
         return null;
     }
@@ -1329,20 +1455,9 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
       </View>
 
       {/* Tab Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.container}>
         {renderTabContent()}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 });
@@ -1742,6 +1857,45 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 12,
     fontFamily: theme.fonts.medium,
+  },
+  // Table Styles
+  tableContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(150,150,150,0.1)',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(150,150,150,0.1)',
+  },
+  tableHeaderText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  tableCell: {
+    justifyContent: 'center',
+    paddingRight: 8,
+  },
+  tableCellText: {
+    fontSize: 13,
+    fontFamily: theme.fonts.medium,
+  },
+  tableCellSubtext: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
 });
 

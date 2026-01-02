@@ -234,6 +234,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       label: "Chats",
       onPress: () => navigation?.navigate("ChatList"),
     },
+    {
+      icon: "favorite",
+      label: "Favorites",
+      onPress: () => navigation?.navigate("Favorites"),
+    },
   ];
 
   const handleScroll = (event: any) => {

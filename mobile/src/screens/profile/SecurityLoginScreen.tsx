@@ -162,11 +162,14 @@ export default function SecurityLoginScreen({
           {/* Current Password */}
           <View style={styles.inputContainer}>
             <Text
-              style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
+              style={[styles.label, dynamicStyles.textSecondary]}
             >
               Current Password
             </Text>
             <View style={styles.passwordInputContainer}>
+              <View style={[styles.inputIconContainer, dynamicStyles.iconBg]}>
+                <MaterialIcons name="lock-outline" size={20} color={theme.colors.primary} />
+              </View>
               <TextInput
                 style={[styles.passwordInput, dynamicStyles.input]}
                 value={currentPassword}
@@ -192,11 +195,14 @@ export default function SecurityLoginScreen({
           {/* New Password */}
           <View style={styles.inputContainer}>
             <Text
-              style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
+              style={[styles.label, dynamicStyles.textSecondary]}
             >
               New Password
             </Text>
             <View style={styles.passwordInputContainer}>
+              <View style={[styles.inputIconContainer, dynamicStyles.iconBg]}>
+                <MaterialIcons name="vpn-key" size={20} color={theme.colors.primary} />
+              </View>
               <TextInput
                 style={[styles.passwordInput, dynamicStyles.input]}
                 value={newPassword}
@@ -222,11 +228,14 @@ export default function SecurityLoginScreen({
           {/* Confirm Password */}
           <View style={styles.inputContainer}>
             <Text
-              style={[styles.label, { color: dynamicStyles.textSecondary.color }]}
+              style={[styles.label, dynamicStyles.textSecondary]}
             >
               Confirm Password
             </Text>
             <View style={styles.passwordInputContainer}>
+              <View style={[styles.inputIconContainer, dynamicStyles.iconBg]}>
+                <MaterialIcons name="verified-user" size={20} color={theme.colors.primary} />
+              </View>
               <TextInput
                 style={[styles.passwordInput, dynamicStyles.input]}
                 value={confirmPassword}
@@ -254,6 +263,7 @@ export default function SecurityLoginScreen({
             onPress={handleUpdatePassword}
             activeOpacity={0.7}
           >
+            <MaterialIcons name="security" size={20} color="#FFFFFF" />
             <Text style={styles.updatePasswordButtonText}>Update Password</Text>
           </TouchableOpacity>
         </View>
@@ -361,7 +371,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: StatusBar.currentHeight || 0,
     paddingBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
@@ -407,63 +416,88 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   sectionCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: theme.spacing.xs,
-    fontFamily: theme.fonts.medium,
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 6,
+    fontFamily: theme.fonts.bold,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    opacity: 0.6,
   },
   passwordInputContainer: {
-    position: "relative",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  inputIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
   passwordInput: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 8,
+    flex: 1,
+    borderRadius: 12,
     paddingHorizontal: theme.spacing.md,
     paddingRight: 50,
     paddingVertical: theme.spacing.sm,
     fontSize: 16,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.medium,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 44,
+    minHeight: 48,
   },
   eyeIcon: {
     position: "absolute",
-    right: theme.spacing.md,
-    top: 12,
+    right: theme.spacing.xs,
+    top: 6,
     padding: theme.spacing.xs,
   },
   updatePasswordButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 8,
+    borderRadius: 16,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   updatePasswordButtonText: {
     color: theme.colors.white,
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   dangerCard: {
-    backgroundColor: theme.colors.errorLight,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
+    borderWidth: 1.5,
+    borderColor: theme.colors.error + '20',
   },
   dangerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "800",
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
   },
@@ -472,94 +506,101 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     fontFamily: theme.fonts.regular,
     lineHeight: 20,
+    opacity: 0.8,
   },
   deleteAccountButton: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 8,
+    borderRadius: 14,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.error,
+    backgroundColor: theme.colors.white,
   },
   deleteAccountButtonText: {
     color: theme.colors.error,
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: theme.colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.lg,
   },
   modalContent: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    padding: theme.spacing.lg,
+    borderRadius: 24,
+    padding: theme.spacing.xl,
     width: "100%",
     maxWidth: 340,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+    alignItems: 'center',
   },
   warningIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.error + '10',
     alignItems: "center",
     justifyContent: "center",
     marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    alignSelf: "center",
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "800",
     fontFamily: theme.fonts.bold,
-    color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     textAlign: "center",
   },
   modalMessage: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    fontSize: 15,
     textAlign: "center",
-    marginBottom: theme.spacing.lg,
-    lineHeight: 20,
+    marginBottom: theme.spacing.xl,
+    lineHeight: 22,
     fontFamily: theme.fonts.regular,
+    opacity: 0.7,
   },
   modalButtons: {
     flexDirection: "row",
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
+    width: '100%',
   },
   modalCancelButton: {
     flex: 1,
     backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 8,
+    borderRadius: 14,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   modalCancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   modalDeleteButton: {
     flex: 1,
     backgroundColor: theme.colors.error,
-    borderRadius: 8,
+    borderRadius: 14,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
+    elevation: 4,
+    shadowColor: theme.colors.error,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   modalDeleteButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
     color: theme.colors.white,
   },
 });

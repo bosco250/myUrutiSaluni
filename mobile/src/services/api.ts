@@ -160,7 +160,7 @@ class ApiService {
     if (cache) {
       const cachedData = this.getCachedData(cacheKey, cacheDuration);
       if (cachedData !== null) {
-        console.log(`[API Cache Hit] ${endpoint}`);
+        // console.log(`[API Cache Hit] ${endpoint}`);
         return cachedData;
       }
     }
@@ -168,7 +168,7 @@ class ApiService {
     // Check if there's already a pending request for this endpoint (request deduplication)
     const pendingRequest = this.pendingRequests.get(cacheKey);
     if (pendingRequest) {
-      console.log(`[API Request Dedup] ${endpoint}`);
+      // console.log(`[API Request Dedup] ${endpoint}`);
       return pendingRequest;
     }
     

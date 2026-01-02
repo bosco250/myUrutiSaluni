@@ -1,3 +1,6 @@
+/**
+ * AppointmentDetailScreen - A humanized view of appointment details for both customers and staff.
+ */
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -8,6 +11,7 @@ import {
   StatusBar,
   Alert,
   Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -118,6 +122,18 @@ export default function AppointmentDetailScreen({
     }
   };
 
+  const handleGetDirections = () => {
+    if (!appointment?.salon?.address) return;
+    const address = encodeURIComponent(appointment.salon.address);
+    const url = Platform.select({
+      ios: `maps:0,0?q=${address}`,
+      android: `geo:0,0?q=${address}`,
+    });
+    if (url) {
+      Linking.openURL(url);
+    }
+  };
+
 
   const handleCancelAppointment = async () => {
     if (!appointment) return;
@@ -151,21 +167,42 @@ export default function AppointmentDetailScreen({
     );
   };
 
+  const getFriendlyStatusMessage = (status: AppointmentStatus) => {
+    switch (status) {
+      case AppointmentStatus.CONFIRMED:
+        return isCustomer ? "You're all set! See you soon." : "Confirmed & ready to go.";
+      case AppointmentStatus.PENDING:
+        return isCustomer ? "Hang tight! We're checking your booking." : "Needs your attention.";
+      case AppointmentStatus.BOOKED:
+        return isCustomer ? "Your spot is secured!" : "New booking received.";
+      case AppointmentStatus.IN_PROGRESS:
+        return "Service is currently happening.";
+      case AppointmentStatus.COMPLETED:
+        return isCustomer ? "Hope you loved your service!" : "Finished & successful.";
+      case AppointmentStatus.CANCELLED:
+        return "This appointment was cancelled.";
+      case AppointmentStatus.NO_SHOW:
+        return "Customer didn't show up.";
+      default:
+        return "Appointment details below.";
+    }
+  };
+
   const getStatusIcon = (status: AppointmentStatus) => {
     switch (status) {
       case AppointmentStatus.CONFIRMED:
-        return "check-circle";
+        return "verified";
       case AppointmentStatus.PENDING:
-        return "schedule";
+        return "hourglass-empty";
       case AppointmentStatus.BOOKED:
-        return "event";
+        return "bookmark";
       case AppointmentStatus.IN_PROGRESS:
-        return "play-circle";
+        return "play-circle-filled";
       case AppointmentStatus.COMPLETED:
         return "check-circle";
       case AppointmentStatus.CANCELLED:
       case AppointmentStatus.NO_SHOW:
-        return "cancel";
+        return "error";
       default:
         return "event";
     }
@@ -278,52 +315,27 @@ export default function AppointmentDetailScreen({
       >
         {/* Status Header */}
         <View
-          style={[styles.statusHeader, { backgroundColor: statusColor + "10" }]}
+          style={[styles.statusWrapper, { backgroundColor: statusColor + "08" }]}
         >
-          <View style={styles.statusHeaderContent}>
+          <View style={styles.statusMainRow}>
             <View
               style={[
-                styles.statusIconContainer,
-                { backgroundColor: statusColor + "20" },
+                styles.brandCircle,
+                { backgroundColor: statusColor + "15" },
               ]}
             >
               <MaterialIcons
                 name={getStatusIcon(appointment.status) as any}
-                size={28}
+                size={32}
                 color={statusColor}
               />
             </View>
-            <View style={styles.statusHeaderText}>
-              <Text style={[styles.statusTitle, { color: statusColor }]}>
-                {appointment.status
-                  .replace("_", " ")
-                  .toUpperCase()
-                  .split(" ")
-                  .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
-                  .join(" ")}
+            <View style={styles.statusInfo}>
+              <Text style={[styles.statusGreeting, { color: statusColor }]}>
+                {getFriendlyStatusMessage(appointment.status)}
               </Text>
-              <Text
-                style={[styles.statusSubtitle, dynamicStyles.textSecondary]}
-              >
-                {isCustomer
-                  ? appointment.status === AppointmentStatus.COMPLETED
-                  ? "Service completed successfully"
-                  : appointment.status === AppointmentStatus.CANCELLED
-                    ? "This appointment has been cancelled"
-                    : appointment.status === AppointmentStatus.CONFIRMED
-                      ? "Your appointment is confirmed"
-                      : appointment.status === AppointmentStatus.BOOKED
-                        ? "Your appointment is booked"
-                          : "Awaiting confirmation"
-                  : appointment.status === AppointmentStatus.COMPLETED
-                    ? "Service completed"
-                    : appointment.status === AppointmentStatus.CANCELLED
-                      ? "Appointment cancelled"
-                      : appointment.status === AppointmentStatus.CONFIRMED
-                        ? "Appointment confirmed"
-                        : appointment.status === AppointmentStatus.BOOKED
-                          ? "Appointment booked"
-                          : "Pending confirmation"}
+              <Text style={[styles.statusBadge, { color: statusColor, backgroundColor: statusColor + "10" }]}>
+                {appointment.status.replace("_", " ")}
               </Text>
             </View>
           </View>
@@ -500,109 +512,107 @@ export default function AppointmentDetailScreen({
             />
             <Text style={[styles.sectionTitle, dynamicStyles.text]}>Salon</Text>
           </View>
-          <Text style={[styles.salonName, dynamicStyles.text]}>
-            {appointment.salon?.name || "Salon"}
-          </Text>
-          {appointment.salon?.address && (
-            <View style={styles.infoRow}>
-              <MaterialIcons
-                name="location-on"
-                size={18}
-                color={dynamicStyles.textSecondary.color}
-              />
-              <Text style={[styles.infoText, dynamicStyles.textSecondary]}>
-                {appointment.salon.address}
+          <View style={styles.salonInfoRow}>
+            <View style={styles.salonTextContent}>
+              <Text style={[styles.salonName, dynamicStyles.text]}>
+                {appointment.salon?.name || "Salon"}
               </Text>
+              {appointment.salon?.address && (
+                <Text style={[styles.salonAddressText, dynamicStyles.textSecondary]}>
+                  {appointment.salon.address}
+                </Text>
+              )}
             </View>
-          )}
-          {appointment.salon?.phone && (
             <TouchableOpacity
-              style={styles.infoRow}
-              onPress={() => handlePhonePress(appointment.salon?.phone)}
+              style={[styles.smallActionBtn, { backgroundColor: theme.colors.primary + "10" }]}
+              onPress={handleGetDirections}
               activeOpacity={0.7}
             >
               <MaterialIcons
-                name="phone"
-                size={18}
+                name="directions"
+                size={22}
                 color={theme.colors.primary}
               />
-              <Text style={[styles.infoText, { color: theme.colors.primary }]}>
-                {appointment.salon.phone}
-              </Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Stylist Section - Only for Customers */}
-        {isCustomer && appointment.salonEmployee?.user?.fullName && (
-          <View style={[styles.sectionCard, dynamicStyles.card]}>
-              <View style={styles.sectionHeader}>
-                <MaterialIcons
-                  name="person"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                  Stylist
-                </Text>
-              </View>
-              <Text style={[styles.employeeName, dynamicStyles.text]}>
-                {appointment.salonEmployee.user.fullName}
-              </Text>
-              {appointment.salonEmployee.roleTitle && (
-                <Text
-                  style={[styles.employeeTitle, dynamicStyles.textSecondary]}
-                >
-                  {appointment.salonEmployee.roleTitle}
-                </Text>
-              )}
-              {/* Message Stylist Button */}
+          </View>
+          
+          <View style={[styles.divider, { marginVertical: 12, opacity: 0.3 }]} />
+          
+          <View style={styles.salonContactRow}>
+             {appointment.salon?.phone && (
               <TouchableOpacity
-                style={styles.messageStylistButton}
-                onPress={() => {
-                  navigation?.navigate("Chat", {
-                    employeeId: appointment.salonEmployeeId,
-                    salonId: appointment.salonId,
-                    appointmentId: appointment.id,
-                  });
-                }}
+                style={styles.contactChip}
+                onPress={() => handlePhonePress(appointment.salon?.phone)}
                 activeOpacity={0.7}
               >
                 <MaterialIcons
-                  name="chat"
-                  size={18}
+                  name="phone"
+                  size={16}
                   color={theme.colors.primary}
                 />
-                <Text style={styles.messageStylistButtonText}>
-                  Message Stylist
-                </Text>
+                <Text style={styles.contactChipText}>Call Salon</Text>
               </TouchableOpacity>
-            </View>
-        )}
+            )}
+            <TouchableOpacity
+              style={styles.contactChip}
+              onPress={() => navigation?.navigate("Explore", { salonId: appointment.salonId })}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name="visibility"
+                size={16}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.contactChipText}>View Salon</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        {/* Assigned Employee Section - Only for Staff/Employees */}
-        {!isCustomer && appointment.salonEmployee?.user?.fullName && (
+        {/* Stylist/Assigned Employee Section */}
+        {appointment.salonEmployee?.user?.fullName && (
           <View style={[styles.sectionCard, dynamicStyles.card]}>
             <View style={styles.sectionHeader}>
               <MaterialIcons
-                name="person"
+                name="face"
                 size={20}
                 color={theme.colors.primary}
               />
               <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                Assigned Employee
+                {isCustomer ? "Your Stylist" : "Assigned Professional"}
               </Text>
             </View>
-            <Text style={[styles.employeeName, dynamicStyles.text]}>
-              {appointment.salonEmployee.user.fullName}
-            </Text>
-            {appointment.salonEmployee.roleTitle && (
-              <Text
-                style={[styles.employeeTitle, dynamicStyles.textSecondary]}
-              >
-                {appointment.salonEmployee.roleTitle}
-              </Text>
-            )}
+            <View style={styles.employeeRow}>
+              <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary + "10" }]}>
+                <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
+                  {appointment.salonEmployee.user.fullName.charAt(0)}
+                </Text>
+              </View>
+              <View style={styles.employeeInfo}>
+                <Text style={[styles.employeeName, dynamicStyles.text]}>
+                  {appointment.salonEmployee.user.fullName}
+                </Text>
+                {appointment.salonEmployee.roleTitle && (
+                  <Text style={[styles.employeeTitle, dynamicStyles.textSecondary]}>
+                    {appointment.salonEmployee.roleTitle}
+                  </Text>
+                )}
+              </View>
+              {isCustomer && (
+                <TouchableOpacity
+                  style={[styles.smallActionBtn, { backgroundColor: theme.colors.primary + "10" }]}
+                  onPress={() => {
+                    navigation?.navigate("Chat", {
+                      employeeId: appointment.salonEmployeeId,
+                      salonId: appointment.salonId,
+                      appointmentId: appointment.id,
+                      otherUserName: appointment.salonEmployee?.user?.fullName
+                    });
+                  }}
+                >
+                  <MaterialIcons name="chat" size={20} color={theme.colors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
 
@@ -620,7 +630,7 @@ export default function AppointmentDetailScreen({
                 </Text>
               </View>
               <Text style={[styles.price, { color: theme.colors.primary }]}>
-                ${Number(appointment.serviceAmount).toFixed(2)}
+                RWF {Number(appointment.serviceAmount).toLocaleString()}
               </Text>
             </View>
         )}
@@ -644,155 +654,101 @@ export default function AppointmentDetailScreen({
             </View>
         )}
 
-        {/* Action Buttons - Different for Customers vs Staff */}
+        {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           {isCustomer ? (
-            <>
-              {/* Customer Actions */}
-          {appointment.status === AppointmentStatus.COMPLETED && (
-            <>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => {
-                  if (appointment.salonId) {
-                    navigation?.navigate("Explore", {
-                      salonId: appointment.salonId,
-                      serviceId: appointment.serviceId,
-                    });
-                  } else {
-                    navigation?.navigate("Explore");
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons
-                  name="refresh"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={[
-                    styles.actionButtonText,
-                    { color: theme.colors.primary },
-                  ]}
+            <View style={styles.buttonStack}>
+              {appointment.status === AppointmentStatus.COMPLETED && (
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.primaryMainButton]}
+                  onPress={() => {
+                    if (appointment.salonId) {
+                      navigation?.navigate("Explore", {
+                        salonId: appointment.salonId,
+                        serviceId: appointment.serviceId,
+                      });
+                    } else {
+                      navigation?.navigate("Explore");
+                    }
+                  }}
+                  activeOpacity={0.7}
                 >
-                  Rebook Service
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: theme.colors.primary + '15' }]}
-                onPress={() => {
-                  navigation?.navigate("Review", {
-                    salonId: appointment.salonId,
-                    salonName: appointment.salon?.name || "Salon",
-                    employeeId: appointment.salonEmployeeId,
-                    employeeName: appointment.salonEmployee?.user?.fullName,
-                    appointmentId: appointment.id,
-                  });
-                }}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons
-                  name="star"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={[
-                    styles.actionButtonText,
-                    { color: theme.colors.primary },
-                  ]}
-                >
-                  Write Review
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-          {canCancel && (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCancelAppointment}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name="cancel"
-                size={20}
-                color={theme.colors.error}
-              />
-              <Text
-                style={[styles.cancelButtonText, { color: theme.colors.error }]}
-              >
-                Cancel Appointment
-              </Text>
-            </TouchableOpacity>
-          )}
-          {canCancel && appointment.status !== AppointmentStatus.COMPLETED && (
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                if (appointment.salonId && appointment.salonEmployeeId) {
-                  navigation?.navigate("Explore", {
-                    salonId: appointment.salonId,
-                    serviceId: appointment.serviceId,
-                    employeeId: appointment.salonEmployeeId,
-                    reschedule: true,
-                    appointmentId: appointment.id,
-                  });
-                } else {
-                  Alert.alert(
-                    "Reschedule",
-                    "To reschedule, please navigate to Explore and select the same service.",
-                    [{ text: "OK" }]
-                  );
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name="schedule"
-                size={20}
-                color={theme.colors.primary}
-              />
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                Reschedule
-              </Text>
-            </TouchableOpacity>
+                  <MaterialIcons name="refresh" size={20} color="#FFF" />
+                  <Text style={styles.primaryMainButtonText}>Rebook This Service</Text>
+                </TouchableOpacity>
               )}
-            </>
+
+              {appointment.status === AppointmentStatus.COMPLETED && (
+                <TouchableOpacity
+                  style={[styles.actionButton, { borderColor: theme.colors.primary }]}
+                  onPress={() => {
+                    navigation?.navigate("Review", {
+                      salonId: appointment.salonId,
+                      salonName: appointment.salon?.name || "Salon",
+                      employeeId: appointment.salonEmployeeId,
+                      employeeName: appointment.salonEmployee?.user?.fullName,
+                      appointmentId: appointment.id,
+                    });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="star" size={20} color={theme.colors.primary} />
+                  <Text style={[styles.actionButtonText, { color: theme.colors.primary }]}>Share Your Experience</Text>
+                </TouchableOpacity>
+              )}
+
+              {canCancel && (
+                <View style={styles.buttonGapRow}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, { flex: 1, borderColor: theme.colors.primary }]}
+                    onPress={() => {
+                      if (appointment.salonId && appointment.serviceId) {
+                        navigation?.navigate("BookingFlow", {
+                          salonId: appointment.salonId,
+                          serviceId: appointment.serviceId,
+                          service: appointment.service,
+                          employeeId: appointment.salonEmployeeId,
+                          reschedule: true,
+                          appointmentId: appointment.id,
+                        });
+                      } else {
+                        Alert.alert("Reschedule", "To reschedule, please select the service again from the salon's profile.");
+                        navigation?.navigate("SalonDetail", { salonId: appointment.salonId });
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="schedule" size={20} color={theme.colors.primary} />
+                    <Text style={[styles.actionButtonText, { color: theme.colors.primary }]}>Reschedule</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.cancelMainButton, { flex: 1 }]}
+                    onPress={handleCancelAppointment}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="cancel" size={20} color={theme.colors.error} />
+                    <Text style={styles.cancelMainButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           ) : (
-            <>
-              {/* Staff/Employee Actions - Can mark as completed, in progress, etc. */}
+            <View style={styles.buttonStack}>
               {appointment.status !== AppointmentStatus.COMPLETED &&
                 appointment.status !== AppointmentStatus.CANCELLED && (
                   <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                    style={[styles.actionButton, styles.primaryMainButton]}
                     onPress={() => {
-                      // Navigate to work log or action screen
                       navigation?.navigate("UnifiedWorkLog");
                     }}
                     activeOpacity={0.7}
                   >
-                    <MaterialIcons
-                      name="play-arrow"
-                      size={20}
-                      color={theme.colors.white}
-                    />
-                    <Text
-                      style={[
-                        styles.actionButtonText,
-                        { color: theme.colors.white },
-                      ]}
-                    >
-                      Start Service
-                    </Text>
+                    <MaterialIcons name="play-arrow" size={22} color="#FFF" />
+                    <Text style={styles.primaryMainButtonText}>Start Providing Service</Text>
                   </TouchableOpacity>
                 )}
-            </>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -869,38 +825,51 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
     marginBottom: theme.spacing.xs,
   },
-  statusHeader: {
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.xs,
+  statusWrapper: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.xs / 2,
     marginHorizontal: theme.spacing.lg,
-    borderRadius: 12,
+    borderRadius: 16,
   },
-  statusHeaderContent: {
+  statusMainRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
-  statusIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  brandCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  statusHeaderText: {
+  statusInfo: {
     flex: 1,
   },
-  statusTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+  statusGreeting: {
+    fontSize: 16,
+    fontWeight: "700",
     fontFamily: theme.fonts.bold,
-    marginBottom: 2,
+    lineHeight: 20,
+    marginBottom: 4,
   },
-  statusSubtitle: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
+  statusBadge: {
+    fontSize: 11,
+    fontWeight: "800",
+    fontFamily: theme.fonts.bold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   section: {
     paddingHorizontal: theme.spacing.lg,
@@ -910,12 +879,12 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -929,10 +898,10 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   serviceName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.xs / 2,
+    marginBottom: 2,
   },
   serviceDescription: {
     fontSize: 15,
@@ -996,79 +965,147 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
+  employeeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  avatarPlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+  },
+  employeeInfo: {
+    flex: 1,
+  },
   employeeName: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 17,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
     marginBottom: 2,
   },
   employeeTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
+  smallActionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   price: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "800",
     fontFamily: theme.fonts.bold,
+    marginTop: 2,
   },
   notes: {
     fontSize: 14,
     fontFamily: theme.fonts.regular,
     lineHeight: 20,
+    marginTop: 2,
+  },
+  salonInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing.md,
+  },
+  salonTextContent: {
+    flex: 1,
+  },
+  salonAddressText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  salonContactRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  contactChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.primary + "08",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + "10",
+  },
+  contactChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.medium,
   },
   actionsContainer: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
+    paddingBottom: 30,
+  },
+  buttonStack: {
+    gap: theme.spacing.sm,
+  },
+  buttonGapRow: {
+    flexDirection: "row",
     gap: theme.spacing.sm,
   },
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-    backgroundColor: "transparent",
-    gap: theme.spacing.xs,
+    gap: 8,
   },
   actionButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
-  cancelButton: {
+  primaryMainButton: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  primaryMainButtonText: {
+    color: "#FFF",
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+  },
+  cancelMainButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: theme.colors.error + "08",
     borderWidth: 1.5,
-    borderColor: theme.colors.error,
-    gap: theme.spacing.xs,
+    borderColor: theme.colors.error + "20",
+    gap: 8,
   },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  messageStylistButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-    backgroundColor: theme.colors.primary + "15",
-    borderRadius: 8,
-    gap: theme.spacing.xs,
-  },
-  messageStylistButtonText: {
-    color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+  cancelMainButtonText: {
+    color: theme.colors.error,
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
 });

@@ -15,6 +15,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import * as Location from "expo-location";
+import { SERVICE_CATEGORIES, TARGET_CLIENTELE } from "../../constants/business";
 import { exploreService, Service } from "../../services/explore";
 import ServiceCard from "./components/ServiceCard";
 
@@ -28,6 +30,24 @@ const getScreenWidth = () => {
 };
 
 const getCardWidth = () => (getScreenWidth() - theme.spacing.md * 3) / 2;
+
+// Distance calculation
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
 
 interface AllServicesScreenProps {
   navigation?: {
@@ -77,15 +97,29 @@ export default function AllServicesScreen({
     setRefreshing(false);
   };
 
-  // Get unique categories from services
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
-    services.forEach((service) => {
-      const category = service.metadata?.category || "All";
-      cats.add(category);
-    });
-    return Array.from(cats).sort();
-  }, [services]);
+  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
+
+  // Filter Options
+  const categories = useMemo(() => [
+     "All", 
+     "Nearby",
+     ...TARGET_CLIENTELE.map(t => t.label),
+     ...SERVICE_CATEGORIES.map(c => c.label)
+  ], []);
+
+  const getLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+         Alert.alert('Permission Denied', 'Permission to access location was denied');
+         return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation(location.coords);
+    } catch (err) {
+       console.log(err);
+    }
+  };
 
   const filterAndSortServices = useCallback(() => {
     let filtered = [...services];
@@ -97,37 +131,64 @@ export default function AllServicesScreen({
         (service) =>
           service.name.toLowerCase().includes(query) ||
           service.description?.toLowerCase().includes(query) ||
-          service.salon?.name.toLowerCase().includes(query)
+          service.salon?.name?.toLowerCase().includes(query)
       );
     }
 
-    // Filter by category
+    // Filter by category / Nearby / Gender
     if (selectedCategory && selectedCategory !== "All") {
-      filtered = filtered.filter(
-        (service) => service.metadata?.category === selectedCategory
-      );
+       if (selectedCategory === "Nearby") {
+           if (userLocation) {
+                filtered = filtered.filter(s => {
+                    if (s.salon?.latitude && s.salon?.longitude) {
+                        return getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, s.salon.latitude, s.salon.longitude) <= 20;
+                    }
+                    return false;
+                });
+                // Sort by distance
+                filtered.sort((a, b) => {
+                    const d1 = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, a.salon!.latitude!, a.salon!.longitude!);
+                    const d2 = getDistanceFromLatLonInKm(userLocation.latitude, userLocation.longitude, b.salon!.latitude!, b.salon!.longitude!);
+                    return d1 - d2;
+                });
+           }
+       } else {
+           const filterLower = selectedCategory.toLowerCase();
+           filtered = filtered.filter(service => {
+              if (service.category?.toLowerCase() === filterLower) return true;
+              if (service.targetGender?.toLowerCase() === filterLower) return true;
+              if (service.metadata?.category?.toLowerCase() === filterLower) return true;
+              if (service.metadata?.targetGender?.toLowerCase() === filterLower) return true;
+              // Fallback
+              if (service.name.toLowerCase().includes(filterLower)) return true;
+              return false;
+           });
+       }
     }
 
     // Sort services
-    filtered.sort((a, b) => {
-      switch (sortOption) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "price-low":
-          return Number(a.basePrice) - Number(b.basePrice);
-        case "price-high":
-          return Number(b.basePrice) - Number(a.basePrice);
-        case "newest":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        default:
-          return 0;
-      }
-    });
+    // Sort services (skip if Nearby as it's already sorted by distance)
+    if (selectedCategory !== "Nearby") {
+        filtered.sort((a, b) => {
+          switch (sortOption) {
+            case "name":
+              return a.name.localeCompare(b.name);
+            case "price-low":
+              return Number(a.basePrice) - Number(b.basePrice);
+            case "price-high":
+              return Number(b.basePrice) - Number(a.basePrice);
+            case "newest":
+              return (
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              );
+            default:
+              return 0;
+          }
+        });
+    }
 
     setFilteredServices(filtered);
-  }, [services, searchQuery, sortOption, selectedCategory]);
+  }, [services, searchQuery, sortOption, selectedCategory, userLocation]);
 
   useEffect(() => {
     filterAndSortServices();
@@ -250,43 +311,25 @@ export default function AllServicesScreen({
           style={styles.filtersBar}
           contentContainerStyle={styles.filtersContent}
         >
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              dynamicStyles.filterButton,
-              !selectedCategory && dynamicStyles.filterButtonActive,
-            ]}
-            onPress={() => setSelectedCategory(null)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                !selectedCategory && { color: theme.colors.white },
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
           {categories.map((category) => (
             <TouchableOpacity
               key={category}
               style={[
                 styles.filterButton,
                 dynamicStyles.filterButton,
-                selectedCategory === category && dynamicStyles.filterButtonActive,
+                (selectedCategory === category || (!selectedCategory && category === "All")) && dynamicStyles.filterButtonActive,
               ]}
-              onPress={() =>
-                setSelectedCategory(
-                  selectedCategory === category ? null : category
-                )
-              }
+              onPress={() => {
+                if (category === "Nearby") getLocation();
+                if (category === "All") setSelectedCategory(null);
+                else setSelectedCategory(category === selectedCategory ? null : category);
+              }}
               activeOpacity={0.7}
             >
               <Text
                 style={[
                   styles.filterButtonText,
-                  selectedCategory === category && { color: theme.colors.white },
+                  (selectedCategory === category || (!selectedCategory && category === "All")) && { color: theme.colors.white },
                 ]}
               >
                 {category}
@@ -296,6 +339,7 @@ export default function AllServicesScreen({
         </ScrollView>
 
         {/* Sort Options */}
+        {selectedCategory !== "Nearby" && (
         <View style={styles.sortContainer}>
           <MaterialIcons
             name="sort"
@@ -335,6 +379,7 @@ export default function AllServicesScreen({
             ))}
           </ScrollView>
         </View>
+        )}
       </View>
 
       {/* Services List */}
@@ -390,10 +435,7 @@ export default function AllServicesScreen({
                 style={viewMode === "grid" ? [styles.gridItem, { width: getCardWidth() }] : undefined}
               >
                 <ServiceCard
-                  image={null}
-                  title={service.name}
-                  author={service.salon?.name || "Salon"}
-                  likes={0}
+                  service={service}
                   variant={viewMode}
                   onPress={() => handleServicePress(service)}
                   onLike={() => console.log("Like:", service.id)}
@@ -455,7 +497,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.xs,
   },
   filtersSection: {
-    paddingBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },
@@ -463,11 +505,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 16,
+    height: 40,         // Even more compact
+    borderRadius: 20,
     backgroundColor: theme.colors.backgroundSecondary,
     shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 1 },
@@ -480,8 +522,11 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
+    height: "100%",
+    paddingVertical: 0, // Critical for text visibility
+    textAlignVertical: "center", // Critical for Android
   },
   filtersBar: {
     maxHeight: 50,

@@ -55,3 +55,9 @@ export function PhoneIcon({ size = 20, color = theme.colors.primary }: IconProps
   );
 }
 
+export function ChevronLeftIcon({ size = 24, color = theme.colors.text }: IconProps) {
+  return (
+    <MaterialIcons name="chevron-left" size={size} color={color} />
+  );
+}
+

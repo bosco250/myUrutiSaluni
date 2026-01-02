@@ -8,8 +8,10 @@ import {
   Platform,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Input } from "../../components";
-import { MailIcon, LockIcon } from "../../components/common/Icons";
+import { MailIcon, LockIcon, ChevronLeftIcon } from "../../components/common/Icons";
+import { useTheme } from "../../context";
 import { theme } from "../../theme";
 
 interface ForgotPasswordScreenProps {
@@ -20,6 +22,28 @@ interface ForgotPasswordScreenProps {
 }
 
 export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
+  const { isDark } = useTheme();
+  
+  // Dynamic styles for dark/light mode support
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    text: {
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+    },
+    backButton: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
+    },
+    iconBackground: {
+      backgroundColor: isDark ? theme.colors.gray800 : "#F5E6D3",
+    },
+  };
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,38 +92,42 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.content}>
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButtonContainer}
-            onPress={() => navigation?.goBack()}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-
-          {/* Padlock Icon */}
-          <View style={styles.iconContainer}>
-            <View style={styles.iconBackground}>
-              <LockIcon size={36} color="#A67C52" />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Header with Back Button */}
+            <View style={styles.headerContainer}>
+              <TouchableOpacity
+                style={[styles.backButton, dynamicStyles.backButton]}
+                onPress={() => navigation?.goBack()}
+              >
+                <ChevronLeftIcon size={28} color={isDark ? theme.colors.white : theme.colors.text} />
+              </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Forgot Password?</Text>
-            <Text style={styles.subtitle}>
-              Don't worry! It happens. Please enter the email associated with
-              your account.
-            </Text>
-          </View>
+            {/* Padlock Icon */}
+            <View style={styles.iconContainer}>
+              <View style={[styles.iconBackground, dynamicStyles.iconBackground]}>
+                <LockIcon size={40} color={isDark ? theme.colors.primary : "#A67C52"} />
+              </View>
+            </View>
+
+            {/* Header Text */}
+            <View style={styles.header}>
+              <Text style={[styles.title, dynamicStyles.text]}>Forgot Password?</Text>
+              <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>
+                Don't worry! It happens. Please enter the email associated with
+                your account.
+              </Text>
+            </View>
 
           {/* Form */}
           <View style={styles.form}>
@@ -125,9 +153,10 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
               style={styles.sendButton}
             />
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -138,44 +167,55 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 29, // theme.spacing.lg (24) + 20% = 29
     paddingBottom: theme.spacing.xl,
   },
   content: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
   },
-  backButtonContainer: {
-    alignSelf: "flex-start",
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.xs,
-    paddingLeft: 0,
+  headerContainer: {
+    marginBottom: theme.spacing.lg,
   },
-  backButtonText: {
-    fontSize: 28,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -4,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconContainer: {
     alignItems: "center",
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
   },
   iconBackground: {
     width: 100,
     height: 100,
-    borderRadius: 16,
+    borderRadius: 24,
     backgroundColor: "#F5E6D3",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   header: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
     alignItems: "center",
   },
   title: {
     fontSize: 32,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     fontFamily: theme.fonts.bold,
     textAlign: "center",
   },
@@ -189,9 +229,17 @@ const styles = StyleSheet.create({
   },
   form: {
     width: "100%",
+    gap: theme.spacing.md,
   },
   sendButton: {
     marginTop: theme.spacing.md,
+    height: 56,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   successContainer: {
     flex: 1,

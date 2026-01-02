@@ -284,89 +284,99 @@ export default function BookingFlowScreen({
     try {
       setAvailabilityLoading(true);
 
-      // If "Any Available" is selected, generate availability from operating hours (same as web)
-      if (isAnyEmployee && operatingHours) {
-        const days: DayAvailability[] = [];
-        const today = new Date();
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(today.getDate() + 30);
+      const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
 
-        for (let i = 0; i < 30; i++) {
-          const d = new Date(today);
-          d.setDate(today.getDate() + i);
+      // Determine target employees
+      let targetEmployees: Employee[] = [];
+      if (selectedEmployeeId && selectedEmployeeId !== "any") {
+        const emp = employees.find(e => e.id === selectedEmployeeId);
+        if (emp) targetEmployees = [emp];
+      } else if (isAnyEmployee) {
+        targetEmployees = employees.filter(e => e.isActive);
+      }
 
-          const dayNames = [
-            "sunday",
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday",
-            "saturday",
-          ];
-          const dayIndex = d.getDay();
-          const dayName = dayNames[dayIndex];
-          const dayHours = operatingHours[dayName];
+      // If no valid employees (and not checking just operating hours fallback), return empty
+      // But wait! If isAnyEmployee, we SHOULD check employees.
+      if (targetEmployees.length === 0) {
+         setAvailability([]);
+         return;
+      }
 
-          if (dayHours?.isOpen) {
-            // Calculate number of slots based on operating hours
-            const [startHour, startMin] = dayHours.startTime
-              .split(":")
-              .map(Number);
-            const [endHour, endMin] = dayHours.endTime.split(":").map(Number);
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            const slotCount = Math.floor((endMinutes - startMinutes) / 30);
-
-            days.push({
-              date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-              status: "available" as const,
-              totalSlots: slotCount,
-              availableSlots: slotCount,
-            });
-          } else {
-            // Day is closed
-            days.push({
-              date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-              status: "unavailable" as const,
-              totalSlots: 0,
-              availableSlots: 0,
-            });
-          }
-        }
-        setAvailability(days);
-      } else if (selectedEmployeeId && selectedEmployeeId !== "any") {
-        // For specific employee, use backend API (same as web)
-        // Only call API if we have a valid UUID employee ID
-        const today = new Date();
-        const endDate = new Date();
-        endDate.setDate(today.getDate() + 30);
-
-        // CRITICAL: Use local date format, NOT toISOString() which converts to UTC
-        const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
-
-        const availabilityData =
-          await appointmentsService.getEmployeeAvailability(
-            selectedEmployeeId,
+      // Fetch availability for all target employees parallel
+      const availPromises = targetEmployees.map(emp => 
+        appointmentsService.getEmployeeAvailability(
+            emp.id,
             startDateStr,
             endDateStr,
             service.id,
             service.durationMinutes
-          );
-        setAvailability(availabilityData);
-      } else {
-        // No valid employee selected
-        setAvailability([]);
-      }
+        ).catch(() => [])
+      );
+
+      const results = await Promise.all(availPromises);
+
+      // Aggregate: Map<dateString, DayAvailability>
+      const aggMap = new Map<string, DayAvailability>();
+
+      // Initialize with dates if needed, or just let merging handle it (api returns sparse or full?)
+      // Assume API returns full range.
+
+      results.flat().forEach(day => {
+          if (!day || !day.date) return;
+          const existing = aggMap.get(day.date);
+
+          if (!existing) {
+              aggMap.set(day.date, { ...day });
+          } else {
+              // Merge Logic
+              // Status priority: available > partially_booked > fully_booked > unavailable
+              let newStatus = existing.status;
+              if (day.status === 'available') newStatus = 'available';
+              else if (day.status === 'partially_booked' && existing.status !== 'available') newStatus = 'partially_booked';
+              else if (day.status === 'fully_booked' && existing.status === 'unavailable') newStatus = 'fully_booked';
+              
+              const newTotal = existing.totalSlots + day.totalSlots;
+              const newAvailable = existing.availableSlots + day.availableSlots;
+              
+              aggMap.set(day.date, {
+                  date: day.date,
+                  status: newStatus,
+                  totalSlots: newTotal,
+                  availableSlots: newAvailable
+              });
+          }
+      });
+
+      setAvailability(Array.from(aggMap.values()).sort((a,b) => a.date.localeCompare(b.date)));
+
     } catch {
       setError("Failed to load availability");
       setAvailability([]);
     } finally {
       setAvailabilityLoading(false);
     }
-  }, [service, isAnyEmployee, operatingHours, selectedEmployeeId]);
+  }, [service, isAnyEmployee, selectedEmployeeId, employees]);
 
   const fetchTimeSlots = useCallback(async () => {
-    if (!selectedDate || !selectedEmployeeId || selectedEmployeeId === "any" || !service) {
+    if (!selectedDate || !service) {
+      return;
+    }
+
+    // Determine target employees: specific one or all active ones
+    let targetEmployees: Employee[] = [];
+    if (selectedEmployeeId && selectedEmployeeId !== "any") {
+      const emp = employees.find(e => e.id === selectedEmployeeId);
+      if (emp) targetEmployees = [emp];
+    } else if (isAnyEmployee) {
+      targetEmployees = employees.filter(e => e.isActive);
+    }
+
+    if (targetEmployees.length === 0) {
+      setTimeSlots([]);
       return;
     }
 
@@ -374,21 +384,32 @@ export default function BookingFlowScreen({
       setTimeSlotsLoading(true);
       const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
       
-      const slots = await appointmentsService.getEmployeeTimeSlots(
-        selectedEmployeeId,
-        dateStr,
-        service.durationMinutes,
-        service.id
+      const slotsPromises = targetEmployees.map(emp => 
+        appointmentsService.getEmployeeTimeSlots(
+          emp.id,
+          dateStr,
+          service.durationMinutes,
+          service.id
+        ).catch(() => []) 
       );
 
-      const processedSlots = Array.isArray(slots) ? slots : [];
-      
-      const validSlots = processedSlots
-        .filter((slot) => slot && slot.startTime && slot.endTime)
-        .map((slot) => ({
-          ...slot,
-          available: slot.available === true,
-        }))
+      const allResults = await Promise.all(slotsPromises);
+      const aggregatedSlotsMap = new Map<string, TimeSlot>();
+
+      allResults.flat().forEach(slot => {
+         if (!slot || !slot.startTime) return;
+         const key = slot.startTime;
+         const existing = aggregatedSlotsMap.get(key);
+         const isAvailable = slot.available === true;
+
+         if (!existing) {
+           aggregatedSlotsMap.set(key, { ...slot, available: isAvailable });
+         } else if (!existing.available && isAvailable) {
+             aggregatedSlotsMap.set(key, { ...slot, available: true, reason: undefined });
+         }
+      });
+
+      const validSlots = Array.from(aggregatedSlotsMap.values())
         .sort((a, b) => {
           const timeA = a.startTime.split(":").map(Number);
           const timeB = b.startTime.split(":").map(Number);
@@ -404,114 +425,9 @@ export default function BookingFlowScreen({
     } finally {
       setTimeSlotsLoading(false);
     }
-  }, [selectedDate, selectedEmployeeId, service]);
+  }, [selectedDate, selectedEmployeeId, isAnyEmployee, service, employees]);
 
-  // Generate time slots from operating hours (same logic as web version)
-  const generateTimeSlotsFromOperatingHours = useCallback(() => {
-    if (!selectedDate || !service || !operatingHours) {
-      setTimeSlots([]);
-      return;
-    }
 
-    try {
-      setTimeSlotsLoading(true);
-      const slots: TimeSlot[] = [];
-      const now = new Date();
-      const selectedDateStart = new Date(selectedDate);
-      selectedDateStart.setHours(0, 0, 0, 0);
-      const isToday = selectedDateStart.toDateString() === now.toDateString();
-
-      // Get day name (lowercase: monday, tuesday, etc.)
-      const dayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-      const dayIndex = selectedDate.getDay();
-      const dayName = dayNames[dayIndex];
-      const dayHours = operatingHours[dayName];
-
-      // Use salon operating hours if available (same as web)
-      if (dayHours?.isOpen) {
-        const [startHour, startMin] = dayHours.startTime.split(":").map(Number);
-        const [endHour, endMin] = dayHours.endTime.split(":").map(Number);
-
-        const startMinutes = startHour * 60 + startMin;
-        const endMinutes = endHour * 60 + endMin;
-
-        // Generate slots every 30 minutes (same as web)
-        for (
-          let currentMinutes = startMinutes;
-          currentMinutes + service.durationMinutes <= endMinutes;
-          currentMinutes += 30
-        ) {
-          const slotHour = Math.floor(currentMinutes / 60);
-          const slotMin = currentMinutes % 60;
-          const startTime = `${slotHour.toString().padStart(2, "0")}:${slotMin.toString().padStart(2, "0")}`;
-
-          const endMinutesForSlot = currentMinutes + service.durationMinutes;
-          const endSlotHour = Math.floor(endMinutesForSlot / 60);
-          const endSlotMin = endMinutesForSlot % 60;
-          const endTime = `${endSlotHour.toString().padStart(2, "0")}:${endSlotMin.toString().padStart(2, "0")}`;
-
-          // Only add slot if it doesn't exceed closing time
-          if (endMinutesForSlot <= endMinutes) {
-            // Check if slot is in the past (only for today)
-            let isPastSlot = false;
-            if (isToday) {
-              const slotDateTime = new Date(selectedDate);
-              slotDateTime.setHours(slotHour, slotMin, 0, 0);
-              isPastSlot = slotDateTime < now;
-            }
-
-            slots.push({
-              startTime,
-              endTime,
-              available: !isPastSlot,
-              reason: isPastSlot ? "Past time slot" : undefined,
-            });
-          }
-        }
-      } else {
-        // Fallback to default hours (9 AM - 6 PM) if no operating hours (same as web)
-        for (let hour = 9; hour < 18; hour++) {
-          for (let min = 0; min < 60; min += 30) {
-            const startTime = `${hour.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
-            const endHour =
-              min + service.durationMinutes >= 60 ? hour + 1 : hour;
-            const endMin = (min + service.durationMinutes) % 60;
-            const endTime = `${endHour.toString().padStart(2, "0")}:${endMin.toString().padStart(2, "0")}`;
-
-            // Check if slot is in the past (only for today)
-            let isPastSlot = false;
-            if (isToday) {
-              const slotDateTime = new Date(selectedDate);
-              slotDateTime.setHours(hour, min, 0, 0);
-              isPastSlot = slotDateTime < now;
-            }
-
-            slots.push({
-              startTime,
-              endTime,
-              available: !isPastSlot,
-              reason: isPastSlot ? "Past time slot" : undefined,
-            });
-          }
-        }
-      }
-
-      setTimeSlots(slots);
-    } catch {
-      setError("Failed to generate time slots from operating hours");
-      setTimeSlots([]);
-    } finally {
-      setTimeSlotsLoading(false);
-    }
-  }, [selectedDate, service, operatingHours]);
 
   useEffect(() => {
     if (serviceId) {
@@ -600,21 +516,14 @@ export default function BookingFlowScreen({
 
   useEffect(() => {
     if (selectedDate && service) {
-      if (isAnyEmployee) {
-        // Generate time slots from salon operating hours (like web version)
-        // Note: For "Any Available", we can't check specific employee bookings
-        // The backend will handle assignment when creating the appointment
-        generateTimeSlotsFromOperatingHours();
-      } else if (selectedEmployeeId && selectedEmployeeId !== "any") {
-        // Fetch time slots from backend for specific employee
-        // Backend will return slots with available: false for booked times
+      if (isAnyEmployee || (selectedEmployeeId && selectedEmployeeId !== "any")) {
+        // Fetch time slots (aggregating if Any, specific if ID)
         fetchTimeSlots();
       } else {
-        // No valid employee selected, clear slots
+        // No valid employee selected
         setTimeSlots([]);
       }
     } else {
-      // No date selected, clear slots
       setTimeSlots([]);
     }
   }, [
@@ -622,8 +531,6 @@ export default function BookingFlowScreen({
     selectedEmployeeId,
     isAnyEmployee,
     service,
-    operatingHours,
-    generateTimeSlotsFromOperatingHours,
     fetchTimeSlots,
   ]);
 
@@ -835,14 +742,14 @@ export default function BookingFlowScreen({
         }
       }
 
-      // Create appointment
+      // Create or Update appointment
       const appointmentData: any = {
         salonId: salon.id,
         serviceId: service.id,
         customerId: customerId || undefined,
         scheduledStart: scheduledStart.toISOString(),
         scheduledEnd: scheduledEnd.toISOString(),
-        status: "pending" as const,
+        status: route?.params?.reschedule ? undefined : ("pending" as const),
         notes: notes.trim() || undefined,
       };
 
@@ -851,24 +758,37 @@ export default function BookingFlowScreen({
         appointmentData.salonEmployeeId = selectedEmployeeId;
       }
 
-      const appointment =
-        await appointmentsService.createAppointment(appointmentData);
+      let appointment;
+      if (route?.params?.reschedule && route?.params?.appointmentId) {
+        appointment = await appointmentsService.updateAppointment(
+          route.params.appointmentId,
+          appointmentData
+        );
+      } else {
+        appointment = await appointmentsService.createAppointment(appointmentData);
+      }
 
-      Alert.alert("Success", "Appointment booked successfully!", [
-        {
-          text: "View Booking",
-          onPress: () => {
-            navigation?.navigate("AppointmentDetail", {
-              appointmentId: appointment.id,
-              appointment,
-            });
+      Alert.alert(
+        "Success",
+        route?.params?.reschedule
+          ? "Appointment rescheduled successfully!"
+          : "Appointment booked successfully!",
+        [
+          {
+            text: "View Booking",
+            onPress: () => {
+              navigation?.navigate("AppointmentDetail", {
+                appointmentId: appointment.id,
+                appointment,
+              });
+            },
           },
-        },
-        {
-          text: "OK",
-          onPress: () => navigation?.goBack(),
-        },
-      ]);
+          {
+            text: "OK",
+            onPress: () => navigation?.goBack(),
+          },
+        ]
+      );
     } catch (error: any) {
       // Check if error is about availability
       if (
@@ -996,19 +916,39 @@ export default function BookingFlowScreen({
 
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.backgroundDark : theme.colors.background,
+    },
+    header: {
+      backgroundColor: isDark ? theme.colors.backgroundDark : theme.colors.background,
+      borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.background,
     },
     text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
+      color: isDark ? theme.colors.textInverse : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray500 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark
-        ? theme.colors.gray800
-        : theme.colors.backgroundSecondary,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.backgroundSecondary,
+      borderColor: isDark ? theme.colors.gray800 : "transparent",
     },
+    input: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+      color: isDark ? theme.colors.textInverse : theme.colors.text,
+      borderColor: isDark ? theme.colors.gray800 : theme.colors.borderLight,
+    },
+    dot: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+    },
+    button: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+    },
+    border: {
+      borderColor: isDark ? theme.colors.gray800 : theme.colors.borderLight,
+    },
+    icon: {
+      color: isDark ? theme.colors.textInverse : theme.colors.text,
+    }
   };
 
   if (loading) {
@@ -1046,72 +986,60 @@ export default function BookingFlowScreen({
   const days = getDaysInMonth(currentMonth);
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
 
-  return (
+    return (
     <View style={[styles.container, dynamicStyles.container]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={dynamicStyles.container.backgroundColor} />
 
       {/* Header */}
-      <View style={[styles.header, dynamicStyles.container]}>
-        {/* Back button to go back */}
+      <View style={[styles.header, dynamicStyles.header]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          {service ? `Book ${service.name}` : salon ? `Book at ${salon.name}` : "Book Appointment"}
+          {currentStep === 'service' ? 'Select Service' : 
+           currentStep === 'employee' ? 'Select Stylist' :
+           currentStep === 'datetime' ? 'Date & Time' : 
+           route?.params?.reschedule ? 'Reschedule Appointment' : 'Review Booking'}
         </Text>
         <View style={styles.headerRight} />
       </View>
 
-      {/* Progress Steps */}
-      <View style={[styles.progressContainer, dynamicStyles.card]}>
+      {/* Modern Progress Dots */}
+      <View style={styles.progressContainer}>
         {STEPS.map((step, index) => (
-          <React.Fragment key={step.key}>
-            <View style={styles.progressStep}>
-              <View
-                style={[
-                  styles.progressCircle,
-                  currentStepIndex >= index && styles.progressCircleActive,
-                  currentStepIndex > index && styles.progressCircleCompleted,
-                ]}
-              >
-                {currentStepIndex > index ? (
-                  <MaterialIcons
-                    name="check"
-                    size={20}
-                    color={theme.colors.white}
-                  />
-                ) : (
-                  <MaterialIcons
-                    name={step.icon as any}
-                    size={20}
-                    color={
-                      currentStepIndex >= index
-                        ? theme.colors.white
-                        : dynamicStyles.textSecondary.color
-                    }
-                  />
-                )}
-              </View>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  currentStepIndex >= index
-                    ? dynamicStyles.text
-                    : dynamicStyles.textSecondary,
-                ]}
-              >
-                {step.label}
-              </Text>
+          <View key={step.key} style={styles.progressStep}>
+            <View
+              style={[
+                styles.progressDot,
+                dynamicStyles.dot,
+                currentStepIndex === index && styles.progressDotActive,
+                currentStepIndex > index && styles.progressDotCompleted,
+              ]}
+            >
+              {currentStepIndex > index ? (
+                <MaterialIcons name="check" size={18} color={theme.colors.white} />
+              ) : (
+                <Text style={{ 
+                  color: currentStepIndex === index ? theme.colors.white : dynamicStyles.textSecondary.color, 
+                  fontSize: 14, 
+                  fontWeight: 'bold',
+                  fontFamily: theme.fonts.bold
+                }}>
+                  {index + 1}
+                </Text>
+              )}
             </View>
             {index < STEPS.length - 1 && (
               <View
                 style={[
                   styles.progressLine,
-                  currentStepIndex > index && styles.progressLineActive,
+                  { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.borderLight },
+                  currentStepIndex > index && styles.progressLineCompleted,
+                  currentStepIndex === index && styles.progressLineActive,
                 ]}
               />
             )}
-          </React.Fragment>
+          </View>
         ))}
       </View>
 
@@ -1120,7 +1048,7 @@ export default function BookingFlowScreen({
         <View style={styles.errorContainer}>
           <MaterialIcons
             name="error-outline"
-            size={20}
+            size={24}
             color={theme.colors.error}
           />
           <Text style={styles.errorText}>{error}</Text>
@@ -1132,60 +1060,42 @@ export default function BookingFlowScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Step: Service Selection (only when booking from favorites) */}
+        {/* Step: Service Selection */}
         {currentStep === "service" && (
           <View style={styles.stepContent}>
-            {/* Show selected stylist banner when booking from favorites */}
             {hasPreSelectedEmployee && selectedEmployee && (
-              <View style={[styles.selectedStylistBanner, dynamicStyles.card]}>
+              <View style={[styles.selectedStylistBanner]}>
                 <View style={styles.selectedStylistContent}>
-                  <View style={[styles.selectedStylistAvatar, { backgroundColor: theme.colors.primary }]}>
+                  <View style={styles.selectedStylistAvatar}>
                     <Text style={styles.selectedStylistInitials}>
                       {selectedEmployee.user?.fullName?.charAt(0).toUpperCase() || '?'}
                     </Text>
                   </View>
                   <View style={styles.selectedStylistInfo}>
-                    <Text style={[styles.selectedStylistLabel, dynamicStyles.textSecondary]}>
-                      Booking with
-                    </Text>
+                    <Text style={styles.selectedStylistLabel}>Booking with</Text>
                     <Text style={[styles.selectedStylistName, dynamicStyles.text]}>
-                      {selectedEmployee.user?.fullName || 'Your Favorite Stylist'}
+                      {selectedEmployee.user?.fullName}
                     </Text>
                     {salon && (
-                      <Text style={[styles.selectedStylistSalon, dynamicStyles.textSecondary]}>
-                        at {salon.name}
-                      </Text>
+                      <Text style={[styles.selectedStylistSalon, dynamicStyles.textSecondary]}>at {salon.name}</Text>
                     )}
                   </View>
                 </View>
-                <MaterialIcons name="favorite" size={24} color={theme.colors.error} />
               </View>
             )}
 
-            <Text style={[styles.stepTitle, dynamicStyles.text]}>
-              Select a Service
-            </Text>
-            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-              Choose the service you want to book
-            </Text>
+            <Text style={[styles.stepTitle, dynamicStyles.text]}>Which service?</Text>
+            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>Choose a service to continue</Text>
 
             {servicesLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
               </View>
             ) : services.length === 0 ? (
-              <View style={[styles.emptyCard, dynamicStyles.card]}>
-                <MaterialIcons
-                  name="spa"
-                  size={48}
-                  color={dynamicStyles.textSecondary.color}
-                />
-                <Text style={[styles.emptyText, dynamicStyles.text]}>
-                  No services available
-                </Text>
-                <Text style={[styles.emptySubtext, dynamicStyles.textSecondary]}>
-                  This salon hasn't added any services yet
-                </Text>
+              <View style={[styles.emptyCard, dynamicStyles.card, dynamicStyles.border]}>
+                <MaterialIcons name="spa" size={48} color={dynamicStyles.textSecondary.color} />
+                <Text style={[styles.emptyText, dynamicStyles.text]}>No services found</Text>
+                <Text style={[styles.emptySubtext, dynamicStyles.textSecondary]}>This salon hasn't listed any services yet.</Text>
               </View>
             ) : (
               <View style={styles.employeesList}>
@@ -1197,60 +1107,37 @@ export default function BookingFlowScreen({
                       style={[
                         styles.employeeCard,
                         dynamicStyles.card,
+                        dynamicStyles.border,
                         isSelected && styles.employeeCardSelected,
                       ]}
                       onPress={() => setService(svc)}
                       activeOpacity={0.7}
                     >
                       <View style={styles.employeeInfo}>
-                        <View
-                          style={[
-                            styles.employeeAvatar,
-                            { backgroundColor: theme.colors.primary + "20" },
-                          ]}
-                        >
+                        <View style={[styles.employeeAvatar, { 
+                          backgroundColor: isSelected ? theme.colors.primary : (isDark ? theme.colors.gray800 : theme.colors.white), 
+                          borderColor: isSelected ? theme.colors.primary : (isDark ? theme.colors.gray700 : theme.colors.borderLight),
+                          elevation: isSelected ? 4 : 0,
+                          shadowColor: theme.colors.primary,
+                          shadowOpacity: isSelected ? 0.3 : 0,
+                          shadowRadius: 4,
+                        }]}>
                           <MaterialIcons
                             name="spa"
-                            size={24}
-                            color={theme.colors.primary}
+                            size={22}
+                            color={isSelected ? theme.colors.white : theme.colors.primary}
                           />
                         </View>
                         <View style={styles.employeeDetails}>
-                          <Text
-                            style={[styles.employeeName, dynamicStyles.text]}
-                            numberOfLines={1}
-                          >
-                            {svc.name}
+                          <Text style={[styles.employeeName, dynamicStyles.text, { fontSize: 15 }]}>{svc.name}</Text>
+                          <Text style={[styles.employeeRole, dynamicStyles.textSecondary, { fontSize: 12 }]}>
+                            {svc.durationMinutes} min • RWF {svc.basePrice.toLocaleString()}
                           </Text>
-                          <Text
-                            style={[
-                              styles.employeeRole,
-                              dynamicStyles.textSecondary,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {svc.durationMinutes} mins • RWF {svc.basePrice.toLocaleString()}
-                          </Text>
-                          {svc.description && (
-                            <Text
-                              style={[
-                                styles.employeeRole,
-                                dynamicStyles.textSecondary,
-                              ]}
-                              numberOfLines={2}
-                            >
-                              {svc.description}
-                            </Text>
-                          )}
                         </View>
                       </View>
-                      {isSelected && (
-                        <MaterialIcons
-                          name="check-circle"
-                          size={24}
-                          color={theme.colors.primary}
-                        />
-                      )}
+                      <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: isSelected ? theme.colors.primary : (isDark ? theme.colors.gray700 : theme.colors.borderLight), justifyContent: 'center', alignItems: 'center' }}>
+                        {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.primary }} />}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -1262,214 +1149,135 @@ export default function BookingFlowScreen({
         {/* Step: Employee Selection */}
         {currentStep === "employee" && (
           <View style={styles.stepContent}>
-            <Text style={[styles.stepTitle, dynamicStyles.text]}>
-              Select Your Stylist
-            </Text>
-            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-              Choose a preferred stylist or select "Any Available"
-            </Text>
+            <Text style={[styles.stepTitle, dynamicStyles.text]}>Choose a Pro</Text>
+            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>Select a stylist or let us pick for you</Text>
 
             {employeesLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
               </View>
             ) : employees.length === 0 ? (
-              <View style={[styles.emptyCard, dynamicStyles.card]}>
-                <MaterialIcons
-                  name="person-off"
-                  size={48}
-                  color={dynamicStyles.textSecondary.color}
-                />
-                <Text style={[styles.emptyText, dynamicStyles.text]}>
-                  No stylists available
-                </Text>
+              <View style={[styles.emptyCard, dynamicStyles.card, dynamicStyles.border]}>
+                <MaterialIcons name="person-off" size={48} color={dynamicStyles.textSecondary.color} />
+                <Text style={[styles.emptyText, dynamicStyles.text]}>No stylists available</Text>
               </View>
             ) : (
               <View style={styles.employeesList}>
-                {/* "Any Available" Option */}
+                {/* Any Available Option */}
                 <TouchableOpacity
                   style={[
                     styles.employeeCard,
                     dynamicStyles.card,
+                    dynamicStyles.border,
                     isAnyEmployee && styles.employeeCardSelected,
                   ]}
                   onPress={() => handleEmployeeSelect("any")}
                   activeOpacity={0.7}
                 >
                   <View style={styles.employeeInfo}>
-                    <View
-                      style={[
-                        styles.employeeAvatar,
-                        { backgroundColor: theme.colors.primaryLight },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name="people"
-                        size={24}
-                        color={theme.colors.primary}
-                      />
+                    <View style={[styles.employeeAvatar, { 
+                      backgroundColor: isAnyEmployee ? theme.colors.primary : (isDark ? theme.colors.gray800 : theme.colors.white), 
+                      borderColor: isAnyEmployee ? theme.colors.primary : (isDark ? theme.colors.gray700 : theme.colors.borderLight),
+                      elevation: isAnyEmployee ? 4 : 0,
+                      shadowColor: theme.colors.primary,
+                      shadowOpacity: isAnyEmployee ? 0.3 : 0,
+                      shadowRadius: 4,
+                    }]}>
+                      <MaterialIcons name="auto-awesome" size={22} color={isAnyEmployee ? theme.colors.white : theme.colors.primary} />
                     </View>
                     <View style={styles.employeeDetails}>
-                      <Text style={[styles.employeeName, dynamicStyles.text]}>
-                        Any Available Stylist
-                      </Text>
-                      <Text
-                        style={[
-                          styles.employeeRole,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Salon will assign a stylist
-                      </Text>
+                      <Text style={[styles.employeeName, dynamicStyles.text, { fontSize: 15 }]}>Any Professional</Text>
+                      <Text style={[styles.employeeRole, dynamicStyles.textSecondary, { fontSize: 12 }]}>Maximum availability</Text>
                     </View>
                   </View>
-                  {isAnyEmployee && (
-                    <MaterialIcons
-                      name="check-circle"
-                      size={24}
-                      color={theme.colors.primary}
-                    />
-                  )}
+                  <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: isAnyEmployee ? theme.colors.primary : (isDark ? theme.colors.gray700 : theme.colors.borderLight), justifyContent: 'center', alignItems: 'center' }}>
+                     {isAnyEmployee && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.primary }} />}
+                  </View>
                 </TouchableOpacity>
 
-                {/* Employee List */}
-                {employees.map((employee) => (
-                  <TouchableOpacity
-                    key={employee.id}
-                    style={[
-                      styles.employeeCard,
-                      dynamicStyles.card,
-                      selectedEmployeeId === employee.id &&
-                        styles.employeeCardSelected,
-                    ]}
-                    onPress={() => handleEmployeeSelect(employee.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.employeeInfo}>
-                      <View style={styles.employeeAvatar}>
-                        <Text style={styles.employeeInitials}>
-                          {employee.user?.fullName
-                            ?.split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2) || "?"}
-                        </Text>
+                {employees.map((employee) => {
+                  const isSelected = selectedEmployeeId === employee.id;
+                  return (
+                    <TouchableOpacity
+                      key={employee.id}
+                      style={[
+                        styles.employeeCard,
+                        dynamicStyles.card,
+                        dynamicStyles.border,
+                        isSelected && styles.employeeCardSelected,
+                      ]}
+                      onPress={() => handleEmployeeSelect(employee.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.employeeInfo}>
+                        <View style={[styles.employeeAvatar, { 
+                          borderColor: isSelected ? theme.colors.primary : (isDark ? theme.colors.gray700 : theme.colors.borderLight), 
+                          backgroundColor: isSelected ? theme.colors.primary : (isDark ? theme.colors.gray800 : theme.colors.white),
+                          elevation: isSelected ? 4 : 0,
+                          shadowColor: theme.colors.primary,
+                          shadowOpacity: isSelected ? 0.3 : 0,
+                          shadowRadius: 4,
+                        }]}>
+                           {/* Initials or Image if avail */}
+                           <Text style={[styles.employeeInitials, { color: isSelected ? theme.colors.white : theme.colors.primary, fontSize: 16 }]}>
+                             {employee.user?.fullName?.slice(0, 2).toUpperCase()}
+                           </Text>
+                        </View>
+                        <View style={styles.employeeDetails}>
+                          <Text style={[styles.employeeName, dynamicStyles.text, { fontSize: 15 }]}>{employee.user?.fullName}</Text>
+                          <Text style={[styles.employeeRole, dynamicStyles.textSecondary, { fontSize: 12 }]}>{employee.roleTitle || 'Stylist'}</Text>
+                        </View>
                       </View>
-                      <View style={styles.employeeDetails}>
-                        <Text style={[styles.employeeName, dynamicStyles.text]}>
-                          {employee.user?.fullName || "Unknown"}
-                        </Text>
-                        {employee.roleTitle && (
-                          <Text
-                            style={[
-                              styles.employeeRole,
-                              dynamicStyles.textSecondary,
-                            ]}
-                          >
-                            {employee.roleTitle}
-                          </Text>
-                        )}
+                      <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: isSelected ? theme.colors.primary : (isDark ? theme.colors.gray700 : theme.colors.borderLight), justifyContent: 'center', alignItems: 'center' }}>
+                        {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.primary }} />}
                       </View>
-                    </View>
-                    {selectedEmployeeId === employee.id && (
-                      <MaterialIcons
-                        name="check-circle"
-                        size={24}
-                        color={theme.colors.primary}
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
         )}
 
-        {/* Step 2: Date & Time Selection */}
+        {/* Step: Date & Time */}
         {currentStep === "datetime" && (
           <View style={styles.stepContent}>
-            <Text style={[styles.stepTitle, dynamicStyles.text]}>
-              Select Date & Time
-            </Text>
-            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-              Choose your preferred date and time slot
-            </Text>
+            <Text style={[styles.stepTitle, dynamicStyles.text]}>When?</Text>
+            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>Select a date and time slot</Text>
 
-            {/* Calendar */}
-            <View style={[styles.calendarContainer, dynamicStyles.card]}>
+            <View style={[styles.calendarContainer, dynamicStyles.card, dynamicStyles.border]}>
               <View style={styles.monthHeader}>
                 <TouchableOpacity
-                  onPress={() =>
-                    setCurrentMonth(
-                      new Date(
-                        currentMonth.getFullYear(),
-                        currentMonth.getMonth() - 1,
-                        1
-                      )
-                    )
-                  }
-                  style={styles.monthButton}
+                  onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+                  style={[styles.monthButton, dynamicStyles.button]}
                 >
-                  <MaterialIcons
-                    name="chevron-left"
-                    size={24}
-                    color={dynamicStyles.text.color}
-                  />
+                  <MaterialIcons name="chevron-left" size={24} color={dynamicStyles.text.color} />
                 </TouchableOpacity>
                 <Text style={[styles.monthText, dynamicStyles.text]}>
-                  {currentMonth.toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>
-                    setCurrentMonth(
-                      new Date(
-                        currentMonth.getFullYear(),
-                        currentMonth.getMonth() + 1,
-                        1
-                      )
-                    )
-                  }
-                  style={styles.monthButton}
+                  onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+                  style={[styles.monthButton, dynamicStyles.button]}
                 >
-                  <MaterialIcons
-                    name="chevron-right"
-                    size={24}
-                    color={dynamicStyles.text.color}
-                  />
+                  <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.text.color} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.daysOfWeek}>
+              <View style={[styles.daysOfWeek, { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight }]}>
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                  <Text
-                    key={day}
-                    style={[styles.dayOfWeek, dynamicStyles.text]}
-                  >
-                    {day}
-                  </Text>
+                  <Text key={day} style={[styles.dayOfWeek, dynamicStyles.textSecondary]}>{day}</Text>
                 ))}
               </View>
 
               <View style={styles.calendarGrid}>
                 {days.map((date, index) => {
-                  if (!date) {
-                    return (
-                      <View key={`empty-${index}`} style={styles.calendarDay} />
-                    );
-                  }
-
+                  if (!date) return <View key={`empty-${index}`} style={styles.calendarDay} />;
+                  
                   const isSelected = isDateSelected(date);
                   const isAvailable = isDateAvailable(date);
                   const isPastDate = isPast(date);
-
-                  // For "Any Available", check operating hours; for specific employee, check availability
-                  const isDayAvailable = isAnyEmployee
-                    ? isDateAvailable(date)
-                    : isAvailable;
+                  const isDayAvailable = isAnyEmployee ? isDateAvailable(date) : isAvailable;
 
                   return (
                     <TouchableOpacity
@@ -1479,9 +1287,7 @@ export default function BookingFlowScreen({
                         isSelected && styles.selectedDay,
                         isDayAvailable && !isSelected && styles.availableDay,
                       ]}
-                      onPress={() =>
-                        !isPastDate && isDayAvailable && handleDateSelect(date)
-                      }
+                      onPress={() => !isPastDate && isDayAvailable && handleDateSelect(date)}
                       disabled={isPastDate || !isDayAvailable}
                       activeOpacity={0.7}
                     >
@@ -1490,8 +1296,7 @@ export default function BookingFlowScreen({
                           styles.dayText,
                           dynamicStyles.text,
                           isSelected && styles.selectedDayText,
-                          (!isDayAvailable || isPastDate) &&
-                            styles.unavailableDayText,
+                          (!isDayAvailable || isPastDate) && styles.unavailableDayText,
                         ]}
                       >
                         {date.getDate()}
@@ -1502,128 +1307,53 @@ export default function BookingFlowScreen({
               </View>
             </View>
 
-            {/* Time Slots */}
             {selectedDate && (
               <View style={styles.timeSlotsContainer}>
                 <View style={styles.timeSlotsHeader}>
-                  <View>
-                    <Text style={[styles.timeSlotsTitle, dynamicStyles.text]}>
-                      Available Times
-                    </Text>
-                    {timeSlots.length > 0 && (
-                      <Text style={[styles.timeSlotsSubtitle, dynamicStyles.textSecondary]}>
-                        {timeSlots.filter((s) => s.available === true).length} available • {timeSlots.filter((s) => s.available !== true).length} booked
-                      </Text>
-                    )}
-                  </View>
+                  <Text style={[styles.timeSlotsTitle, dynamicStyles.text]}>Available Time</Text>
                   <TouchableOpacity
                     onPress={() => {
-                      // Refresh time slots to get latest availability
-                      if (selectedDate && selectedEmployeeId && selectedEmployeeId !== "any") {
-                        fetchTimeSlots();
-                      } else if (isAnyEmployee) {
-                        generateTimeSlotsFromOperatingHours();
-                      }
+                        // FIX: Use fetchTimeSlots for both cases
+                        if (selectedDate) fetchTimeSlots();
                     }}
-                    style={styles.refreshButton}
+                    style={[styles.refreshButton, dynamicStyles.button]}
                     disabled={timeSlotsLoading}
                   >
-                    <MaterialIcons
-                      name="refresh"
-                      size={18}
-                      color={theme.colors.primary}
-                    />
+                     {timeSlotsLoading ? <ActivityIndicator size="small" color={theme.colors.primary} /> : <MaterialIcons name="refresh" size={20} color={theme.colors.primary} />}
                   </TouchableOpacity>
                 </View>
-                {timeSlotsLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator
-                      size="small"
-                      color={theme.colors.primary}
-                    />
-                  </View>
-                ) : timeSlots.length === 0 ? (
-                  <Text
-                    style={[styles.noSlotsText, dynamicStyles.textSecondary]}
-                  >
-                    No available time slots for this date
-                  </Text>
+
+                {timeSlots.length === 0 && !timeSlotsLoading ? (
+                  <Text style={[styles.noSlotsText, { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.backgroundSecondary, color: dynamicStyles.textSecondary.color }]}>No slots available for this date.</Text>
                 ) : (
                   <View style={styles.timeSlotsGrid}>
-                    {timeSlots.length === 0 ? (
-                      <Text
-                        style={[styles.noSlotsText, dynamicStyles.textSecondary]}
-                      >
-                        No time slots available for this date
-                      </Text>
-                    ) : (
-                      timeSlots.map((slot, index) => {
-                        const isSelected =
-                          selectedSlot?.startTime === slot.startTime &&
-                          selectedSlot?.endTime === slot.endTime;
-                        // STRICT CHECK: Only available if explicitly true
-                        const isAvailable = slot.available === true;
-                        const isUnavailable = !isAvailable;
-                        
-                        return (
-                          <TouchableOpacity
-                            key={`${slot.startTime}-${slot.endTime}-${index}`}
-                            style={[
-                              styles.timeSlot,
-                              dynamicStyles.card,
-                              isSelected && isAvailable && styles.timeSlotSelected,
-                              isUnavailable && styles.timeSlotUnavailable,
-                            ]}
-                            onPress={() => {
-                              if (isAvailable) {
-                                handleSlotSelect(slot);
-                              } else {
-                                // Show error and prevent selection
-                                setError(slot.reason || "This time slot is already booked");
-                                // Clear any previously selected slot if this one is unavailable
-                                if (isSelected) {
-                                  setSelectedSlot(null);
-                                }
-                              }
-                            }}
-                            disabled={isUnavailable}
-                            activeOpacity={isUnavailable ? 1 : 0.7}
-                          >
-                            <View style={styles.timeSlotContent}>
-                              <Text
-                                style={[
-                                  styles.timeSlotText,
-                                  dynamicStyles.text,
-                                  isSelected && isAvailable && styles.timeSlotTextSelected,
-                                  isUnavailable && styles.timeSlotTextUnavailable,
-                                ]}
-                              >
-                                {formatTime(slot.startTime)}
-                              </Text>
-                              {isUnavailable && (
-                                <MaterialIcons
-                                  name="block"
-                                  size={14}
-                                  color={theme.colors.error}
-                                  style={styles.unavailableIcon}
-                                />
-                              )}
-                            </View>
-                            {isUnavailable && (
-                              <Text
-                                style={[
-                                  styles.timeSlotReason,
-                                  dynamicStyles.textSecondary,
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {slot.reason || "Booked"}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })
-                    )}
+                    {timeSlots.map((slot, index) => {
+                       const isSelected = selectedSlot?.startTime === slot.startTime;
+                       const isAvailable = slot.available === true;
+                       return (
+                         <TouchableOpacity
+                           key={`${slot.startTime}-${index}`}
+                           style={[
+                             styles.timeSlot,
+                             dynamicStyles.card,
+                             dynamicStyles.border,
+                             isSelected && isAvailable && styles.timeSlotSelected,
+                             !isAvailable && styles.timeSlotUnavailable
+                           ]}
+                           onPress={() => isAvailable && handleSlotSelect(slot)}
+                           disabled={!isAvailable}
+                         >
+                           <Text style={[
+                             styles.timeSlotText,
+                             dynamicStyles.text,
+                             isSelected && isAvailable && styles.timeSlotTextSelected,
+                             !isAvailable && styles.timeSlotTextUnavailable
+                           ]}>
+                             {formatTime(slot.startTime)}
+                           </Text>
+                         </TouchableOpacity>
+                       )
+                    })}
                   </View>
                 )}
               </View>
@@ -1631,222 +1361,112 @@ export default function BookingFlowScreen({
           </View>
         )}
 
-        {/* Step 3: Confirmation */}
+        {/* Step: Confirm */}
         {currentStep === "confirm" && (
           <View style={styles.stepContent}>
-            <Text style={[styles.stepTitle, dynamicStyles.text]}>
-              Review Your Booking
-            </Text>
-            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-              Please review your appointment details
-            </Text>
+            <Text style={[styles.stepTitle, dynamicStyles.text]}>Everything looks good?</Text>
+            <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>Double check your booking details</Text>
 
-            <View style={[styles.confirmCard, dynamicStyles.card]}>
-              {/* Service */}
-              <View style={styles.confirmRow}>
-                <MaterialIcons
-                  name="spa"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <View style={styles.confirmRowContent}>
-                  <Text
-                    style={[styles.confirmLabel, dynamicStyles.textSecondary]}
-                  >
-                    Service
-                  </Text>
-                  <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                    {service?.name || "Selected service"}
-                  </Text>
-                </View>
-              </View>
+            <View style={[styles.confirmCard, dynamicStyles.card, dynamicStyles.border]}>
+               {/* Salon Section */}
+               <View style={[styles.confirmRow, { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight }]}>
+                 <MaterialIcons name="storefront" size={20} color={theme.colors.primary} />
+                 <View style={styles.confirmRowContent}>
+                    <Text style={[styles.confirmLabel, dynamicStyles.textSecondary]}>Salon</Text>
+                    <Text style={[styles.confirmValue, dynamicStyles.text]}>{salon?.name}</Text>
+                    {salon?.address && (
+                      <Text style={styles.confirmSubValue}>{salon.address}</Text>
+                    )}
+                 </View>
+               </View>
 
-              {/* Stylist */}
-              {isAnyEmployee ? (
-                <View style={styles.confirmRow}>
-                  <MaterialIcons
-                    name="people"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                  <View style={styles.confirmRowContent}>
-                    <Text
-                      style={[styles.confirmLabel, dynamicStyles.textSecondary]}
-                    >
-                      Stylist
-                    </Text>
+               <View style={[styles.confirmRow, { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight }]}>
+                 <MaterialIcons name="spa" size={20} color={theme.colors.primary} />
+                 <View style={styles.confirmRowContent}>
+                    <Text style={[styles.confirmLabel, dynamicStyles.textSecondary]}>Service</Text>
+                    <Text style={[styles.confirmValue, dynamicStyles.text]}>{service?.name}</Text>
+                    {service?.durationMinutes && (
+                      <Text style={styles.confirmSubValue}>{service.durationMinutes} minutes</Text>
+                    )}
+                 </View>
+               </View>
+
+               <View style={[styles.confirmRow, { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight }]}>
+                 <MaterialIcons name="person" size={20} color={theme.colors.primary} />
+                 <View style={styles.confirmRowContent}>
+                    <Text style={[styles.confirmLabel, dynamicStyles.textSecondary]}>Professional</Text>
                     <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                      Any Available Stylist
+                      {isAnyEmployee ? "Any Available Stylist" : selectedEmployee?.user?.fullName}
                     </Text>
-                  </View>
-                </View>
-              ) : selectedEmployee ? (
-                <View style={styles.confirmRow}>
-                  <MaterialIcons
-                    name="person"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                  <View style={styles.confirmRowContent}>
-                    <Text
-                      style={[styles.confirmLabel, dynamicStyles.textSecondary]}
-                    >
-                      Stylist
-                    </Text>
+                    {!isAnyEmployee && selectedEmployee?.roleTitle && (
+                      <Text style={styles.confirmSubValue}>{selectedEmployee.roleTitle}</Text>
+                    )}
+                 </View>
+               </View>
+
+               <View style={[styles.confirmRow, { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight }]}>
+                 <MaterialIcons name="event" size={20} color={theme.colors.primary} />
+                 <View style={styles.confirmRowContent}>
+                    <Text style={[styles.confirmLabel, dynamicStyles.textSecondary]}>Date & Time</Text>
                     <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                      {selectedEmployee.user?.fullName || "Unknown"}
+                       {selectedDate?.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </Text>
-                  </View>
-                </View>
-              ) : null}
+                    <Text style={styles.confirmSubValue}>
+                      Starting at {selectedSlot ? formatTime(selectedSlot.startTime) : ''}
+                    </Text>
+                 </View>
+               </View>
 
-              {/* Date */}
-              {selectedDate && (
-                <View style={styles.confirmRow}>
-                  <MaterialIcons
-                    name="calendar-today"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                  <View style={styles.confirmRowContent}>
-                    <Text
-                      style={[styles.confirmLabel, dynamicStyles.textSecondary]}
-                    >
-                      Date
+               <View style={styles.confirmRow}>
+                 <MaterialIcons name="payments" size={20} color={theme.colors.primary} />
+                 <View style={styles.confirmRowContent}>
+                    <Text style={[styles.confirmLabel, dynamicStyles.textSecondary]}>Total Amount</Text>
+                    <Text style={[styles.confirmValue, dynamicStyles.text, { fontSize: 20, color: theme.colors.primary }]}>
+                      RWF {service?.basePrice?.toLocaleString()}
                     </Text>
-                    <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                      {selectedDate.toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </Text>
-                  </View>
-                </View>
-              )}
+                 </View>
+               </View>
 
-              {/* Time */}
-              {selectedSlot && (
-                <View style={styles.confirmRow}>
-                  <MaterialIcons
-                    name="access-time"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                  <View style={styles.confirmRowContent}>
-                    <Text
-                      style={[styles.confirmLabel, dynamicStyles.textSecondary]}
-                    >
-                      Scheduled Time
-                    </Text>
-                    <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                      {formatTime(selectedSlot.startTime)} -{" "}
-                      {formatTime(selectedSlot.endTime)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Price */}
-              <View style={styles.confirmRow}>
-                <MaterialIcons
-                  name="attach-money"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <View style={styles.confirmRowContent}>
-                  <Text
-                    style={[styles.confirmLabel, dynamicStyles.textSecondary]}
-                  >
-                    Price
-                  </Text>
-                  <Text style={[styles.confirmValue, dynamicStyles.text]}>
-                    RWF {Number(service?.basePrice || 0).toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Notes */}
-              <View style={styles.notesContainer}>
-                <Text style={[styles.notesLabel, dynamicStyles.text]}>
-                  Additional Notes (Optional)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.notesInput,
-                    dynamicStyles.card,
-                    dynamicStyles.text,
-                  ]}
-                  placeholder="Any special requests or notes..."
-                  placeholderTextColor={dynamicStyles.textSecondary.color}
-                  value={notes}
-                  onChangeText={setNotes}
-                  multiline
-                  numberOfLines={4}
-                />
-              </View>
+               <View style={styles.notesContainer}>
+                 <Text style={[styles.notesLabel, dynamicStyles.textSecondary]}>Special Instructions (optional)</Text>
+                 <TextInput
+                   style={[styles.notesInput, dynamicStyles.input]}
+                   placeholder="Anything you'd like your pro to know?"
+                   placeholderTextColor={isDark ? theme.colors.gray500 : theme.colors.textSecondary}
+                   value={notes}
+                   onChangeText={setNotes}
+                   multiline
+                 />
+               </View>
             </View>
           </View>
         )}
+
       </ScrollView>
 
-      {/* Navigation Buttons */}
-      <View style={[styles.navigationContainer, dynamicStyles.container]}>
-        {currentStepIndex > 0 && (
-          <TouchableOpacity
-            style={[styles.navButton, styles.backButton]}
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons
-              name="arrow-back"
-              size={20}
-              color={dynamicStyles.text.color}
-            />
-            <Text style={[styles.navButtonText, dynamicStyles.text]}>Back</Text>
-          </TouchableOpacity>
-        )}
-        {currentStepIndex < STEPS.length - 1 ? (
-          <TouchableOpacity
-            style={[styles.navButton, styles.nextButton]}
-            onPress={handleNext}
-            activeOpacity={0.7}
-            disabled={
-              (currentStep === "employee" &&
-                !selectedEmployeeId &&
-                !isAnyEmployee) ||
-              (currentStep === "datetime" && (!selectedDate || !selectedSlot))
-            }
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-            <MaterialIcons
-              name="arrow-forward"
-              size={20}
-              color={theme.colors.white}
-            />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.navButton, styles.confirmButton]}
-            onPress={handleConfirmBooking}
-            activeOpacity={0.7}
-            disabled={submitting}
-          >
+      {/* Footer Navigation */}
+      <View style={[styles.navigationContainer, dynamicStyles.header, { borderTopColor: isDark ? theme.colors.gray800 : theme.colors.borderLight }]}>
+         {currentStep !== 'service' && !hasPreSelectedService && (
+             <TouchableOpacity style={[styles.navButton, styles.backButtonLabel, dynamicStyles.button, dynamicStyles.border]} onPress={handleBack}>
+               <Text style={[styles.backButtonText, dynamicStyles.text]}>Back</Text>
+             </TouchableOpacity>
+         )}
+         
+         <TouchableOpacity
+           style={[styles.navButton, currentStep === 'confirm' ? styles.confirmButton : styles.nextButton]}
+           onPress={currentStep === 'confirm' ? handleConfirmBooking : handleNext}
+           disabled={loading || submitting}
+         >
             {submitting ? (
-              <ActivityIndicator size="small" color={theme.colors.white} />
+              <ActivityIndicator color="white" />
             ) : (
-              <>
-                <Text style={styles.confirmButtonText}>Confirm Booking</Text>
-                <MaterialIcons
-                  name="check-circle"
-                  size={20}
-                  color={theme.colors.white}
-                />
-              </>
+              <Text style={currentStep === 'confirm' ? styles.confirmButtonText : styles.nextButtonText}>
+                {currentStep === 'confirm' 
+                  ? (route?.params?.reschedule ? 'Confirm Rescheduling' : 'Confirm Booking') 
+                  : 'Continue'}
+              </Text>
             )}
-          </TouchableOpacity>
-        )}
+         </TouchableOpacity>
       </View>
     </View>
   );
@@ -1865,24 +1485,27 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: theme.spacing.md,
     fontSize: 16,
+    fontFamily: theme.fonts.medium,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: StatusBar.currentHeight || 0,
+    paddingTop: (StatusBar.currentHeight || 0) + theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    zIndex: 1,
   },
   backButton: {
     padding: theme.spacing.xs,
+    marginLeft: -theme.spacing.xs,
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
-    marginHorizontal: theme.spacing.md,
     fontFamily: theme.fonts.bold,
   },
   headerRight: {
@@ -1890,62 +1513,68 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "center",
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.backgroundSecondary + "50",
     marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
-    borderRadius: 12,
-    gap: theme.spacing.xs,
+    borderRadius: 20,
   },
   progressStep: {
-    alignItems: "center",
-    gap: theme.spacing.xs / 2,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  progressCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  progressDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.colors.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  progressCircleActive: {
+  progressDotActive: {
     backgroundColor: theme.colors.primary,
+    elevation: 6,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
   },
-  progressCircleCompleted: {
+  progressDotCompleted: {
     backgroundColor: theme.colors.success,
   },
-  progressLabel: {
-    fontSize: 12,
-    fontFamily: theme.fonts.medium,
-  },
   progressLine: {
-    flex: 1,
+    width: 30,
     height: 2,
     backgroundColor: theme.colors.borderLight,
-    marginHorizontal: theme.spacing.xs,
+    marginHorizontal: 4,
   },
   progressLineActive: {
     backgroundColor: theme.colors.primary,
   },
+  progressLineCompleted: {
+    backgroundColor: theme.colors.success,
+  },
+  stepLabelHidden: {
+    display: 'none', 
+  },
   errorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.error + "10",
+    gap: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.error + "15",
     marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
-    borderRadius: 8,
+    marginBottom: theme.spacing.md,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.error,
   },
   errorText: {
     flex: 1,
     color: theme.colors.error,
     fontSize: 14,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.medium,
   },
   scrollView: {
     flex: 1,
@@ -1955,18 +1584,19 @@ const styles = StyleSheet.create({
   },
   stepContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
   },
   stepSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     marginBottom: theme.spacing.lg,
     fontFamily: theme.fonts.regular,
+    color: theme.colors.textSecondary,
   },
   employeesList: {
     gap: theme.spacing.md,
@@ -1976,14 +1606,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
+    borderColor: 'transparent',
+    backgroundColor: theme.colors.backgroundSecondary,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   employeeCardSelected: {
     borderColor: theme.colors.primary,
-    borderWidth: 2,
-    backgroundColor: theme.colors.primaryLight + "10",
+    backgroundColor: theme.colors.primary + "05",
+    shadowColor: theme.colors.primary,
+    shadowOpacity: 0.1,
   },
   employeeInfo: {
     flexDirection: "row",
@@ -1992,18 +1629,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   employeeAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.background,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   employeeInitials: {
-    color: theme.colors.white,
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
+    color: theme.colors.primary,
   },
   employeeDetails: {
     flex: 1,
@@ -2011,75 +1650,98 @@ const styles = StyleSheet.create({
   employeeName: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.medium,
+    marginBottom: 2,
+    fontFamily: theme.fonts.bold,
   },
   employeeRole: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
+    fontSize: 13,
+    fontFamily: theme.fonts.medium,
+    opacity: 0.7,
   },
   calendarContainer: {
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: 20,
+    backgroundColor: theme.colors.backgroundSecondary,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
   monthHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
   },
   monthButton: {
     padding: theme.spacing.xs,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background,
   },
   monthText: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
   },
   daysOfWeek: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+    paddingBottom: theme.spacing.xs,
   },
   dayOfWeek: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     width: 40,
     textAlign: "center",
     fontFamily: theme.fonts.medium,
+    color: theme.colors.textSecondary,
+    opacity: 0.8,
   },
   calendarGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    rowGap: 8,
   },
   calendarDay: {
-    width: "14.28%",
+    width: "14.28%", 
     aspectRatio: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: 20,
   },
   selectedDay: {
     backgroundColor: theme.colors.primary,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
   },
   availableDay: {
-    backgroundColor: theme.colors.primaryLight + "20",
+    backgroundColor: theme.colors.primary + "15",
   },
   dayText: {
     fontSize: 14,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.text,
   },
   selectedDayText: {
     color: theme.colors.white,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "bold",
   },
   unavailableDayText: {
+    color: theme.colors.textSecondary,
     opacity: 0.3,
   },
   timeSlotsContainer: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.xs,
   },
   timeSlotsHeader: {
     flexDirection: "row",
@@ -2089,98 +1751,127 @@ const styles = StyleSheet.create({
   },
   timeSlotsTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
   },
   timeSlotsSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
   refreshButton: {
     padding: theme.spacing.xs,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: 20,
   },
   timeSlotsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: theme.spacing.sm,
+    gap: 10,
   },
   timeSlot: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 8,
-    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    minWidth: 100,
+    backgroundColor: theme.colors.backgroundSecondary,
+    minWidth: '28%',
     alignItems: "center",
     justifyContent: "center",
   },
   timeSlotContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs / 2,
+    gap: 4,
   },
   unavailableIcon: {
     marginLeft: 2,
+    opacity: 0.7,
   },
   timeSlotSelected: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary,
+    elevation: 2,
   },
   timeSlotUnavailable: {
-    opacity: 0.6,
-    backgroundColor: theme.colors.error + "15",
-    borderColor: theme.colors.error + "50",
-    borderWidth: 1.5,
+    opacity: 0.5,
+    backgroundColor: theme.colors.background,
+    borderColor: theme.colors.borderLight,
+    borderStyle: 'dashed',
   },
   timeSlotText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.medium,
+    color: theme.colors.text,
   },
   timeSlotTextSelected: {
     color: theme.colors.white,
+    fontWeight: 'bold',
   },
   timeSlotTextUnavailable: {
-    opacity: 0.6,
+    color: theme.colors.textSecondary,
     textDecorationLine: "line-through",
   },
-  timeSlotReason: {
-    fontSize: 10,
-    marginTop: 2,
-    fontFamily: theme.fonts.regular,
+  timeSlotReason: { // Hidden mostly
+    display: 'none',
   },
   noSlotsText: {
     fontSize: 14,
     textAlign: "center",
-    paddingVertical: theme.spacing.md,
-    fontFamily: theme.fonts.regular,
+    paddingVertical: theme.spacing.lg,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.textSecondary,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: 12,
+    marginTop: theme.spacing.xs,
+    fontStyle: 'italic',
   },
   confirmCard: {
     padding: theme.spacing.lg,
-    borderRadius: 12,
-    marginTop: theme.spacing.md,
+    borderRadius: 20,
+    backgroundColor: theme.colors.backgroundSecondary,
+    marginTop: theme.spacing.xs,
     gap: theme.spacing.md,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   confirmRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
     gap: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
   },
   confirmRowContent: {
     flex: 1,
   },
   confirmLabel: {
     fontSize: 12,
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
+    marginBottom: 4,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   confirmValue: {
     fontSize: 16,
     fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
+    lineHeight: 22,
+  },
+  confirmSubValue: {
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   notesContainer: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   notesLabel: {
     fontSize: 14,
@@ -2191,27 +1882,35 @@ const styles = StyleSheet.create({
   notesInput: {
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: theme.spacing.md,
     minHeight: 100,
     textAlignVertical: "top",
     fontSize: 14,
     fontFamily: theme.fonts.regular,
+    backgroundColor: theme.colors.background,
   },
   emptyCard: {
     padding: theme.spacing.xl,
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 16,
     gap: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    borderStyle: 'dashed',
   },
   emptyText: {
-    fontSize: 16,
-    fontFamily: theme.fonts.medium,
+    fontSize: 18,
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.textSecondary,
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: theme.fonts.regular,
     textAlign: "center",
+    color: theme.colors.textSecondary,
+    maxWidth: '80%',
   },
   navigationContainer: {
     flexDirection: "row",
@@ -2220,15 +1919,32 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
     gap: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    elevation: 20,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   navButton: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 16,
     gap: theme.spacing.sm,
+    elevation: 2,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  backButtonLabel: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    elevation: 0,
   },
   nextButton: {
     backgroundColor: theme.colors.primary,
@@ -2238,25 +1954,27 @@ const styles = StyleSheet.create({
   },
   navButtonText: {
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
   },
   nextButtonText: {
     color: theme.colors.white,
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
   },
   confirmButtonText: {
     color: theme.colors.white,
     fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  backButtonText: {
-    color: theme.colors.primary,
-    fontSize: 14,
-    fontFamily: theme.fonts.medium,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
   },
   selectedStylistBanner: {
     flexDirection: "row",
@@ -2265,8 +1983,9 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderRadius: 16,
     marginBottom: theme.spacing.lg,
-    borderWidth: 2,
-    borderColor: theme.colors.primary + "40",
+    backgroundColor: theme.colors.primary + "10",
+    borderWidth: 1,
+    borderColor: theme.colors.primary + "30",
   },
   selectedStylistContent: {
     flexDirection: "row",
@@ -2275,15 +1994,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectedStylistAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: theme.colors.primary,
   },
   selectedStylistInitials: {
     color: theme.colors.white,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
   },
@@ -2291,20 +2011,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectedStylistLabel: {
-    fontSize: 12,
+    fontSize: 11,
     marginBottom: 2,
-    fontFamily: theme.fonts.regular,
+    fontFamily: theme.fonts.bold,
     textTransform: "uppercase",
+    color: theme.colors.primary,
     letterSpacing: 0.5,
   },
   selectedStylistName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
-    marginBottom: 2,
+    marginBottom: 1,
+    color: theme.colors.text,
   },
   selectedStylistSalon: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
+    color: theme.colors.textSecondary,
   },
 });

@@ -531,20 +531,22 @@ class SalonService {
   async addService(salonId: string, data: {
     name: string;
     description?: string;
-    price: number;
-    duration: number;
-    categoryId?: string;
+    basePrice: number;
+    durationMinutes: number;
+    category?: string;
+    targetGender?: string;
   }): Promise<any> {
-    // Map to backend DTO matching Web App (basePrice, durationMinutes)
     const payload = {
       salonId,
       name: data.name,
       description: data.description,
-      basePrice: Number(data.price),
-      durationMinutes: Number(data.duration),
-      isActive: true, // Default to active
-      code: data.categoryId // harnessing categoryId as code/sku if needed, or omit
+      basePrice: data.basePrice,
+      durationMinutes: data.durationMinutes,
+      isActive: true,
+      category: data.category,
+      targetGender: data.targetGender,
     };
+    
     const response = await api.post<any>('/services', payload);
     return response;
   }
@@ -555,20 +557,13 @@ class SalonService {
   async updateService(serviceId: string, data: Partial<{
     name: string;
     description: string;
-    price: number;
-    duration: number;
+    basePrice: number;
+    durationMinutes: number;
     isActive: boolean;
+    category: string;
+    targetGender: string;
   }>): Promise<any> {
-    const payload: any = { ...data };
-    if (data.price !== undefined) {
-      payload.basePrice = data.price;
-      delete payload.price;
-    }
-    if (data.duration !== undefined) {
-      payload.durationMinutes = data.duration;
-      delete payload.duration;
-    }
-    const response = await api.patch<any>(`/services/${serviceId}`, payload);
+    const response = await api.patch<any>(`/services/${serviceId}`, data);
     return response;
   }
 

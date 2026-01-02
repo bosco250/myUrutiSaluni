@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Input, Checkbox, SocialButton } from "../../components";
 import { MailIcon, LockIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
@@ -372,25 +373,30 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   return (
-    <>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        style={[styles.container, dynamicStyles.container]}
+        style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-            {/* Logo */}
+            {/* Logo Section */}
             <View style={styles.logoContainer}>
-              <Image source={logo} style={styles.logo} resizeMode="contain" />
+              <View style={styles.logoWrapper}>
+                <Image source={logo} style={styles.logo} resizeMode="contain" />
+              </View>
             </View>
 
-            {/* Header */}
+            {/* Header Greeting */}
             <View style={styles.header}>
               <Text style={[styles.title, dynamicStyles.text]}>Welcome Back</Text>
-              <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>Please log in to your account</Text>
+              <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>
+                We're excited to see you again!
+              </Text>
             </View>
 
             {/* Error Banner for general errors */}
@@ -460,7 +466,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                   onPress={() => handleSocialLogin("google")}
                   style={styles.socialButton}
                 />
-                <View style={styles.socialButtonSpacer} />
                 <SocialButton
                   provider="facebook"
                   onPress={() => handleSocialLogin("facebook")}
@@ -526,7 +531,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           </View>
         </View>
       </Modal>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -536,37 +541,54 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl,
   },
   content: {
-    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.xl,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  logoWrapper: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.colors.white,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logo: {
-    width: 80,
-    height: 80,
-    maxWidth: "100%",
+    width: '100%',
+    height: '100%',
   },
   header: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
     alignItems: "center",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "600",
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.semibold,
+    fontSize: 28,
+    fontWeight: "800",
+    marginBottom: theme.spacing.xs,
+    fontFamily: theme.fonts.bold,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: theme.fonts.regular,
+    opacity: 0.6,
+    textAlign: 'center',
   },
   form: {
     width: "100%",
+    gap: theme.spacing.sm,
   },
   rememberForgotContainer: {
     flexDirection: "row",
@@ -592,140 +614,155 @@ const styles = StyleSheet.create({
     height: 1,
   },
   dividerText: {
-    marginHorizontal: theme.spacing.sm,
-    fontSize: 11,
-    fontFamily: theme.fonts.regular,
-    letterSpacing: 0.3,
+    marginHorizontal: theme.spacing.lg,
+    fontSize: 12,
+    fontFamily: theme.fonts.bold,
+    letterSpacing: 1,
+    opacity: 0.5,
   },
   socialButtonsContainer: {
     flexDirection: "row",
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xl,
+    gap: theme.spacing.md,
   },
   socialButton: {
     flex: 1,
-  },
-  socialButtonSpacer: {
-    width: theme.spacing.xs,
+    height: 56,
+    borderRadius: 16,
+    borderWidth: 1.5,
   },
   signUpContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
   signUpText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: theme.fonts.regular,
+    opacity: 0.8,
   },
   signUpLink: {
     color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
   },
   modalContent: {
-    borderRadius: 12,
-    padding: theme.spacing.lg,
+    borderRadius: 24,
+    padding: theme.spacing.xl,
     width: "100%",
     maxWidth: 360,
     alignItems: "center",
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowRadius: 16,
+    elevation: 12,
   },
   closeButton: {
     position: "absolute",
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
+    top: theme.spacing.md,
+    right: theme.spacing.md,
     padding: theme.spacing.xs,
   },
   closeButtonText: {
     fontSize: 20,
-    fontWeight: "300",
+    opacity: 0.5,
   },
   successIconContainer: {
-    marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
   },
   successIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: theme.colors.success + '15',
   },
   successCheckmark: {
-    fontSize: 36,
+    fontSize: 40,
     color: theme.colors.success,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
   successTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "800",
     marginBottom: theme.spacing.sm,
-    fontFamily: theme.fonts.semibold,
+    fontFamily: theme.fonts.bold,
     textAlign: "center",
   },
   successMessage: {
-    fontSize: 13,
+    fontSize: 15,
     textAlign: "center",
-    marginBottom: theme.spacing.md,
-    lineHeight: 18,
+    marginBottom: theme.spacing.xl,
+    lineHeight: 22,
     fontFamily: theme.fonts.regular,
+    opacity: 0.7,
   },
   continueButtonContainer: {
     width: "100%",
   },
   continueButton: {
-    width: "100%",
-    backgroundColor: theme.colors.primary,
+    height: 56,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   // Error Banner Styles
   errorBanner: {
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    marginBottom: theme.spacing.sm,
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    marginBottom: theme.spacing.lg,
     overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   errorBannerContent: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    padding: theme.spacing.sm,
+    alignItems: "center",
+    padding: theme.spacing.md,
   },
   errorBannerIcon: {
-    fontSize: 18,
-    marginRight: theme.spacing.xs,
-    marginTop: 1,
+    fontSize: 20,
+    marginRight: theme.spacing.sm,
   },
   errorBannerTextContainer: {
     flex: 1,
   },
   errorBannerTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
     marginBottom: 2,
   },
   errorBannerMessage: {
     fontSize: 12,
     fontFamily: theme.fonts.regular,
-    lineHeight: 16,
+    lineHeight: 18,
+    opacity: 0.8,
   },
   errorBannerClose: {
-    padding: theme.spacing.xs / 2,
+    padding: theme.spacing.xs,
     marginLeft: theme.spacing.xs,
-    marginTop: -2,
   },
   errorBannerCloseText: {
     fontSize: 16,
-    fontWeight: "300",
+    opacity: 0.5,
   },
 });

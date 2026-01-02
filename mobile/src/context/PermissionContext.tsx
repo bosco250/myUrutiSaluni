@@ -104,6 +104,17 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     lastError: null,
   });
 
+  // CRITICAL: Use refs to break circular dependencies and prevent infinite loops
+  const activeSalonIdRef = React.useRef<string | null>(null);
+  const isFetchingRef = React.useRef(false);
+  const lastFetchTimeRef = React.useRef<number>(0);
+  const MIN_FETCH_INTERVAL = 5000; // Minimum 5 seconds between fetches
+
+  // Keep ref in sync with state
+  React.useEffect(() => {
+    activeSalonIdRef.current = state.activeSalon?.salonId || null;
+  }, [state.activeSalon?.salonId]);
+
   // Role checks
   const isOwner = user?.role === UserRole.SALON_OWNER;
   const isAdmin =
@@ -138,12 +149,27 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
   /**
    * Refresh permissions from server
+   * CRITICAL: This function must NOT depend on state to avoid infinite loops
    */
   const refreshPermissions = useCallback(async () => {
     if (!isAuthenticated || !user || !isEmployee) {
       setState((prev) => ({ ...prev, isLoading: false }));
       return;
     }
+
+    // CRITICAL: Prevent concurrent fetches and rate limit
+    const now = Date.now();
+    if (isFetchingRef.current) {
+      console.log('🔒 Permission fetch already in progress, skipping...');
+      return;
+    }
+    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL) {
+      console.log('⏳ Permission fetch rate limited, skipping...');
+      return;
+    }
+
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
 
     try {
       // 1. Get all employee records for this user
@@ -207,10 +233,11 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       // Priority: current active salon (if still valid) > salon with most permissions > first
       let bestSalon = salonContexts[0];
 
-      // Check if current active salon is still valid
-      if (state.activeSalon) {
+      // CRITICAL: Use ref instead of state to avoid dependency issues
+      const currentActiveSalonId = activeSalonIdRef.current;
+      if (currentActiveSalonId) {
         const currentValid = salonContexts.find(
-          (s) => s.salonId === state.activeSalon?.salonId,
+          (s) => s.salonId === currentActiveSalonId,
         );
         if (currentValid) {
           bestSalon = currentValid;
@@ -218,7 +245,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       }
 
       // If no current or invalid, pick salon with most permissions
-      if (!state.activeSalon) {
+      if (!currentActiveSalonId) {
         bestSalon = salonContexts.reduce(
           (best, current) =>
             current.permissionCount > (best?.permissionCount || 0)
@@ -258,8 +285,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
             ? error
             : new Error('Failed to fetch permissions'),
       }));
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [isAuthenticated, user, isEmployee, state.activeSalon, saveToCache]);
+  }, [isAuthenticated, user, isEmployee, saveToCache]); // CRITICAL: Removed state.activeSalon from dependencies
 
   // Effect to refresh permissions when app comes to foreground
   useEffect(() => {
@@ -291,7 +320,13 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
   /**
    * Loading cached permissions from AsyncStorage
+   * NOTE: Uses a stable reference to refreshPermissions to avoid circular dependencies
    */
+  const refreshPermissionsRef = React.useRef(refreshPermissions);
+  React.useEffect(() => {
+    refreshPermissionsRef.current = refreshPermissions;
+  }, [refreshPermissions]);
+
   const loadCachedPermissions = useCallback(async () => {
     try {
       const cached = await AsyncStorage.getItem(STORAGE_KEY);
@@ -299,6 +334,11 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         const parsed = JSON.parse(cached);
         // Validate cache is for current user
         if (parsed.userId === user?.id) {
+          // Update the ref with cached salon ID before setting state
+          if (parsed.state.activeSalon?.salonId) {
+            activeSalonIdRef.current = parsed.state.activeSalon.salonId;
+          }
+          
           setState((prev) => ({
             ...prev,
             ...parsed.state,
@@ -309,9 +349,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
             isInitialized: true,
           }));
 
-          // If employee, also fetch fresh data in background
+          // If employee, also fetch fresh data in background (using ref to avoid dependency)
           if (isEmployee) {
-            refreshPermissions();
+            // Use setTimeout to break the synchronous chain
+            setTimeout(() => refreshPermissionsRef.current(), 100);
           }
           return;
         }
@@ -323,9 +364,10 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     // No valid cache, initialize and fetch
     setState((prev) => ({ ...prev, isLoading: false, isInitialized: true }));
     if (isEmployee) {
-      refreshPermissions();
+      // Use setTimeout to break the synchronous chain
+      setTimeout(() => refreshPermissionsRef.current(), 100);
     }
-  }, [user?.id, isEmployee, refreshPermissions]);
+  }, [user?.id, isEmployee]); // CRITICAL: Removed refreshPermissions from dependencies
 
   // Load cached permissions on mount
   useEffect(() => {
