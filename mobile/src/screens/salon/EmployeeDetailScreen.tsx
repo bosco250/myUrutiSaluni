@@ -85,7 +85,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
           onPress: async () => {
             try {
               setActionLoading(true);
-              await salonService.updateEmployee(employeeId, { isActive: newStatus });
+              await salonService.updateEmployee(salonId, employeeId, { isActive: newStatus });
               setEmployee(prev => prev ? { ...prev, isActive: newStatus } : null);
               Alert.alert('Success', `Employee has been ${newStatus ? 'activated' : 'suspended'}`);
             } catch (err: any) {
@@ -111,7 +111,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
           onPress: async () => {
             try {
               setActionLoading(true);
-              await salonService.removeEmployee(employeeId);
+              await salonService.removeEmployee(salonId, employeeId);
               Alert.alert('Success', 'Employee has been removed');
               navigation.goBack();
             } catch (err: any) {
@@ -247,6 +247,20 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
         {/* Actions */}
         <View style={styles.actionsContainer}>
           <Text style={[styles.sectionTitle, dynamicStyles.text]}>Actions</Text>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: theme.colors.primary + '20' }]}
+            onPress={() => navigation.navigate('GrantPermissions', {
+              employeeId: employee.id,
+              salonId: salonId,
+              employee: employee,
+            })}
+          >
+            <MaterialIcons name="admin-panel-settings" size={24} color={theme.colors.primary} />
+            <Text style={[styles.actionButtonText, { color: theme.colors.primary }]}>
+              Manage Permissions
+            </Text>
+          </TouchableOpacity>
           
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: employee.isActive ? theme.colors.warning + '20' : theme.colors.success + '20' }]}

@@ -19,6 +19,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { RequirePermission } from '../auth/decorators/require-employee-permission.decorator';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -40,7 +42,9 @@ export class UsersController {
     UserRole.ASSOCIATION_ADMIN,
     UserRole.DISTRICT_LEADER,
     UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
   )
+  @RequirePermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES)
   @ApiOperation({
     summary: 'Get all users (for searching/selecting employees)',
   })
@@ -50,8 +54,11 @@ export class UsersController {
       // TODO: Filter by district when district info is available
       return this.usersService.findAll(role);
     }
-    // Salon owners can see users to add as employees (limited fields)
-    if (user.role === UserRole.SALON_OWNER) {
+    // Salon owners and employees can see users to add as employees (limited fields)
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       return this.usersService.findAllForEmployeeSelection();
     }
     return this.usersService.findAll(role);

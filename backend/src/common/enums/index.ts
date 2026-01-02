@@ -55,3 +55,5 @@ export enum PaymentMethod {
   AIRTEL_MONEY = 'airtel_money',
   BANK_TRANSFER = 'bank_transfer',
 }
+
+export * from './employee-permission.enum';

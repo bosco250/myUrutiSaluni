@@ -22,9 +22,13 @@ import {
   Appointment,
   AppointmentStatus,
 } from "../../services/appointments";
+import { api } from "../../services/api";
 import { salonService } from "../../services/salon";
 import { Loader } from "../../components/common";
 import { getPreviousWeek, getNextWeek } from "../../utils/dateHelpers";
+import { useEmployeePermissionCheck } from "../../hooks/useEmployeePermissionCheck";
+import { EmployeePermission } from "../../constants/employeePermissions";
+
 
 interface SalonAppointmentsScreenProps {
   navigation: {
@@ -55,6 +59,8 @@ export default function SalonAppointmentsScreen({
   navigation,
 }: SalonAppointmentsScreenProps) {
   const { isDark } = useTheme();
+  const { checkPermission, isOwner, isAdmin } = useEmployeePermissionCheck();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -71,6 +77,20 @@ export default function SalonAppointmentsScreen({
   const [actionLoading, setActionLoading] = useState(false);
   const [reassignLoading, setReassignLoading] = useState<string | null>(null);
   const [notesLoading, setNotesLoading] = useState(false);
+
+  // Check permissions
+  const canManageAppointments =
+    isOwner ||
+    isAdmin ||
+    checkPermission(EmployeePermission.MANAGE_APPOINTMENTS);
+  const canModifyStatus =
+    isOwner ||
+    isAdmin ||
+    checkPermission(EmployeePermission.MODIFY_APPOINTMENT_STATUS);
+  const canAssignAppointments =
+    isOwner ||
+    isAdmin ||
+    checkPermission(EmployeePermission.ASSIGN_APPOINTMENTS);
 
   const dynamicStyles = {
     container: {
@@ -420,6 +440,39 @@ export default function SalonAppointmentsScreen({
     }
   };
 
+  const handleSendReminder = async () => {
+    if (!selectedAppointment || actionLoading) return;
+
+    try {
+      setActionLoading(true);
+
+      // Send reminder via notification endpoint
+      await api.post(`/appointments/${selectedAppointment.id}/remind`, {});
+
+      Alert.alert(
+        "Reminder Sent",
+        "Appointment reminder has been sent to the customer",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setShowActionModal(false);
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error("[SalonAppointments] Send reminder error:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to send reminder. Please try again.";
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleAddNotes = async () => {
     if (!selectedAppointment || notesLoading) return;
 
@@ -535,8 +588,7 @@ export default function SalonAppointmentsScreen({
                   dateIsSelected && styles.weekDaySelected,
                   dateIsToday && !dateIsSelected && styles.weekDayToday,
                 ]}
-                onPress={() => !isPastDate && setSelectedDate(date)}
-                disabled={isPastDate}
+                onPress={() => setSelectedDate(date)}
                 activeOpacity={0.7}
               >
                 <Text
@@ -560,7 +612,7 @@ export default function SalonAppointmentsScreen({
                 >
                   {date.getDate()}
                 </Text>
-                {count > 0 && !isPastDate && (
+                {count > 0 && (
                   <View
                     style={[
                       styles.weekAppointmentDot,
@@ -624,9 +676,8 @@ export default function SalonAppointmentsScreen({
   };
 
   // Memoized appointment card component for performance
-  const AppointmentCard = React.memo(function AppointmentCard(
-    { item }: { item: Appointment }
-  ) {
+  const AppointmentCard = React.memo(
+    function AppointmentCard({ item }: { item: Appointment }) {
       const isPending =
         item.status === AppointmentStatus.PENDING ||
         item.status === AppointmentStatus.BOOKED;
@@ -852,42 +903,45 @@ export default function SalonAppointmentsScreen({
   }, [groupedAppointments]);
 
   // Render date header
-  const renderDateHeader = useCallback((group: GroupedAppointments) => (
-    <View style={styles.dateSection}>
-      <View style={styles.dateHeader}>
-        <View style={styles.dateHeaderLeft}>
-          {group.isToday && (
-            <View
-              style={[
-                styles.todayIndicator,
-                { backgroundColor: theme.colors.primary },
-              ]}
-            />
-          )}
-          <View style={styles.dateInfo}>
-            <Text style={[styles.dateLabel, dynamicStyles.text]}>
-              {group.dateLabel}
-            </Text>
-            <Text style={[styles.dateSubLabel, dynamicStyles.textSecondary]}>
-              {group.monthName} {group.dayNumber}
+  const renderDateHeader = useCallback(
+    (group: GroupedAppointments) => (
+      <View style={styles.dateSection}>
+        <View style={styles.dateHeader}>
+          <View style={styles.dateHeaderLeft}>
+            {group.isToday && (
+              <View
+                style={[
+                  styles.todayIndicator,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              />
+            )}
+            <View style={styles.dateInfo}>
+              <Text style={[styles.dateLabel, dynamicStyles.text]}>
+                {group.dateLabel}
+              </Text>
+              <Text style={[styles.dateSubLabel, dynamicStyles.textSecondary]}>
+                {group.monthName} {group.dayNumber}
+              </Text>
+            </View>
+          </View>
+          <View
+            style={[
+              styles.appointmentCountBadge,
+              { backgroundColor: theme.colors.primary + "20" },
+            ]}
+          >
+            <Text
+              style={[styles.appointmentCount, { color: theme.colors.primary }]}
+            >
+              {group.appointments.length}
             </Text>
           </View>
         </View>
-        <View
-          style={[
-            styles.appointmentCountBadge,
-            { backgroundColor: theme.colors.primary + "20" },
-          ]}
-        >
-          <Text
-            style={[styles.appointmentCount, { color: theme.colors.primary }]}
-          >
-            {group.appointments.length}
-          </Text>
-        </View>
       </View>
-    </View>
-  ), [dynamicStyles.text, dynamicStyles.textSecondary]);
+    ),
+    [dynamicStyles.text, dynamicStyles.textSecondary]
+  );
 
   // Render list item (header or appointment)
   const renderListItem = useCallback(
@@ -933,8 +987,8 @@ export default function SalonAppointmentsScreen({
     const secondaryActions: any[] = [];
     const destructiveActions: any[] = [];
 
-    // Primary actions (status progression)
-    if (isPending) {
+    // Primary actions (status progression) - Check permissions
+    if (isPending && canModifyStatus) {
       primaryActions.push({
         label: "Confirm Appointment",
         icon: "check-circle",
@@ -949,7 +1003,7 @@ export default function SalonAppointmentsScreen({
         },
       });
     }
-    if (isConfirmed) {
+    if (isConfirmed && canModifyStatus) {
       primaryActions.push({
         label: "Start Service",
         icon: "play-circle-filled",
@@ -961,7 +1015,7 @@ export default function SalonAppointmentsScreen({
           ),
       });
     }
-    if (isInProgress) {
+    if (isInProgress && canModifyStatus) {
       primaryActions.push({
         label: "Mark Complete",
         icon: "done-all",
@@ -988,22 +1042,52 @@ export default function SalonAppointmentsScreen({
     });
 
     if (!isCompleted && !isCancelled) {
-      secondaryActions.push({
-        label: "Reassign Staff",
-        icon: "swap-horiz",
-        color: theme.colors.warning,
-        onPress: () => openReassignModal(selectedAppointment),
-      });
-      secondaryActions.push({
-        label: "Add/Edit Notes",
-        icon: "note-add",
-        color: theme.colors.secondary,
-        onPress: () => openNotesModal(selectedAppointment),
-      });
+      if (canAssignAppointments) {
+        secondaryActions.push({
+          label: "Reassign Staff",
+          icon: "swap-horiz",
+          color: theme.colors.warning,
+          onPress: () => openReassignModal(selectedAppointment),
+        });
+      }
+      if (canManageAppointments) {
+        secondaryActions.push({
+          label: "Add/Edit Notes",
+          icon: "note-add",
+          color: theme.colors.secondary,
+          onPress: () => openNotesModal(selectedAppointment),
+        });
+      }
+
+      // Only show reminder for future appointments that are booked/confirmed
+      const appointmentDate = new Date(selectedAppointment.scheduledStart);
+      const now = new Date();
+      const isFutureAppointment = appointmentDate > now;
+
+      if (isFutureAppointment && (isPending || isConfirmed)) {
+        secondaryActions.push({
+          label: "Send Reminder",
+          icon: "notifications-active",
+          color: theme.colors.info,
+          onPress: () => {
+            Alert.alert(
+              "Send Reminder",
+              "Send a reminder notification to the customer about this appointment?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Send",
+                  onPress: () => handleSendReminder(),
+                },
+              ]
+            );
+          },
+        });
+      }
     }
 
-    // Destructive actions
-    if (!isCompleted && !isCancelled) {
+    // Destructive actions - Check permissions
+    if (!isCompleted && !isCancelled && canModifyStatus) {
       destructiveActions.push({
         label: "Mark No Show",
         icon: "person-off",
@@ -1068,75 +1152,244 @@ export default function SalonAppointmentsScreen({
                     {
                       backgroundColor: isDark
                         ? theme.colors.gray600
-                        : theme.colors.gray300,
+                        : theme.colors.gray400,
                     },
                   ]}
                 />
               </View>
 
-              {/* Appointment Summary */}
-              <View style={styles.appointmentSummary}>
-                <View style={styles.summaryHeader}>
-                  <View
-                    style={[
-                      styles.summaryStatusBadge,
-                      { backgroundColor: statusColor + "20" },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.summaryStatusText, { color: statusColor }]}
-                    >
-                      {getStatusLabel(selectedAppointment.status)}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => setShowActionModal(false)}
-                    style={styles.closeButton}
-                  >
-                    <MaterialIcons
-                      name="close"
-                      size={22}
-                      color={dynamicStyles.textSecondary.color}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <Text style={[styles.summaryCustomer, dynamicStyles.text]}>
-                  {selectedAppointment.customer?.user?.fullName || "Walk-in"}
+              {/* Modal Header with Title */}
+              <View style={styles.actionModalHeader}>
+                <Text style={[styles.actionModalTitle, dynamicStyles.text]}>
+                  Appointment Actions
                 </Text>
-                <View style={styles.summaryDetails}>
-                  <View style={styles.summaryDetailItem}>
-                    <MaterialIcons
-                      name="schedule"
-                      size={16}
-                      color={dynamicStyles.textSecondary.color}
-                    />
-                    <Text
+                <TouchableOpacity
+                  onPress={() => setShowActionModal(false)}
+                  style={[
+                    styles.closeButton,
+                    {
+                      backgroundColor: isDark
+                        ? theme.colors.gray700
+                        : theme.colors.backgroundSecondary,
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons
+                    name="close"
+                    size={20}
+                    color={dynamicStyles.textSecondary.color}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Appointment Summary Card - Redesigned */}
+              <View
+                style={[
+                  styles.appointmentSummaryCard,
+                  {
+                    backgroundColor: isDark
+                      ? theme.colors.gray800
+                      : theme.colors.white,
+                    borderColor: isDark
+                      ? theme.colors.gray700
+                      : theme.colors.borderLight,
+                    shadowColor: statusColor,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 12,
+                    elevation: 3,
+                  },
+                ]}
+              >
+                {/* Status Bar */}
+                <View
+                  style={[
+                    styles.summaryStatusBar,
+                    { backgroundColor: statusColor },
+                  ]}
+                />
+
+                {/* Customer & Status */}
+                <View style={styles.summaryCardHeader}>
+                  <View style={styles.customerSection}>
+                    <View
                       style={[
-                        styles.summaryDetailText,
-                        dynamicStyles.textSecondary,
+                        styles.customerAvatar,
+                        { backgroundColor: statusColor + "20" },
                       ]}
                     >
-                      {formatTime(selectedAppointment.scheduledStart)} -{" "}
-                      {formatTime(selectedAppointment.scheduledEnd)}
-                    </Text>
-                  </View>
-                  {selectedAppointment.service?.name && (
-                    <View style={styles.summaryDetailItem}>
                       <MaterialIcons
-                        name="content-cut"
-                        size={16}
-                        color={dynamicStyles.textSecondary.color}
+                        name="person"
+                        size={20}
+                        color={statusColor}
                       />
+                    </View>
+                    <View style={styles.customerInfo}>
+                      <Text
+                        style={[styles.customerNameLarge, dynamicStyles.text]}
+                      >
+                        {selectedAppointment.customer?.user?.fullName ||
+                          "Walk-in Customer"}
+                      </Text>
+                      <View
+                        style={[
+                          styles.statusBadgeInline,
+                          {
+                            backgroundColor: statusColor + "15",
+                            borderWidth: 1,
+                            borderColor: statusColor + "30",
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.statusDotSmall,
+                            { backgroundColor: statusColor },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.statusTextInline,
+                            { color: statusColor },
+                          ]}
+                        >
+                          {getStatusLabel(selectedAppointment.status)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Appointment Details Grid */}
+                <View style={styles.detailsGrid}>
+                  {/* Time */}
+                  <View
+                    style={[
+                      styles.detailGridItem,
+                      {
+                        backgroundColor: isDark
+                          ? theme.colors.gray700 + "50"
+                          : theme.colors.primary + "08",
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.gridIconContainer,
+                        { backgroundColor: theme.colors.primary + "20" },
+                      ]}
+                    >
+                      <MaterialIcons
+                        name="schedule"
+                        size={16}
+                        color={theme.colors.primary}
+                      />
+                    </View>
+                    <View style={styles.gridTextContainer}>
+                      <Text
+                        style={[styles.gridLabel, dynamicStyles.textSecondary]}
+                      >
+                        Time
+                      </Text>
+                      <Text style={[styles.gridValue, dynamicStyles.text]}>
+                        {formatTime(selectedAppointment.scheduledStart)}
+                      </Text>
                       <Text
                         style={[
-                          styles.summaryDetailText,
+                          styles.gridSubValue,
                           dynamicStyles.textSecondary,
                         ]}
                       >
-                        {selectedAppointment.service.name}
+                        to {formatTime(selectedAppointment.scheduledEnd)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Service */}
+                  {selectedAppointment.service?.name && (
+                    <View
+                      style={[
+                        styles.detailGridItem,
+                        {
+                          backgroundColor: isDark
+                            ? theme.colors.gray700 + "50"
+                            : theme.colors.secondary + "08",
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.gridIconContainer,
+                          { backgroundColor: theme.colors.secondary + "20" },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="content-cut"
+                          size={16}
+                          color={theme.colors.secondary}
+                        />
+                      </View>
+                      <View style={styles.gridTextContainer}>
+                        <Text
+                          style={[
+                            styles.gridLabel,
+                            dynamicStyles.textSecondary,
+                          ]}
+                        >
+                          Service
+                        </Text>
+                        <Text
+                          style={[styles.gridValue, dynamicStyles.text]}
+                          numberOfLines={1}
+                        >
+                          {selectedAppointment.service.name}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {/* Staff & Price Row */}
+                <View style={styles.bottomInfoRow}>
+                  {selectedAppointment.salonEmployee?.user?.fullName && (
+                    <View style={styles.staffInfo}>
+                      <MaterialIcons
+                        name="person-outline"
+                        size={14}
+                        color={dynamicStyles.textSecondary.color}
+                      />
+                      <Text
+                        style={[styles.staffName, dynamicStyles.textSecondary]}
+                      >
+                        {selectedAppointment.salonEmployee.user.fullName}
                       </Text>
                     </View>
                   )}
+                  {selectedAppointment.serviceAmount !== undefined &&
+                    selectedAppointment.serviceAmount > 0 && (
+                      <View
+                        style={[
+                          styles.priceTag,
+                          { backgroundColor: theme.colors.success + "15" },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="payments"
+                          size={14}
+                          color={theme.colors.success}
+                        />
+                        <Text
+                          style={[
+                            styles.priceValue,
+                            { color: theme.colors.success },
+                          ]}
+                        >
+                          {selectedAppointment.serviceAmount.toLocaleString()}{" "}
+                          RWF
+                        </Text>
+                      </View>
+                    )}
                 </View>
               </View>
 
@@ -1158,22 +1411,47 @@ export default function SalonAppointmentsScreen({
                   </View>
                 )}
 
-                {/* Primary Actions */}
+                {/* Primary Actions - Enhanced Design */}
                 {primaryActions.length > 0 && (
                   <View style={styles.actionGroup}>
-                    <Text
-                      style={[
-                        styles.actionGroupTitle,
-                        dynamicStyles.textSecondary,
-                      ]}
-                    >
-                      Primary Actions
-                    </Text>
+                    <View style={styles.actionGroupHeader}>
+                      <View
+                        style={[
+                          styles.actionGroupIconContainer,
+                          { backgroundColor: theme.colors.primary + "15" },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="bolt"
+                          size={12}
+                          color={theme.colors.primary}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.actionGroupTitle,
+                          dynamicStyles.textSecondary,
+                        ]}
+                      >
+                        Quick Actions
+                      </Text>
+                    </View>
                     {primaryActions.map((action, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.actionCard,
+                          styles.actionCardPrimary,
+                          {
+                            backgroundColor: isDark
+                              ? theme.colors.gray800
+                              : theme.colors.white,
+                            shadowColor: action.color,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 8,
+                            elevation: 3,
+                          },
                           actionLoading && styles.actionCardDisabled,
                         ]}
                         onPress={action.onPress}
@@ -1183,12 +1461,17 @@ export default function SalonAppointmentsScreen({
                         <View
                           style={[
                             styles.actionCardIcon,
-                            { backgroundColor: action.color + "15" },
+                            styles.actionCardIconLarge,
+                            {
+                              backgroundColor: action.color + "15",
+                              borderWidth: 1,
+                              borderColor: action.color + "30",
+                            },
                           ]}
                         >
                           <MaterialIcons
                             name={action.icon as any}
-                            size={24}
+                            size={26}
                             color={action.color}
                           />
                         </View>
@@ -1198,34 +1481,68 @@ export default function SalonAppointmentsScreen({
                           >
                             {action.label}
                           </Text>
+                          <Text
+                            style={[
+                              styles.actionCardHint,
+                              dynamicStyles.textSecondary,
+                            ]}
+                          >
+                            Tap to proceed
+                          </Text>
                         </View>
-                        <MaterialIcons
-                          name="chevron-right"
-                          size={20}
-                          color={dynamicStyles.textSecondary.color}
-                        />
+                        <View
+                          style={[
+                            styles.actionChevronContainer,
+                            { backgroundColor: action.color + "10" },
+                          ]}
+                        >
+                          <MaterialIcons
+                            name="chevron-right"
+                            size={22}
+                            color={action.color}
+                          />
+                        </View>
                       </TouchableOpacity>
                     ))}
                   </View>
                 )}
 
-                {/* Secondary Actions */}
+                {/* Secondary Actions - Enhanced Design */}
                 {secondaryActions.length > 0 && (
                   <View style={styles.actionGroup}>
-                    <Text
-                      style={[
-                        styles.actionGroupTitle,
-                        dynamicStyles.textSecondary,
-                      ]}
-                    >
-                      More Options
-                    </Text>
+                    <View style={styles.actionGroupHeader}>
+                      <View
+                        style={[
+                          styles.actionGroupIconContainer,
+                          { backgroundColor: theme.colors.info + "15" },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="tune"
+                          size={12}
+                          color={theme.colors.info}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.actionGroupTitle,
+                          dynamicStyles.textSecondary,
+                        ]}
+                      >
+                        More Options
+                      </Text>
+                    </View>
                     {secondaryActions.map((action, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.actionCard,
                           styles.actionCardSecondary,
+                          {
+                            backgroundColor: isDark
+                              ? theme.colors.gray800 + "50"
+                              : theme.colors.gray50,
+                          },
                           actionLoading && styles.actionCardDisabled,
                         ]}
                         onPress={action.onPress}
@@ -1236,7 +1553,11 @@ export default function SalonAppointmentsScreen({
                           style={[
                             styles.actionCardIcon,
                             styles.actionCardIconSmall,
-                            { backgroundColor: action.color + "15" },
+                            {
+                              backgroundColor: action.color + "15",
+                              borderWidth: 1,
+                              borderColor: action.color + "20",
+                            },
                           ]}
                         >
                           <MaterialIcons
@@ -1247,14 +1568,17 @@ export default function SalonAppointmentsScreen({
                         </View>
                         <View style={styles.actionCardContent}>
                           <Text
-                            style={[styles.actionCardLabel, dynamicStyles.text]}
+                            style={[
+                              styles.actionCardLabelSecondary,
+                              dynamicStyles.text,
+                            ]}
                           >
                             {action.label}
                           </Text>
                         </View>
                         <MaterialIcons
                           name="chevron-right"
-                          size={20}
+                          size={18}
                           color={dynamicStyles.textSecondary.color}
                         />
                       </TouchableOpacity>
@@ -1262,23 +1586,43 @@ export default function SalonAppointmentsScreen({
                   </View>
                 )}
 
-                {/* Destructive Actions */}
+                {/* Destructive Actions - Enhanced Design */}
                 {destructiveActions.length > 0 && (
-                  <View style={styles.actionGroup}>
-                    <Text
-                      style={[
-                        styles.actionGroupTitle,
-                        dynamicStyles.textSecondary,
-                      ]}
-                    >
-                      Danger Zone
-                    </Text>
+                  <View style={[styles.actionGroup, styles.actionGroupDanger]}>
+                    <View style={styles.actionGroupHeader}>
+                      <View
+                        style={[
+                          styles.actionGroupIconContainer,
+                          { backgroundColor: theme.colors.error + "15" },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name="warning"
+                          size={12}
+                          color={theme.colors.error}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.actionGroupTitle,
+                          { color: theme.colors.error },
+                        ]}
+                      >
+                        Danger Zone
+                      </Text>
+                    </View>
                     {destructiveActions.map((action, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.actionCard,
                           styles.actionCardDestructive,
+                          {
+                            backgroundColor: isDark
+                              ? theme.colors.gray800
+                              : theme.colors.white,
+                            borderColor: action.color + "30",
+                          },
                           actionLoading && styles.actionCardDisabled,
                         ]}
                         onPress={action.onPress}
@@ -1289,7 +1633,11 @@ export default function SalonAppointmentsScreen({
                           style={[
                             styles.actionCardIcon,
                             styles.actionCardIconSmall,
-                            { backgroundColor: action.color + "15" },
+                            {
+                              backgroundColor: action.color + "15",
+                              borderWidth: 1,
+                              borderColor: action.color + "30",
+                            },
                           ]}
                         >
                           <MaterialIcons
@@ -1310,8 +1658,8 @@ export default function SalonAppointmentsScreen({
                         </View>
                         <MaterialIcons
                           name="chevron-right"
-                          size={20}
-                          color={action.color}
+                          size={18}
+                          color={action.color + "80"}
                         />
                       </TouchableOpacity>
                     ))}
@@ -1353,17 +1701,30 @@ export default function SalonAppointmentsScreen({
                     {
                       backgroundColor: isDark
                         ? theme.colors.gray600
-                        : theme.colors.gray300,
+                        : theme.colors.gray400,
                     },
                   ]}
                 />
               </View>
-              <View style={styles.modalHeader}>
+              <View
+                style={[
+                  styles.modalHeader,
+                  {
+                    backgroundColor: isDark
+                      ? theme.colors.gray800 + "80"
+                      : theme.colors.warning + "08",
+                  },
+                ]}
+              >
                 <View style={styles.modalHeaderContent}>
                   <View
                     style={[
                       styles.modalHeaderIcon,
-                      { backgroundColor: theme.colors.warning + "20" },
+                      {
+                        backgroundColor: theme.colors.warning + "20",
+                        borderWidth: 1,
+                        borderColor: theme.colors.warning + "30",
+                      },
                     ]}
                   >
                     <MaterialIcons
@@ -1382,17 +1743,25 @@ export default function SalonAppointmentsScreen({
                         dynamicStyles.textSecondary,
                       ]}
                     >
-                      Select a staff member to assign
+                      Choose a team member
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   onPress={() => setShowReassignModal(false)}
-                  style={styles.closeButton}
+                  style={[
+                    styles.closeButton,
+                    {
+                      backgroundColor: isDark
+                        ? theme.colors.gray700
+                        : theme.colors.white,
+                    },
+                  ]}
+                  activeOpacity={0.7}
                 >
                   <MaterialIcons
                     name="close"
-                    size={22}
+                    size={20}
                     color={dynamicStyles.textSecondary.color}
                   />
                 </TouchableOpacity>
@@ -1406,7 +1775,12 @@ export default function SalonAppointmentsScreen({
                     <View
                       style={[
                         styles.emptyIconContainer,
-                        { backgroundColor: theme.colors.textTertiary + "15" },
+                        {
+                          backgroundColor: theme.colors.textTertiary + "15",
+                          borderWidth: 2,
+                          borderColor: theme.colors.textTertiary + "30",
+                          borderStyle: "dashed",
+                        },
                       ]}
                     >
                       <MaterialIcons
@@ -1418,7 +1792,7 @@ export default function SalonAppointmentsScreen({
                     <Text
                       style={[styles.emptyEmployeesText, dynamicStyles.text]}
                     >
-                      No employees available
+                      No team members available
                     </Text>
                     <Text
                       style={[
@@ -1426,7 +1800,7 @@ export default function SalonAppointmentsScreen({
                         dynamicStyles.textSecondary,
                       ]}
                     >
-                      Add employees to your salon to reassign appointments
+                      Add employees to your salon first
                     </Text>
                   </View>
                 ) : (
@@ -1439,7 +1813,25 @@ export default function SalonAppointmentsScreen({
                         key={employee.id}
                         style={[
                           styles.employeeCard,
-                          isCurrentEmployee && styles.employeeCardCurrent,
+                          {
+                            backgroundColor: isDark
+                              ? theme.colors.gray800
+                              : theme.colors.white,
+                            shadowColor: isCurrentEmployee
+                              ? theme.colors.success
+                              : theme.colors.black,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: isCurrentEmployee ? 0.15 : 0.05,
+                            shadowRadius: 4,
+                            elevation: isCurrentEmployee ? 3 : 1,
+                          },
+                          isCurrentEmployee && {
+                            borderColor: theme.colors.success + "40",
+                            borderWidth: 1.5,
+                            backgroundColor: isDark
+                              ? theme.colors.success + "10"
+                              : theme.colors.success + "05",
+                          },
                           isLoading && styles.employeeCardDisabled,
                         ]}
                         onPress={() => handleReassign(employee.id)}
@@ -1449,7 +1841,15 @@ export default function SalonAppointmentsScreen({
                         <View
                           style={[
                             styles.employeeAvatar,
-                            { backgroundColor: theme.colors.primary + "20" },
+                            {
+                              backgroundColor: isCurrentEmployee
+                                ? theme.colors.success + "20"
+                                : theme.colors.primary + "20",
+                              borderWidth: 2,
+                              borderColor: isCurrentEmployee
+                                ? theme.colors.success + "40"
+                                : theme.colors.primary + "30",
+                            },
                           ]}
                         >
                           {isLoading ? (
@@ -1461,7 +1861,11 @@ export default function SalonAppointmentsScreen({
                             <MaterialIcons
                               name="person"
                               size={24}
-                              color={theme.colors.primary}
+                              color={
+                                isCurrentEmployee
+                                  ? theme.colors.success
+                                  : theme.colors.primary
+                              }
                             />
                           )}
                         </View>
@@ -1479,16 +1883,23 @@ export default function SalonAppointmentsScreen({
                                   {
                                     backgroundColor:
                                       theme.colors.success + "20",
+                                    borderWidth: 1,
+                                    borderColor: theme.colors.success + "40",
                                   },
                                 ]}
                               >
+                                <MaterialIcons
+                                  name="check-circle"
+                                  size={10}
+                                  color={theme.colors.success}
+                                />
                                 <Text
                                   style={[
                                     styles.currentBadgeText,
                                     { color: theme.colors.success },
                                   ]}
                                 >
-                                  Current
+                                  Assigned
                                 </Text>
                               </View>
                             )}
@@ -1505,11 +1916,26 @@ export default function SalonAppointmentsScreen({
                           )}
                         </View>
                         {!isLoading && (
-                          <MaterialIcons
-                            name="chevron-right"
-                            size={20}
-                            color={dynamicStyles.textSecondary.color}
-                          />
+                          <View
+                            style={[
+                              styles.employeeChevron,
+                              {
+                                backgroundColor: isCurrentEmployee
+                                  ? theme.colors.success + "10"
+                                  : theme.colors.gray100,
+                              },
+                            ]}
+                          >
+                            <MaterialIcons
+                              name="chevron-right"
+                              size={20}
+                              color={
+                                isCurrentEmployee
+                                  ? theme.colors.success
+                                  : dynamicStyles.textSecondary.color
+                              }
+                            />
+                          </View>
                         )}
                       </TouchableOpacity>
                     );
@@ -1552,17 +1978,30 @@ export default function SalonAppointmentsScreen({
                     {
                       backgroundColor: isDark
                         ? theme.colors.gray600
-                        : theme.colors.gray300,
+                        : theme.colors.gray400,
                     },
                   ]}
                 />
               </View>
-              <View style={styles.modalHeader}>
+              <View
+                style={[
+                  styles.modalHeader,
+                  {
+                    backgroundColor: isDark
+                      ? theme.colors.gray800 + "80"
+                      : theme.colors.secondary + "08",
+                  },
+                ]}
+              >
                 <View style={styles.modalHeaderContent}>
                   <View
                     style={[
                       styles.modalHeaderIcon,
-                      { backgroundColor: theme.colors.secondary + "20" },
+                      {
+                        backgroundColor: theme.colors.secondary + "20",
+                        borderWidth: 1,
+                        borderColor: theme.colors.secondary + "30",
+                      },
                     ]}
                   >
                     <MaterialIcons
@@ -1581,17 +2020,25 @@ export default function SalonAppointmentsScreen({
                         dynamicStyles.textSecondary,
                       ]}
                     >
-                      Add private notes about this appointment
+                      Add private notes
                     </Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   onPress={() => setShowNotesModal(false)}
-                  style={styles.closeButton}
+                  style={[
+                    styles.closeButton,
+                    {
+                      backgroundColor: isDark
+                        ? theme.colors.gray700
+                        : theme.colors.white,
+                    },
+                  ]}
+                  activeOpacity={0.7}
                 >
                   <MaterialIcons
                     name="close"
-                    size={22}
+                    size={20}
                     color={dynamicStyles.textSecondary.color}
                   />
                 </TouchableOpacity>
@@ -1600,8 +2047,22 @@ export default function SalonAppointmentsScreen({
                 <View
                   style={[
                     styles.notesInputContainer,
-                    dynamicStyles.card,
-                    characterCount > maxCharacters && styles.notesInputError,
+                    {
+                      backgroundColor: isDark
+                        ? theme.colors.gray800
+                        : theme.colors.white,
+                      borderColor:
+                        characterCount > maxCharacters
+                          ? theme.colors.error
+                          : isDark
+                            ? theme.colors.gray700
+                            : theme.colors.borderLight,
+                      shadowColor: theme.colors.secondary,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 4,
+                      elevation: 1,
+                    },
                   ]}
                 >
                   <TextInput
@@ -1615,7 +2076,21 @@ export default function SalonAppointmentsScreen({
                     textAlignVertical="top"
                     maxLength={maxCharacters}
                   />
-                  <View style={styles.notesFooter}>
+                  <View
+                    style={[
+                      styles.notesFooter,
+                      {
+                        backgroundColor: isDark
+                          ? theme.colors.gray700 + "50"
+                          : theme.colors.gray50,
+                      },
+                    ]}
+                  >
+                    <MaterialIcons
+                      name="edit-note"
+                      size={14}
+                      color={dynamicStyles.textSecondary.color}
+                    />
                     <Text
                       style={[
                         styles.characterCount,
@@ -1626,7 +2101,7 @@ export default function SalonAppointmentsScreen({
                           styles.characterCountError,
                       ]}
                     >
-                      {characterCount}/{maxCharacters}
+                      {characterCount}/{maxCharacters} characters
                     </Text>
                   </View>
                 </View>
@@ -1634,12 +2109,20 @@ export default function SalonAppointmentsScreen({
                   style={[
                     styles.saveBtn,
                     styles.saveBtnLarge,
-                    { backgroundColor: theme.colors.primary },
+                    {
+                      backgroundColor: theme.colors.primary,
+                      shadowColor: theme.colors.primary,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    },
                     (notesLoading || characterCount > maxCharacters) &&
                       styles.saveBtnDisabled,
                   ]}
                   onPress={handleAddNotes}
                   disabled={notesLoading || characterCount > maxCharacters}
+                  activeOpacity={0.8}
                 >
                   {notesLoading ? (
                     <ActivityIndicator
@@ -2320,8 +2803,10 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "70%",
-    paddingBottom: 90, // Account for bottom navigation (64px + safe area)
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    maxHeight: "85%",
+    paddingBottom: 40, // Reduced from 90 for better space usage
   },
   modalHandleBar: {
     alignItems: "center",
@@ -2380,6 +2865,7 @@ const styles = StyleSheet.create({
   actionsList: {
     padding: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xl, // Extra padding for better scrolling
   },
   actionItem: {
     flexDirection: "row",
@@ -2643,9 +3129,12 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   currentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    gap: 2,
   },
   currentBadgeText: {
     fontSize: 9,
@@ -2653,5 +3142,215 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: theme.fonts.bold,
     letterSpacing: 0.3,
+  },
+  // Enhanced Modal Styles
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
+  },
+  detailIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 6,
+  },
+  actionGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  actionGroupIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionGroupDanger: {
+    marginTop: theme.spacing.xs,
+    paddingTop: theme.spacing.sm,
+  },
+  actionCardPrimary: {
+    borderWidth: 1.5,
+    paddingVertical: theme.spacing.md,
+  },
+  actionCardIconLarge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  actionCardHint: {
+    fontSize: 11,
+    marginTop: 2,
+    fontFamily: theme.fonts.regular,
+  },
+  actionCardLabelSecondary: {
+    fontSize: 14,
+    fontWeight: "500",
+    fontFamily: theme.fonts.medium,
+  },
+  actionChevronContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  employeeChevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Redesigned Action Modal Styles
+  actionModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  actionModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+  },
+  appointmentSummaryCard: {
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  summaryStatusBar: {
+    height: 4,
+    width: "100%",
+  },
+  summaryCardHeader: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  customerSection: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+  },
+  customerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customerInfo: {
+    flex: 1,
+    gap: 6,
+  },
+  customerNameLarge: {
+    fontSize: 17,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+  },
+  statusBadgeInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  statusDotSmall: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  statusTextInline: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    fontFamily: theme.fonts.bold,
+    letterSpacing: 0.5,
+  },
+  detailsGrid: {
+    flexDirection: "row",
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  detailGridItem: {
+    flex: 1,
+    flexDirection: "row",
+    padding: theme.spacing.sm,
+    borderRadius: 12,
+    gap: theme.spacing.xs,
+    alignItems: "flex-start",
+  },
+  gridIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gridTextContainer: {
+    flex: 1,
+  },
+  gridLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 3,
+    fontFamily: theme.fonts.medium,
+  },
+  gridValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
+    marginBottom: 1,
+  },
+  gridSubValue: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+  },
+  bottomInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  staffInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flex: 1,
+  },
+  staffName: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+  },
+  priceTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  priceValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    fontFamily: theme.fonts.bold,
   },
 });

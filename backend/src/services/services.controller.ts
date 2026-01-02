@@ -14,21 +14,26 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ServicesService } from './services.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { EmployeePermissionGuard } from '../auth/guards/employee-permission.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RequireEmployeePermission } from '../auth/decorators/require-employee-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { SalonsService } from '../salons/salons.service';
+import { EmployeePermissionsService } from '../salons/services/employee-permissions.service';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Services')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, EmployeePermissionGuard)
 @Controller('services')
 export class ServicesController {
   constructor(
     private readonly servicesService: ServicesService,
     private readonly salonsService: SalonsService,
+    private readonly employeePermissionsService: EmployeePermissionsService,
   ) {}
 
   @Post()
@@ -38,6 +43,7 @@ export class ServicesController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_SERVICES)
   @ApiOperation({ summary: 'Create a new service' })
   async create(
     @Body() createServiceDto: CreateServiceDto,
@@ -50,10 +56,38 @@ export class ServicesController {
       createServiceDto.salonId
     ) {
       const salon = await this.salonsService.findOne(createServiceDto.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only create services for your own salon',
-        );
+
+      // Salon owners can always create
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only create services for your own salon',
+          );
+        }
+      } else if (user.role === UserRole.SALON_EMPLOYEE) {
+        // Employees need MANAGE_SERVICES permission
+        const employee =
+          await this.employeePermissionsService.getEmployeeRecordByUserId(
+            user.id,
+            createServiceDto.salonId,
+          );
+        if (employee) {
+          const hasPermission =
+            await this.employeePermissionsService.hasPermission(
+              employee.id,
+              createServiceDto.salonId,
+              EmployeePermission.MANAGE_SERVICES,
+            );
+          if (!hasPermission) {
+            throw new ForbiddenException(
+              'You do not have permission to manage services. Please contact your salon owner.',
+            );
+          }
+        } else {
+          throw new ForbiddenException(
+            'You can only create services for salons you work at',
+          );
+        }
       }
     }
     return this.servicesService.create(createServiceDto);
@@ -184,6 +218,7 @@ export class ServicesController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_SERVICES)
   @ApiOperation({ summary: 'Update a service' })
   async update(
     @Param('id') id: string,
@@ -207,13 +242,26 @@ export class ServicesController {
           );
         }
       }
-      // Employees can update services for salons they work at
+      // Employees need MANAGE_SERVICES permission
       else if (user.role === UserRole.SALON_EMPLOYEE) {
-        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
-          user.id,
-          service.salonId,
-        );
-        if (!isEmployee) {
+        const employee =
+          await this.employeePermissionsService.getEmployeeRecordByUserId(
+            user.id,
+            service.salonId,
+          );
+        if (employee) {
+          const hasPermission =
+            await this.employeePermissionsService.hasPermission(
+              employee.id,
+              service.salonId,
+              EmployeePermission.MANAGE_SERVICES,
+            );
+          if (!hasPermission) {
+            throw new ForbiddenException(
+              'You do not have permission to manage services. Please contact your salon owner.',
+            );
+          }
+        } else {
           throw new ForbiddenException(
             'You can only update services for salons you work at',
           );

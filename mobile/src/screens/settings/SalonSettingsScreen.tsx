@@ -168,6 +168,14 @@ export default function SalonSettingsScreen({ navigation }: SalonSettingsScreenP
           color: theme.colors.primary,
         },
         {
+          id: 'permissions',
+          icon: 'admin-panel-settings',
+          title: 'Employee Permissions',
+          description: 'Grant & manage permissions',
+          screen: 'EmployeePermissions',
+          color: theme.colors.secondary,
+        },
+        {
           id: 'commissions',
           icon: 'payments',
           title: 'Commission Rates',

@@ -57,12 +57,17 @@ import ApplicationSuccessScreen from "../screens/membership/ApplicationSuccessSc
 import MyScheduleScreen from "../screens/staff/MyScheduleScreen";
 import AttendanceScreen from "../screens/staff/AttendanceScreen";
 import CreateAppointmentScreen from "../screens/staff/CreateAppointmentScreen";
+import MyPermissionsScreen from "../screens/staff/MyPermissionsScreen";
+import WhatCanIDoScreen from "../screens/staff/WhatCanIDoScreen";
+import EmployeeSalonDashboard from "../screens/staff/EmployeeSalonDashboard";
 
 // Owner screens
 import MoreMenuScreen from "../screens/owner/MoreMenuScreen";
 import CreateSalonScreen from "../screens/owner/CreateSalonScreen";
 import SalonAppointmentsScreen from "../screens/owner/SalonAppointmentsScreen";
 import OperationsScreen from "../screens/owner/OperationsScreen";
+import EmployeePermissionsScreen from "../screens/owner/EmployeePermissionsScreen";
+import GrantPermissionsScreen from "../screens/owner/GrantPermissionsScreen";
 
 // Admin screens
 import SalonManagementScreen from "../screens/admin/SalonManagementScreen";
@@ -339,6 +344,22 @@ export const renderScreen = (
         />
       );
 
+    case "EmployeePermissions":
+      return (
+        <EmployeePermissionsScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
+
+    case "GrantPermissions":
+      return (
+        <GrantPermissionsScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
+
     case "AddEmployee":
       return (
         <AddEmployeeScreen
@@ -428,6 +449,20 @@ export const renderScreen = (
 
     case "Attendance":
       return <AttendanceScreen navigation={navigation} />;
+
+    case "MyPermissions":
+      return <MyPermissionsScreen navigation={navigation} />;
+
+    case "WhatCanIDo":
+      return <WhatCanIDoScreen navigation={navigation} />;
+
+    case "EmployeeSalonDashboard":
+      return (
+        <EmployeeSalonDashboard
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
 
     // Business Analytics screen
     case "BusinessAnalytics":

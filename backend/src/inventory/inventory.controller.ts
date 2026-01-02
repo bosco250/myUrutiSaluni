@@ -14,22 +14,27 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { EmployeePermissionGuard } from '../auth/guards/employee-permission.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RequireEmployeePermission } from '../auth/decorators/require-employee-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateMovementDto } from './dto/create-movement.dto';
 import { SalonsService } from '../salons/salons.service';
+import { EmployeePermissionsService } from '../salons/services/employee-permissions.service';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Inventory')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, EmployeePermissionGuard)
 @Controller('inventory')
 export class InventoryController {
   constructor(
     private readonly inventoryService: InventoryService,
     private readonly salonsService: SalonsService,
+    private readonly employeePermissionsService: EmployeePermissionsService,
   ) {}
 
   @Post('products')
@@ -39,6 +44,7 @@ export class InventoryController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_PRODUCTS)
   @ApiOperation({ summary: 'Create a new product' })
   async createProduct(
     @Body() createProductDto: CreateProductDto,
@@ -51,10 +57,37 @@ export class InventoryController {
       createProductDto.salonId
     ) {
       const salon = await this.salonsService.findOne(createProductDto.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only create products for your own salon',
-        );
+
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only create products for your own salon',
+          );
+        }
+      } else if (user.role === UserRole.SALON_EMPLOYEE) {
+        // Employees need MANAGE_PRODUCTS permission
+        const employee =
+          await this.employeePermissionsService.getEmployeeRecordByUserId(
+            user.id,
+            createProductDto.salonId,
+          );
+        if (employee) {
+          const hasPermission =
+            await this.employeePermissionsService.hasPermission(
+              employee.id,
+              createProductDto.salonId,
+              EmployeePermission.MANAGE_PRODUCTS,
+            );
+          if (!hasPermission) {
+            throw new ForbiddenException(
+              'You do not have permission to manage products. Please contact your salon owner.',
+            );
+          }
+        } else {
+          throw new ForbiddenException(
+            'You can only create products for salons you work at',
+          );
+        }
       }
     }
     return this.inventoryService.createProduct(createProductDto);
@@ -100,8 +133,22 @@ export class InventoryController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
+      let salonIds: string[] = [];
+
+      if (user.role === UserRole.SALON_OWNER) {
+        const salons = await this.salonsService.findByOwnerId(user.id);
+        salonIds = salons.map((s) => s.id);
+      } else {
+        // For employees, find all salons they work at
+        const employeeRecords =
+          await this.salonsService.findAllEmployeesByUserId(user.id);
+        salonIds = employeeRecords.map((e) => e.salonId);
+      }
+
+      if (salonIds.length === 0) {
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
           'You can only access products for your own salon',
@@ -135,10 +182,24 @@ export class InventoryController {
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       const salon = await this.salonsService.findOne(product.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only access products for your own salon',
+
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only access products for your own salon',
+          );
+        }
+      } else {
+        // Employee check
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          product.salonId,
         );
+        if (!isEmployee) {
+          throw new ForbiddenException(
+            'You can only access products for salons you work at',
+          );
+        }
       }
     }
 
@@ -152,6 +213,7 @@ export class InventoryController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_PRODUCTS)
   @ApiOperation({ summary: 'Update a product' })
   async updateProduct(
     @Param('id') id: string,
@@ -166,10 +228,37 @@ export class InventoryController {
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       const salon = await this.salonsService.findOne(product.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only update products for your own salon',
-        );
+
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only update products for your own salon',
+          );
+        }
+      } else if (user.role === UserRole.SALON_EMPLOYEE) {
+        // Employees need MANAGE_PRODUCTS permission
+        const employee =
+          await this.employeePermissionsService.getEmployeeRecordByUserId(
+            user.id,
+            product.salonId,
+          );
+        if (employee) {
+          const hasPermission =
+            await this.employeePermissionsService.hasPermission(
+              employee.id,
+              product.salonId,
+              EmployeePermission.MANAGE_PRODUCTS,
+            );
+          if (!hasPermission) {
+            throw new ForbiddenException(
+              'You do not have permission to manage products. Please contact your salon owner.',
+            );
+          }
+        } else {
+          throw new ForbiddenException(
+            'You can only update products for salons you work at',
+          );
+        }
       }
     }
 
@@ -214,8 +303,22 @@ export class InventoryController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
+      let salonIds: string[] = [];
+
+      if (user.role === UserRole.SALON_OWNER) {
+        const salons = await this.salonsService.findByOwnerId(user.id);
+        salonIds = salons.map((s) => s.id);
+      } else {
+        // For employees, find all salons they work at
+        const employeeRecords =
+          await this.salonsService.findAllEmployeesByUserId(user.id);
+        salonIds = employeeRecords.map((e) => e.salonId);
+      }
+
+      if (salonIds.length === 0) {
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
           'You can only access movements for your own salon',
@@ -237,6 +340,7 @@ export class InventoryController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_INVENTORY)
   @ApiOperation({ summary: 'Create a new inventory movement' })
   async createMovement(
     @Body() createMovementDto: CreateMovementDto,
@@ -279,8 +383,22 @@ export class InventoryController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
+      let salonIds: string[] = [];
+
+      if (user.role === UserRole.SALON_OWNER) {
+        const salons = await this.salonsService.findByOwnerId(user.id);
+        salonIds = salons.map((s) => s.id);
+      } else {
+        // For employees, find all salons they work at
+        const employeeRecords =
+          await this.salonsService.findAllEmployeesByUserId(user.id);
+        salonIds = employeeRecords.map((e) => e.salonId);
+      }
+
+      if (salonIds.length === 0) {
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
           'You can only access stock for your own salon',
@@ -313,10 +431,24 @@ export class InventoryController {
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       const salon = await this.salonsService.findOne(product.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only access stock for your own salon',
+
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only access stock for your own salon',
+          );
+        }
+      } else {
+        // Employee check
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          product.salonId,
         );
+        if (!isEmployee) {
+          throw new ForbiddenException(
+            'You can only access stock for salons you work at',
+          );
+        }
       }
     }
 

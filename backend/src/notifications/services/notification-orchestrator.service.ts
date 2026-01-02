@@ -24,6 +24,9 @@ export interface NotificationContext {
   recipientEmail?: string; // Email for email notifications
   saleItems?: Array<{ name: string; quantity: number; price: string }>;
   isEmployee?: boolean;
+  salonId?: string;
+  salonName?: string;
+  permissions?: string[]; // Array of permission names/descriptions
   [key: string]: any;
 }
 
@@ -236,6 +239,30 @@ export class NotificationOrchestratorService {
     // Determine icon
     const icon = this.getIcon(type);
 
+    // Extract custom metadata from context by filtering out standard fields
+    // This ensures we pass custom metadata like grantedPermissions, employeeId, etc.
+    const standardFields = [
+      'userId',
+      'customerId',
+      'appointmentId',
+      'saleId',
+      'commissionId',
+      'productId',
+      'recipientEmail',
+      'saleItems',
+      'isEmployee',
+      'salonId',
+      'salonName',
+      'permissions',
+    ];
+    const customMetadata = Object.fromEntries(
+      Object.entries(context).filter(([key]) => !standardFields.includes(key)),
+    );
+
+    this.logger.log(
+      `📦 Extracted custom metadata for notification: ${JSON.stringify(customMetadata)}`,
+    );
+
     const notificationPayload = {
       userId: context.userId,
       customerId: context.customerId,
@@ -246,7 +273,11 @@ export class NotificationOrchestratorService {
       actionLabel,
       priority: priority || this.getDefaultPriority(type),
       icon,
-      metadata: context,
+      metadata: {
+        ...customMetadata, // Custom metadata like grantedPermissions, employeeId
+        salonId: context.salonId, // Add salonId for reference
+        salonName: context.salonName, // Add salonName for reference
+      },
       appointmentId: context.appointmentId,
     };
 
@@ -526,6 +557,8 @@ export class NotificationOrchestratorService {
       [NotificationType.SALON_UPDATE]: 'info',
       [NotificationType.MEMBERSHIP_STATUS]: 'user-check',
       [NotificationType.EMPLOYEE_ASSIGNED]: 'briefcase',
+      [NotificationType.PERMISSION_GRANTED]: 'shield-check',
+      [NotificationType.PERMISSION_REVOKED]: 'shield-off',
       [NotificationType.SYSTEM_ALERT]: 'alert-circle',
       [NotificationType.SECURITY_ALERT]: 'shield-alert',
       [NotificationType.REVIEW]: 'star',
@@ -563,6 +596,8 @@ export class NotificationOrchestratorService {
       [NotificationType.STOCK_REPLENISHED]: 'low',
       [NotificationType.SALON_UPDATE]: 'medium',
       [NotificationType.EMPLOYEE_ASSIGNED]: 'high',
+      [NotificationType.PERMISSION_GRANTED]: 'high',
+      [NotificationType.PERMISSION_REVOKED]: 'high',
       [NotificationType.MEMBERSHIP_STATUS]: 'high',
       [NotificationType.SYSTEM_ALERT]: 'medium',
       [NotificationType.SECURITY_ALERT]: 'critical',
@@ -625,6 +660,10 @@ export class NotificationOrchestratorService {
       [NotificationType.SALON_UPDATE]: this.handleSalonUpdate.bind(this),
       [NotificationType.EMPLOYEE_ASSIGNED]:
         this.handleEmployeeAssigned.bind(this),
+      [NotificationType.PERMISSION_GRANTED]:
+        this.handlePermissionGranted.bind(this),
+      [NotificationType.PERMISSION_REVOKED]:
+        this.handlePermissionRevoked.bind(this),
       [NotificationType.MEMBERSHIP_STATUS]:
         this.handleMembershipStatus.bind(this),
       [NotificationType.SYSTEM_ALERT]: this.handleSystemAlert.bind(this),
@@ -936,6 +975,30 @@ export class NotificationOrchestratorService {
         commissionAmount: context.commissionAmount
           ? `RWF ${Number(context.commissionAmount).toLocaleString()}`
           : '',
+      },
+    };
+  }
+
+  private async handlePermissionGranted(context: NotificationContext) {
+    const permissionNames = context.permissions?.join(', ') || 'permissions';
+    return {
+      title: 'New Permissions Granted',
+      message: `You have been granted new permissions: ${permissionNames}. You can now access additional features in the app.`,
+      variables: {
+        permissions: permissionNames,
+        salonName: context.salonName || 'Salon',
+      },
+    };
+  }
+
+  private async handlePermissionRevoked(context: NotificationContext) {
+    const permissionNames = context.permissions?.join(', ') || 'permissions';
+    return {
+      title: 'Permissions Revoked',
+      message: `The following permissions have been revoked: ${permissionNames}. Some features may no longer be accessible.`,
+      variables: {
+        permissions: permissionNames,
+        salonName: context.salonName || 'Salon',
       },
     };
   }

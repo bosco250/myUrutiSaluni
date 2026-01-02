@@ -284,23 +284,55 @@ class SalonService {
    * Update employee details
    */
   async updateEmployee(
+    salonId: string,
     employeeId: string,
     data: Partial<{ position: string; commissionRate: number; isActive: boolean }>
   ): Promise<SalonEmployee> {
-    const response = await api.patch<SalonEmployee>(`/salon-employees/${employeeId}`, data);
+    const response = await api.patch<SalonEmployee>(`/salons/${salonId}/employees/${employeeId}`, data);
     return response;
   }
 
   /**
    * Remove/deactivate an employee
    */
-  async removeEmployee(employeeId: string): Promise<void> {
-    await api.delete(`/salon-employees/${employeeId}`);
+  async removeEmployee(salonId: string, employeeId: string): Promise<void> {
+    await api.delete(`/salons/${salonId}/employees/${employeeId}`);
   }
 
   /**
    * Get the current user's employee record for a specific salon
    */
+  /**
+   * Get current user's employee records across all salons
+   * Uses the backend endpoint: GET /salons/employees/by-user/:userId
+   */
+  async getMyEmployeeRecords(): Promise<SalonEmployee[]> {
+    try {
+      // Note: Cannot use hooks in service class. Use getEmployeeRecordsByUserId instead.
+      throw new Error('getMyEmployeeRecords requires userId - use getEmployeeRecordsByUserId instead');
+    } catch (error) {
+      console.error('Error in getMyEmployeeRecords:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get employee records for a specific user ID
+   * Backend: GET /salons/employees/by-user/:userId
+   */
+  async getEmployeeRecordsByUserId(userId: string): Promise<SalonEmployee[]> {
+    try {
+      const response = await api.get<SalonEmployee[]>(
+        `/salons/employees/by-user/${userId}`,
+        { requireAuth: true },
+      );
+      return response || [];
+    } catch (error: any) {
+      console.error('Error fetching employee records:', error);
+      return [];
+    }
+  }
+
   async getCurrentEmployee(salonId: string): Promise<SalonEmployee | null> {
     try {
       const response = await api.get<SalonEmployee>(`/salons/${salonId}/employees/me`);
@@ -508,10 +540,8 @@ class SalonService {
       salonId,
       name: data.name,
       description: data.description,
-      basePrice: data.price,
-      price: data.price, // Redundant for safety
-      durationMinutes: data.duration,
-      duration: data.duration, // Redundant for safety
+      basePrice: Number(data.price),
+      durationMinutes: Number(data.duration),
       isActive: true, // Default to active
       code: data.categoryId // harnessing categoryId as code/sku if needed, or omit
     };

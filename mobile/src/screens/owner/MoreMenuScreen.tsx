@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,15 @@ import {
   Image,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
+import { useEmployeePermissionCheck } from '../../hooks/useEmployeePermissionCheck';
+import { EmployeePermission } from '../../constants/employeePermissions';
+import { salonService } from '../../services/salon';
+import { UserRole, getRoleName } from '../../constants/roles';
 
 // Profile image placeholder
 const profileImage = require('../../../assets/Logo.png');
@@ -31,13 +36,201 @@ interface MenuItem {
   screen: string;
   badge?: number | string;
   iconColor: string;
+  requiredPermissions?: EmployeePermission[];
+  ownerOnly?: boolean; // If true, only owners/admins can see this item
 }
+
+// Menu sections with items
+// Using theme colors for consistency
+const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
+  {
+    title: 'My Account',
+    items: [
+      {
+        id: 'profile',
+        icon: 'person',
+        label: 'My Profile',
+        description: 'Manage personal details',
+        screen: 'Profile',
+        iconColor: theme.colors.secondary,
+      },
+      {
+        id: 'notifications',
+        icon: 'notifications',
+        label: 'Alerts',
+        description: ' Updates & reminders',
+        screen: 'Notifications',
+        badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
+        iconColor: theme.colors.warning,
+      },
+    ] as MenuItem[],
+  },
+  {
+    title: 'Workspace',
+    items: [
+      {
+        id: 'sales',
+        icon: 'point-of-sale',
+        label: 'Checkout',
+        description: 'Process a new payment',
+        screen: 'Sales',
+        iconColor: theme.colors.success,
+        requiredPermissions: [EmployeePermission.PROCESS_PAYMENTS],
+      },
+      {
+        id: 'sales-history',
+        icon: 'receipt-long',
+        label: 'Transactions',
+        description: 'View sales history',
+        screen: 'SalesHistory',
+        iconColor: theme.colors.secondary,
+        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+      },
+      {
+        id: 'commissions',
+        icon: 'payments',
+        label: 'My Earnings',
+        description: 'Track commissions',
+        screen: 'Commissions',
+        iconColor: theme.colors.primary,
+        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS, EmployeePermission.VIEW_EMPLOYEE_COMMISSIONS],
+      },
+      {
+        id: 'analytics',
+        icon: 'analytics',
+        label: 'Business Reports',
+        description: 'Performance insights',
+        screen: 'BusinessAnalytics',
+        iconColor: theme.colors.warning,
+        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+      },
+      {
+        id: 'employee-schedules',
+        icon: 'calendar-today',
+        label: 'Team Schedule',
+        description: 'Manage shifts',
+        screen: 'MySchedule',
+        iconColor: theme.colors.secondary,
+        requiredPermissions: [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES],
+      },
+      {
+        id: 'performance',
+        icon: 'trending-up',
+        label: 'Team Performance',
+        description: 'Staff metrics',
+        screen: 'BusinessAnalytics',
+        iconColor: theme.colors.warning,
+        requiredPermissions: [EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE],
+      },
+      {
+        id: 'staff',
+        icon: 'people',
+        label: 'Team List',
+        description: 'View & manage staff',
+        screen: 'StaffManagement',
+        iconColor: theme.colors.secondary,
+        requiredPermissions: [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES, EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE],
+      },
+      {
+        id: 'employee-permissions',
+        icon: 'admin-panel-settings',
+        label: 'Access Controls',
+        description: 'Manage staff permissions',
+        screen: 'EmployeePermissions',
+        iconColor: theme.colors.secondary,
+        ownerOnly: true, // Only owners can manage permissions
+      },
+      {
+        id: 'customers',
+        icon: 'people-outline',
+        label: 'Client List',
+        description: 'View customer directory',
+        screen: 'CustomerManagement',
+        iconColor: theme.colors.secondaryLight,
+        requiredPermissions: [EmployeePermission.MANAGE_CUSTOMERS, EmployeePermission.VIEW_CUSTOMER_HISTORY],
+      },
+      {
+        id: 'schedule',
+        icon: 'schedule',
+        label: 'My Calendar',
+        description: 'View my appointments',
+        screen: 'SalonAppointments',
+        iconColor: theme.colors.error,
+        requiredPermissions: [EmployeePermission.VIEW_ALL_APPOINTMENTS, EmployeePermission.MANAGE_APPOINTMENTS],
+      },
+    ] as MenuItem[],
+  },
+  {
+    title: 'App Settings',
+    items: [
+      {
+        id: 'salon-settings',
+        icon: 'store',
+        label: 'Salon Details',
+        description: 'Hours & info',
+        screen: 'SalonSettings',
+        iconColor: theme.colors.primary,
+        requiredPermissions: [EmployeePermission.MANAGE_SALON_PROFILE, EmployeePermission.VIEW_SALON_SETTINGS, EmployeePermission.UPDATE_SALON_SETTINGS, EmployeePermission.MANAGE_BUSINESS_HOURS],
+      },
+      {
+        id: 'explore',
+        icon: 'explore',
+        label: 'Explore Salons',
+        description: 'Find other salons',
+        screen: 'Explore',
+        iconColor: theme.colors.secondary,
+        // No permission required - public
+      },
+    ] as MenuItem[],
+  },
+  {
+    title: 'Support',
+    items: [
+      {
+        id: 'chat',
+        icon: 'chat',
+        label: 'Messages',
+        description: 'Customer chats',
+        screen: 'ChatList',
+        iconColor: theme.colors.secondary,
+      },
+      {
+        id: 'help',
+        icon: 'help-outline',
+        label: 'Help & Support',
+        description: 'FAQs & contact',
+        screen: 'Help',
+        iconColor: theme.colors.textSecondary,
+      },
+    ] as MenuItem[],
+  },
+];
 
 export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   const { isDark } = useTheme();
   const { user, logout } = useAuth();
   const unreadNotificationCount = useUnreadNotifications();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { checkPermission, isOwner, isAdmin, salonId: employeeSalonId } = useEmployeePermissionCheck();
+  const [salonName, setSalonName] = useState<string | null>(null);
+
+  // Fetch salon name for employees
+  useEffect(() => {
+    const fetchSalonName = async () => {
+      if (employeeSalonId && user?.role === UserRole.SALON_EMPLOYEE) {
+        try {
+          const salons = await salonService.getAllSalons();
+          const salon = salons.find(s => s.id === employeeSalonId);
+          if (salon?.name) {
+            setSalonName(salon.name);
+          }
+        } catch (error) {
+          console.error('Error fetching salon name:', error);
+        }
+      }
+    };
+    fetchSalonName();
+  }, [employeeSalonId, user?.role]);
 
   // Dynamic styles for dark/light mode (matching OperationsScreen pattern)
   const dynamicStyles = {
@@ -75,152 +268,87 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   // Helper to generate light background from color
   const getLightBg = (color: string) => `${color}15`; // 15% opacity
 
-  // ... (rest of the component body is unchanged until styles)
+  const menuSections = useMemo(() => getMenuSections(unreadNotificationCount, isDark), [unreadNotificationCount, isDark]);
 
-  // ...
-
-// ...
-
-  // Menu sections with items
-  // Using theme colors for consistency
-  const menuSections = [
-    {
-      title: 'My Account',
+  // Add "My Salon" section for employees with permissions
+  // Use employeeSalonId check instead of salonName to avoid render delay
+  const employeeSalonSection = useMemo(() => {
+    return (employeeSalonId && user?.role === UserRole.SALON_EMPLOYEE) ? {
+      title: 'Dashboard',
       items: [
         {
-          id: 'profile',
-          icon: 'person',
-          label: 'Profile',
-          description: 'Manage your personal info',
-          screen: 'Profile',
-          iconColor: theme.colors.secondary,
-        },
-        {
-          id: 'notifications',
-          icon: 'notifications',
-          label: 'Notifications',
-          description: 'Alerts & updates',
-          screen: 'Notifications',
-          badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
-          iconColor: theme.colors.warning,
-        },
-      ] as MenuItem[],
-    },
-    {
-      title: 'Business Tools',
-      items: [
-        {
-          id: 'sales',
-          icon: 'point-of-sale',
-          label: 'Quick Sale',
-          description: 'New sale / POS',
-          screen: 'Sales',
-          iconColor: theme.colors.success,
-        },
-        {
-          id: 'sales-history',
-          icon: 'receipt-long',
-          label: 'Sales History',
-          description: 'View transactions',
-          screen: 'SalesHistory',
-          iconColor: theme.colors.secondary,
-        },
-        {
-          id: 'commissions',
-          icon: 'payments',
-          label: 'Commissions',
-          description: 'Employee earnings',
-          screen: 'Commissions',
+          id: 'my-salon',
+          icon: 'dashboard',
+          label: salonName || 'My Salon Workspace', // Fallback while loading
+          description: 'Go to main dashboard',
+          screen: 'EmployeeSalonDashboard', // Navigate to employee-specific dashboard with all permitted features
           iconColor: theme.colors.primary,
-        },
-        {
-          id: 'analytics',
-          icon: 'analytics',
-          label: 'Business Analytics',
-          description: 'Reports & insights',
-          screen: 'BusinessAnalytics',
-          iconColor: theme.colors.warning,
-        },
-        {
-          id: 'staff',
-          icon: 'people',
-          label: 'Staff Management',
-          description: 'Manage your team',
-          screen: 'StaffManagement',
-          iconColor: theme.colors.secondary,
-        },
-        {
-          id: 'inventory',
-          icon: 'inventory-2',
-          label: 'Inventory & Stock',
-          description: 'Manage products & stock',
-          screen: 'StockManagement',
-          iconColor: theme.colors.secondaryDark,
-        },
-        {
-          id: 'customers',
-          icon: 'people-outline',
-          label: 'Customer Management',
-          description: 'View & manage customers',
-          screen: 'CustomerManagement',
-          iconColor: theme.colors.secondaryLight,
-        },
-        {
-          id: 'schedule',
-          icon: 'schedule',
-          label: 'My Schedule',
-          description: 'All salon appointments',
-          screen: 'SalonAppointments',
-          iconColor: theme.colors.error,
+          // Show this if employee has any management permissions
+          requiredPermissions: [
+            EmployeePermission.MANAGE_PRODUCTS,
+            EmployeePermission.MANAGE_SERVICES,
+            EmployeePermission.MANAGE_APPOINTMENTS,
+            EmployeePermission.MANAGE_CUSTOMERS,
+            EmployeePermission.MANAGE_SALON_PROFILE,
+            EmployeePermission.UPDATE_SALON_SETTINGS,
+          ],
         },
       ] as MenuItem[],
-    },
-    {
-      title: 'Settings',
-      items: [
-        {
-          id: 'salon-settings',
-          icon: 'store',
-          label: 'Salon Settings',
-          description: 'Business hours, info & more',
-          screen: 'SalonSettings',
-          iconColor: theme.colors.primary,
-        },
-        {
-          id: 'explore',
-          icon: 'explore',
-          label: 'Explore Salons',
-          description: 'Browse other salons',
-          screen: 'Explore',
-          iconColor: theme.colors.secondary,
-        },
-      ] as MenuItem[],
-    },
-    {
-      title: 'Support',
-      items: [
-        {
-          id: 'chat',
-          icon: 'chat',
-          label: 'Messages',
-          description: 'Chat with customers',
-          screen: 'ChatList',
-          iconColor: theme.colors.secondary,
-        },
-        {
-          id: 'help',
-          icon: 'help-outline',
-          label: 'Help & Support',
-          description: 'FAQs & contact us',
-          screen: 'Help',
-          iconColor: theme.colors.textSecondary,
-        },
-      ] as MenuItem[],
-    },
-  ];
+    } : null;
+  }, [employeeSalonId, user?.role, salonName]);
+
+  // Combine all sections, adding employee salon section if it exists
+  const allMenuSections = useMemo(() => employeeSalonSection 
+    ? [employeeSalonSection, ...menuSections]
+    : menuSections, [employeeSalonSection, menuSections]);
+
+  // Filter menu items based on permissions
+  const filteredMenuSections = useMemo(() => {
+    return allMenuSections.map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        // Owner-only items: only visible to owners and admins
+        if (item.ownerOnly) {
+          return isOwner || isAdmin;
+        }
+        
+        // Owners and admins see everything (except owner-only items already handled above)
+        if (isOwner || isAdmin) return true;
+        
+        // If no permissions required, show it
+        if (!item.requiredPermissions || item.requiredPermissions.length === 0) return true;
+        
+        // Check if user has any of the required permissions
+        return item.requiredPermissions.some(perm => checkPermission(perm));
+      })
+    })).filter(section => section.items.length > 0); // Remove empty sections
+  }, [allMenuSections, isOwner, isAdmin, checkPermission]);
 
   const handleMenuPress = (screen: string) => {
-    navigation.navigate(screen);
+    // Screens that require salonId parameter
+    const screensNeedingSalonId = [
+      'AddProduct',
+      'AddService', 
+      'StockManagement',
+      'SalonSettings',
+      'SalonAppointments',
+      'CustomerManagement',
+      'Sales',
+      'StaffManagement',
+      'EmployeePermissions',
+      'Operations', // Added for employee salon access
+    ];
+    
+    // For employees, use the salonId from their employee record (from hook)
+    // For owners, let the screen fetch their own salon
+    const salonIdToPass = employeeSalonId;
+    
+    // Navigate with salonId if the screen needs it and we have one
+    if (screensNeedingSalonId.includes(screen) && salonIdToPass) {
+      navigation.navigate(screen, { salonId: salonIdToPass });
+    } else {
+      navigation.navigate(screen);
+    }
   };
 
   const handleLogout = () => {
@@ -274,7 +402,10 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   );
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView 
+      style={[styles.container, dynamicStyles.container]}
+      edges={['top']}
+    >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <ScrollView
@@ -297,17 +428,17 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           </View>
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, dynamicStyles.text]}>
-              {user?.fullName || 'Salon Owner'}
+              {user?.fullName || getRoleName(user?.role)}
             </Text>
             <Text style={[styles.profileRole, dynamicStyles.textSecondary]}>
-              Salon Owner
+              {getRoleName(user?.role)}
             </Text>
           </View>
           <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
         </TouchableOpacity>
 
-        {/* Menu Sections */}
-        {menuSections.map((section, sectionIndex) => (
+        {/* Menu Sections - Filtered by permissions */}
+        {filteredMenuSections.map((section, sectionIndex) => (
           <View key={section.title} style={styles.section}>
             <Text style={[styles.sectionTitle, dynamicStyles.textSecondary]}>
               {section.title}
@@ -386,7 +517,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -399,8 +530,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: 60,
-    paddingBottom: theme.spacing.md,
+    // paddingTop: theme.spacing.xs,
+    paddingBottom: theme.spacing.xs,
     alignItems: 'center',
   },
   headerTitle: {
@@ -413,8 +544,8 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
     borderRadius: 16,
     borderWidth: 1,
   },
@@ -422,9 +553,9 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.md,
   },
   profileImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
     borderColor: theme.colors.primary,
   },

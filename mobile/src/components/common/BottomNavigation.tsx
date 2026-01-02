@@ -4,11 +4,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { getNavigationTabsForRole } from '../../navigation/navigationConfig';
+import { useEmployeePermissionCheck } from '../../hooks/useEmployeePermissionCheck';
+// Removed unused imports - useEmployeePermissionCheck handles salon loading
 
 interface BottomNavigationProps {
   activeTab: string;
   onTabPress: (tabId: string) => void;
   unreadNotificationCount?: number;
+  currentScreen?: string; // Current screen name to detect salon view mode
 }
 
 /**
@@ -19,13 +22,37 @@ interface BottomNavigationProps {
 const BottomNavigation = React.memo(function BottomNavigation({ 
   activeTab, 
   onTabPress, 
-  unreadNotificationCount = 0 
+  unreadNotificationCount = 0,
+  currentScreen 
 }: BottomNavigationProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
-  
-  // Get tabs based on user's role
-  const tabs = React.useMemo(() => getNavigationTabsForRole(user?.role), [user?.role]);
+
+  // Use permission check hook - it will automatically load salonId and employeeId
+  const { 
+    checkPermission, 
+    isOwner, 
+    isAdmin,
+    hasOwnerLevelPermissions, // Check if employee has owner-level permissions
+  } = useEmployeePermissionCheck({
+    autoFetch: true,
+  });
+
+  // Get tabs based on user's role, filtered by permissions
+  // Tabs will automatically update when permissions change because activePermissions changes
+  // When viewing salon screens, employees with permissions see owner navigation
+  const tabs = React.useMemo(() => {
+    const calculatedTabs = getNavigationTabsForRole(
+      user?.role,
+      checkPermission,
+      isOwner || false,
+      isAdmin || false,
+      hasOwnerLevelPermissions || false,
+      currentScreen // Pass current screen to detect salon mode
+    );
+    
+    return calculatedTabs;
+  }, [user?.role, checkPermission, isOwner, isAdmin, hasOwnerLevelPermissions, currentScreen]); // Include currentScreen in dependencies
 
   const dynamicStyles = {
     container: {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CustomersService } from './customers.service';
 import { CustomersController } from './customers.controller';
@@ -17,6 +17,7 @@ import { SalonRewardsConfig } from './entities/rewards-config.entity';
 import { RewardsConfigService } from './rewards-config.service';
 import { CustomerFavorite } from './entities/customer-favorite.entity';
 import { CustomerFavoritesService } from './customer-favorites.service';
+import { SalonsModule } from '../salons/salons.module';
 
 @Module({
   imports: [
@@ -29,8 +30,9 @@ import { CustomerFavoritesService } from './customer-favorites.service';
       SalonRewardsConfig,
       CustomerFavorite,
     ]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     FileUploadModule,
+    forwardRef(() => SalonsModule),
   ],
   controllers: [CustomersController],
   providers: [

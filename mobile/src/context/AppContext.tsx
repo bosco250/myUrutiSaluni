@@ -1,28 +1,43 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { ReactNode } from 'react';
+import { AuthProvider } from './AuthContext';
+import { ThemeProvider } from './ThemeContext';
+import { NetworkProvider } from './NetworkContext';
+import { PushNotificationProvider } from './PushNotificationContext';
+import { PermissionProvider } from './PermissionContext';
 
 interface AppContextType {
   // Add your app-wide state here
-  // Example: user: User | null;
-  // Example: theme: 'light' | 'dark';
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
+/**
+ * AppProvider
+ *
+ * Wraps all context providers in the correct order:
+ * 1. Theme - no dependencies
+ * 2. Network - no dependencies
+ * 3. Auth - needs network
+ * 4. Permissions - needs auth
+ * 5. PushNotifications - needs auth
+ */
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Add your app-wide state management here
-  
-  const value: AppContextType = {
-    // Add your context values here
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <ThemeProvider>
+      <NetworkProvider>
+        <AuthProvider>
+          <PermissionProvider>
+            <PushNotificationProvider>
+              {children}
+            </PushNotificationProvider>
+          </PermissionProvider>
+        </AuthProvider>
+      </NetworkProvider>
+    </ThemeProvider>
+  );
 }
 
-export function useApp() {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+/**
+ * useApp hook - placeholder for app-wide state
+ */
+export function useApp(): AppContextType {
+  return {};
 }
-

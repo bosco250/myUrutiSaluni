@@ -186,6 +186,23 @@ export const ROLE_PERMISSIONS = {
       Screen.COMMISSIONS,
       Screen.EXPLORE,
       Screen.WALLET,
+      // Owner screens accessible with appropriate permissions
+      // Navigation config (navigationConfig.ts) handles permission checking
+      Screen.SALON_APPOINTMENTS, // Requires VIEW_ALL_APPOINTMENTS or MANAGE_APPOINTMENTS
+      Screen.OPERATIONS, // Requires operation-related permissions
+      Screen.OWNER_DASHBOARD, // Requires any management permission
+      Screen.SALON_LIST, // Requires salon management permissions
+      Screen.SALON_DETAIL,
+      Screen.OWNER_SALON_DETAIL,
+      Screen.ADD_SERVICE, // Requires MANAGE_SERVICES
+      Screen.ADD_PRODUCT, // Requires MANAGE_PRODUCTS
+      Screen.EDIT_SALON,
+      Screen.SALON_SETTINGS, // Requires VIEW_SALON_SETTINGS or UPDATE_SALON_SETTINGS
+      Screen.BUSINESS_ANALYTICS, // Requires VIEW_SALES_REPORTS
+      Screen.INVENTORY_MANAGEMENT, // Requires MANAGE_INVENTORY
+      Screen.STAFF_MANAGEMENT, // Requires staff management permissions
+      Screen.FINANCE, // Requires financial permissions
+      Screen.MORE_MENU, // Accessible with any permission
     ],
     actions: [
       Action.CLOCK_IN_OUT,

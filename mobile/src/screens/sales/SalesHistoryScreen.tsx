@@ -5,15 +5,16 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StatusBar,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService } from '../../services/salon';
 import { salesService, Sale } from '../../services/sales';
+import { Loader } from '../../components/common';
 
 interface SalesHistoryScreenProps {
   navigation: {
@@ -45,14 +46,23 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
       color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     header: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    tableHeader: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray50,
+    },
+    tableRow: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderBottomColor: isDark
+        ? theme.colors.gray700
+        : theme.colors.borderLight,
     },
     filterActive: {
       backgroundColor: theme.colors.primary,
@@ -151,10 +161,11 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric',
     });
   };
+
+
 
   const getPaymentIcon = (method?: string) => {
     switch (method) {
@@ -167,17 +178,140 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
     }
   };
 
+  const getPaymentMethodLabel = (method?: string) => {
+    switch (method) {
+      case 'card':
+        return 'Card';
+      case 'mobile_money':
+        return 'Mobile Money';
+      case 'bank_transfer':
+        return 'Bank Transfer';
+      default:
+        return 'Cash';
+    }
+  };
+
+  // Render table row
+  const renderTableRow = (sale: Sale) => {
+    const itemsCount = sale.items?.length || 0;
+
+    return (
+      <TouchableOpacity
+        style={[styles.tableRow, dynamicStyles.tableRow]}
+        onPress={() => navigation.navigate('SaleDetail', { saleId: sale.id, sale })}
+        activeOpacity={0.7}
+      >
+        {/* Date */}
+        <View style={styles.tableCell}>
+          <Text
+            style={[styles.tableCellText, dynamicStyles.text]}
+            numberOfLines={1}
+          >
+            {formatDate(sale.createdAt)}
+          </Text>
+          <Text
+            style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
+            numberOfLines={1}
+          >
+            {new Date(sale.createdAt).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+        </View>
+
+        {/* Sale ID */}
+        <View style={styles.tableCell}>
+          <Text
+            style={[styles.tableCellText, dynamicStyles.text]}
+            numberOfLines={1}
+          >
+            #{sale.id.slice(-8).toUpperCase()}
+          </Text>
+        </View>
+
+        {/* Customer */}
+        <View style={styles.tableCell}>
+          <Text
+            style={[styles.tableCellText, dynamicStyles.text]}
+            numberOfLines={1}
+          >
+            {sale.customer?.fullName || 'Walk-in'}
+          </Text>
+          {sale.customer?.phone && (
+            <Text
+              style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
+              numberOfLines={1}
+            >
+              {sale.customer.phone}
+            </Text>
+          )}
+        </View>
+
+        {/* Payment Method */}
+        <View style={styles.tableCell}>
+          <View
+            style={[
+              styles.paymentMethodBadge,
+              { backgroundColor: theme.colors.primary + '20' },
+            ]}
+          >
+            <MaterialIcons
+              name={getPaymentIcon(sale.paymentMethod) as any}
+              size={14}
+              color={theme.colors.primary}
+            />
+            <Text
+              style={[styles.paymentMethodText, { color: theme.colors.primary }]}
+            >
+              {getPaymentMethodLabel(sale.paymentMethod)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Items Count */}
+        <View style={styles.tableCell}>
+          <Text
+            style={[styles.tableCellText, dynamicStyles.textSecondary]}
+            numberOfLines={1}
+          >
+            {itemsCount} item{itemsCount !== 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        {/* Amount */}
+        <View style={styles.tableCellAmount}>
+          <Text
+            style={[
+              styles.tableCellAmountText,
+              { color: theme.colors.primary },
+            ]}
+            numberOfLines={1}
+          >
+            RWF {Number(sale.totalAmount).toLocaleString()}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
+      <SafeAreaView
+        style={[styles.container, dynamicStyles.container]}
+        edges={['top']}
+      >
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
+        <Loader fullscreen message="Loading sales history..." />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView
+      style={[styles.container, dynamicStyles.container]}
+      edges={['top']}
+    >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
@@ -250,24 +384,37 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
         ))}
       </View>
 
-      {/* Sales List */}
+      {/* Sales Table */}
       <ScrollView
-        style={styles.salesList}
-        contentContainerStyle={styles.salesContent}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
         }
         showsVerticalScrollIndicator={false}
       >
         {sales.length === 0 ? (
           <View style={styles.emptyState}>
-            <MaterialIcons name="receipt-long" size={64} color={dynamicStyles.textSecondary.color} />
-            <Text style={[styles.emptyTitle, dynamicStyles.text]}>No sales found</Text>
+            <MaterialIcons
+              name="receipt-long"
+              size={64}
+              color={dynamicStyles.textSecondary.color}
+            />
+            <Text style={[styles.emptyTitle, dynamicStyles.text]}>
+              No sales found
+            </Text>
             <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
               Sales will appear here once you make transactions
             </Text>
             <TouchableOpacity
-              style={[styles.newSaleBtn, { backgroundColor: theme.colors.primary }]}
+              style={[
+                styles.newSaleBtn,
+                { backgroundColor: theme.colors.primary },
+              ]}
               onPress={() => navigation.navigate('Sales')}
             >
               <MaterialIcons name="add" size={20} color={theme.colors.white} />
@@ -275,49 +422,70 @@ export default function SalesHistoryScreen({ navigation, route }: SalesHistorySc
             </TouchableOpacity>
           </View>
         ) : (
-          sales.map((sale) => (
-            <TouchableOpacity
-              key={sale.id}
-              style={[styles.saleCard, dynamicStyles.card]}
-              onPress={() => navigation.navigate('SaleDetail', { saleId: sale.id, sale })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.saleHeader}>
-                <View style={[styles.paymentBadge, { backgroundColor: theme.colors.primary + '15' }]}>
-                  <MaterialIcons
-                    name={getPaymentIcon(sale.paymentMethod) as any}
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.saleInfo}>
-                  <Text style={[styles.saleDate, dynamicStyles.text]}>
-                    {formatDate(sale.createdAt)}
-                  </Text>
-                  <Text style={[styles.saleId, dynamicStyles.textSecondary]}>
-                    #{sale.id.slice(-8).toUpperCase()}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={true}
+            style={styles.tableScrollContainer}
+            contentContainerStyle={styles.tableContainer}
+          >
+            <View style={styles.tableContent}>
+              {/* Table Header */}
+              <View style={[styles.tableHeaderRow, dynamicStyles.tableHeader]}>
+                <View style={styles.tableCell}>
+                  <Text
+                    style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
+                  >
+                    Date
                   </Text>
                 </View>
-                <View style={styles.amountContainer}>
-                  <Text style={[styles.saleAmount, { color: theme.colors.primary }]}>
-                    RWF {Number(sale.totalAmount).toLocaleString()}
+                <View style={styles.tableCell}>
+                  <Text
+                    style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
+                  >
+                    Sale ID
                   </Text>
-                  <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
+                </View>
+                <View style={styles.tableCell}>
+                  <Text
+                    style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
+                  >
+                    Customer
+                  </Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text
+                    style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
+                  >
+                    Payment
+                  </Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text
+                    style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
+                  >
+                    Items
+                  </Text>
+                </View>
+                <View style={styles.tableCellAmount}>
+                  <Text
+                    style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
+                  >
+                    Amount
+                  </Text>
                 </View>
               </View>
-              {sale.customer && (
-                <View style={styles.customerRow}>
-                  <MaterialIcons name="person" size={14} color={dynamicStyles.textSecondary.color} />
-                  <Text style={[styles.customerName, dynamicStyles.textSecondary]}>
-                    {sale.customer.fullName}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))
+
+              {/* Table Rows */}
+              {sales.map((sale) => (
+                <React.Fragment key={sale.id}>
+                  {renderTableRow(sale)}
+                </React.Fragment>
+              ))}
+            </View>
+          </ScrollView>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -325,17 +493,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
-    paddingTop: 50,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   backButton: {
     width: 40,
@@ -355,6 +517,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 13,
     fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
   newSaleButton: {
     width: 40,
@@ -377,14 +540,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     fontFamily: theme.fonts.bold,
     marginTop: theme.spacing.xs,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 2,
+    fontFamily: theme.fonts.regular,
   },
   filterContainer: {
     flexDirection: 'row',
@@ -402,12 +566,81 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
-  salesList: {
+  list: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
   },
-  salesContent: {
+  listContent: {
     paddingBottom: theme.spacing.xl,
+  },
+  tableScrollContainer: {
+    marginHorizontal: theme.spacing.md,
+  },
+  tableContainer: {
+    paddingVertical: theme.spacing.xs,
+  },
+  tableContent: {
+    minWidth: 900, // Minimum width to enable horizontal scrolling
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: theme.colors.borderLight,
+    gap: theme.spacing.xs,
+    minWidth: 900,
+  },
+  tableHeaderText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
+    borderBottomWidth: 1,
+    gap: theme.spacing.xs,
+    minWidth: 900,
+  },
+  tableCell: {
+    flex: 1,
+    minWidth: 120,
+  },
+  tableCellAmount: {
+    width: 140,
+    alignItems: 'flex-end',
+  },
+  tableCellText: {
+    fontSize: 13,
+    fontFamily: theme.fonts.medium,
+  },
+  tableCellSubtext: {
+    fontSize: 10,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
+  tableCellAmountText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
+  },
+  paymentMethodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  paymentMethodText: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
   emptyState: {
     alignItems: 'center',
@@ -418,11 +651,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginTop: theme.spacing.md,
+    fontFamily: theme.fonts.bold,
   },
   emptyText: {
     fontSize: 14,
     marginTop: theme.spacing.xs,
     textAlign: 'center',
+    fontFamily: theme.fonts.regular,
+    paddingHorizontal: 40,
   },
   newSaleBtn: {
     flexDirection: 'row',
@@ -437,57 +673,6 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontSize: 14,
     fontWeight: '600',
-  },
-  saleCard: {
-    padding: theme.spacing.md,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: theme.spacing.sm,
-  },
-  saleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  paymentBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saleInfo: {
-    flex: 1,
-    marginLeft: theme.spacing.md,
-  },
-  saleDate: {
-    fontSize: 14,
-    fontWeight: '600',
     fontFamily: theme.fonts.medium,
-  },
-  saleId: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  saleAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  customerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
-    gap: 6,
-  },
-  customerName: {
-    fontSize: 12,
   },
 });

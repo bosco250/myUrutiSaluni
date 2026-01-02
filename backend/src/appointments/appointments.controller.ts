@@ -17,17 +17,21 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { EmployeePermissionGuard } from '../auth/guards/employee-permission.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RequireEmployeePermission } from '../auth/decorators/require-employee-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { SalonsService } from '../salons/salons.service';
 import { CustomersService } from '../customers/customers.service';
+import { EmployeePermissionsService } from '../salons/services/employee-permissions.service';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Appointments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, EmployeePermissionGuard)
 @Controller('appointments')
 export class AppointmentsController {
   private readonly logger = new Logger(AppointmentsController.name);
@@ -36,6 +40,7 @@ export class AppointmentsController {
     private readonly appointmentsService: AppointmentsService,
     private readonly salonsService: SalonsService,
     private readonly customersService: CustomersService,
+    private readonly employeePermissionsService: EmployeePermissionsService,
   ) {}
 
   @Post()
@@ -46,6 +51,7 @@ export class AppointmentsController {
     UserRole.SALON_EMPLOYEE,
     UserRole.CUSTOMER,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_APPOINTMENTS)
   @ApiOperation({ summary: 'Create a new appointment' })
   async create(
     @Body() createAppointmentDto: CreateAppointmentDto,
@@ -104,6 +110,7 @@ export class AppointmentsController {
             'You can only create appointments for salons you work at',
           );
         }
+        // Permission check is handled by @RequireEmployeePermission guard
       }
     }
 
@@ -220,11 +227,20 @@ export class AppointmentsController {
         `[AppointmentsController] Finding appointments for ${user.role} (userId: ${user.id})`,
       );
 
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
+      let salonIds: string[] = [];
+
+      if (user.role === UserRole.SALON_OWNER) {
+        const salons = await this.salonsService.findByOwnerId(user.id);
+        salonIds = salons.map((s) => s.id);
+      } else {
+        // For employees, find all salons they work at
+        const employeeRecords =
+          await this.salonsService.findAllEmployeesByUserId(user.id);
+        salonIds = employeeRecords.map((e) => e.salonId);
+      }
 
       this.logger.log(
-        `[AppointmentsController] Found ${salons.length} salon(s) for owner ${user.id}: ${salonIds.join(', ') || 'none'}`,
+        `[AppointmentsController] Found ${salonIds.length} permitted salon(s) for user ${user.id}: ${salonIds.join(', ') || 'none'}`,
       );
 
       if (salonIds.length === 0) {
@@ -236,7 +252,7 @@ export class AppointmentsController {
 
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access appointments for your own salon',
+          'You can only access appointments for salons you work at or own',
         );
       }
 
@@ -245,12 +261,81 @@ export class AppointmentsController {
         await this.appointmentsService.findBySalonIds(salonIds);
 
       this.logger.log(
-        `[AppointmentsController] Found ${salonAppointments.length} appointment(s) for salon owner ${user.id}`,
+        `[AppointmentsController] Found ${salonAppointments.length} appointment(s) for user ${user.id}`,
       );
 
-      // If employee, also include appointments where they are preferred
+      // If employee, check if they have VIEW_ALL_APPOINTMENTS permission
       if (user.role === UserRole.SALON_EMPLOYEE) {
-        // Get all employee records for this user
+        // Check permission for each salon
+        const hasViewAllPermission = await Promise.all(
+          salonIds.map(async (sid) => {
+            const employee =
+              await this.employeePermissionsService.getEmployeeRecordByUserId(
+                user.id,
+                sid,
+              );
+            if (employee) {
+              // Check for VIEW_ALL_APPOINTMENTS
+              const canViewAll =
+                await this.employeePermissionsService.hasPermission(
+                  employee.id,
+                  sid,
+                  EmployeePermission.VIEW_ALL_APPOINTMENTS,
+                );
+
+              if (canViewAll) return true;
+
+              // Also check for MANAGE_APPOINTMENTS - if they can manage, they should see all
+              return await this.employeePermissionsService.hasPermission(
+                employee.id,
+                sid,
+                EmployeePermission.MANAGE_APPOINTMENTS,
+              );
+            }
+            return false;
+          }),
+        );
+
+        // If employee has VIEW_ALL_APPOINTMENTS permission for any salon, show all appointments
+        // Otherwise, only show appointments where they are preferred employee
+        const canViewAll = hasViewAllPermission.some((has) => has);
+
+        if (!canViewAll) {
+          // Get all employee records for this user
+          const employeeRecords = [];
+          for (const sid of salonIds) {
+            const emp = await this.salonsService.findEmployeeByUserId(
+              user.id,
+              sid,
+            );
+            if (emp) employeeRecords.push(emp);
+          }
+
+          // Filter to only show appointments where employee is preferred
+          const filteredAppointments = [];
+          for (const apt of salonAppointments) {
+            // Check if this appointment has the employee as preferred
+            let metadata = apt.metadata;
+            if (typeof metadata === 'string') {
+              try {
+                metadata = JSON.parse(metadata);
+              } catch (e) {
+                metadata = {};
+              }
+            }
+            const preferredEmployeeId =
+              metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
+            if (
+              preferredEmployeeId &&
+              employeeRecords.some((emp) => emp.id === preferredEmployeeId)
+            ) {
+              filteredAppointments.push(apt);
+            }
+          }
+          return filteredAppointments;
+        }
+
+        // If has permission, include appointments where they are preferred as well
         const employeeRecords = [];
         for (const sid of salonIds) {
           const emp = await this.salonsService.findEmployeeByUserId(
@@ -486,6 +571,7 @@ export class AppointmentsController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_APPOINTMENTS)
   @ApiOperation({ summary: 'Update an appointment' })
   async update(
     @Param('id') id: string,
@@ -521,9 +607,7 @@ export class AppointmentsController {
       }
     }
 
-    // Salon employees can update appointments if:
-    // 1. They are the preferred employee for this appointment, OR
-    // 2. They work at the salon where the appointment is
+    // Salon employees - permission check handled by @RequireEmployeePermission guard
     if (
       user.role === UserRole.SALON_EMPLOYEE ||
       user.role === 'salon_employee'
@@ -536,57 +620,27 @@ export class AppointmentsController {
         return this.appointmentsService.update(id, updateAppointmentDto);
       }
 
-      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(
+      // Verify employee works at this salon
+      const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
         user.id,
         appointment.salonId,
       );
-
-      let isPreferredEmployee = false;
-      // Handle metadata parsing
-      let metadata = appointment.metadata;
-      if (typeof metadata === 'string') {
-        try {
-          metadata = JSON.parse(metadata);
-        } catch (e) {
-          metadata = {};
-        }
-      }
-      if (!metadata || typeof metadata !== 'object') {
-        metadata = {};
-      }
-
-      const preferredEmployeeId =
-        metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
-      if (preferredEmployeeId) {
-        try {
-          const preferredEmployee =
-            await this.salonsService.findEmployeeById(preferredEmployeeId);
-          if (
-            preferredEmployee &&
-            (preferredEmployee.userId === user.id ||
-              preferredEmployee.user?.id === user.id)
-          ) {
-            isPreferredEmployee = true;
-          }
-        } catch (error) {
-          // Employee record not found, continue
-        }
-      }
-
-      if (!isEmployeeOfSalon && !isPreferredEmployee) {
+      if (!isEmployee) {
         throw new ForbiddenException(
-          'You can only update appointments for your salon or appointments assigned to you',
+          'You can only update appointments for salons you work at',
         );
       }
+      // Permission check is handled by @RequireEmployeePermission guard
     }
 
     return this.appointmentsService.update(id, updateAppointmentDto);
   }
 
   @Patch(':id/start')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.SALON_OWNER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @RequireEmployeePermission(EmployeePermission.MODIFY_APPOINTMENT_STATUS)
   @ApiOperation({
-    summary: 'Start an appointment (mark as in_progress) - Owner only',
+    summary: 'Start an appointment (mark as in_progress)',
   })
   async startAppointment(@Param('id') id: string, @CurrentUser() user: any) {
     const appointment = await this.appointmentsService.findOne(id);
@@ -612,12 +666,31 @@ export class AppointmentsController {
       }
     }
 
+    // Employees - verify they belong to the salon
+    if (
+      user.role === UserRole.SALON_EMPLOYEE ||
+      user.role === 'salon_employee'
+    ) {
+      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(
+        user.id,
+        appointment.salonId,
+      );
+
+      if (!isEmployeeOfSalon) {
+        throw new ForbiddenException(
+          'You can only start appointments for your salon',
+        );
+      }
+      // Permission check is handled by @RequireEmployeePermission guard
+    }
+
     return this.appointmentsService.update(id, { status: 'in_progress' });
   }
 
   @Patch(':id/complete')
   @Roles(UserRole.SUPER_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
-  @ApiOperation({ summary: 'Complete an appointment - Owner and Employee' })
+  @RequireEmployeePermission(EmployeePermission.MODIFY_APPOINTMENT_STATUS)
+  @ApiOperation({ summary: 'Complete an appointment' })
   async completeAppointment(
     @Param('id') id: string,
     @Body() body: { notes?: string },
@@ -646,7 +719,7 @@ export class AppointmentsController {
       }
     }
 
-    // Employees can complete appointments if they are the assigned employee or work at the salon
+    // Employees - permission check handled by @RequireEmployeePermission guard
     if (
       user.role === UserRole.SALON_EMPLOYEE ||
       user.role === 'salon_employee'
@@ -656,42 +729,12 @@ export class AppointmentsController {
         appointment.salonId,
       );
 
-      let isPreferredEmployee = false;
-      let metadata = appointment.metadata;
-      if (typeof metadata === 'string') {
-        try {
-          metadata = JSON.parse(metadata);
-        } catch (e) {
-          metadata = {};
-        }
-      }
-      if (!metadata || typeof metadata !== 'object') {
-        metadata = {};
-      }
-
-      const preferredEmployeeId =
-        metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
-      if (preferredEmployeeId) {
-        try {
-          const preferredEmployee =
-            await this.salonsService.findEmployeeById(preferredEmployeeId);
-          if (
-            preferredEmployee &&
-            (preferredEmployee.userId === user.id ||
-              preferredEmployee.user?.id === user.id)
-          ) {
-            isPreferredEmployee = true;
-          }
-        } catch (error) {
-          // Employee record not found, continue
-        }
-      }
-
-      if (!isEmployeeOfSalon && !isPreferredEmployee) {
+      if (!isEmployeeOfSalon) {
         throw new ForbiddenException(
-          'You can only complete appointments for your salon or appointments assigned to you',
+          'You can only complete appointments for your salon',
         );
       }
+      // Permission check is handled by @RequireEmployeePermission guard
     }
 
     const updateData: any = { status: 'completed' };
@@ -702,6 +745,71 @@ export class AppointmentsController {
     return this.appointmentsService.update(id, updateData);
   }
 
+  @Post(':id/remind')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @RequireEmployeePermission(EmployeePermission.MANAGE_APPOINTMENTS)
+  @ApiOperation({ summary: 'Send appointment reminder to customer' })
+  async sendReminder(@Param('id') id: string, @CurrentUser() user: any) {
+    const appointment = await this.appointmentsService.findOne(id);
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    // Only allow reminders for future appointments
+    const appointmentDate = new Date(appointment.scheduledStart);
+    if (appointmentDate < new Date()) {
+      throw new ForbiddenException(
+        'Cannot send reminder for past appointments',
+      );
+    }
+
+    // Salon owners can send reminders for their salon
+    if (user.role === UserRole.SALON_OWNER) {
+      const salon = await this.salonsService.findOne(appointment.salonId);
+      if (salon.ownerId !== user.id) {
+        throw new ForbiddenException(
+          'You can only send reminders for your own salon',
+        );
+      }
+    }
+
+    // Employees - permission check handled by @RequireEmployeePermission guard
+    if (
+      user.role === UserRole.SALON_EMPLOYEE ||
+      user.role === 'salon_employee'
+    ) {
+      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(
+        user.id,
+        appointment.salonId,
+      );
+
+      if (!isEmployeeOfSalon) {
+        throw new ForbiddenException(
+          'You can only send reminders for your salon',
+        );
+      }
+      // Permission check is handled by @RequireEmployeePermission guard
+    }
+
+    // Send the reminder notification
+    try {
+      await this.appointmentsService.sendAppointmentReminder(appointment);
+      return {
+        success: true,
+        message: 'Reminder sent successfully',
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to send reminder for appointment ${id}: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException(
+        'Failed to send reminder. Please try again.',
+      );
+    }
+  }
+
   @Delete(':id')
   @Roles(
     UserRole.SUPER_ADMIN,
@@ -709,6 +817,7 @@ export class AppointmentsController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.MANAGE_APPOINTMENTS)
   @ApiOperation({ summary: 'Delete an appointment' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const appointment = await this.appointmentsService.findOne(id);
@@ -732,9 +841,7 @@ export class AppointmentsController {
       }
     }
 
-    // Salon employees can delete appointments if:
-    // 1. They are the preferred employee for this appointment, OR
-    // 2. They work at the salon where the appointment is
+    // Employees - permission check handled by @RequireEmployeePermission guard
     if (
       user.role === UserRole.SALON_EMPLOYEE ||
       user.role === 'salon_employee'
@@ -747,48 +854,16 @@ export class AppointmentsController {
         return this.appointmentsService.remove(id);
       }
 
-      const isEmployeeOfSalon = await this.salonsService.isUserEmployeeOfSalon(
+      const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
         user.id,
         appointment.salonId,
       );
-
-      let isPreferredEmployee = false;
-      // Handle metadata parsing
-      let metadata = appointment.metadata;
-      if (typeof metadata === 'string') {
-        try {
-          metadata = JSON.parse(metadata);
-        } catch (e) {
-          metadata = {};
-        }
-      }
-      if (!metadata || typeof metadata !== 'object') {
-        metadata = {};
-      }
-
-      const preferredEmployeeId =
-        metadata?.preferredEmployeeId || metadata?.preferred_employee_id;
-      if (preferredEmployeeId) {
-        try {
-          const preferredEmployee =
-            await this.salonsService.findEmployeeById(preferredEmployeeId);
-          if (
-            preferredEmployee &&
-            (preferredEmployee.userId === user.id ||
-              preferredEmployee.user?.id === user.id)
-          ) {
-            isPreferredEmployee = true;
-          }
-        } catch (error) {
-          // Employee record not found, continue
-        }
-      }
-
-      if (!isEmployeeOfSalon && !isPreferredEmployee) {
+      if (!isEmployee) {
         throw new ForbiddenException(
-          'You can only delete appointments for your salon or appointments assigned to you',
+          'You can only delete appointments for salons you work at',
         );
       }
+      // Permission check is handled by @RequireEmployeePermission guard
     }
 
     return this.appointmentsService.remove(id);

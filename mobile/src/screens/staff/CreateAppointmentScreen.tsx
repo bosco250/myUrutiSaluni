@@ -21,6 +21,10 @@ import { appointmentsService, AppointmentStatus, TimeSlot } from '../../services
 import { exploreService, Service } from '../../services/explore';
 import { staffService } from '../../services/staff';
 import { api } from '../../services/api';
+import { EmployeePermissionGate } from '../../components/permissions/EmployeePermissionGate';
+import { EmployeePermission } from '../../constants/employeePermissions';
+
+import { salonService } from '../../services/salon';
 
 interface Customer {
   id: string;
@@ -44,11 +48,14 @@ export default function CreateAppointmentScreen({
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [employeeRecords, setEmployeeRecords] = useState<any[]>([]);
   const [selectedSalonId, setSelectedSalonId] = useState<string | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
+
   // Initialize with today, ensuring it's not in the past
   const getTodayDate = () => {
     const today = new Date();
@@ -71,6 +78,10 @@ export default function CreateAppointmentScreen({
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
 
+  // ... dynamicStyles removed for brevity in replacement constraint (assuming it follows, but I need to be careful not to delete it if I don't include it in target) ...
+  // Wait, I can't skip dynamicStyles if I target a range that includes it.
+  // I will target up to the useEffects.
+
   const dynamicStyles = {
     container: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
@@ -92,12 +103,36 @@ export default function CreateAppointmentScreen({
     },
   };
 
+  const loadEmployees = React.useCallback(async (salonId: string) => {
+    try {
+      setLoadingEmployees(true);
+      const staff = await salonService.getEmployees(salonId);
+      // Filter active employees
+      const activeStaff = staff.filter((e: any) => e.isActive !== false);
+      setEmployees(activeStaff);
+
+      // Auto-select logic
+      if (user?.role === 'salon_employee') {
+        // If current user is employee, select them
+        const me = activeStaff.find((e: any) => e.userId === user.id);
+        if (me) setSelectedEmployee(me);
+      } else if (activeStaff.length > 0 && !selectedEmployee) {
+        // Optional: Pre-select first employee for convenience? 
+        // Or leave null to force selection. Let's leave null to ensure intentional assignment.
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  }, [user?.role, user?.id, selectedEmployee]);
+
   useEffect(() => {
     if (user?.id) {
       loadInitialData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id]); // Keeping user?.id as specific dep
 
   // Ensure selected date is never in the past
   useEffect(() => {
@@ -108,30 +143,52 @@ export default function CreateAppointmentScreen({
     }
   }, [selectedDate]);
 
+  // Load employees when salon changes
+  useEffect(() => {
+    if (selectedSalonId) {
+      loadEmployees(selectedSalonId);
+    }
+  }, [selectedSalonId, loadEmployees]);
+
   // Load time slots when date, service, or employee changes
   useEffect(() => {
-    if (selectedDate && selectedService && employeeRecords.length > 0 && selectedSalonId) {
+    if (selectedDate && selectedService && selectedEmployee && selectedSalonId) {
       loadTimeSlots();
     } else {
       setAvailableTimeSlots([]);
       setSelectedTime('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, selectedService?.id, selectedSalonId]);
+  }, [selectedDate, selectedService?.id, selectedEmployee?.id, selectedSalonId]);
 
   const loadInitialData = async () => {
     try {
       setLoading(true);
       
-      // Get employee records
-      const employeeData = await staffService.getEmployeeByUserId(String(user?.id));
-      const records = Array.isArray(employeeData) ? employeeData : [employeeData];
-      setEmployeeRecords(records.filter(r => r));
+      let initialSalonId: string | null = null;
 
-      if (records.length > 0) {
-        const firstSalonId = records[0].salonId;
-        setSelectedSalonId(firstSalonId);
-        await loadServices(firstSalonId);
+      // Handle Owners: Get owned salons
+      if (user?.role === 'salon_owner') {
+        const mySalons = await salonService.getMySalons();
+        if (mySalons.length > 0) {
+          initialSalonId = mySalons[0].id;
+        }
+      } 
+      // Handle Employees: Get employee records
+      else {
+        // Get employee records
+        const employeeData = await staffService.getEmployeeByUserId(String(user?.id));
+        const records = Array.isArray(employeeData) ? employeeData : [employeeData];
+        // Removing unused setEmployeeRecords call
+        
+        if (records.length > 0) {
+          initialSalonId = records[0].salonId;
+        }
+      }
+
+      if (initialSalonId) {
+        setSelectedSalonId(initialSalonId);
+        await loadServices(initialSalonId);
       }
     } catch (error: any) {
       console.error('Error loading initial data:', error);
@@ -242,13 +299,7 @@ export default function CreateAppointmentScreen({
   };
 
   const loadTimeSlots = async () => {
-    if (!selectedService || !selectedSalonId || !selectedDate) return;
-
-    const employeeRecord = employeeRecords.find(e => e.salonId === selectedSalonId);
-    if (!employeeRecord) {
-      console.warn('No employee record found for salon:', selectedSalonId);
-      return;
-    }
+    if (!selectedService || !selectedSalonId || !selectedDate || !selectedEmployee) return;
 
     try {
       setLoadingTimeSlots(true);
@@ -256,14 +307,14 @@ export default function CreateAppointmentScreen({
       const duration = selectedService.durationMinutes || 30;
       
       console.log('Loading time slots:', {
-        employeeId: employeeRecord.id,
+        employeeId: selectedEmployee.id,
         date: dateStr,
         duration,
         serviceId: selectedService.id,
       });
       
       const slots = await appointmentsService.getEmployeeTimeSlots(
-        employeeRecord.id,
+        selectedEmployee.id,
         dateStr,
         duration,
         selectedService.id
@@ -376,9 +427,8 @@ export default function CreateAppointmentScreen({
       return;
     }
 
-    const employeeRecord = employeeRecords.find(e => e.salonId === selectedSalonId);
-    if (!employeeRecord) {
-      Alert.alert('Error', 'Employee record not found for selected salon');
+    if (!selectedEmployee) {
+      Alert.alert('Error', 'Please select a stylist');
       return;
     }
 
@@ -409,7 +459,7 @@ export default function CreateAppointmentScreen({
         salonId: selectedSalonId,
         customerId: customerId,
         serviceId: selectedService.id,
-        salonEmployeeId: employeeRecord.id, // Assign to the employee
+        salonEmployeeId: selectedEmployee.id, // Assign to the selected employee
         scheduledStart: scheduledStart.toISOString(),
         scheduledEnd: scheduledEnd.toISOString(),
         status: AppointmentStatus.PENDING, // Pending for owner confirmation
@@ -455,8 +505,14 @@ export default function CreateAppointmentScreen({
   }
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <EmployeePermissionGate
+      requiredPermission={EmployeePermission.MANAGE_APPOINTMENTS}
+      salonId={selectedSalonId || undefined}
+      showUnauthorizedMessage={true}
+      onUnauthorizedPress={() => navigation.goBack()}
+    >
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
       <View style={[styles.header, dynamicStyles.card]}>
@@ -657,6 +713,97 @@ export default function CreateAppointmentScreen({
               />
               <Text style={[styles.selectedServiceText, dynamicStyles.text]}>
                 Selected: {selectedService.name}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Stylist Selection */}
+        <View style={[styles.section, dynamicStyles.card]}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons
+              name="person-outline"
+              size={20}
+              color={theme.colors.primary}
+            />
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Stylist</Text>
+          </View>
+          {loadingEmployees ? (
+            <View style={styles.servicesLoading}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.hintText, dynamicStyles.textSecondary]}>
+                Loading stylists...
+              </Text>
+            </View>
+          ) : employees.length === 0 ? (
+            <View style={styles.emptyServicesContainer}>
+              <MaterialIcons
+                name="person-off"
+                size={32}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <Text style={[styles.emptyServicesText, dynamicStyles.textSecondary]}>
+                No stylists available
+              </Text>
+              <Text style={[styles.hintText, dynamicStyles.textSecondary]}>
+                Please contact the salon owner to add employees
+              </Text>
+            </View>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.servicesContainer}
+            >
+              {employees.map((employee) => (
+                <TouchableOpacity
+                  key={employee.id}
+                  style={[
+                    styles.serviceChip,
+                    selectedEmployee?.id === employee.id && styles.serviceChipSelected,
+                    selectedEmployee?.id === employee.id && {
+                      backgroundColor: theme.colors.primary,
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedEmployee(employee);
+                    // Clear selected time when employee changes
+                    setSelectedTime('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.serviceChipText,
+                      selectedEmployee?.id === employee.id && styles.serviceChipTextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {employee.user?.fullName || employee.roleTitle || 'Unknown'}
+                  </Text>
+                  {employee.roleTitle && (
+                    <Text
+                      style={[
+                        styles.serviceChipDuration,
+                        selectedEmployee?.id === employee.id && styles.serviceChipTextSelected,
+                      ]}
+                    >
+                      {employee.roleTitle}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+          {selectedEmployee && (
+            <View style={styles.selectedServiceInfo}>
+              <MaterialIcons
+                name="check-circle"
+                size={16}
+                color={theme.colors.primary}
+              />
+              <Text style={[styles.selectedServiceText, dynamicStyles.text]}>
+                Selected: {selectedEmployee.user?.fullName || 'Stylist'}
               </Text>
             </View>
           )}
@@ -968,7 +1115,8 @@ export default function CreateAppointmentScreen({
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </EmployeePermissionGate>
   );
 }
 

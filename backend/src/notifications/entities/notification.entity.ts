@@ -47,6 +47,8 @@ export enum NotificationType {
   // System events
   SALON_UPDATE = 'salon_update',
   EMPLOYEE_ASSIGNED = 'employee_assigned',
+  PERMISSION_GRANTED = 'permission_granted',
+  PERMISSION_REVOKED = 'permission_revoked',
   MEMBERSHIP_STATUS = 'membership_status',
   SYSTEM_ALERT = 'system_alert',
   SECURITY_ALERT = 'security_alert',

@@ -792,4 +792,47 @@ export class AppointmentsService {
       .orderBy('appointment.scheduledStart', 'ASC')
       .getMany();
   }
+
+  /**
+   * Send appointment reminder notification to customer
+   */
+  async sendAppointmentReminder(appointment: Appointment): Promise<void> {
+    if (!appointment.customerId) {
+      this.logger.warn(
+        `Cannot send reminder for appointment ${appointment.id} - no customer`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Sending appointment reminder for ${appointment.id} to customer ${appointment.customerId}`,
+    );
+
+    try {
+      await this.notificationOrchestrator.notify(
+        NotificationType.APPOINTMENT_REMINDER,
+        {
+          customerId: appointment.customerId,
+          appointmentId: appointment.id,
+          recipientEmail: appointment.customer?.email,
+          customerName: appointment.customer?.fullName,
+          salonName: appointment.salon?.name,
+          serviceName: appointment.service?.name,
+          appointmentDate: format(new Date(appointment.scheduledStart), 'PPP'),
+          appointmentTime: format(new Date(appointment.scheduledStart), 'p'),
+          employeeName: appointment.salonEmployee?.user?.fullName,
+        },
+      );
+
+      this.logger.log(
+        `✅ Reminder sent successfully for appointment ${appointment.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to send reminder for appointment ${appointment.id}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

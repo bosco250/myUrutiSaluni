@@ -31,6 +31,8 @@ import { SalonCustomerService } from '../customers/salon-customer.service';
 import { CustomerCommunicationService } from '../customers/customer-communication.service';
 import { RewardsConfigService } from '../customers/rewards-config.service';
 import { Response } from 'express';
+import { RequirePermission } from '../auth/decorators/require-employee-permission.decorator';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Salons')
 @ApiBearerAuth()
@@ -710,7 +712,13 @@ export class SalonsController {
   }
 
   @Post(':id/employees')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @RequirePermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES)
   @ApiOperation({ summary: 'Add an employee to a salon' })
   async addEmployee(
     @Param('id') salonId: string,
@@ -739,7 +747,13 @@ export class SalonsController {
   }
 
   @Patch(':id/employees/:employeeId')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @RequirePermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES)
   @ApiOperation({ summary: 'Update an employee' })
   async updateEmployee(
     @Param('id') salonId: string,
@@ -749,7 +763,6 @@ export class SalonsController {
   ) {
     const salon = await this.salonsService.findOne(salonId);
 
-    // Salon owners can only update employees of their own salon
     if (user.role === UserRole.SALON_OWNER && salon.ownerId !== user.id) {
       throw new ForbiddenException(
         'You can only update employees of your own salon',
@@ -766,7 +779,13 @@ export class SalonsController {
   }
 
   @Delete(':id/employees/:employeeId')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @RequirePermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES)
   @ApiOperation({ summary: 'Remove an employee from a salon' })
   async removeEmployee(
     @Param('id') salonId: string,
@@ -775,7 +794,6 @@ export class SalonsController {
   ) {
     const salon = await this.salonsService.findOne(salonId);
 
-    // Salon owners can only remove employees from their own salon
     if (user.role === UserRole.SALON_OWNER && salon.ownerId !== user.id) {
       throw new ForbiddenException(
         'You can only remove employees from your own salon',

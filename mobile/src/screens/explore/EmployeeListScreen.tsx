@@ -15,6 +15,9 @@ import { useTheme, useAuth } from "../../context";
 import { exploreService, Employee, Salon } from "../../services/explore";
 import { salonService } from "../../services/salon";
 
+import { useEmployeePermissionCheck } from "../../hooks/useEmployeePermissionCheck";
+import { EmployeePermission } from "../../constants/employeePermissions";
+
 interface EmployeeListScreenProps {
   navigation?: {
     navigate: (screen: string, params?: any) => void;
@@ -35,6 +38,8 @@ export default function EmployeeListScreen({
 }: EmployeeListScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
+  const { checkPermission } = useEmployeePermissionCheck();
+  
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [salonId, setSalonId] = useState<string | null>(
@@ -45,8 +50,11 @@ export default function EmployeeListScreen({
   );
   
   // Check if this is an owner view (from Staff Management menu)
+  // OR if the employee has permission to manage schedules (which implies staff management)
   const isOwnerView = route?.params?.isOwnerView || 
     (user?.role === 'salon_owner' && !route?.params?.salonId);
+
+  const canManageStaff = isOwnerView || checkPermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES);
 
   // Calculate card width safely
   const cardWidth = useMemo(() => {
@@ -90,7 +98,7 @@ export default function EmployeeListScreen({
 
   const handleEmployeePress = (employee: Employee) => {
     // Use owner view if it's an owner viewing their staff
-    const detailScreen = isOwnerView ? "OwnerEmployeeDetail" : "EmployeeDetail";
+    const detailScreen = canManageStaff ? "OwnerEmployeeDetail" : "EmployeeDetail";
     navigation?.navigate(detailScreen, {
       employeeId: employee.id,
       salonId: salonId,
@@ -147,9 +155,9 @@ export default function EmployeeListScreen({
           />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]} numberOfLines={1}>
-          {isOwnerView ? "Staff Management" : (salonName || "Employees")}
+          {canManageStaff ? "Staff Management" : (salonName || "Employees")}
         </Text>
-        {isOwnerView ? (
+        {canManageStaff ? (
           <TouchableOpacity
             style={styles.addButton}
             onPress={handleAddEmployee}
@@ -174,23 +182,34 @@ export default function EmployeeListScreen({
         >
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-              {isOwnerView ? "Your Team" : "Our Team"}
+              {canManageStaff ? "Your Team" : "Our Team"}
             </Text>
             <Text style={[styles.sectionSubtitle, dynamicStyles.textSecondary]}>
               {employees.length} {employees.length === 1 ? "employee" : "employees"}
             </Text>
           </View>
 
-          {/* Add Employee Card for Owners */}
-          {isOwnerView && (
-            <TouchableOpacity
-              style={styles.addEmployeeCard}
-              onPress={handleAddEmployee}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons name="add" size={20} color={theme.colors.primary} />
-              <Text style={styles.addEmployeeText}>Add New Employee</Text>
-            </TouchableOpacity>
+          {/* Quick Actions for Owners */}
+          {canManageStaff && (
+            <>
+              <TouchableOpacity
+                style={styles.addEmployeeCard}
+                onPress={handleAddEmployee}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="add" size={20} color={theme.colors.primary} />
+                <Text style={styles.addEmployeeText}>Add New Employee</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.addEmployeeCard, { backgroundColor: theme.colors.secondary + '15', borderColor: theme.colors.secondary + '30' }]}
+                onPress={() => navigation?.navigate('EmployeePermissions', { salonId })}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="admin-panel-settings" size={20} color={theme.colors.secondary} />
+                <Text style={[styles.addEmployeeText, { color: theme.colors.secondary }]}>Manage All Permissions</Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {employees.length === 0 ? (

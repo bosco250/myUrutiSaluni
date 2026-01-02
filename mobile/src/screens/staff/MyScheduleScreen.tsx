@@ -19,6 +19,8 @@ import {
   Appointment,
   AppointmentStatus,
 } from '../../services/appointments';
+import { EmployeePermissionGate } from '../../components/permissions/EmployeePermissionGate';
+import { EmployeePermission } from '../../constants/employeePermissions';
 
 interface GroupedAppointments {
   date: string;
@@ -499,14 +501,21 @@ export default function MyScheduleScreen({ navigation }: any) {
         </ScrollView>
       )}
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => navigation.navigate('CreateAppointment')}
-        activeOpacity={0.8}
+      {/* Floating Action Button - Permission Based */}
+      <EmployeePermissionGate
+        requiredPermission={EmployeePermission.MANAGE_APPOINTMENTS}
+        salonId={undefined}
+        employeeId={undefined}
+        fallback={null}
       >
-        <MaterialIcons name="add" size={28} color={theme.colors.white} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+          onPress={() => navigation.navigate('CreateAppointment')}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons name="add" size={28} color={theme.colors.white} />
+        </TouchableOpacity>
+      </EmployeePermissionGate>
     </SafeAreaView>
   );
 }

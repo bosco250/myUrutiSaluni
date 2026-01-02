@@ -289,18 +289,25 @@ class ApiService {
   /**
    * DELETE request
    */
-  async delete<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { requireAuth = true } = options;
+  async delete<T>(endpoint: string, options: RequestOptions & { data?: unknown } = {}): Promise<T> {
+    const { requireAuth = true, data } = options;
     const headers = await this.getHeaders(requireAuth);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const fetchOptions: RequestInit = {
         method: 'DELETE',
         headers: {
           ...headers,
           ...options.headers,
         },
-      });
+      };
+
+      // Include body if data is provided (some DELETE requests need a body)
+      if (data !== undefined) {
+        fetchOptions.body = JSON.stringify(data);
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
       return this.handleResponse<T>(response);
     } catch (error: any) {

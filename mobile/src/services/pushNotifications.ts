@@ -2,6 +2,7 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { api } from "./api";
+import { getPrimaryScreenFromPermissions } from "../utils/permissionNavigation";
 
 // Check if running in Expo Go (where push notifications are not supported)
 const isExpoGo = Constants.executionEnvironment === "storeClient";
@@ -416,6 +417,42 @@ class PushNotificationsService {
           params,
         };
       }
+    }
+
+    // Permission notifications - smart navigation based on user role
+    if (type === "permission_granted" || type === "permission_revoked") {
+      const salonId = data.salonId || data.salon_id;
+      const employeeId = data.employeeId || data.employee_id;
+      const grantedPermissions = data.grantedPermissions || data.permissions || [];
+      
+      // For employees: Navigate to screen where they can USE permissions
+      // For owners: Navigate to permissions management screen
+      // Note: We can't check user role here, so we'll default to MyPermissions
+      // The NotificationsScreen will handle the smart routing based on user role
+      
+      if (type === "permission_granted" && grantedPermissions.length > 0) {
+        // Try to get primary screen from permissions
+        try {
+          const primaryScreen = getPrimaryScreenFromPermissions(grantedPermissions);
+          return {
+            screen: primaryScreen,
+            params: { salonId, employeeId },
+          };
+        } catch (error) {
+          console.log('Error getting primary screen:', error);
+          // Fallback to MyPermissions if helper not available
+          return {
+            screen: "MyPermissions",
+            params: { salonId, employeeId },
+          };
+        }
+      }
+      
+      // Default: navigate to MyPermissions screen
+      return {
+        screen: "MyPermissions",
+        params: { salonId, employeeId },
+      };
     }
 
     // Default: go to notifications screen

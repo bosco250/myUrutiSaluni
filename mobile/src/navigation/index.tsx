@@ -23,9 +23,17 @@ import { theme } from "../theme";
 import { getDefaultHomeScreen } from "../constants/permissions";
 import { Screen } from "../constants/permissions";
 import { renderScreen } from "./screenRouter";
-import { getNavigationTabsForRole, mapScreenToTab } from "./navigationConfig";
+import {
+  getNavigationTabsForRole,
+  mapScreenToTab,
+  ROLE_NAVIGATION_TABS,
+  NavigationTab,
+} from "./navigationConfig";
 import BottomNavigation from "../components/common/BottomNavigation";
 import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
+import { useEmployeePermissionCheck } from "../hooks/useEmployeePermissionCheck";
+import { checkNavigationPermission } from "../utils/navigationGuard";
+import { isPublicScreen } from "../utils/permissionNavigation";
 
 type MainScreen =
   | "Home"
@@ -86,7 +94,25 @@ type MainScreen =
   | "OwnerEmployeeDetail"
   | "AddEmployee"
   | "AddService"
-  | "EditSalon";
+  | "AddProduct"
+  | "EditService"
+  | "EditSalon"
+  | "Sales"
+  | "SalesHistory"
+  | "Commissions"
+  | "CommissionDetail"
+  | "SaleDetail"
+  | "FinancialReports"
+  | "ProfitLossReport"
+  | "ExpenseBreakdown"
+  | "RevenueByService"
+  | "LoanRepayment"
+  | "CreateAppointment"
+  | "MyPermissions"
+  | "EmployeePermissions"
+  | "GrantPermissions"
+  | "CustomerDetail"
+  | "Favorites";
 
 // Main tabs that are root level screens
 const MAIN_TABS: MainScreen[] = [
@@ -122,6 +148,35 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     { name: "Home", params: {} },
   ]);
   const [activeTab, setActiveTab] = useState<string>("home");
+
+  // Initialize permission check hook - it will automatically load salonId and employeeId
+  // No need to load salonId separately as the hook handles it internally
+  const {
+    checkPermission,
+    isOwner,
+    isAdmin,
+    hasOwnerLevelPermissions, // Check if employee has owner-level permissions
+    loading: permissionsLoading,
+  } = useEmployeePermissionCheck({
+    autoFetch: true,
+  });
+
+  // Default permission check function if hook hasn't loaded yet
+  // Default permission check function if hook hasn't loaded yet
+  const safeCheckPermission = useCallback(
+    (permission: any) => {
+      // If checkPermission is not available yet, we can't check
+      if (!checkPermission) {
+        return false;
+      }
+
+      // Trust the hook's checkPermission function
+      // Even if loading is true (background refresh), we might have cached permissions
+      // blocking on permissionsLoading causes "clickable but not working" issues
+      return checkPermission(permission);
+    },
+    [checkPermission]
+  );
 
   // Skip welcome screen if user is already authenticated
   // Also set appropriate home screen based on role
@@ -317,32 +372,83 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     setHasShownWelcome(true);
   };
 
-  const handleNavigate = useCallback((screen: string, params?: any) => {
-    const targetScreen = screen as MainScreen;
+  const handleNavigate = useCallback(
+    (screen: string, params?: any) => {
+      const targetScreen = screen as MainScreen;
 
-    // Ensure we have a valid screen
-    if (!targetScreen) {
-      console.warn("handleNavigate called with invalid screen:", screen);
-      return;
-    }
+      // Ensure we have a valid screen
+      if (!targetScreen) {
+        console.warn("handleNavigate called with invalid screen:", screen);
+        return;
+      }
 
-    const historyItem: HistoryItem = {
-      name: targetScreen,
-      params: params || {},
-    };
+      // Customers can always access BookingFlow and other public screens
+      if (user?.role === "customer" || user?.role === "CUSTOMER") {
+        // Customers can access all customer screens including BookingFlow
+        // No permission check needed for customers
+      }
+      // Check navigation permission for employees
+      else if (
+        user?.role === "salon_employee" ||
+        user?.role === "SALON_EMPLOYEE"
+      ) {
+        // Always allow public screens, even while permissions are loading
+        if (isPublicScreen(screen, user?.role)) {
+          // Public screen - allow navigation, continue below
+        } else if (!permissionsLoading) {
+          // Only check permissions if they're loaded (not loading)
+          const permissionCheck = checkNavigationPermission(
+            screen,
+            user?.role,
+            safeCheckPermission,
+            isOwner || false,
+            isAdmin || false
+          );
 
-    // If navigating to a main tab, reset history
-    if (MAIN_TABS.includes(targetScreen)) {
-      setScreenHistory([historyItem]);
-    } else {
-      // For detail screens, add to history
-      setScreenHistory((prev) => [...prev, historyItem]);
-    }
+          if (!permissionCheck.canNavigate) {
+            // Show alert and prevent navigation - stay on current screen
+            Alert.alert(
+              "Permission Required",
+              permissionCheck.reason ||
+                "You don't have permission to access this screen.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    // Do nothing - remain on current screen
+                    // User clicked OK, just dismiss the alert
+                  },
+                },
+              ]
+            );
+            return;
+          }
+        } else {
+          // Permissions are still loading and screen is not public
+          // Allow navigation but it will be checked when permissions load
+          // This prevents blocking the user while permissions are being fetched
+        }
+      }
 
-    // Update current screen - this is critical for rendering the correct screen
-    setCurrentScreen(targetScreen);
-    setScreenParams(params || {});
-  }, []);
+      const historyItem: HistoryItem = {
+        name: targetScreen,
+        params: params || {},
+      };
+
+      // If navigating to a main tab, reset history
+      if (MAIN_TABS.includes(targetScreen)) {
+        setScreenHistory([historyItem]);
+      } else {
+        // For detail screens, add to history
+        setScreenHistory((prev) => [...prev, historyItem]);
+      }
+
+      // Update current screen - this is critical for rendering the correct screen
+      setCurrentScreen(targetScreen);
+      setScreenParams(params || {});
+    },
+    [user?.role, safeCheckPermission, isOwner, isAdmin, permissionsLoading]
+  );
 
   // Expose navigate function to parent via callback
   useEffect(() => {
@@ -382,66 +488,132 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
   };
 
   // Handle tab press - role aware - memoized to prevent re-renders
-  const handleTabPress = React.useCallback((tabId: string) => {
-    // Map tab ID to screen based on role
-    const tabs = getNavigationTabsForRole(user?.role);
-    const tab = tabs.find((t) => t.id === tabId);
+  const handleTabPress = React.useCallback(
+    (tabId: string) => {
+      // First, determine what screen this tab should navigate to
+      // We need to check both owner and employee tabs to find the right screen
+      let targetScreen: MainScreen = "Home"; // Default fallback
+      let tab: NavigationTab | undefined;
 
-    if (!tab) {
-      console.warn(`Tab with id "${tabId}" not found for role "${user?.role}"`);
-      return;
-    }
+      // Check owner tabs first (if employee has owner-level permissions and is in salon mode)
+      if (hasOwnerLevelPermissions) {
+        const ownerTabs = ROLE_NAVIGATION_TABS.salon_owner;
+        const ownerTab = ownerTabs.find((t) => t.id === tabId);
+        if (ownerTab) {
+          tab = ownerTab;
+          // Map owner tab screen to MainScreen
+          if (tab.screen === Screen.OWNER_DASHBOARD) {
+            targetScreen = "OwnerDashboard";
+          } else if (tab.screen === Screen.OPERATIONS) {
+            targetScreen = "Operations";
+          } else if (tab.screen === Screen.SALON_LIST) {
+            targetScreen = "SalonList";
+          } else if (tab.screen === Screen.FINANCE) {
+            targetScreen = "Finance";
+          } else if (tab.screen === Screen.MORE_MENU) {
+            targetScreen = "MoreMenu";
+          }
+        }
+      }
 
-    // Map Screen enum to MainScreen string - use explicit mapping to avoid enum toString() issues
-    let targetScreen: MainScreen = "Home"; // Default fallback
+      // If not found in owner tabs, check employee tabs
+      if (!tab) {
+        // Get employee tabs to find the tab
+        const employeeTabs = getNavigationTabsForRole(
+          user?.role,
+          safeCheckPermission,
+          isOwner || false,
+          isAdmin || false,
+          hasOwnerLevelPermissions || false,
+          currentScreen
+        );
 
-    if (tab.screen === Screen.STAFF_DASHBOARD) {
-      targetScreen = "StaffDashboard";
-    } else if (tab.screen === Screen.OWNER_DASHBOARD) {
-      targetScreen = "OwnerDashboard";
-    } else if (tab.screen === Screen.ADMIN_DASHBOARD) {
-      targetScreen = "AdminDashboard";
-    } else if (tab.screen === Screen.HOME) {
-      targetScreen = "Home";
-    } else if (tab.screen === Screen.BOOKINGS) {
-      targetScreen = "Bookings";
-    } else if (tab.screen === Screen.EXPLORE) {
-      targetScreen = "Explore";
-    } else if (tab.screen === Screen.PROFILE) {
-      targetScreen = "Profile";
-    } else if (tab.screen === Screen.NOTIFICATIONS) {
-      targetScreen = "Notifications";
-    } else if (tab.screen === Screen.MY_SCHEDULE) {
-      targetScreen = "MySchedule";
-    } else if (tab.screen === Screen.CUSTOMER_MANAGEMENT) {
-      targetScreen = "CustomerManagement";
-    } else if (tab.screen === Screen.STAFF_MANAGEMENT) {
-      targetScreen = "StaffManagement";
-    } else if (tab.screen === Screen.BUSINESS_ANALYTICS) {
-      targetScreen = "BusinessAnalytics";
-    } else if (tab.screen === Screen.SALON_MANAGEMENT) {
-      targetScreen = "SalonManagement";
-    } else if (tab.screen === Screen.MEMBERSHIP_APPROVALS) {
-      targetScreen = "MembershipApprovals";
-    } else if (tab.screen === Screen.OPERATIONS) {
-      targetScreen = "Operations";
-    } else if (tab.screen === Screen.FINANCE) {
-      targetScreen = "Finance";
-    } else if (tab.screen === Screen.MORE_MENU) {
-      targetScreen = "MoreMenu";
-    } else if (tab.screen === Screen.WORK_LOG) {
-      targetScreen = "WorkLog";
-    } else if (tab.screen === Screen.CHAT) {
-      targetScreen = "ChatList";
-    } else if (tab.screen === Screen.SALON_LIST) {
-      targetScreen = "SalonList";
-    }
+        tab = employeeTabs.find((t) => t.id === tabId);
 
-    // Navigate first to ensure screen is updated, then update active tab
-    // This ensures currentScreen is set before activeTab sync runs
-    handleNavigate(targetScreen);
-    setActiveTab(tabId);
-  }, [user?.role, handleNavigate]);
+        if (!tab) {
+          return;
+        }
+
+        // Map Screen enum to MainScreen string
+        if (tab.screen === Screen.STAFF_DASHBOARD) {
+          targetScreen = "StaffDashboard";
+        } else if (tab.screen === Screen.OWNER_DASHBOARD) {
+          targetScreen = "OwnerDashboard";
+        } else if (tab.screen === Screen.ADMIN_DASHBOARD) {
+          targetScreen = "AdminDashboard";
+        } else if (tab.screen === Screen.HOME) {
+          targetScreen = "Home";
+        } else if (tab.screen === Screen.BOOKINGS) {
+          targetScreen = "Bookings";
+        } else if (tab.screen === Screen.EXPLORE) {
+          targetScreen = "Explore";
+        } else if (tab.screen === Screen.PROFILE) {
+          targetScreen = "Profile";
+        } else if (tab.screen === Screen.NOTIFICATIONS) {
+          targetScreen = "Notifications";
+        } else if (tab.screen === Screen.MY_SCHEDULE) {
+          targetScreen = "MySchedule";
+        } else if (tab.screen === Screen.CUSTOMER_MANAGEMENT) {
+          targetScreen = "CustomerManagement";
+        } else if (tab.screen === Screen.STAFF_MANAGEMENT) {
+          targetScreen = "StaffManagement";
+        } else if (tab.screen === Screen.BUSINESS_ANALYTICS) {
+          targetScreen = "BusinessAnalytics";
+        } else if (tab.screen === Screen.SALON_MANAGEMENT) {
+          targetScreen = "SalonManagement";
+        } else if (tab.screen === Screen.MEMBERSHIP_APPROVALS) {
+          targetScreen = "MembershipApprovals";
+        } else if (tab.screen === Screen.OPERATIONS) {
+          targetScreen = "Operations";
+        } else if (tab.screen === Screen.FINANCE) {
+          targetScreen = "Finance";
+        } else if (tab.screen === Screen.MORE_MENU) {
+          targetScreen = "MoreMenu";
+        } else if (tab.screen === Screen.WORK_LOG) {
+          targetScreen = "WorkLog";
+        } else if (tab.screen === Screen.CHAT) {
+          targetScreen = "ChatList";
+        } else if (tab.screen === Screen.SALON_LIST) {
+          targetScreen = "SalonList";
+        } else {
+          // Handle string screen names from navigationConfig (employee tabs use 'as any')
+          // This section only runs if no Screen enum matched above
+          // Cast to unknown first to allow comparison with string literals
+          const screenValue = tab.screen as unknown;
+
+          if (screenValue === "SalonAppointments") {
+            targetScreen = "SalonAppointments";
+          } else if (screenValue === "CustomerManagement") {
+            targetScreen = "CustomerManagement";
+          } else if (screenValue === "Sales") {
+            targetScreen = "Sales";
+          } else if (
+            screenValue === "StockManagement" ||
+            screenValue === "InventoryManagement"
+          ) {
+            targetScreen = "StockManagement";
+          } else if (typeof screenValue === "string") {
+            // Handle any other string screen names directly
+            targetScreen = screenValue as MainScreen;
+          }
+        }
+      }
+
+      // Navigate first to ensure screen is updated, then update active tab
+      // This ensures currentScreen is set before activeTab sync runs
+      handleNavigate(targetScreen);
+      setActiveTab(tabId);
+    },
+    [
+      user?.role,
+      handleNavigate,
+      safeCheckPermission,
+      isOwner,
+      isAdmin,
+      hasOwnerLevelPermissions, // Include in dependencies
+      currentScreen, // Include currentScreen to detect salon mode correctly
+    ]
+  );
 
   // Show loading state while checking authentication
   // Add timeout to prevent infinite loading
@@ -506,6 +678,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
             activeTab={activeTab}
             onTabPress={handleTabPress}
             unreadNotificationCount={unreadNotificationCount}
+            currentScreen={currentScreen}
           />
         </View>
       );
@@ -561,6 +734,7 @@ function NavigationWithPushNotifications() {
 
   const handleNotificationTap = useCallback((screen: string, params: any) => {
     if (navigationRef.current) {
+      // Navigation guard will check permissions in handleNavigate
       navigationRef.current(screen, params);
     }
   }, []);

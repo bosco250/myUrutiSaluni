@@ -1,6 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppointmentsService } from './appointments.service';
+import { AppointmentSchedulerService } from './appointment-scheduler.service';
 import { AppointmentsController } from './appointments.controller';
 import { AvailabilityService } from './services/availability.service';
 import { AvailabilityController } from './controllers/availability.controller';
@@ -20,6 +22,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       Appointment,
       EmployeeWorkingHours,
@@ -29,7 +32,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       Salon,
     ]),
     forwardRef(() => SalonsModule),
-    CustomersModule,
+    forwardRef(() => CustomersModule), // Use forwardRef to handle circular dependency
     ServicesModule,
     CommissionsModule,
     forwardRef(() => NotificationsModule),
@@ -41,6 +44,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   ],
   providers: [
     AppointmentsService,
+    AppointmentSchedulerService,
     AvailabilityService,
     EmployeeScheduleService,
   ],

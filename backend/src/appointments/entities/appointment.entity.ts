@@ -98,6 +98,12 @@ export class Appointment {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
+  @Column({ name: 'reminder_sent', default: false })
+  reminderSent: boolean;
+
+  @Column({ name: 'reminder_sent_at', type: 'timestamp', nullable: true })
+  reminderSentAt: Date;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

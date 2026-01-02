@@ -23,6 +23,9 @@ import {
 } from "../../services/salon";
 import { salesService, CreateSaleDto } from "../../services/sales";
 import { api } from "../../services/api";
+import { EmployeePermissionGate } from "../../components/permissions/EmployeePermissionGate";
+import { EmployeePermission } from "../../constants/employeePermissions";
+import { useEmployeePermissionCheck } from "../../hooks/useEmployeePermissionCheck";
 
 interface SalesScreenProps {
   navigation: {
@@ -57,6 +60,34 @@ type PaymentMethod = "cash" | "card" | "mobile_money";
 export default function SalesScreen({ navigation }: SalesScreenProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
+  const [currentSalonId, setCurrentSalonId] = useState<string | undefined>(undefined);
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<string | undefined>(undefined);
+
+  // Load salon and employee IDs for permission checks
+  useEffect(() => {
+    const loadEmployeeData = async () => {
+      if (user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') {
+        try {
+          const employees = await salonService.getEmployeeRecordsByUserId(String(user.id));
+          if (employees && employees.length > 0) {
+            setCurrentSalonId(employees[0].salonId);
+            setCurrentEmployeeId(employees[0].id);
+          }
+        } catch (error) {
+          console.error('Error loading employee data:', error);
+        }
+      }
+    };
+    if (user?.id) {
+      loadEmployeeData();
+    }
+  }, [user?.id, user?.role]);
+
+  useEmployeePermissionCheck({
+    salonId: currentSalonId,
+    employeeId: currentEmployeeId,
+    autoFetch: false,
+  });
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -118,12 +149,29 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
       );
 
       // Step 1: Get salon first (critical)
-      const salonResponse = await Promise.race([
-        salonService.getSalonByOwnerId(String(user.id)),
-        timeout(5000)
-      ]).catch(() => null);
-
-      const salon = salonResponse as SalonDetails | null;
+      // For employees, use salonId from employee record; for owners, fetch from API
+      let salon: SalonDetails | null = null;
+      
+      if (user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') {
+        // For employees, use the salonId from their employee record
+        if (currentSalonId) {
+          try {
+            salon = await Promise.race([
+              salonService.getSalonDetails(currentSalonId),
+              timeout(5000)
+            ]).catch(() => null) as SalonDetails | null;
+          } catch (error) {
+            console.error('Error fetching salon details for employee:', error);
+          }
+        }
+      } else {
+        // For owners, get salon by owner ID
+        const salonResponse = await Promise.race([
+          salonService.getSalonByOwnerId(String(user.id)),
+          timeout(5000)
+        ]).catch(() => null);
+        salon = salonResponse as SalonDetails | null;
+      }
 
       if (!salon?.id) {
         setLoading(false);
@@ -134,9 +182,10 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
       setLoading(false); // Show UI immediately
 
       // Step 2: Load all data in parallel (non-blocking)
+      const salonIdToUse = salon.id;
       Promise.all([
         // Load services
-        salonService.getServices(salon.id)
+        salonService.getServices(salonIdToUse)
           .then((servicesData) => {
             const mappedServices = servicesData.map((s: any) => ({
               id: s.id,
@@ -149,12 +198,12 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
           .catch(() => setServices([])),
 
         // Load products
-        salonService.getProducts(salon.id)
+        salonService.getProducts(salonIdToUse)
           .then(setProducts)
           .catch(() => setProducts([])),
 
         // Load employees
-        salonService.getEmployees(salon.id)
+        salonService.getEmployees(salonIdToUse)
           .then(setEmployees)
           .catch(() => setEmployees([])),
 
@@ -163,7 +212,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
           try {
             setLoadingCustomers(true);
             const customersResponse = await api.get<any>(
-              `/salons/${salon.id}/customers`,
+              `/salons/${salonIdToUse}/customers`,
               { cache: true, cacheDuration: 120000 }
             );
             const customersData = Array.isArray(customersResponse)
@@ -191,11 +240,18 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
       console.error("Error loading data:", error);
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.role, currentSalonId]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    // For employees, wait for salon ID to be loaded; for owners, load immediately
+    if (user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE') {
+      if (currentSalonId) {
+        loadData();
+      }
+    } else if (user?.id) {
+      loadData();
+    }
+  }, [loadData, user?.id, user?.role, currentSalonId]);
 
   // Cart calculations
   const subtotal = useMemo(() => {
@@ -340,17 +396,20 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, dynamicStyles.container]}>
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <EmployeePermissionGate
+      requiredPermission={EmployeePermission.PROCESS_PAYMENTS}
+      salonId={currentSalonId}
+      employeeId={currentEmployeeId}
+      showUnauthorizedMessage={true}
+    >
+      {loading ? (
+        <View style={[styles.loadingContainer, dynamicStyles.container]}>
+          <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      ) : (
+        <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
@@ -1164,7 +1223,9 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
           </View>
         </View>
       </Modal>
-    </View>
+        </View>
+      )}
+    </EmployeePermissionGate>
   );
 }
 

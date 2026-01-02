@@ -62,48 +62,62 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      if (!user?.id) return;
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
 
       // PERFORMANCE OPTIMIZATION: Load all data in parallel with timeout
       const timeout = (ms: number) => new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), ms)
       );
 
-      // Step 1: Check membership status with timeout (5 seconds)
+      // Step 1: Check membership status with timeout (10 seconds)
       try {
         const membershipResponse = await Promise.race([
           api.get('/memberships/status', { cache: true, cacheDuration: 60000 }),
-          timeout(5000)
-        ]);
-        const { application } = membershipResponse as any;
+          timeout(10000) // Increased timeout to 10 seconds
+        ]) as any;
+        
+        // Backend returns { isMember: boolean, application: MembershipApplication | null }
+        const { application, isMember } = membershipResponse || {};
         
         if (!application) {
           setMembershipStatus('none');
-          return;
+          // Continue to check for salon even without membership
+        } else {
+          // Handle application status
+          if (application.status === 'pending' || application.status === 'PENDING') {
+            setMembershipStatus('pending');
+            // Continue to check for salon even if pending
+          } else if (application.status === 'rejected' || application.status === 'REJECTED') {
+            setMembershipStatus('rejected');
+            // Continue to check for salon even if rejected
+          } else if (application.status === 'approved' || application.status === 'APPROVED' || isMember) {
+            setMembershipStatus('approved');
+            // Continue to check for salon
+          } else {
+            // Default to none if status is unknown
+            setMembershipStatus('none');
+            // Continue to check for salon
+          }
         }
-        
-        if (application.status === 'pending') {
-          setMembershipStatus('pending');
-          return;
-        }
-        
-        if (application.status === 'rejected') {
-          setMembershipStatus('rejected');
-          return;
-        }
-        
-        setMembershipStatus('approved');
       } catch (membershipError: any) {
-        console.error('[OwnerDashboard] Error checking membership:', membershipError);
-        // If 404 or timeout, assume no membership
-        if (membershipError?.response?.status === 404 || 
-            membershipError?.message?.includes('404') ||
-            membershipError?.message?.includes('timeout')) {
-          setMembershipStatus('none');
-          return;
+        // Silently handle timeout/404 errors - these are expected when user has no membership
+        const isExpectedError = 
+          membershipError?.response?.status === 404 || 
+          membershipError?.message?.includes('404') ||
+          membershipError?.message?.includes('timeout') ||
+          membershipError?.message?.includes('Request timeout');
+        
+        if (!isExpectedError) {
+          // Only log unexpected errors
+          console.error('[OwnerDashboard] Error checking membership:', membershipError);
         }
+        
+        // For any error (timeout, 404, etc.), assume no membership
         setMembershipStatus('none');
-        return;
+        // Continue to check for salon even if membership check fails
       }
 
       // Step 2: Get salon with timeout (5 seconds)

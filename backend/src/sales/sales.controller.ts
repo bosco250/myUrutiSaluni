@@ -14,16 +14,20 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { EmployeePermissionGuard } from '../auth/guards/employee-permission.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RequireEmployeePermission } from '../auth/decorators/require-employee-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { SalonsService } from '../salons/salons.service';
 import { CustomersService } from '../customers/customers.service';
+import { EmployeePermissionsService } from '../salons/services/employee-permissions.service';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Sales')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, EmployeePermissionGuard)
 @Controller('sales')
 export class SalesController {
   private readonly logger = new Logger(SalesController.name);
@@ -32,6 +36,7 @@ export class SalesController {
     private readonly salesService: SalesService,
     private readonly salonsService: SalonsService,
     private readonly customersService: CustomersService,
+    private readonly employeePermissionsService: EmployeePermissionsService,
   ) {}
 
   /**
@@ -59,6 +64,7 @@ export class SalesController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.PROCESS_PAYMENTS)
   @ApiOperation({ summary: 'Create a new sale' })
   async create(@Body() createSaleDto: CreateSaleDto, @CurrentUser() user: any) {
     const { items, ...saleData } = createSaleDto;
@@ -70,10 +76,26 @@ export class SalesController {
       saleData.salonId
     ) {
       const salon = await this.salonsService.findOne(saleData.salonId);
-      if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only create sales for your own salon',
-        );
+
+      if (user.role === UserRole.SALON_OWNER) {
+        if (salon.ownerId !== user.id) {
+          throw new ForbiddenException(
+            'You can only create sales for your own salon',
+          );
+        }
+      } else if (user.role === UserRole.SALON_EMPLOYEE) {
+        // Employees can create sales (basic permission), but need PROCESS_PAYMENTS for payment operations
+        // This is handled at the service level if needed
+        const employee =
+          await this.employeePermissionsService.getEmployeeRecordByUserId(
+            user.id,
+            saleData.salonId,
+          );
+        if (!employee) {
+          throw new ForbiddenException(
+            'You can only create sales for salons you work at',
+          );
+        }
       }
     }
 
@@ -91,6 +113,7 @@ export class SalesController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
+  @RequireEmployeePermission(EmployeePermission.VIEW_SALES_REPORTS)
   @ApiOperation({ summary: 'Get all sales' })
   async findAll(
     @Query('salonId') salonId: string | undefined,
@@ -111,13 +134,40 @@ export class SalesController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
+      let salonIds: string[] = [];
+
+      if (user.role === UserRole.SALON_OWNER) {
+        const salons = await this.salonsService.findByOwnerId(user.id);
+        salonIds = salons.map((s) => s.id);
+      } else {
+        // For employees, find all salons they work at
+        const employeeRecords =
+          await this.salonsService.findAllEmployeesByUserId(user.id);
+        salonIds = employeeRecords.map((e) => e.salonId);
+      }
+
+      if (salonIds.length === 0) {
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access sales for your own salon',
+          'You can only access sales for salons you work at or own',
         );
       }
+
+      // If we are filtering by a specific valid salon, use that
+      if (salonId) {
+        return this.salesService.findBySalonIds(
+          [salonId],
+          pageNum,
+          limitNum,
+          startDateFilter,
+          endDateFilter,
+        );
+      }
+
+      // Otherwise search across all permitted salons
       return this.salesService.findBySalonIds(
         salonIds,
         pageNum,
@@ -247,14 +297,22 @@ export class SalesController {
     }
 
     // Salon owners and employees can only access sales for their salon
-    if (
-      user.role === UserRole.SALON_OWNER ||
-      user.role === UserRole.SALON_EMPLOYEE
-    ) {
+    if (user.role === UserRole.SALON_OWNER) {
       const salon = await this.salonsService.findOne(sale.salonId);
       if (!salon || salon.ownerId !== user.id) {
         throw new ForbiddenException(
           'You can only access sales for your own salon',
+        );
+      }
+    } else if (user.role === UserRole.SALON_EMPLOYEE) {
+      const employee =
+        await this.employeePermissionsService.getEmployeeRecordByUserId(
+          user.id,
+          sale.salonId,
+        );
+      if (!employee) {
+        throw new ForbiddenException(
+          'You can only access sales for salons you work at',
         );
       }
     }
@@ -277,16 +335,30 @@ export class SalesController {
     @Query('endDate') endDate: string | undefined,
     @CurrentUser() user: any,
   ) {
-    // Salon owners and employees can only see analytics for their salon(s)
+    // Salon owners and employees can only see sales for their salon(s)
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      const salons = await this.salonsService.findByOwnerId(user.id);
-      const salonIds = salons.map((s) => s.id);
+      let salonIds: string[] = [];
+
+      if (user.role === UserRole.SALON_OWNER) {
+        const salons = await this.salonsService.findByOwnerId(user.id);
+        salonIds = salons.map((s) => s.id);
+      } else {
+        // For employees, find all salons they work at
+        const employeeRecords =
+          await this.salonsService.findAllEmployeesByUserId(user.id);
+        salonIds = employeeRecords.map((e) => e.salonId);
+      }
+
+      if (salonIds.length === 0) {
+        return [];
+      }
+
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access analytics for your own salon',
+          'You can only access sales for salons you work at or own',
         );
       }
       return this.salesService.getAnalyticsSummary(
@@ -349,14 +421,22 @@ export class SalesController {
     }
 
     // Salon owners and employees can only access sales for their salon
-    if (
-      user.role === UserRole.SALON_OWNER ||
-      user.role === UserRole.SALON_EMPLOYEE
-    ) {
+    if (user.role === UserRole.SALON_OWNER) {
       const salon = await this.salonsService.findOne(sale.salonId);
       if (!salon || salon.ownerId !== user.id) {
         throw new ForbiddenException(
           'You can only access sales for your own salon',
+        );
+      }
+    } else if (user.role === UserRole.SALON_EMPLOYEE) {
+      const employee =
+        await this.employeePermissionsService.getEmployeeRecordByUserId(
+          user.id,
+          sale.salonId,
+        );
+      if (!employee) {
+        throw new ForbiddenException(
+          'You can only access sales for salons you work at',
         );
       }
     }

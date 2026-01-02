@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity';
 import { Salon } from '../salons/entities/salon.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
+import { EmployeePermissionEntity } from '../salons/entities/employee-permission.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Membership } from '../memberships/entities/membership.entity';
 import { MembershipApplication } from '../memberships/entities/membership-application.entity';
@@ -62,6 +63,7 @@ import { CustomerFavorite } from '../customers/entities/customer-favorite.entity
           User,
           Salon,
           SalonEmployee,
+          EmployeePermissionEntity,
           Customer,
           Membership,
           MembershipApplication,

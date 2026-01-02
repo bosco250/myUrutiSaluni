@@ -965,38 +965,36 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           />
         }
       >
-        {/* Salon Selector */}
-        {salons.length > 0 && (
+        {/* Salon Selector - Only show if employee works in multiple salons */}
+        {salons.length > 1 && (
           <TouchableOpacity 
             style={[
               styles.salonCard, 
+              styles.salonCardCompact,
               { 
                 backgroundColor: cardColor,
                 borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
                 shadowColor: isDark ? '#000000' : '#000000',
               }
             ]}
-            onPress={() => salons.length > 1 && setShowSalonPicker(true)}
-            disabled={salons.length <= 1}
+            onPress={() => setShowSalonPicker(true)}
             activeOpacity={0.7}
           >
-            <View style={[styles.salonIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
-              <FontAwesome5 name="store" size={22} color={theme.colors.primary} />
+            <View style={[styles.salonIconContainer, styles.salonIconContainerCompact, { backgroundColor: theme.colors.primary + '15' }]}>
+              <FontAwesome5 name="store" size={18} color={theme.colors.primary} />
             </View>
             <View style={styles.salonInfo}>
-              <Text style={[styles.salonLabel, { color: subTextColor }]}>Current Workplace</Text>
-              <Text style={[styles.salonName, { color: textColor }]} numberOfLines={1}>
+              <Text style={[styles.salonLabel, styles.salonLabelCompact, { color: subTextColor }]}>Current Workplace</Text>
+              <Text style={[styles.salonName, styles.salonNameCompact, { color: textColor }]} numberOfLines={1}>
                 {selectedSalon?.name || 'Select Salon'}
               </Text>
               {selectedSalon?.city && (
-                <Text style={[styles.salonAddress, { color: subTextColor }]} numberOfLines={1}>
+                <Text style={[styles.salonAddress, styles.salonAddressCompact, { color: subTextColor }]} numberOfLines={1}>
                   {selectedSalon.city}
                 </Text>
               )}
             </View>
-            {salons.length > 1 && (
-              <MaterialIcons name="keyboard-arrow-down" size={24} color={subTextColor} />
-            )}
+            <MaterialIcons name="keyboard-arrow-down" size={20} color={subTextColor} />
           </TouchableOpacity>
         )}
 
@@ -1007,42 +1005,13 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           onDateSelect={setSelectedDate}
         />
 
-        {/* Statistics */}
-        {viewMode === "tasks" ? (
+        {/* Statistics (Work Log only) */}
+        {viewMode === "worklog" && workLogDay && (
           <View style={styles.statsContainer}>
-            <StatCard
-              label="Pending"
-              value={taskStats.pending.toString()}
-              icon="schedule"
-              color={theme.colors.warning}
-            />
-            <StatCard
-              label="Active"
-              value={taskStats.inProgress.toString()}
-              icon="play-circle-filled"
-              color={theme.colors.secondary}
-            />
-            <StatCard
-              label="Done"
-              value={taskStats.completed.toString()}
-              icon="check-circle"
-              color={theme.colors.success}
-            />
-            <StatCard
-              label="Earned"
-              value={formatCompactCurrency(taskStats.totalEarnings)}
-              icon="attach-money"
-              color={theme.colors.primary}
-            />
+            {workLogStats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
+            ))}
           </View>
-        ) : (
-          workLogDay && (
-            <View style={styles.statsContainer}>
-              {workLogStats.map((stat) => (
-                <StatCard key={stat.label} {...stat} />
-              ))}
-            </View>
-          )
         )}
 
         {/* Clock In/Out Status (Work Log only) */}
@@ -1723,6 +1692,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: theme.fonts.regular,
     marginTop: 2,
+  },
+  salonCardCompact: {
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 10,
+  },
+  salonIconContainerCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    marginRight: 10,
+  },
+  salonLabelCompact: {
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  salonNameCompact: {
+    fontSize: 14,
+    marginBottom: 1,
+  },
+  salonAddressCompact: {
+    fontSize: 11,
+    marginTop: 1,
   },
   // Modal
   modalOverlay: {

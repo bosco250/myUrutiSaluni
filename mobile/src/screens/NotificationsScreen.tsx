@@ -376,6 +376,91 @@ export default function NotificationsScreen({
           });
         }
       }
+      // Handle permission notifications
+      else if (
+        notification.type === "permission_granted" ||
+        notification.type === "permission_revoked"
+      ) {
+        const permissionSalonId =
+          metadata.salonId ||
+          (notification as any).salonId ||
+          metadata.salon_id;
+        const permissionEmployeeId =
+          metadata.employeeId ||
+          (notification as any).employeeId ||
+          metadata.employee_id;
+
+        // For employees: Navigate to screen where they can USE the permissions
+        // For owners: Navigate to permissions management screen
+        if (user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE") {
+          // Employee - navigate to where they can use permissions
+          if (notification.type === "permission_granted") {
+            // Get granted permissions from metadata
+            // CRITICAL: Backend sends:
+            // - metadata.grantedPermissions = array of CODES like ["MANAGE_APPOINTMENTS"]
+            // - permissions = array of DESCRIPTIONS like ["Create, update, and cancel..."]
+            // We need the CODES, not the descriptions!
+            let grantedPermissions: string[] = 
+              metadata.grantedPermissions || // This has the codes we need
+              (notification as any).grantedPermissions ||
+              [];
+            
+            console.log("🔍 Permission notification metadata:", {
+              grantedPermissions: metadata.grantedPermissions,
+              permissions: metadata.permissions,
+              selectedPermissions: grantedPermissions,
+            });
+            
+            // If permissions not in metadata, try to fetch from API
+            if (grantedPermissions.length === 0 && permissionSalonId && permissionEmployeeId) {
+              try {
+                console.log("📡 Fetching permissions from API for employee:", permissionEmployeeId);
+                // Dynamically import to avoid circular dependencies
+                const { employeePermissionsService } = await import("../services/employeePermissions");
+                const permissionsData = await employeePermissionsService.getEmployeePermissions(
+                  permissionSalonId,
+                  permissionEmployeeId
+                );
+                grantedPermissions = permissionsData
+                  .filter(p => p.isActive)
+                  .map(p => p.permissionCode);
+                console.log("✅ Fetched permissions from API:", grantedPermissions);
+              } catch (error) {
+                console.error("❌ Error fetching permissions for navigation:", error);
+              }
+            }
+            
+            
+            // Import helper function to get primary screen
+            // Use dynamic import to avoid circular dependencies
+             const { getPrimaryScreenFromPermissions } = await import("../utils/permissionNavigation");
+            
+            if (grantedPermissions.length > 0) {
+              // Navigate to the primary screen based on granted permissions
+              const primaryScreen = getPrimaryScreenFromPermissions(grantedPermissions as any);
+              console.log("🎯 Navigating employee to primary screen:", primaryScreen, "based on permission CODES:", grantedPermissions);
+              navigation?.navigate(primaryScreen);
+            } else {
+              // If permissions not available, navigate to MyPermissions to see them
+              console.log("⚠️ No permissions found, navigating to MyPermissions");
+              navigation?.navigate("MyPermissions");
+            }
+          } else {
+            // Permission revoked - show permissions screen
+            navigation?.navigate("MyPermissions");
+          }
+        } else {
+          // Owner/Admin - navigate to permissions management screen
+          if (permissionSalonId) {
+            navigation?.navigate("EmployeePermissions", {
+              salonId: permissionSalonId,
+              employeeId: permissionEmployeeId,
+            });
+          } else {
+            navigation?.navigate("EmployeePermissions");
+          }
+        }
+      }
       // For other notifications, stay on notifications screen or navigate to relevant screen
       else {
         console.log(
