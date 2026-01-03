@@ -49,4 +49,6 @@ database/*.sqlite3
 
 # Uploads
 uploads/
+!src/uploads/
+!src/uploads/
 

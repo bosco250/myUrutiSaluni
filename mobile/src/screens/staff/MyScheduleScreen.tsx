@@ -528,7 +528,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
-    paddingTop: (StatusBar.currentHeight || 0) + theme.spacing.sm,
     paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
   },

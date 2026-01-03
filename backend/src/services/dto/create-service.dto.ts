@@ -26,6 +26,16 @@ export class CreateServiceDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  imageUrl?: string;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsString({ each: true })
+  images?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @ApiProperty({ required: false, default: 30 })

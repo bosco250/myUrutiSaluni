@@ -9,13 +9,16 @@ import {
   StatusBar,
   Switch,
   Modal,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as ImagePicker from 'expo-image-picker';
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
 import { Loader } from "../../components/common";
 import { api } from "../../services/api";
+import { uploadService } from "../../services/upload";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
@@ -35,12 +38,54 @@ type ProfileSubScreen = "main" | "personal" | "notifications" | "security" | "co
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { isDark, toggleTheme } = useTheme();
-  const { logout, user } = useAuth();
+  const { logout, user, updateUser } = useAuth();
   const [currentSubScreen, setCurrentSubScreen] =
     useState<ProfileSubScreen>("main");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [hasExistingApplication, setHasExistingApplication] = useState(false);
   const [checkingMembership, setCheckingMembership] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  const handlePickImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.status === 'denied') {
+         Alert.alert('Permission Required', 'You need to grant permission to access your photos.');
+         return;
+      }
+
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (pickerResult.canceled) return;
+
+      if (pickerResult.assets && pickerResult.assets.length > 0) {
+        uploadIcon(pickerResult.assets[0].uri);
+      }
+    } catch {
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const uploadIcon = async (uri: string) => {
+    setUploading(true);
+    try {
+        const response = await uploadService.uploadAvatar(uri);
+        if (response.url) {
+            await updateUser({ avatarUrl: response.url });
+            Alert.alert("Success", "Profile photo updated!");
+        }
+    } catch {
+        Alert.alert("Error", "Failed to upload photo");
+    } finally {
+        setUploading(false);
+    }
+  };
 
   // Check if user is an employee
   const isEmployee = user?.role === "salon_employee" || user?.role === "SALON_EMPLOYEE";
@@ -188,7 +233,16 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.profileHeaderContent}>
             <View style={styles.profileImageContainer}>
               <View style={styles.profileImageGlow} />
-              <Image source={profileImage} style={styles.profileImage} />
+              <TouchableOpacity onPress={handlePickImage} disabled={uploading}>
+                  <Image 
+                    source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                    style={[styles.profileImage, uploading && { opacity: 0.7 }]}
+                    onError={(e) => console.log('Profile avatar load error:', e.nativeEvent.error)}
+                  />
+                  <View style={[styles.editBadge, { backgroundColor: theme.colors.primary }]}>
+                     <MaterialIcons name="camera-alt" size={14} color="#FFF" />
+                  </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.profileInfoContainer}>
@@ -560,6 +614,18 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.backgroundSecondary,
     borderWidth: 3,
     borderColor: theme.colors.white,
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
   profileInfoContainer: {
     flex: 1,

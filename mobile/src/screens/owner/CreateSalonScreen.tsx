@@ -19,6 +19,9 @@ import * as Location from 'expo-location';
 import { theme } from '../../theme';
 import { useAuth, useTheme } from '../../context';
 import { salonService, CreateSalonDto } from '../../services/salon';
+import { uploadService } from '../../services/upload';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 interface CreateSalonScreenProps {
@@ -53,6 +56,7 @@ interface FormData {
   numberOfEmployees: string;
   licenseNumber: string;
   taxId: string;
+  images: string[];
 }
 
 interface FormErrors {
@@ -133,7 +137,9 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     numberOfEmployees: '',
     licenseNumber: '',
     taxId: '',
+    images: [] as string[],
   });
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [, setLocationPermission] = useState(false);
   const [mapRegion, setMapRegion] = useState({
@@ -150,6 +156,49 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     day: keyof WorkingHours;
     field: 'openTime' | 'closeTime';
   } | null>(null);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Gallery permission is required to upload photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      handleImageUpload(result.assets[0].uri);
+    }
+  };
+
+  const handleImageUpload = async (uri: string) => {
+    setUploading(true);
+    try {
+      const response = await uploadService.uploadServiceImage(uri);
+      setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, response.url]
+      }));
+    } catch (error) {
+      Alert.alert('Upload Failed', 'Failed to upload image. Please try again.');
+      console.error(error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+        ...prev,
+        images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
 
   const dynamicStyles = {
     container: {
@@ -202,6 +251,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       numberOfEmployees: editingSalon.settings?.numberOfEmployees?.toString() || '',
       licenseNumber: editingSalon.settings?.licenseNumber || '',
       taxId: editingSalon.settings?.taxId || '',
+      images: editingSalon.images || editingSalon.photos || [],
     });
 
     if (editingSalon.latitude && editingSalon.longitude) {
@@ -390,6 +440,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           licenseNumber: formData.licenseNumber.trim() || undefined,
           taxId: formData.taxId.trim() || undefined,
         },
+        images: formData.images,
       };
 
       if (mode === 'edit' && editingSalon?.id) {
@@ -593,6 +644,8 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
         Tell us about your salon
       </Text>
       
+
+
       {renderInputField('Salon Name', 'name', {
         placeholder: 'Enter your salon name',
         icon: 'store',
@@ -734,7 +787,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
             region={mapRegion}
             onPress={handleMapPress}
           >
-            {formData.latitude && formData.longitude && (
+            {formData.latitude !== undefined && formData.longitude !== undefined && (
               <Marker
                 coordinate={{ latitude: formData.latitude, longitude: formData.longitude }}
               />
@@ -744,7 +797,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
             <MaterialIcons name="my-location" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
-        {formData.latitude && formData.longitude && (
+        {formData.latitude !== undefined && formData.longitude !== undefined && (
           <Text style={[styles.coordinatesText, dynamicStyles.textSecondary]}>
             📍 {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
           </Text>
@@ -767,8 +820,10 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     <View style={styles.stepContent}>
       <Text style={[styles.stepTitle, dynamicStyles.text]}>Business Hours</Text>
       <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-        Set your salon's working hours
+        Set your salon's working hours and photos
       </Text>
+
+
       {DAYS.map(({ key, label }) => (
         <View key={key} style={[styles.dayRow, dynamicStyles.card]}>
           <View style={styles.dayInfo}>
@@ -844,6 +899,31 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
         placeholder: 'https://www.yoursalon.com',
         icon: 'language',
       })}
+
+      {/* Salon Photos Section */}
+      <View style={{ marginBottom: 20, marginTop: 10 }}>
+          <Text style={[styles.inputLabel, dynamicStyles.text, { marginBottom: 10 }]}>Salon Photos</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
+              <TouchableOpacity style={[styles.addPhotoButton, { borderColor: theme.colors.primary }]} onPress={pickImage} disabled={uploading}>
+                  {uploading ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : (
+                      <>
+                          <MaterialIcons name="add-a-photo" size={24} color={theme.colors.primary} />
+                          <Text style={{ color: theme.colors.primary, fontSize: 10, marginTop: 4, textAlign: 'center' }}>Add Photo</Text>
+                      </>
+                  )}
+              </TouchableOpacity>
+              {formData.images.map((img, index) => (
+                  <View key={index} style={styles.photoWrapper}>
+                      <Image source={{ uri: img }} style={styles.photo} />
+                      <TouchableOpacity style={styles.removePhotoButton} onPress={() => removeImage(index)}>
+                          <MaterialIcons name="close" size={16} color="#FFF" />
+                      </TouchableOpacity>
+                  </View>
+              ))}
+          </ScrollView>
+      </View>
     </View>
   );
 
@@ -1025,39 +1105,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    padding: 16,
+    paddingBottom: 80,
   },
   stepContent: {
-    gap: 20,
+    gap: 14,
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   stepSubtitle: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 14,
+    marginBottom: 14,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   labelRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    minHeight: 50,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    minHeight: 44,
   },
   inputIcon: {
     marginRight: 10,
@@ -1103,19 +1183,16 @@ const styles = StyleSheet.create({
   },
   locationButton: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    bottom: 10,
+    right: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   coordinatesText: {
     fontSize: 12,
@@ -1176,35 +1253,30 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     flexDirection: 'row',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(150, 150, 150, 0.1)',
   },
   secondaryButton: {
     flex: 1,
-    height: 56,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
-    marginRight: 12,
+    borderRadius: 12,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   primaryButton: {
     flex: 2,
-    height: 56,
-    borderRadius: 16,
+    height: 48,
+    borderRadius: 12,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   fullWidthButton: {
     flex: 1,
@@ -1278,5 +1350,36 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Photos styles
+  photosContainer: {
+    marginBottom: 16,
+  },
+  addPhotoButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  photoWrapper: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  photo: {
+    width: 140,
+    height: 100,
+    borderRadius: 12,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
   },
 });

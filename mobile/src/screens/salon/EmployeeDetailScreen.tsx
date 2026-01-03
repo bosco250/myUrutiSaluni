@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { salonService, SalonEmployee } from '../../services/salon';
@@ -40,19 +39,14 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
   const [actionLoading, setActionLoading] = useState(false);
 
   const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    container: { backgroundColor: isDark ? '#1C1C1E' : '#F5F5F5' },
+    text: { color: isDark ? '#FFFFFF' : '#1A1A2E' },
+    textSecondary: { color: isDark ? '#8E8E93' : '#6B7280' },
+    card: { 
+      backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+      borderColor: isDark ? '#3A3A3C' : '#E8E8E8',
     },
-    text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    textSecondary: {
-      color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
-    },
-    card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.background,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
-    },
+    headerBorder: { borderBottomColor: isDark ? '#3A3A3C' : '#E8E8E8' },
   };
 
   const loadEmployee = useCallback(async () => {
@@ -89,7 +83,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
               setEmployee(prev => prev ? { ...prev, isActive: newStatus } : null);
               Alert.alert('Success', `Employee has been ${newStatus ? 'activated' : 'suspended'}`);
             } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to update employee status');
+              Alert.alert('Error', err.message || 'Failed to update status');
             } finally {
               setActionLoading(false);
             }
@@ -102,7 +96,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
   const handleRemoveEmployee = () => {
     Alert.alert(
       'Remove Employee',
-      'Are you sure you want to remove this employee? This action cannot be undone.',
+      'Are you sure? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -112,10 +106,10 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
             try {
               setActionLoading(true);
               await salonService.removeEmployee(salonId, employeeId);
-              Alert.alert('Success', 'Employee has been removed');
+              Alert.alert('Success', 'Employee removed');
               navigation.goBack();
             } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to remove employee');
+              Alert.alert('Error', err.message || 'Failed to remove');
               setActionLoading(false);
             }
           },
@@ -128,7 +122,7 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
     return (
       <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <Loader fullscreen message="Loading employee details..." />
+        <Loader fullscreen message="Loading..." />
       </SafeAreaView>
     );
   }
@@ -137,50 +131,61 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
     return (
       <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <View style={styles.loadingContainer}>
-          <MaterialIcons name="error-outline" size={48} color={theme.colors.textSecondary} />
+        <View style={styles.centerContainer}>
+          <MaterialIcons name="error-outline" size={48} color={dynamicStyles.textSecondary.color} />
           <Text style={[styles.errorText, dynamicStyles.textSecondary]}>Employee not found</Text>
-          <TouchableOpacity style={styles.backButtonAlt} onPress={() => navigation.goBack()}>
-            <Text style={{ color: theme.colors.primary }}>Go Back</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={24} color={isDark ? theme.colors.white : theme.colors.text} />
+      <View style={[styles.header, dynamicStyles.headerBorder]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <MaterialIcons name="arrow-back" size={22} color={dynamicStyles.text.color} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>Employee Details</Text>
-        <View style={styles.headerRight} />
+        <Text style={[styles.headerTitle, dynamicStyles.text]}>Employee Profile</Text>
+        <View style={{ width: 30 }} />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.secondary]}
-            style={styles.avatarLarge}
-          >
-            <Text style={styles.avatarLargeText}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Card */}
+        <View style={[styles.profileCard, dynamicStyles.card]}>
+          <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
+            <Text style={styles.avatarText}>
               {employee.user?.fullName?.charAt(0) || 'E'}
             </Text>
-          </LinearGradient>
-          <Text style={[styles.employeeName, dynamicStyles.text]}>
+          </View>
+          
+          <Text style={[styles.name, dynamicStyles.text]}>
             {employee.user?.fullName || 'Employee'}
           </Text>
-          <Text style={[styles.employeePosition, dynamicStyles.textSecondary]}>
+          
+          <Text style={[styles.position, dynamicStyles.textSecondary]}>
             {employee.position || 'Staff Member'}
           </Text>
+          
           <View style={[
-            styles.statusBadgeLarge,
-            { backgroundColor: employee.isActive ? theme.colors.success + '20' : theme.colors.error + '20' }
+            styles.statusBadge,
+            { backgroundColor: employee.isActive ? theme.colors.success + '15' : theme.colors.error + '15' }
           ]}>
             <View style={[
               styles.statusDot,
@@ -188,104 +193,116 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
             ]} />
             <Text style={{ 
               color: employee.isActive ? theme.colors.success : theme.colors.error,
-              fontFamily: theme.fonts.medium,
+              fontSize: 12,
+              fontWeight: '600',
             }}>
               {employee.isActive ? 'Active' : 'Suspended'}
             </Text>
           </View>
         </View>
 
-        {/* Info Card */}
-        <View style={[styles.infoCard, dynamicStyles.card]}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Contact Information</Text>
+        {/* Quick Stats */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statBox, dynamicStyles.card]}>
+            <MaterialIcons name="percent" size={18} color={theme.colors.primary} />
+            <Text style={[styles.statValue, dynamicStyles.text]}>
+              {employee.commissionRate || 0}%
+            </Text>
+            <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>Commission</Text>
+          </View>
+          <View style={[styles.statBox, dynamicStyles.card]}>
+            <MaterialIcons name="event" size={18} color={theme.colors.secondary} />
+            <Text style={[styles.statValue, dynamicStyles.text]}>
+              {employee.hireDate ? formatDate(employee.hireDate) : 'N/A'}
+            </Text>
+            <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>Hire Date</Text>
+          </View>
+        </View>
+
+        {/* Contact Section */}
+        <View style={[styles.section, dynamicStyles.card]}>
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Contact</Text>
           
           {employee.user?.email && (
             <View style={styles.infoRow}>
-              <MaterialIcons name="email" size={20} color={theme.colors.primary} />
-              <Text style={[styles.infoText, dynamicStyles.text]}>{employee.user.email}</Text>
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.primary + '15' }]}>
+                <MaterialIcons name="email" size={16} color={theme.colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>Email</Text>
+                <Text style={[styles.infoValue, dynamicStyles.text]}>{employee.user.email}</Text>
+              </View>
             </View>
           )}
           
           {employee.user?.phone && (
             <View style={styles.infoRow}>
-              <MaterialIcons name="phone" size={20} color={theme.colors.primary} />
-              <Text style={[styles.infoText, dynamicStyles.text]}>{employee.user.phone}</Text>
+              <View style={[styles.iconBox, { backgroundColor: theme.colors.success + '15' }]}>
+                <MaterialIcons name="phone" size={16} color={theme.colors.success} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={[styles.infoLabel, dynamicStyles.textSecondary]}>Phone</Text>
+                <Text style={[styles.infoValue, dynamicStyles.text]}>{employee.user.phone}</Text>
+              </View>
             </View>
           )}
         </View>
 
-        {/* Employment Info */}
-        <View style={[styles.infoCard, dynamicStyles.card]}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Employment Details</Text>
-          
-          <View style={styles.infoRow}>
-            <MaterialIcons name="work" size={20} color={theme.colors.primary} />
-            <Text style={[styles.infoText, dynamicStyles.text]}>
-              {employee.position || 'Staff Member'}
-            </Text>
-          </View>
-          
-          {employee.commissionRate !== undefined && (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="percent" size={20} color={theme.colors.primary} />
-              <Text style={[styles.infoText, dynamicStyles.text]}>
-                {employee.commissionRate}% Commission
-              </Text>
-            </View>
-          )}
-          
-          {employee.hireDate && (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="event" size={20} color={theme.colors.primary} />
-              <Text style={[styles.infoText, dynamicStyles.text]}>
-                Hired: {new Date(employee.hireDate).toLocaleDateString()}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actionsContainer}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Actions</Text>
+        {/* Quick Actions */}
+        <View style={styles.actionsSection}>
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
           
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.primary + '20' }]}
+            style={[styles.actionRow, dynamicStyles.card]}
             onPress={() => navigation.navigate('GrantPermissions', {
               employeeId: employee.id,
               salonId: salonId,
               employee: employee,
             })}
           >
-            <MaterialIcons name="admin-panel-settings" size={24} color={theme.colors.primary} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.primary }]}>
-              Manage Permissions
-            </Text>
+            <View style={[styles.actionIcon, { backgroundColor: theme.colors.primary + '15' }]}>
+              <MaterialIcons name="admin-panel-settings" size={20} color={theme.colors.primary} />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={[styles.actionTitle, dynamicStyles.text]}>Manage Permissions</Text>
+              <Text style={[styles.actionSubtitle, dynamicStyles.textSecondary]}>Control access levels</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: employee.isActive ? theme.colors.warning + '20' : theme.colors.success + '20' }]}
+            style={[styles.actionRow, dynamicStyles.card]}
             onPress={() => handleStatusChange(!employee.isActive)}
             disabled={actionLoading}
           >
-            <MaterialIcons 
-              name={employee.isActive ? 'pause-circle-outline' : 'play-circle-outline'} 
-              size={24} 
-              color={employee.isActive ? theme.colors.warning : theme.colors.success} 
-            />
-            <Text style={[styles.actionButtonText, { color: employee.isActive ? theme.colors.warning : theme.colors.success }]}>
-              {employee.isActive ? 'Suspend Employee' : 'Activate Employee'}
-            </Text>
+            <View style={[styles.actionIcon, { backgroundColor: (employee.isActive ? theme.colors.warning : theme.colors.success) + '15' }]}>
+              <MaterialIcons 
+                name={employee.isActive ? 'pause-circle-outline' : 'play-circle-outline'} 
+                size={20} 
+                color={employee.isActive ? theme.colors.warning : theme.colors.success} 
+              />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={[styles.actionTitle, dynamicStyles.text]}>
+                {employee.isActive ? 'Suspend Employee' : 'Activate Employee'}
+              </Text>
+              <Text style={[styles.actionSubtitle, dynamicStyles.textSecondary]}>
+                {employee.isActive ? 'Temporarily disable access' : 'Restore access'}
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
           </TouchableOpacity>
+        </View>
 
+        {/* Danger Zone */}
+        <View style={styles.dangerSection}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.error + '20' }]}
+            style={styles.dangerButton}
             onPress={handleRemoveEmployee}
             disabled={actionLoading}
           >
-            <MaterialIcons name="person-remove" size={24} color={theme.colors.error} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.error }]}>
-              Remove Employee
-            </Text>
+            <MaterialIcons name="delete-outline" size={18} color={theme.colors.error} />
+            <Text style={styles.dangerText}>Remove Employee</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -297,135 +314,194 @@ const EmployeeDetailScreen = ({ navigation, route }: EmployeeDetailScreenProps) 
       )}
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1 },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: 56,
-    paddingBottom: theme.spacing.md,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
   },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
-  },
-  headerRight: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-    padding: theme.spacing.lg,
-  },
-  profileHeader: {
+  backBtn: { padding: 4 },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', marginLeft: 12 },
+  
+  content: { padding: 14, paddingBottom: 40 },
+  
+  // Profile Card
+  profileCard: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    padding: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
   },
-  avatarLarge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
-  avatarLargeText: {
-    color: theme.colors.white,
-    fontSize: 40,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
+  avatarText: {
+    color: '#FFF',
+    fontSize: 28,
+    fontWeight: '700',
   },
-  employeeName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
-    marginBottom: 4,
+  name: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 2,
   },
-  employeePosition: {
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
-    marginBottom: theme.spacing.md,
+  position: {
+    fontSize: 14,
+    marginBottom: 10,
   },
-  statusBadgeLarge: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
   },
-  infoCard: {
-    padding: theme.spacing.lg,
-    borderRadius: 16,
+  
+  // Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  statBox: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+  statLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  
+  // Section
+  section: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.md,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
   },
+  
+  // Info Row
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
-  infoText: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-    marginLeft: theme.spacing.md,
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoContent: {
+    marginLeft: 12,
     flex: 1,
   },
-  actionsContainer: {
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
+  infoLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  actionButton: {
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  
+  // Actions
+  actionsSection: {
+    marginBottom: 20,
+  },
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    padding: 12,
     borderRadius: 12,
-    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    marginBottom: 8,
   },
-  actionButtonText: {
-    fontSize: 15,
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  actionTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
-    marginLeft: theme.spacing.md,
   },
+  actionSubtitle: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  
+  // Danger Zone
+  dangerSection: {
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(150,150,150,0.1)',
+  },
+  dangerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  dangerText: {
+    color: theme.colors.error,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   errorText: {
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  backButtonAlt: {
-    padding: theme.spacing.md,
+    fontSize: 14,
+    marginTop: 12,
+    marginBottom: 16,
   },
 });
 

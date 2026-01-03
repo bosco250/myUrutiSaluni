@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,15 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  Image,
+  Animated,
+  Linking,
+  Platform,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../theme";
-import { useTheme } from "../../context";
+import { useTheme, useAuth } from "../../context";
 import { exploreService, Service } from "../../services/explore";
 import { reviewsService, Review } from "../../services/reviews";
 import { Loader } from "../../components/common";
@@ -37,6 +42,7 @@ export default function ServiceDetailScreen({
   route,
 }: ServiceDetailScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
 
   const [service, setService] = useState<Service | null>(
     route?.params?.service || null
@@ -51,6 +57,22 @@ export default function ServiceDetailScreen({
   const [totalReviews, setTotalReviews] = useState(0);
 
   const serviceId = route?.params?.serviceId || route?.params?.service?.id;
+  
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Animation effect when image changes
+  useEffect(() => {
+    fadeAnim.setValue(0.4); // Start partially transparent to avoid flicker
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [activeImageIndex, fadeAnim]);
+
+  // Check ownership
+  const isOwner = user && service?.salon?.ownerId === user.id;
 
   const fetchService = useCallback(async () => {
     if (!serviceId) return;
@@ -79,8 +101,28 @@ export default function ServiceDetailScreen({
     }
   }, []);
 
+  const handleOpenMap = () => {
+    if (!service?.salon) return;
+    const { latitude, longitude, name, address } = service.salon;
+    const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+    const latLng = `${latitude || 0},${longitude || 0}`;
+    const label = name;
+    
+    let url;
+    if (address) {
+        url = `${scheme}${encodeURIComponent(address)}`;
+    } else {
+        url = Platform.select({
+            ios: `${scheme}${label}@${latLng}`,
+            android: `${scheme}${latLng}(${label})`
+        });
+    }
+
+    if (url) Linking.openURL(url);
+  };
+
   useEffect(() => {
-    if (serviceId && !service) {
+    if (serviceId && (!service || !service.salon)) {
       fetchService();
     }
   }, [serviceId, service, fetchService]);
@@ -165,13 +207,18 @@ export default function ServiceDetailScreen({
         </Text>
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={handleFavorite}
+          onPress={isOwner ? () => navigation?.navigate("AddService", { 
+              salonId: service.salonId, 
+              service: service,  
+              mode: 'edit',
+              onSave: () => fetchService() // Refresh on return
+          }) : handleFavorite}
           activeOpacity={0.7}
         >
           <MaterialIcons
-            name={isFavorite ? "favorite" : "favorite-border"}
+            name={isOwner ? "edit" : (isFavorite ? "favorite" : "favorite-border")}
             size={24}
-            color={isFavorite ? theme.colors.error : dynamicStyles.text.color}
+            color={isOwner ? theme.colors.primary : (isFavorite ? theme.colors.error : dynamicStyles.text.color)}
           />
         </TouchableOpacity>
       </View>
@@ -182,10 +229,59 @@ export default function ServiceDetailScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Image Area */}
+        {/* Hero Image Area - Swipeable Carousel */}
+        {/* Hero Image Area - Immersive */}
         <View style={styles.heroContainer}>
-            <View style={[styles.heroImagePlaceholder, { backgroundColor: theme.colors.primaryLight }]}>
-                 <MaterialIcons name="spa" size={80} color={theme.colors.white} />
-            </View>
+            <TouchableOpacity activeOpacity={0.9} style={{ width: '100%', height: '100%' }}>
+                  {service.images && service.images.length > 0 ? (
+                      <Animated.Image 
+                          source={{ uri: service.images[activeImageIndex] }} 
+                          style={{ width: '100%', height: '100%', resizeMode: 'cover', opacity: fadeAnim }} 
+                      />
+                  ) : (
+                      service.imageUrl ? (
+                          <Image 
+                              source={{ uri: service.imageUrl }} 
+                              style={{ width: '100%', height: '100%', resizeMode: 'cover' }} 
+                          />
+                      ) : (
+                          <View style={[styles.heroImagePlaceholder, { backgroundColor: theme.colors.primaryLight }]}>
+                              <MaterialIcons name="spa" size={80} color={theme.colors.white} />
+                          </View>
+                      )
+                  )}
+                  
+                  {/* Gradient Overlay */}
+                  <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+                      style={StyleSheet.absoluteFillObject}
+                  />
+            </TouchableOpacity>
+
+            {/* Thumbnails Overlay (Floating) */}
+            {service.images && service.images.length > 1 && (
+                <View style={styles.thumbnailsOverlay}>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+                    >
+                        {service.images.map((img, index) => (
+                            <TouchableOpacity 
+                                key={index} 
+                                onPress={() => setActiveImageIndex(index)}
+                                activeOpacity={0.8}
+                                style={[
+                                    styles.thumbnailItem,
+                                    activeImageIndex === index && styles.thumbnailActive
+                                ]}
+                            >
+                                <Image source={{ uri: img }} style={styles.thumbnailImage} resizeMode="cover" />
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
         </View>
 
         {/* content */}
@@ -232,8 +328,13 @@ export default function ServiceDetailScreen({
                     <View style={styles.salonInfoText}>
                         <Text style={[styles.salonName, dynamicStyles.text]}>{service.salon.name}</Text>
                         <Text style={[styles.salonAddress, dynamicStyles.textSecondary]}>
-                           {service.salon.address || "Location available on map"}
+                           {service.salon.address || "Location available on map"} 
                         </Text>
+
+                        <TouchableOpacity style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}} onPress={handleOpenMap}>
+                              <MaterialIcons name="map" size={14} color={theme.colors.primary} />
+                              <Text style={{color: theme.colors.primary, fontSize: 12, marginLeft: 4, fontWeight: '600'}}>View on Map</Text>
+                        </TouchableOpacity>
                     </View>
                     <MaterialIcons name="chevron-right" size={24} color={theme.colors.gray400} />
                 </TouchableOpacity>
@@ -279,7 +380,14 @@ export default function ServiceDetailScreen({
                          <View key={review.id} style={[styles.reviewPreview, dynamicStyles.card]}>
                              <View style={styles.reviewHeader}>
                                  <View style={styles.reviewerAvatar}>
-                                     <Text style={styles.reviewerInitials}>{review.customer?.user?.fullName?.charAt(0) || '?'}</Text>
+                                     {review.customer?.user?.profileImage ? (
+                                         <Image 
+                                             source={{ uri: review.customer.user.profileImage }} 
+                                             style={{ width: '100%', height: '100%' }}
+                                         />
+                                     ) : (
+                                         <Text style={styles.reviewerInitials}>{review.customer?.user?.fullName?.charAt(0) || '?'}</Text>
+                                     )}
                                  </View>
                                  <View style={{flex: 1}}>
                                      <Text style={[styles.reviewerName, dynamicStyles.text]}>{review.customer?.user?.fullName}</Text>
@@ -347,7 +455,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 50,
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 10,
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -376,14 +484,39 @@ const styles = StyleSheet.create({
   },
   heroContainer: {
       width: '100%',
-      height: 220,
+      height: 380, // Taller image for premium feel
       backgroundColor: theme.colors.gray100,
+      position: 'relative',
   },
   heroImagePlaceholder: {
       width: '100%',
       height: '100%',
       justifyContent: 'center',
       alignItems: 'center',
+  },
+  thumbnailsOverlay: {
+      position: 'absolute',
+      bottom: 40, // Above the content overlap
+      left: 0,
+      right: 0,
+  },
+  thumbnailItem: {
+      width: 60,
+      height: 60,
+      borderRadius: 12,
+      marginRight: 8,
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.5)',
+      overflow: 'hidden',
+  },
+  thumbnailActive: {
+      borderColor: theme.colors.primary,
+      borderWidth: 2,
+      transform: [{ scale: 1.05 }],
+  },
+  thumbnailImage: {
+      width: '100%',
+      height: '100%',
   },
   mainContent: {
       flex: 1,
@@ -524,6 +657,7 @@ const styles = StyleSheet.create({
       backgroundColor: theme.colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
+      overflow: "hidden",
   },
   reviewerInitials: {
       color: 'white',

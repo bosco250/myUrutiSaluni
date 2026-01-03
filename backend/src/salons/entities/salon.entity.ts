@@ -66,6 +66,9 @@ export class Salon {
   @Column({ type: 'simple-json', default: '{}' })
   settings: Record<string, any>;
 
+  @Column({ type: 'simple-json', nullable: true })
+  images: string[];
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

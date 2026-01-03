@@ -29,6 +29,12 @@ export class Service {
   @Column({ length: 255 })
   name: string;
 
+  @Column({ name: 'image_url', nullable: true })
+  imageUrl: string;
+
+  @Column({ type: 'json', nullable: true })
+  images: string[];
+
   @Column({ type: 'text', nullable: true })
   description: string;
 

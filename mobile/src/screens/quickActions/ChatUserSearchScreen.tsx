@@ -8,9 +8,10 @@ import {
   StatusBar,
   TextInput,
   Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { Loader } from "../../components/common";
@@ -56,20 +57,26 @@ export default function ChatUserSearchScreen({
     textSecondary: {
       color: isDark ? "#8E8E93" : theme.colors.textSecondary,
     },
-    card: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
-      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
-    },
     searchContainer: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.backgroundSecondary,
-      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
+      backgroundColor: isDark ? "#2C2C2E" : "#F5F5F5",
+      borderColor: isDark ? "#3A3A3C" : "transparent",
     },
     filterButton: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.backgroundSecondary,
-      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
+      backgroundColor: isDark ? "#2C2C2E" : "#F5F5F5",
+      borderColor: isDark ? "#3A3A3C" : "transparent",
+    },
+    filterButtonActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
     },
     filterButtonText: {
       color: isDark ? "#FFFFFF" : theme.colors.text,
+    },
+    separator: {
+      backgroundColor: isDark ? "#2C2C2E" : "#F0F0F0",
+    },
+    avatarBg: {
+      backgroundColor: isDark ? "#3A3A3C" : "#E1E1E1",
     },
   };
 
@@ -128,7 +135,7 @@ export default function ChatUserSearchScreen({
   const getRoleLabel = (role: string): string => {
     switch (role) {
       case "SALON_EMPLOYEE":
-        return "Employee";
+        return "Stylist";
       case "SALON_OWNER":
         return "Salon Owner";
       default:
@@ -141,283 +148,270 @@ export default function ChatUserSearchScreen({
   };
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
+    <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
-          />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          New Message
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchWrapper}>
-        <View style={[styles.searchContainer, dynamicStyles.searchContainer]}>
-          <MaterialIcons
-            name="search"
-            size={20}
-            color={theme.colors.textSecondary}
-          />
-          <TextInput
-            style={[styles.searchInput, dynamicStyles.text]}
-            placeholder="Search by name, email, or phone..."
-            placeholderTextColor={theme.colors.textTertiary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery("")}
-              activeOpacity={0.7}
-            >
-              <MaterialIcons
-                name="clear"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
+        {/* Modern Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={28}
+              color={dynamicStyles.text.color}
+            />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, dynamicStyles.text]}>
+            New Message
+          </Text>
+          <View style={styles.placeholder} />
         </View>
-      </View>
 
-      {/* Role Filter */}
-      <View style={styles.filterContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScrollContent}
-        >
-          {(["all", "SALON_EMPLOYEE", "SALON_OWNER"] as FilterRole[]).map(
-            (role) => (
-              <TouchableOpacity
-                key={role}
-                style={[
-                  styles.filterButton,
-                  dynamicStyles.filterButton,
-                  selectedRole === role && styles.filterButtonActive,
-                  selectedRole === role && {
-                    backgroundColor: theme.colors.primary,
-                    borderColor: theme.colors.primary,
-                  },
-                ]}
-                onPress={() => setSelectedRole(role)}
-                activeOpacity={0.7}
-              >
-                <Text
+        {/* Search Bar */}
+        <View style={styles.searchWrapper}>
+          <View style={[styles.searchContainer, dynamicStyles.searchContainer]}>
+            <Ionicons
+              name="search"
+              size={20}
+              color={theme.colors.textTertiary}
+            />
+            <TextInput
+              style={[styles.searchInput, dynamicStyles.text]}
+              placeholder="Search by name, email..."
+              placeholderTextColor={theme.colors.textTertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+          </View>
+        </View>
+
+        {/* Role Filter Chips */}
+        <View style={styles.filterContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScrollContent}
+          >
+            {(["all", "SALON_EMPLOYEE", "SALON_OWNER"] as FilterRole[]).map(
+              (role) => (
+                <TouchableOpacity
+                  key={role}
                   style={[
-                    styles.filterButtonText,
-                    dynamicStyles.filterButtonText,
-                    selectedRole === role && styles.filterButtonTextActive,
+                    styles.filterButton,
+                    dynamicStyles.filterButton,
+                    selectedRole === role && dynamicStyles.filterButtonActive,
                   ]}
+                  onPress={() => setSelectedRole(role)}
+                  activeOpacity={0.8}
                 >
-                  {role === "all"
-                    ? "All"
-                    : role === "SALON_EMPLOYEE"
-                    ? "Employees"
-                    : "Salon Owners"}
-                </Text>
-              </TouchableOpacity>
-            ),
-          )}
-        </ScrollView>
-      </View>
-
-      {/* Users List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <Loader message="Searching users..." />
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.content}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {users.map((user) => (
-            <TouchableOpacity
-              key={`${user.userId}-${user.role}`}
-              style={[styles.userItem, dynamicStyles.card]}
-              onPress={() => handleUserPress(user)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.avatarContainer}>
-                <Image
-                  source={getAvatar()}
-                  style={styles.avatar}
-                  resizeMode="cover"
-                />
-                {user.isActive && <View style={styles.onlineIndicator} />}
-              </View>
-
-              <View style={styles.userInfo}>
-                <Text
-                  style={[styles.userName, dynamicStyles.text]}
-                  numberOfLines={1}
-                >
-                  {user.name}
-                </Text>
-                <Text
-                  style={[styles.userRole, dynamicStyles.textSecondary]}
-                  numberOfLines={1}
-                >
-                  {getRoleLabel(user.role)}
-                  {user.salonName && ` • ${user.salonName}`}
-                </Text>
-                {user.email && (
                   <Text
-                    style={[styles.userEmail, dynamicStyles.textSecondary]}
-                    numberOfLines={1}
+                    style={[
+                      styles.filterButtonText,
+                      dynamicStyles.filterButtonText,
+                      selectedRole === role && styles.filterButtonTextActive,
+                    ]}
                   >
-                    {user.email}
+                    {role === "all"
+                      ? "All"
+                      : role === "SALON_EMPLOYEE"
+                      ? "Stylists"
+                      : "Owners"}
                   </Text>
+                </TouchableOpacity>
+              ),
+            )}
+          </ScrollView>
+        </View>
+
+        {/* Users List */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Loader message="Searching users..." />
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardDismissMode="on-drag"
+          >
+            {users.map((user, index) => (
+              <React.Fragment key={`${user.userId}-${user.role}`}>
+                <TouchableOpacity
+                  style={styles.userItem}
+                  onPress={() => handleUserPress(user)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.avatarContainer}>
+                    <Image
+                      source={getAvatar()}
+                      style={[styles.avatar, dynamicStyles.avatarBg]}
+                      resizeMode="cover"
+                    />
+                    {user.isActive && <View style={styles.onlineIndicator} />}
+                  </View>
+
+                  <View style={styles.userInfo}>
+                    <Text
+                      style={[styles.userName, dynamicStyles.text]}
+                      numberOfLines={1}
+                    >
+                      {user.name}
+                    </Text>
+                    <Text
+                      style={[styles.userRole, dynamicStyles.textSecondary]}
+                      numberOfLines={1}
+                    >
+                      {getRoleLabel(user.role)}
+                      {user.salonName && ` • ${user.salonName}`}
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={theme.colors.textTertiary}
+                  />
+                </TouchableOpacity>
+                {/* Separator */}
+                {index < users.length - 1 && (
+                  <View style={[styles.separator, dynamicStyles.separator]} />
                 )}
+              </React.Fragment>
+            ))}
+
+            {users.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIconContainer, dynamicStyles.searchContainer]}>
+                   <Ionicons
+                    name="search-outline"
+                    size={48}
+                    color={theme.colors.primary}
+                  />
+                </View>
+                <Text style={[styles.emptyTitle, dynamicStyles.text]}>
+                  {searchQuery && searchQuery.trim().length >= 2
+                    ? "No users found"
+                    : "Search to Message"}
+                </Text>
+                <Text style={[styles.emptySubtitle, dynamicStyles.textSecondary]}>
+                  {searchQuery && searchQuery.trim().length >= 2
+                    ? "Try checking your spelling or search for a different name."
+                    : "Find Stylists or Salon Owners to chat with."}
+                </Text>
               </View>
-
-              <MaterialIcons
-                name="chevron-right"
-                size={24}
-                color={dynamicStyles.textSecondary.color}
-              />
-            </TouchableOpacity>
-          ))}
-
-          {users.length === 0 && !loading && (
-            <View style={styles.emptyState}>
-              <MaterialIcons
-                name="person-search"
-                size={64}
-                color={dynamicStyles.textSecondary.color}
-              />
-              <Text style={[styles.emptyTitle, dynamicStyles.text]}>
-                {searchQuery && searchQuery.trim().length >= 2
-                  ? "No users found"
-                  : "Search for someone to message"}
-              </Text>
-              <Text style={[styles.emptySubtitle, dynamicStyles.textSecondary]}>
-                {searchQuery && searchQuery.trim().length >= 2
-                  ? "Try a different search term or check your spelling"
-                  : "Enter at least 2 characters to search by name, email, or phone number"}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      )}
-    </SafeAreaView>
+            )}
+            
+            {/* Bottom Padding */}
+            <View style={{ height: 20 }} />
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   backButton: {
-    padding: theme.spacing.xs,
+    padding: 4,
+    marginLeft: -4,
   },
   headerTitle: {
-    flex: 1,
     fontSize: 20,
-    fontWeight: "bold",
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
-    textAlign: "center",
+    fontWeight: "700",
+    letterSpacing: -0.5,
   },
   placeholder: {
-    width: 40,
+    width: 32,
   },
   searchWrapper: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: 12,
-    paddingHorizontal: theme.spacing.md,
-    height: 44,
+    paddingHorizontal: 12,
+    height: 48,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: "transparent",
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    marginLeft: theme.spacing.sm,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.regular,
+    marginLeft: 10,
+    fontFamily: Platform.OS === 'ios' ? "System" : "Roboto",
   },
   filterContainer: {
-    paddingBottom: theme.spacing.sm,
+    paddingBottom: 8,
   },
   filterScrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.sm,
+    paddingHorizontal: 20,
+    gap: 10,
   },
   filterButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
   },
-  filterButtonActive: {
-    borderColor: theme.colors.primary,
-  },
   filterButtonText: {
     fontSize: 14,
-    fontFamily: theme.fonts.medium,
+    fontWeight: "500",
   },
   filterButtonTextActive: {
     color: "#FFFFFF",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingTop: 8,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  // List Items
   userItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  separator: {
+    height: 1,
+    marginLeft: 86,
+    marginRight: 20,
   },
   avatarContainer: {
     position: "relative",
-    marginRight: theme.spacing.md,
+    marginRight: 16,
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: theme.colors.gray200,
   },
   onlineIndicator: {
     position: "absolute",
@@ -428,47 +422,47 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "#34C759",
     borderWidth: 2,
-    borderColor: theme.colors.background,
+    borderColor: "#FFFFFF", 
   },
   userInfo: {
     flex: 1,
+    justifyContent: "center",
   },
   userName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: theme.colors.text,
-    fontFamily: theme.fonts.medium,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   userRole: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
     marginBottom: 2,
   },
   userEmail: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
   },
+  // Empty State
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.xl * 2,
+    paddingTop: 80,
+    paddingHorizontal: 40,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
-    marginTop: theme.spacing.md,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.xs,
+    fontSize: 16,
     textAlign: "center",
+    lineHeight: 22,
   },
 });
-

@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,12 +10,16 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { salonService } from '../../services/salon';
+import { uploadService } from '../../services/upload';
 
 interface ServiceFormScreenProps {
   navigation: {
@@ -39,6 +42,8 @@ interface ServiceFormScreenProps {
         isActive: boolean;
         category?: string;
         targetGender?: string;
+        imageUrl?: string;
+        images?: string[];
         metadata?: {
           category?: string;
           targetGender?: string;
@@ -93,8 +98,12 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
     category: service?.category || service?.metadata?.category || '',
     targetGender: service?.targetGender || service?.metadata?.targetGender || '',
     isActive: service?.isActive ?? true,
+    imageUrl: service?.imageUrl || '',
+    images: service?.images || [],
   });
+  const [imageUris, setImageUris] = useState<string[]>(service?.images?.length ? service.images : (service?.imageUrl ? [service.imageUrl] : []));
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -111,6 +120,29 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
       color: isDark ? '#FFFFFF' : '#1A1A2E',
       borderColor: isDark ? '#404040' : '#E0E0E0',
     },
+  };
+
+
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        setImageUris(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const removeImage = (index: number) => {
+      setImageUris(prev => prev.filter((_, i) => i !== index));
   };
 
   const validate = () => {
@@ -132,7 +164,23 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
     if (!validate()) return;
 
     setLoading(true);
+    let finalImageUrls: string[] = [];
+
     try {
+      // proper upload logic for multiple images
+      if (imageUris.length > 0) {
+         setUploading(true);
+         const uploadPromises = imageUris.map(async (uri) => {
+             if (uri.startsWith('http')) return uri; // Already uploaded
+             const res = await uploadService.uploadServiceImage(uri);
+             return res.url;
+         });
+         finalImageUrls = await Promise.all(uploadPromises);
+         setUploading(false);
+      }
+
+      const primaryImageUrl = finalImageUrls.length > 0 ? finalImageUrls[0] : '';
+
       if (isEditMode && service) {
         await salonService.updateService(service.id, {
           name: formData.name.trim(),
@@ -142,6 +190,8 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
           isActive: formData.isActive,
           category: formData.category,
           targetGender: formData.targetGender,
+          imageUrl: primaryImageUrl,
+          images: finalImageUrls,
         });
         route.params.onSave?.();
         Alert.alert('Success', 'Service updated!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
@@ -153,11 +203,14 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
           durationMinutes: Number(formData.duration),
           category: formData.category,
           targetGender: formData.targetGender,
+          imageUrl: primaryImageUrl,
+          images: finalImageUrls,
         });
         route.params.onSave?.();
         Alert.alert('Success! 🎉', 'Service added!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
       }
     } catch (err: any) {
+      setUploading(false);
       Alert.alert('Error', err.message || 'Failed to save');
     } finally {
       setLoading(false);
@@ -193,7 +246,7 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Compact Header */}
@@ -219,6 +272,39 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
           keyboardShouldPersistTaps="handled"
         >
           
+          {/* Image Picker */}
+          {/* Images Picker - Horizontal Scroller */}
+          <View style={[styles.card, dynamicStyles.card, { padding: 10 }]}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, alignItems: 'center' }}>
+                 {/* Add Button */}
+                 <TouchableOpacity 
+                    style={[styles.addImageBtn, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '10' }]} 
+                    onPress={pickImage}
+                 >
+                    <MaterialIcons name="add-a-photo" size={24} color={theme.colors.primary} />
+                    <Text style={{ fontSize: 10, color: theme.colors.primary, marginTop: 4, fontWeight: '600' }}>Add Photo</Text>
+                 </TouchableOpacity>
+
+                 {/* Images List */}
+                 {imageUris.map((uri, index) => (
+                    <View key={index} style={styles.imageThumbnailContainer}>
+                        <Image source={{ uri }} style={styles.imageThumbnail} />
+                        <TouchableOpacity 
+                           style={styles.removeImageBtn}
+                           onPress={() => removeImage(index)}
+                        >
+                            <MaterialIcons name="close" size={14} color="#FFF" />
+                        </TouchableOpacity>
+                    </View>
+                 ))}
+             </ScrollView>
+             {imageUris.length === 0 && (
+                 <Text style={[styles.subText, dynamicStyles.textSecondary, { textAlign: 'center', marginTop: 8 }]}>
+                     Add photos specifically for this service (Max 5)
+                 </Text>
+             )}
+          </View>
+
           {/* Name & Description - Compact Card */}
           <View style={[styles.card, dynamicStyles.card]}>
             <View style={styles.fieldRow}>
@@ -317,7 +403,7 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
                   <Text style={[styles.fieldLabel, dynamicStyles.text]}>Price (RWF) *</Text>
                 </View>
                 <TextInput
-                  style={[styles.input, dynamicStyles.input, errors.price && styles.inputError]}
+                  style={[styles.input, dynamicStyles.input, { color: dynamicStyles.text.color }, errors.price && styles.inputError]}
                   value={formData.price}
                   onChangeText={(t) => updateField('price', t)}
                   placeholder="5000"
@@ -331,7 +417,7 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
                   <Text style={[styles.fieldLabel, dynamicStyles.text]}>Duration (min) *</Text>
                 </View>
                 <TextInput
-                  style={[styles.input, dynamicStyles.input, errors.duration && styles.inputError]}
+                  style={[styles.input, dynamicStyles.input, { color: dynamicStyles.text.color }, errors.duration && styles.inputError]}
                   value={formData.duration}
                   onChangeText={(t) => updateField('duration', t)}
                   placeholder="30"
@@ -362,26 +448,25 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
 
         {/* Submit Button */}
         <View style={[styles.bottomBar, dynamicStyles.card]}>
-          <TouchableOpacity onPress={handleSubmit} disabled={loading} style={styles.submitBtn}>
-            <LinearGradient
-              colors={loading ? ['#9CA3AF', '#6B7280'] : [theme.colors.primary, theme.colors.primaryLight]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.submitGradient}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFF" size="small" />
-              ) : (
-                <>
-                  <MaterialIcons name={isEditMode ? 'save' : 'add-circle'} size={20} color="#FFF" />
-                  <Text style={styles.submitText}>{isEditMode ? 'Save Changes' : 'Add Service'}</Text>
-                </>
-              )}
-            </LinearGradient>
+          <TouchableOpacity 
+            onPress={handleSubmit} 
+            disabled={loading} 
+            style={[styles.submitBtn, { backgroundColor: loading ? '#9CA3AF' : theme.colors.primary }]}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" size="small" />
+            ) : (
+              <View style={styles.submitContent}>
+                <MaterialIcons name={isEditMode ? 'save' : 'add-circle'} size={20} color="#FFF" />
+                <Text style={styles.submitText}>
+                  {uploading ? 'Uploading Image...' : (isEditMode ? 'Save Changes' : 'Add Service')}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -391,7 +476,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 54 : StatusBar.currentHeight! + 10,
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
@@ -446,8 +530,46 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, elevation: 2,
   },
   
-  bottomBar: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 16, borderTopWidth: 1 },
-  submitBtn: { borderRadius: 12, overflow: 'hidden', elevation: 3 },
-  submitGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, gap: 8 },
-  submitText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  bottomBar: { padding: 14, paddingBottom: Platform.OS === 'ios' ? 10 : 14, borderTopWidth: 1 },
+  submitBtn: { 
+    borderRadius: 12, 
+    overflow: 'hidden',
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  submitText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  addImageBtn: {
+      width: 80,
+      height: 80,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  imageThumbnailContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 12,
+      overflow: 'hidden',
+      position: 'relative',
+  },
+  imageThumbnail: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+  },
+  removeImageBtn: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
 });

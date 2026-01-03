@@ -109,6 +109,12 @@ import UnifiedWorkLogScreen from "../screens/workLog/UnifiedWorkLogScreen";
 // Finance screens
 import FinanceScreen from "../screens/finance/FinanceScreen";
 import LoanRepaymentScreen from "../screens/finance/LoanRepaymentScreen";
+import ExpensesScreen from "../screens/finance/ExpensesScreen";
+import AccountingScreen from "../screens/finance/AccountingScreen";
+
+// Common screens
+import ComingSoonScreen from "../screens/common/ComingSoonScreen";
+
 
 /**
  * Screen router helper
@@ -546,6 +552,12 @@ export const renderScreen = (
         />
       );
 
+    case "Expenses":
+      return <ExpensesScreen navigation={navigation} />;
+
+    case "Accounting":
+      return <AccountingScreen navigation={navigation} />;
+
     case "FinancialReports":
       return <FinancialReportsScreen navigation={navigation} />;
 
@@ -587,6 +599,14 @@ export const renderScreen = (
     case "WorkLog":
     case "Tasks":
       return <UnifiedWorkLogScreen navigation={navigation} />;
+
+    case "ComingSoon":
+      return (
+        <ComingSoonScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
 
     default:
       return <RoleBasedHome navigation={{ navigate: handleNavigate }} />;

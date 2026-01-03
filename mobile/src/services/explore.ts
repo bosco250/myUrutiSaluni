@@ -13,6 +13,7 @@ export interface Service {
   basePrice: number;
   isActive: boolean;
   images?: string[];
+  imageUrl?: string;
   category?: string;
   targetGender?: string;
   metadata?: Record<string, any>;
@@ -54,7 +55,12 @@ export interface Salon {
   website?: string;
   status: string; // 'active' | 'inactive' | etc.
   settings?: Record<string, any>;
+  operatingHours?: Record<string, { open: string; close: string; isOpen: boolean }>; // Key: 'monday', 'tuesday', etc.
+  businessHours?: Record<string, { open: string; close: string; isOpen: boolean }>; // Legacy / Alternative location
+  images?: string[]; // Array of image URLs
   employeeCount?: number; // Added by backend service
+  businessType?: string; // 'hair_salon' | 'beauty_spa' | 'nail_salon' | 'barbershop' | 'full_service' | 'mobile' | 'other'
+  targetClientele?: string; // 'men' | 'women' | 'both'
   createdAt: string;
   updatedAt: string;
 }

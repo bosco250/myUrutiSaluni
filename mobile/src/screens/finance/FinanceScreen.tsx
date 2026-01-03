@@ -827,7 +827,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
           </Text>
         </View>
         {topServices.map((service, index) => (
-          <View key={service.id} style={styles.topItemRow}>
+          <View key={service.id || `service-${index}`} style={styles.topItemRow}>
             <View style={styles.topItemRank}>
               <Text style={styles.rankText}>{index + 1}</Text>
             </View>
@@ -859,7 +859,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         {topEmployees.map((employee, index) => {
           const isFirst = index === 0;
           return (
-            <View key={employee.id} style={styles.topItemRow}>
+            <View key={employee.id || `employee-${index}`} style={styles.topItemRow}>
               <View
                 style={[
                   styles.topItemRank,

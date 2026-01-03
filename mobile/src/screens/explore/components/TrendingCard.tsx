@@ -11,14 +11,14 @@ interface TrendingCardProps {
   onPress?: () => void;
 }
 
-const CATEGORY_CONFIG: Record<string, { icon: keyof typeof MaterialIcons.glyphMap, color: string }> = {
-  Hair: { icon: "content-cut", color: "#FF6B6B" },
-  Nails: { icon: "spa", color: "#4ECDC4" },
-  Face: { icon: "face", color: "#FFE66D" },
-  Massage: { icon: "self-improvement", color: "#6B5B95" },
-  Barber: { icon: "content-cut", color: "#95A5A6" },
-  Makeup: { icon: "brush", color: "#FF9FF3" },
-  Other: { icon: "star", color: "#A8E6CF" },
+const CATEGORY_GRADIENTS: Record<string, { icon: keyof typeof MaterialIcons.glyphMap, colors: [string, string] }> = {
+  Hair: { icon: "content-cut", colors: ["#D4AF37", "#8B5E3C"] }, // Gold to Bronze
+  Nails: { icon: "spa", colors: ["#FF9A9E", "#FECFEF"] }, // Soft Pink gradient
+  Face: { icon: "face", colors: ["#FFECD2", "#FCB69F"] }, // Peach gradient
+  Massage: { icon: "self-improvement", colors: ["#A18CD1", "#FBC2EB"] }, // Purple gradient
+  Barber: { icon: "content-cut", colors: ["#2C3E50", "#4CA1AF"] }, // Dark Slate to Teal
+  Makeup: { icon: "brush", colors: ["#ff9a9e", "#fecfef"] }, // Rose gradient
+  Other: { icon: "star", colors: ["#84fab0", "#8fd3f4"] }, // Aqua gradient
 };
 
 export default function TrendingCard({
@@ -29,8 +29,8 @@ export default function TrendingCard({
 }: TrendingCardProps) {
   // Determine fallback config based on category or default to 'Other'
   // Use loose matching
-  const catKey = Object.keys(CATEGORY_CONFIG).find(k => category.includes(k)) || 'Other';
-  const config = CATEGORY_CONFIG[catKey];
+  const catKey = Object.keys(CATEGORY_GRADIENTS).find(k => category.includes(k)) || 'Other';
+  const config = CATEGORY_GRADIENTS[catKey];
 
   return (
     <TouchableOpacity 
@@ -41,11 +41,16 @@ export default function TrendingCard({
       {image ? (
         <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
       ) : (
-        <View style={[styles.placeholderContainer, { backgroundColor: config.color }]}>
+        <LinearGradient
+            colors={config.colors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.placeholderContainer}
+        >
             <View style={styles.iconCircle}>
                 <MaterialIcons name={config.icon} size={40} color="#FFF" />
             </View>
-        </View>
+        </LinearGradient>
       )}
       
       <LinearGradient

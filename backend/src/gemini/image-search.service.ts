@@ -11,16 +11,21 @@ export class ImageSearchService {
     // Use the same GOOGLE_API_KEY from .env (used for Gemini)
     this.googleApiKey = this.configService.get<string>('GOOGLE_API_KEY') || '';
 
-    // Use custom search engine ID if provided, otherwise use default that searches entire web
+    // Use custom search engine ID if provided
     this.googleSearchEngineId =
-      this.configService.get<string>('GOOGLE_SEARCH_ENGINE_ID') ||
-      '017576662512468239146:omuauf_lfve'; // Default: searches entire web
+      this.configService.get<string>('GOOGLE_SEARCH_ENGINE_ID') || '';
 
     if (!this.googleApiKey) {
       this.logger.warn(
         'GOOGLE_API_KEY not found - image search will use fallback',
       );
-    } else {
+    }
+
+    if (!this.googleSearchEngineId && this.googleApiKey) {
+      this.logger.warn(
+        'GOOGLE_SEARCH_ENGINE_ID not found - image search may fail',
+      );
+    } else if (this.googleApiKey) {
       this.logger.log(
         `Using Google Image Search with Search Engine ID: ${this.googleSearchEngineId}`,
       );

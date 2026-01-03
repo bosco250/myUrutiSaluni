@@ -1,1610 +1,669 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
-  Alert,
+  ActivityIndicator,
   Linking,
+  StatusBar,
+  Animated,
+  Share,
+  Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons, FontAwesome, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme, useAuth } from "../../context";
-import {
-  exploreService,
-  Salon,
-  Service,
-  Product,
-  Employee,
+import { useTheme } from "../../context";
+import { 
+  exploreService, 
+  Salon, 
+  Service, 
+  Product, 
+  Employee 
 } from "../../services/explore";
-import { Loader } from "../../components/common";
+import ImageViewing from "react-native-image-viewing";
 
-interface SalonDetailScreenProps {
-  navigation?: {
-    navigate: (screen: string, params?: any) => void;
-    goBack: () => void;
+// Custom navigation props since we don't use React Navigation methods directly
+type Props = {
+  navigation: any;
+  route: {
+    params: any;
   };
-  route?: {
-    params?: {
-      salonId: string;
-      salon?: Salon;
-    };
-  };
-}
+};
 
-type TabType = "Overview" | "Services" | "Products" | "Employees";
+// --- Constants & Helpers ---
 
-export default function SalonDetailScreen({
-  navigation,
-  route,
-}: SalonDetailScreenProps) {
-  const { isDark } = useTheme();
-  const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<TabType>("Overview");
-  const [salon, setSalon] = useState<Salon | null>(
-    route?.params?.salon || null
+const HERO_HEIGHT = 280;
+
+
+
+// Middleware to normalize working hours location from backend
+const getSalonHours = (salon: Salon) => {
+  return salon.operatingHours || 
+         salon.businessHours || 
+         salon.settings?.workingHours || 
+         null;
+};
+
+// Helper to check if salon is currently open based on structure hours
+const checkSalonOpenStatus = (salon: Salon) => {
+  const hoursData = getSalonHours(salon);
+
+  // 1. If detailed operating hours exist, use them
+  if (hoursData) {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const now = new Date();
+    const dayName = days[now.getDay()];
+    // @ts-ignore - indexing generic record
+    const todayHours = hoursData[dayName];
+
+    if (!todayHours || !todayHours.isOpen) {
+      return { isOpen: false, label: 'Closed' };
+    }
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Parse "HH:mm" to minutes
+    const [openH, openM] = todayHours.openTime 
+      ? todayHours.openTime.split(':').map(Number) // Support openTime (CreateSalon)
+      : todayHours.open.split(':').map(Number);    // Support open (Standard)
+      
+    const [closeH, closeM] = todayHours.closeTime
+      ? todayHours.closeTime.split(':').map(Number)
+      : todayHours.close.split(':').map(Number);
+    
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+
+    if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+       // normalize close time string
+       const closeStr = todayHours.closeTime || todayHours.close;
+      return { isOpen: true, label: `Open until ${closeStr}` };
+    }
+    return { isOpen: false, label: 'Closed' };
+  }
+
+  // 2. Fallback: If no hours data, rely on status but don't say "Open Now" (time-specific)
+  if (salon.status === 'active') {
+    return { isOpen: true, label: 'Open' }; 
+  }
+  
+  return { isOpen: false, label: 'Closed' };
+};
+
+const DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+// ... inside component render ...
+// In Overview Tab:
+// <SectionHeader title="Working Hours" />
+// <View style={styles.hoursList}>
+//   {DAYS_ORDER.map(day => {
+//      const hours = salon.operatingHours?.[day] || (day !== 'sunday' ? { open: '08:00', close: '23:00', isOpen: true } : { open: '00:00', close: '00:00', isOpen: false });
+//      return (
+//        <View key={day} style={styles.hourRow}>
+//          <Text style={styles.dayText}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
+//          <Text style={[styles.timeText, !hours.isOpen && styles.closedText]}>
+//            {hours.isOpen ? `${hours.open} - ${hours.close}` : 'Closed'}
+//          </Text>
+//        </View>
+//      );
+//   })}
+// </View>
+
+
+
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  hair_salon: "Hair Salon",
+  beauty_spa: "Beauty Spa",
+  nail_salon: "Nail Salon",
+  barbershop: "Barbershop",
+  full_service: "Full Service",
+  mobile: "Mobile Service",
+  other: "Beauty Center",
+};
+
+const CLIENTELE_LABELS: Record<string, string> = {
+  men: "Men Only",
+  women: "Women Only",
+  both: "Unisex",
+  kids: "Kids Friendly",
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-RW", {
+    style: "currency",
+    currency: "RWF",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+// --- Sub-Components ---
+
+const ActionButton = ({ 
+  icon, 
+  label, 
+  onPress, 
+  primary = false,
+  disabled = false
+}: { 
+  icon: keyof typeof Ionicons.glyphMap; 
+  label: string; 
+  onPress: () => void; 
+  primary?: boolean;
+  disabled?: boolean;
+}) => (
+  <TouchableOpacity 
+    style={[
+      styles.actionButton, 
+      primary && styles.actionButtonPrimary,
+      disabled && styles.actionButtonDisabled
+    ]} 
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.7}
+  >
+    <Ionicons 
+      name={icon} 
+      size={20} 
+      color={primary ? theme.colors.white : theme.colors.text} 
+    />
+    <Text style={[
+      styles.actionButtonText, 
+      primary && styles.actionButtonTextPrimary
+    ]}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+const SectionHeader = ({ title, action }: { title: string; action?: string }) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    {action && (
+      <TouchableOpacity>
+        <Text style={styles.sectionAction}>{action}</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+);
+
+const ServiceItem = ({ service, onPress }: { service: Service; onPress: () => void }) => {
+  const imageSource = service.images && service.images.length > 0 
+      ? { uri: service.images[0] }
+      : service.imageUrl 
+          ? { uri: service.imageUrl }
+          : null;
+
+  return (
+    <TouchableOpacity style={styles.serviceItem} onPress={onPress}>
+      {imageSource && (
+         <Image source={imageSource} style={styles.serviceImage} resizeMode="cover" />
+      )}
+      <View style={styles.serviceInfo}>
+        <Text style={styles.serviceName}>{service.name}</Text>
+        <Text style={styles.serviceDuration}>{service.durationMinutes} mins</Text>
+      </View>
+      <View style={styles.servicePriceContainer}>
+        <Text style={styles.servicePrice}>{formatCurrency(service.basePrice)}</Text>
+        <TouchableOpacity style={styles.bookButtonSmall} onPress={onPress}>
+          <Text style={styles.bookButtonTextSmall}>Book</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+};
+
+const EmployeeAvatar = ({ employee }: { employee: Employee }) => {
+  // Use any cast if you suspect profileImage exists at runtime but not in type
+  // const imageUrl = (employee.user as any)?.profileImage;
+  // For strict safety, we use initials only as per current interface
+  
+  return (
+    <View style={styles.employeeCard}>
+      <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>
+            {employee.user?.fullName?.charAt(0) || "S"}
+          </Text>
+      </View>
+      <Text style={styles.employeeName} numberOfLines={1}>
+        {employee.user?.fullName || "Stylist"}
+      </Text>
+      <Text style={styles.employeeRole} numberOfLines={1}>
+        {employee.roleTitle || "Expert"}
+      </Text>
+    </View>
+  );
+};
+
+const DescriptionText = ({ text }: { text: string }) => {
+  const [expanded, setExpanded] = useState(false);
+  // Truncate if longer than 150 chars
+  const shouldTruncate = text.length > 150;
+
+  if (!shouldTruncate) {
+    return <Text style={styles.description}>{text}</Text>;
+  }
+
+  return (
+    <View>
+      <Text style={styles.description} numberOfLines={expanded ? undefined : 3}>
+        {text}
+      </Text>
+      <TouchableOpacity onPress={() => setExpanded(!expanded)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Text style={styles.readMoreText}>
+          {expanded ? "Read Less" : "Read More"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// --- Main Screen ---
+
+export default function SalonDetailScreen({ route, navigation }: Props) {
+  const { isDark } = useTheme();
+  // Use generic access to params since types might optionally include salon object
+  const params = route.params as any;
+  const salonId = params.salonId;
+  const initialSalon = params.salon as Salon | undefined;
+
+  const [salon, setSalon] = useState<Salon | null>(initialSalon || null);
   const [services, setServices] = useState<Service[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(!route?.params?.salon);
-  const [servicesLoading, setServicesLoading] = useState(false);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [employeesLoading, setEmployeesLoading] = useState(false);
+  const [, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(!initialSalon);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "services" | "team" | "gallery">("overview");
+  
+  // Image Viewer State
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  const salonId = route?.params?.salonId || route?.params?.salon?.id;
+  // Animations
+  const scrollY = useMemo(() => new Animated.Value(0), []);
 
-  const fetchSalon = useCallback(async () => {
-    if (!salonId) return;
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [HERO_HEIGHT - 100, HERO_HEIGHT - 20],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
+  const fetchData = async () => {
     try {
-      setLoading(true);
-      // Fetch salon with browse=true to get full settings including operating hours
-      const fetchedSalon = await exploreService.getSalonById(salonId, true);
-      setSalon(fetchedSalon);
-    } catch (error: any) {
-      console.error("Error fetching salon:", error);
-      Alert.alert("Error", error.message || "Failed to load salon details");
-      navigation?.goBack();
+      if (!initialSalon) setLoading(true);
+      setError(null);
+
+      // optimize: fetch services/employees in parallel
+      const tasks: Promise<any>[] = [
+        exploreService.getServices(salonId),
+        exploreService.getSalonEmployees(salonId),
+        exploreService.getProducts(salonId),
+      ];
+      
+      // If we didn't get salon data from params, fetch it
+      if (!initialSalon) {
+        tasks.push(exploreService.getSalonById(salonId));
+      }
+
+      const results = await Promise.all(tasks);
+      const [servicesData, employeesData, productsData] = results;
+
+      setServices(servicesData);
+      setEmployees(employeesData);
+      setProducts(productsData);
+
+      if (!initialSalon && results[3]) {
+        setSalon(results[3]);
+      }
+    } catch (err) {
+      setError("Failed to load salon details");
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [salonId, navigation]);
-
-  const fetchServices = useCallback(async () => {
-    if (!salonId) return;
-
-    try {
-      setServicesLoading(true);
-      const salonServices = await exploreService.getServices(salonId);
-      setServices(salonServices.filter((s) => s.isActive));
-    } catch {
-      console.error("Error fetching services");
-    } finally {
-      setServicesLoading(false);
-    }
-  }, [salonId]);
-
-  const fetchProducts = useCallback(async () => {
-    if (!salonId) return;
-
-    try {
-      setProductsLoading(true);
-      const salonProducts = await exploreService.getProducts(salonId);
-      // Filter out invalid products and ensure we have valid data
-      const validProducts = salonProducts.filter((p) => p && p.id && p.name);
-      setProducts(validProducts);
-    } catch {
-      // Set empty array on error to show "No products available" message
-      setProducts([]);
-      // Don't show alert for products as it's not critical
-    } finally {
-      setProductsLoading(false);
-    }
-  }, [salonId]);
-
-  const fetchEmployees = useCallback(async () => {
-    if (!salonId) return;
-
-    try {
-      setEmployeesLoading(true);
-      const salonEmployees = await exploreService.getSalonEmployees(salonId);
-      setEmployees(salonEmployees.filter((e) => e.isActive));
-    } catch {
-      setEmployees([]);
-    } finally {
-      setEmployeesLoading(false);
-    }
-  }, [salonId]);
+  };
 
   useEffect(() => {
-    if (salonId && !salon) {
-      fetchSalon();
-    }
-    if (salonId) {
-      fetchServices();
-      fetchProducts();
-      fetchEmployees();
-    }
-  }, [
-    salonId,
-    salon,
-    fetchSalon,
-    fetchServices,
-    fetchProducts,
-    fetchEmployees,
-  ]);
+    fetchData();
+    // fetchData is stable - only changes on salonId or initialSalon change
+    // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [salonId]);
 
-  const handleServicePress = (service: Service) => {
-    navigation?.navigate("ServiceDetail", {
+  const handleShare = async () => {
+    if (!salon) return;
+    try {
+      await Share.share({
+        message: `Check out ${salon.name} on Uruti Saluni!`,
+        url: salon.website || "",
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleCall = () => {
+    if (salon?.phone) Linking.openURL(`tel:${salon.phone}`);
+  };
+
+  const handleMessage = () => {
+    if (salon?.phone) Linking.openURL(`sms:${salon.phone}`);
+  };
+
+  const handleBookService = (service: Service) => {
+    // @ts-ignore
+    navigation.navigate("BookingFlow", {
+      salonId: salon?.id,
       serviceId: service.id,
-      service,
+      service: service,
     });
   };
 
-  const handleEmployeePress = (employee: Employee) => {
-    navigation?.navigate("EmployeeDetail", {
-      employeeId: employee.id,
-      salonId: salonId,
-      employee,
-    });
-  };
-
-  const handlePhonePress = () => {
-    if (salon?.phone) {
-      Linking.openURL(`tel:${salon.phone}`);
+  const handleBook = () => {
+    if (salon) {
+      // @ts-ignore - BookingFlow params mismatch possible, ignoring for clean build if verified elsewhere
+      navigation.navigate("BookingFlow", {
+        salonId: salon.id,
+        salonName: salon.name,
+      });
     }
-  };
-
-  const handleEmailPress = () => {
-    if (salon?.email) {
-      Linking.openURL(`mailto:${salon.email}`);
-    }
-  };
-
-  const handleWebsitePress = () => {
-    if (salon?.website) {
-      const url = salon.website.startsWith("http")
-        ? salon.website
-        : `https://${salon.website}`;
-      Linking.openURL(url);
-    }
-  };
-
-  const getInitials = (text: string) => {
-    return text
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Parse operating hours from settings
-  const parseOperatingHours = () => {
-    if (!salon?.settings) {
-      return null;
-    }
-
-    // Try operatingHours first (detailed format)
-    if (salon.settings.operatingHours) {
-      try {
-        let hours;
-        if (typeof salon.settings.operatingHours === "string") {
-          const hoursStr = salon.settings.operatingHours.trim();
-
-          // Check if it's already a valid JSON object string
-          if (hoursStr.startsWith("{") && hoursStr.endsWith("}")) {
-            try {
-              // Try parsing as-is first
-              hours = JSON.parse(hoursStr);
-            } catch {
-              // If that fails, try unescaping double-encoded JSON
-              try {
-                const unescaped = hoursStr
-                  .replace(/\\"/g, '"')
-                  .replace(/\\n/g, "")
-                  .replace(/\\t/g, "");
-                hours = JSON.parse(unescaped);
-              } catch {
-                // If still fails, try removing outer quotes if present
-                try {
-                  const cleaned = hoursStr.replace(/^["']|["']$/g, "");
-                  hours = JSON.parse(cleaned);
-                } catch {
-                  // Last attempt: try parsing after removing all escape characters
-                  const fullyUnescaped = hoursStr
-                    .replace(/\\/g, "")
-                    .replace(/^["']|["']$/g, "");
-                  hours = JSON.parse(fullyUnescaped);
-                }
-              }
-            }
-          } else {
-            // Not a JSON string, might be a simple format
-            return null;
-          }
-        } else {
-          // Already an object
-          hours = salon.settings.operatingHours;
-        }
-
-        // Verify structure: should have lowercase day names (monday, tuesday, etc.)
-        if (hours && typeof hours === "object" && !Array.isArray(hours)) {
-          // Check if it has at least one day with the expected structure
-          const firstDay = Object.keys(hours)[0];
-          if (
-            firstDay &&
-            hours[firstDay] &&
-            typeof hours[firstDay] === "object"
-          ) {
-            if (
-              hours[firstDay].hasOwnProperty("isOpen") &&
-              hours[firstDay].hasOwnProperty("startTime") &&
-              hours[firstDay].hasOwnProperty("endTime")
-            ) {
-              return hours;
-            }
-          }
-        }
-      } catch {
-        // Silently fail and try fallback - don't log to avoid console spam
-        // The error is expected for malformed data
-      }
-    }
-
-    // Fallback: If operatingHours not found or invalid, check for openingHours (simple format like "08:00-20:00")
-    if (salon.settings.openingHours) {
-      try {
-        const openingHoursStr = String(salon.settings.openingHours).trim();
-        // Parse format like "08:00-20:00"
-        const match = openingHoursStr.match(/(\d{2}):(\d{2})-(\d{2}):(\d{2})/);
-        if (match) {
-          const startTime = `${match[1]}:${match[2]}`;
-          const endTime = `${match[3]}:${match[4]}`;
-
-          // Convert to day-by-day format (all days open with same hours)
-          return {
-            monday: { isOpen: true, startTime, endTime },
-            tuesday: { isOpen: true, startTime, endTime },
-            wednesday: { isOpen: true, startTime, endTime },
-            thursday: { isOpen: true, startTime, endTime },
-            friday: { isOpen: true, startTime, endTime },
-            saturday: { isOpen: true, startTime, endTime },
-            sunday: { isOpen: false, startTime, endTime },
-          };
-        }
-        // If it's not in the expected format, return as string
-        return openingHoursStr;
-      } catch {
-        // Silently fail - don't log to avoid console spam
-      }
-    }
-
-    return null;
-  };
-
-  // Get specialties from settings
-  const getSpecialties = () => {
-    if (
-      salon?.settings?.specialties &&
-      Array.isArray(salon.settings.specialties)
-    ) {
-      return salon.settings.specialties;
-    }
-    return [];
-  };
-
-  const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-    },
-    text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    textSecondary: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
-    },
-    header: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: isDark
-        ? theme.colors.gray800
-        : theme.colors.borderLight,
-    },
-    card: {
-      backgroundColor: isDark
-        ? theme.colors.gray800
-        : theme.colors.backgroundSecondary,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-    },
-    listItem: {
-      backgroundColor: isDark
-        ? theme.colors.gray800
-        : theme.colors.backgroundSecondary,
-      borderBottomColor: isDark
-        ? theme.colors.gray700
-        : theme.colors.borderLight,
-    },
-    sectionBorder: {
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-    },
   };
 
   if (loading) {
     return (
-      <SafeAreaView
-        style={[styles.container, dynamicStyles.container]}
-        edges={["top"]}
-      >
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        <Loader fullscreen message="Loading salon details..." />
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
     );
   }
 
-  if (!salon) {
+  if (error || !salon) {
     return (
-      <SafeAreaView
-        style={[styles.container, dynamicStyles.container]}
-        edges={["top"]}
-      >
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        <View style={styles.errorContainer}>
-          <MaterialIcons
-            name="error-outline"
-            size={64}
-            color={theme.colors.error}
-          />
-          <Text style={[styles.errorText, dynamicStyles.text]}>
-            Salon not found
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.errorBackButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            onPress={() => navigation?.goBack()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error || "Salon not found"}</Text>
+        <TouchableOpacity onPress={fetchData} style={styles.retryButton}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backLink}>
+          <Text style={styles.backLinkText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
+
+  const businessType = BUSINESS_TYPE_LABELS[salon.businessType || "other"] || "Beauty Center";
+  const clientele = CLIENTELE_LABELS[salon.targetClientele || "both"] || "Generic";
 
   return (
-    <SafeAreaView
-      style={[styles.container, dynamicStyles.container]}
-      edges={["top"]}
-    >
+    <View style={styles.container}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      
+      {/* Absolute Header (Back Button & Actions) */}
+      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
+        <SafeAreaView edges={['top']}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{salon.name}</Text>
+        </SafeAreaView>
+      </Animated.View>
 
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          dynamicStyles.header,
-          { borderBottomColor: dynamicStyles.header.borderBottomColor },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation?.goBack()}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
-          />
-        </TouchableOpacity>
-        <Text
-          style={[styles.headerTitle, dynamicStyles.text]}
-          numberOfLines={1}
-        >
-          {salon.name}
-        </Text>
-        <View style={styles.headerRight} />
+      <View style={styles.floatingHeader}>
+        <SafeAreaView edges={['top']} style={styles.floatingHeaderContent}>
+          <TouchableOpacity 
+            style={styles.circleButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <View style={styles.rightActions}>
+            <TouchableOpacity style={styles.circleButton} onPress={handleShare}>
+              <Ionicons name="share-outline" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.circleButton}>
+              <Ionicons name="heart-outline" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* Salon Image/Header */}
-        <View
-          style={[
-            styles.salonHeader,
-            { backgroundColor: theme.colors.primaryLight },
-          ]}
-        >
-          <View style={styles.salonHeaderDecoration} />
-          <View style={styles.salonImageContainer}>
-            <View
-              style={[
-                styles.salonImagePlaceholder,
-                { backgroundColor: theme.colors.primary },
-              ]}
-            >
-              <Text style={styles.salonInitials}>
-                {getInitials(salon.name)}
+        <View style={styles.heroSection}>
+          {salon.images && salon.images.length > 0 ? (
+            <Image 
+              source={{ uri: salon.images[0] }} 
+              style={StyleSheet.absoluteFillObject} 
+              resizeMode="cover" 
+            />
+          ) : (
+            <View style={styles.heroPlaceholder}>
+              <Text style={styles.heroInitials}>
+                {salon.name.substring(0, 2).toUpperCase()}
               </Text>
             </View>
-            {salon.status === "active" && (
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: theme.colors.success },
-                ]}
-              >
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>Open</Text>
+          )}
+          <View style={styles.heroOverlay} />
+          
+          <View style={styles.heroContent}>
+            <View style={styles.badgeRow}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{businessType}</Text>
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* Salon Info */}
-        <View style={styles.salonInfo}>
-          <View style={styles.salonTitleContainer}>
-            <Text style={[styles.salonTitle, dynamicStyles.text]}>
-              {salon.name}
+              <View style={[styles.badge, styles.badgeSecondary]}>
+                <Text style={[styles.badgeText, styles.badgeTextSecondary]}>{clientele}</Text>
+              </View>
+            </View>
+            <Text style={styles.salonName}>{salon.name}</Text>
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={styles.ratingText}>4.8 (120 reviews)</Text>
+              <Text style={styles.dot}>•</Text>
+              <Text style={[
+                styles.statusText, 
+                checkSalonOpenStatus(salon).isOpen ? styles.statusOpen : styles.statusClosed
+              ]}>
+                {checkSalonOpenStatus(salon).label}
+              </Text>
+            </View>
+            <Text style={styles.addressText} numberOfLines={1}>
+              <Ionicons name="location-outline" size={14} /> {salon.address}, {salon.city}
             </Text>
-            {salon.registrationNumber && (
-              <View style={[styles.verifiedBadge, dynamicStyles.card]}>
-                <MaterialIcons
-                  name="verified"
-                  size={14}
-                  color={theme.colors.primary}
-                />
-                <Text
-                  style={[styles.verifiedText, { color: theme.colors.primary }]}
-                >
-                  Verified
-                </Text>
-              </View>
-            )}
           </View>
+        </View>
 
-          {/* Contact Info Cards */}
-          <View style={styles.contactCards}>
-            {salon.phone && (
-              <TouchableOpacity
-                style={[
-                  styles.contactCard,
-                  dynamicStyles.card,
-                  { borderColor: dynamicStyles.card.borderColor },
-                ]}
-                onPress={handlePhonePress}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.contactIconContainer,
-                    { backgroundColor: theme.colors.primaryLight },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="phone"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.contactTextContainer}>
-                  <Text
-                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
-                  >
-                    Phone
-                  </Text>
-                  <Text
-                    style={[styles.contactText, dynamicStyles.text]}
-                    numberOfLines={1}
-                  >
-                    {salon.phone}
-                  </Text>
-                </View>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={20}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </TouchableOpacity>
-            )}
-            {salon.email && (
-              <TouchableOpacity
-                style={[
-                  styles.contactCard,
-                  dynamicStyles.card,
-                  { borderColor: dynamicStyles.card.borderColor },
-                ]}
-                onPress={handleEmailPress}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.contactIconContainer,
-                    { backgroundColor: theme.colors.primaryLight },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="email"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.contactTextContainer}>
-                  <Text
-                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
-                  >
-                    Email
-                  </Text>
-                  <Text
-                    style={[styles.contactText, dynamicStyles.text]}
-                    numberOfLines={1}
-                  >
-                    {salon.email}
-                  </Text>
-                </View>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={20}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </TouchableOpacity>
-            )}
-            {salon.website && (
-              <TouchableOpacity
-                style={[
-                  styles.contactCard,
-                  dynamicStyles.card,
-                  { borderColor: dynamicStyles.card.borderColor },
-                ]}
-                onPress={handleWebsitePress}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.contactIconContainer,
-                    { backgroundColor: theme.colors.primaryLight },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="language"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.contactTextContainer}>
-                  <Text
-                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
-                  >
-                    Website
-                  </Text>
-                  <Text
-                    style={[styles.contactText, dynamicStyles.text]}
-                    numberOfLines={1}
-                  >
-                    Visit Website
-                  </Text>
-                </View>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={20}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </TouchableOpacity>
-            )}
-            {/* Message Salon Button - Only show for customers */}
-            {user?.role?.toLowerCase() === "customer" && (
-              <TouchableOpacity
-                style={[
-                  styles.contactCard,
-                  dynamicStyles.card,
-                  { borderColor: dynamicStyles.card.borderColor },
-                ]}
-                onPress={() => {
-                  navigation?.navigate("Chat", {
-                    salonId: salon?.id,
-                  });
-                }}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.contactIconContainer,
-                    { backgroundColor: theme.colors.primaryLight },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="chat"
-                    size={18}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.contactTextContainer}>
-                  <Text
-                    style={[styles.contactLabel, dynamicStyles.textSecondary]}
-                  >
-                    Message
-                  </Text>
-                  <Text
-                    style={[styles.contactText, dynamicStyles.text]}
-                    numberOfLines={1}
-                  >
-                    Start a Conversation
-                  </Text>
-                </View>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={20}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
+        {/* Action Bar */}
+        <View style={styles.actionBar}>
+          <ActionButton 
+            icon="calendar" 
+            label="Book Now" 
+            primary 
+            onPress={handleBook} 
+          />
+          <ActionButton 
+            icon="chatbubble-outline" 
+            label="Message" 
+            onPress={handleMessage} 
+          />
+          <ActionButton 
+            icon="call-outline" 
+            label="Call" 
+            onPress={handleCall} 
+            disabled={!salon.phone}
+          />
+        </View>
 
-          {/* Location Card */}
-          {(salon.address || salon.city || salon.district) && (
-            <View
-              style={[
-                styles.locationCard,
-                dynamicStyles.card,
-                { borderColor: dynamicStyles.card.borderColor },
-              ]}
+        {/* Tabs */}
+        <View style={styles.tabBar}>
+          {(["overview", "services", "team", "gallery"] as const).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
+              onPress={() => setActiveTab(tab)}
             >
-              <View
-                style={[
-                  styles.locationIconContainer,
-                  { backgroundColor: theme.colors.primaryLight },
-                ]}
-              >
-                <MaterialIcons
-                  name="location-on"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-              </View>
-              <View style={styles.locationContent}>
-                <Text
-                  style={[styles.locationLabel, dynamicStyles.textSecondary]}
-                >
-                  Location
-                </Text>
-                <Text style={[styles.locationText, dynamicStyles.text]}>
-                  {[salon.address, salon.district, salon.city, salon.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Description */}
-          {salon.description && (
-            <View
-              style={[
-                styles.descriptionSection,
-                { borderTopColor: dynamicStyles.sectionBorder.borderColor },
-              ]}
-            >
-              <View style={styles.sectionHeaderRow}>
-                <View
-                  style={[
-                    styles.sectionHeaderLine,
-                    {
-                      backgroundColor: dynamicStyles.sectionBorder.borderColor,
-                    },
-                  ]}
-                />
-                <Text style={[styles.sectionHeading, dynamicStyles.text]}>
-                  About
-                </Text>
-                <View
-                  style={[
-                    styles.sectionHeaderLine,
-                    {
-                      backgroundColor: dynamicStyles.sectionBorder.borderColor,
-                    },
-                  ]}
-                />
-              </View>
-              <Text
-                style={[styles.description, dynamicStyles.textSecondary]}
-                numberOfLines={isDescriptionExpanded ? undefined : 4}
-              >
-                {salon.description}
+              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
-              {salon.description.length > 150 && (
-                <TouchableOpacity
-                  onPress={() =>
-                    setIsDescriptionExpanded(!isDescriptionExpanded)
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Content */}
+        <View style={styles.contentSection}>
+          {activeTab === "overview" && (
+            <View style={styles.overviewContainer}>
+              <SectionHeader title="About" />
+              <DescriptionText text={salon.description || "No description available for this salon."} />
+
+              <View style={styles.divider} />
+
+              <SectionHeader title="Info" />
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Ionicons name="call-outline" size={20} color={theme.colors.textSecondary} />
+                  <View>
+                    <Text style={styles.infoLabel}>Phone</Text>
+                    <Text style={styles.infoValue}>{salon.phone || "N/A"}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <SectionHeader title="Working Hours" />
+              {getSalonHours(salon) ? (
+                <View style={styles.hoursList}>
+                  {DAYS_ORDER.map(day => {
+                     // @ts-ignore
+                     const hours = getSalonHours(salon)[day];
+                     if (!hours) return null; // Skip if specific day data missing
+                     
+                     const isToday = new Date().getDay() === DAYS_ORDER.indexOf(day) + 1 || (day === 'sunday' && new Date().getDay() === 0);
+                     
+                     // Normalize field names (open vs openTime)
+                     const openStr = hours.open || hours.openTime;
+                     const closeStr = hours.close || hours.closeTime;
+
+                     return (
+                       <View key={day} style={[styles.hourRow, isToday && styles.todayRow]}>
+                         <Text style={[styles.dayText, isToday && styles.todayText]}>
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                         </Text>
+                         <Text style={[
+                           styles.timeText, 
+                           !hours.isOpen && styles.closedText,
+                           isToday && styles.todayText
+                         ]}>
+                           {hours.isOpen ? `${openStr} - ${closeStr}` : 'Closed'}
+                         </Text>
+                       </View>
+                     );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.emptyText}>Contact salon for operating hours.</Text>
+              )}
+
+              <View style={styles.divider} />
+
+              <SectionHeader title="Location" />
+              <TouchableOpacity style={styles.mapPlaceholder} onPress={() => {
+                  const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+                  const latLng = `${salon.latitude || 0},${salon.longitude || 0}`;
+                  const label = salon.name;
+                  
+                  let url;
+                  // Prioritize searching by address if available (more reliable than user-provided coords or name matching)
+                  if (salon.address) {
+                      const query = encodeURIComponent(salon.address);
+                      url = `${scheme}${query}`;
+                  } else {
+                      url = Platform.select({
+                        ios: `${scheme}${label}@${latLng}`,
+                        android: `${scheme}${latLng}(${label})`
+                      });
                   }
-                  style={styles.viewMoreButton}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.viewMoreText,
-                      { color: theme.colors.primary },
-                    ]}
-                  >
-                    {isDescriptionExpanded ? "Show Less" : "Read More"}
-                  </Text>
-                  <MaterialIcons
-                    name={isDescriptionExpanded ? "expand-less" : "expand-more"}
-                    size={18}
-                    color={theme.colors.primary}
+                  
+                  if (url) Linking.openURL(url);
+              }}>
+                 <Ionicons name="map-outline" size={32} color={theme.colors.primary} />
+                 <Text style={styles.mapText}>{salon.address || "View on Map"}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {activeTab === "services" && (
+            <View style={styles.servicesContainer}>
+              {services.length === 0 ? (
+                <Text style={styles.emptyText}>No services listed.</Text>
+              ) : (
+                services.map((service) => (
+                  <ServiceItem 
+                    key={service.id} 
+                    service={service} 
+                    onPress={() => handleBookService(service)}
                   />
-                </TouchableOpacity>
+                ))
               )}
             </View>
           )}
 
-          {/* Tabs */}
-          <View
-            style={[
-              styles.tabsContainer,
-              { borderBottomColor: dynamicStyles.sectionBorder.borderColor },
-            ]}
-          >
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                selectedTab === "Overview" && styles.tabActive,
-              ]}
-              onPress={() => setSelectedTab("Overview")}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedTab === "Overview"
-                    ? styles.tabTextActive
-                    : styles.tabTextInactive,
-                ]}
-              >
-                Overview
-              </Text>
-              {selectedTab === "Overview" && (
-                <View style={styles.tabUnderline} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                selectedTab === "Services" && styles.tabActive,
-              ]}
-              onPress={() => setSelectedTab("Services")}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedTab === "Services"
-                    ? [styles.tabTextActive, { color: theme.colors.primary }]
-                    : [styles.tabTextInactive, dynamicStyles.textSecondary],
-                ]}
-              >
-                Services
-              </Text>
-              {services.length > 0 && (
-                <View
-                  style={[
-                    styles.tabBadge,
-                    selectedTab === "Services" && styles.tabBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tabBadgeText,
-                      selectedTab === "Services" && styles.tabBadgeTextActive,
-                    ]}
-                  >
-                    {services.length}
-                  </Text>
-                </View>
-              )}
-              {selectedTab === "Services" && (
-                <View style={styles.tabUnderline} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                selectedTab === "Products" && styles.tabActive,
-              ]}
-              onPress={() => setSelectedTab("Products")}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedTab === "Products"
-                    ? [styles.tabTextActive, { color: theme.colors.primary }]
-                    : [styles.tabTextInactive, dynamicStyles.textSecondary],
-                ]}
-              >
-                Products
-              </Text>
-              {products.length > 0 && (
-                <View
-                  style={[
-                    styles.tabBadge,
-                    selectedTab === "Products" && styles.tabBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tabBadgeText,
-                      selectedTab === "Products" && styles.tabBadgeTextActive,
-                    ]}
-                  >
-                    {products.length}
-                  </Text>
-                </View>
-              )}
-              {selectedTab === "Products" && (
-                <View style={styles.tabUnderline} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                selectedTab === "Employees" && styles.tabActive,
-              ]}
-              onPress={() => setSelectedTab("Employees")}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedTab === "Employees"
-                    ? [styles.tabTextActive, { color: theme.colors.primary }]
-                    : [styles.tabTextInactive, dynamicStyles.textSecondary],
-                ]}
-              >
-                Employees
-              </Text>
-              {employees.length > 0 && (
-                <View
-                  style={[
-                    styles.tabBadge,
-                    selectedTab === "Employees" && styles.tabBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tabBadgeText,
-                      selectedTab === "Employees" && styles.tabBadgeTextActive,
-                    ]}
-                  >
-                    {employees.length}
-                  </Text>
-                </View>
-              )}
-              {selectedTab === "Employees" && (
-                <View style={styles.tabUnderline} />
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Tab Content */}
-          {selectedTab === "Overview" && (
-            <View style={styles.overviewContent}>
-              {/* Business Information */}
-              <View
-                style={[
-                  styles.infoSection,
-                  {
-                    borderBottomColor: dynamicStyles.sectionBorder.borderColor,
-                  },
-                ]}
-              >
-                <View style={styles.infoRowItem}>
-                  <View style={styles.infoIconContainer}>
-                    <MaterialIcons
-                      name="business"
-                      size={20}
-                      color={theme.colors.primary}
-                    />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text
-                      style={[styles.infoLabel, dynamicStyles.textSecondary]}
-                    >
-                      Business Type
-                    </Text>
-                    <Text style={[styles.infoValue, dynamicStyles.text]}>
-                      {salon.settings?.businessType || "Not specified"}
-                    </Text>
-                  </View>
-                </View>
-
-                {salon.settings?.numberOfEmployees && (
-                  <View style={styles.infoRowItem}>
-                    <View style={styles.infoIconContainer}>
-                      <MaterialIcons
-                        name="people"
-                        size={20}
-                        color={theme.colors.primary}
-                      />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text
-                        style={[styles.infoLabel, dynamicStyles.textSecondary]}
-                      >
-                        Team Size
-                      </Text>
-                      <Text style={[styles.infoValue, dynamicStyles.text]}>
-                        {salon.settings.numberOfEmployees}{" "}
-                        {salon.settings.numberOfEmployees === 1
-                          ? "professional"
-                          : "professionals"}
-                      </Text>
-                    </View>
-                  </View>
+          {activeTab === "team" && (
+            <View style={styles.teamContainer}>
+              <SectionHeader title="Our Specialists" />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.teamScroll}>
+                {employees.length === 0 ? (
+                  <Text style={styles.emptyText}>No information available.</Text>
+                ) : (
+                  employees.map((emp) => (
+                    <EmployeeAvatar key={emp.id} employee={emp} />
+                  ))
                 )}
-
-                {salon.registrationNumber && (
-                  <View style={styles.infoRowItem}>
-                    <View style={styles.infoIconContainer}>
-                      <MaterialIcons
-                        name="verified"
-                        size={20}
-                        color={theme.colors.primary}
-                      />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text
-                        style={[styles.infoLabel, dynamicStyles.textSecondary]}
-                      >
-                        Registration Number
-                      </Text>
-                      <Text style={[styles.infoValue, dynamicStyles.text]}>
-                        {salon.registrationNumber}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                <View style={styles.infoRowItem}>
-                  <View style={styles.infoIconContainer}>
-                    <MaterialIcons
-                      name="check-circle"
-                      size={20}
-                      color={
-                        salon.status === "active"
-                          ? theme.colors.success
-                          : dynamicStyles.textSecondary.color
-                      }
-                    />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text
-                      style={[styles.infoLabel, dynamicStyles.textSecondary]}
-                    >
-                      Status
-                    </Text>
-                    <Text
-                      style={[
-                        styles.infoValue,
-                        {
-                          color:
-                            salon.status === "active"
-                              ? theme.colors.success
-                              : dynamicStyles.textSecondary.color,
-                        },
-                      ]}
-                    >
-                      {salon.status === "active"
-                        ? "Open for business"
-                        : "Currently closed"}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Specialties */}
-              {getSpecialties().length > 0 && (
-                <View
-                  style={[
-                    styles.infoSection,
-                    {
-                      borderBottomColor:
-                        dynamicStyles.sectionBorder.borderColor,
-                    },
-                  ]}
-                >
-                  <View style={styles.sectionHeader}>
-                    <MaterialIcons
-                      name="star"
-                      size={20}
-                      color={theme.colors.primary}
-                    />
-                    <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                      What We Offer
-                    </Text>
-                  </View>
-                  <View style={styles.specialtiesList}>
-                    {getSpecialties().map(
-                      (specialty: string, index: number) => (
-                        <View key={index} style={styles.specialtyItem}>
-                          <MaterialIcons
-                            name="check"
-                            size={16}
-                            color={theme.colors.primary}
-                          />
-                          <Text
-                            style={[styles.specialtyText, dynamicStyles.text]}
-                          >
-                            {specialty}
-                          </Text>
-                        </View>
-                      )
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {/* Operating Hours */}
-              <View
-                style={[
-                  styles.infoSection,
-                  {
-                    borderBottomColor: dynamicStyles.sectionBorder.borderColor,
-                  },
-                ]}
-              >
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons
-                    name="schedule"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                  <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                    Opening Hours
-                  </Text>
-                </View>
-                {(() => {
-                  const hours = parseOperatingHours();
-                  if (!hours) {
-                    return (
-                      <Text
-                        style={[
-                          styles.operatingHoursText,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Hours not specified
-                      </Text>
-                    );
-                  }
-
-                  if (typeof hours === "string") {
-                    return (
-                      <Text
-                        style={[styles.operatingHoursText, dynamicStyles.text]}
-                      >
-                        {hours}
-                      </Text>
-                    );
-                  }
-
-                  return (
-                    <View style={styles.hoursList}>
-                      {Object.entries(hours).map(
-                        ([day, dayHours]: [string, any]) => {
-                          if (
-                            dayHours &&
-                            typeof dayHours === "object" &&
-                            dayHours.isOpen
-                          ) {
-                            return (
-                              <View
-                                key={day}
-                                style={[
-                                  styles.hourRow,
-                                  {
-                                    borderBottomColor:
-                                      dynamicStyles.sectionBorder.borderColor,
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[styles.dayText, dynamicStyles.text]}
-                                >
-                                  {day.charAt(0).toUpperCase() + day.slice(1)}
-                                </Text>
-                                <View style={styles.timeContainer}>
-                                  <MaterialIcons
-                                    name="access-time"
-                                    size={14}
-                                    color={dynamicStyles.textSecondary.color}
-                                  />
-                                  <Text
-                                    style={[
-                                      styles.timeText,
-                                      dynamicStyles.text,
-                                    ]}
-                                  >
-                                    {dayHours.startTime} - {dayHours.endTime}
-                                  </Text>
-                                </View>
-                              </View>
-                            );
-                          } else if (
-                            dayHours &&
-                            typeof dayHours === "object" &&
-                            !dayHours.isOpen
-                          ) {
-                            return (
-                              <View
-                                key={day}
-                                style={[
-                                  styles.hourRow,
-                                  {
-                                    borderBottomColor:
-                                      dynamicStyles.sectionBorder.borderColor,
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[styles.dayText, dynamicStyles.text]}
-                                >
-                                  {day.charAt(0).toUpperCase() + day.slice(1)}
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.timeText,
-                                    dynamicStyles.textSecondary,
-                                  ]}
-                                >
-                                  Closed
-                                </Text>
-                              </View>
-                            );
-                          }
-                          return null;
-                        }
-                      )}
-                    </View>
-                  );
-                })()}
-              </View>
-
-              {/* Location */}
-              {salon.latitude && salon.longitude && (
-                <View
-                  style={[
-                    styles.infoSection,
-                    {
-                      borderBottomColor:
-                        dynamicStyles.sectionBorder.borderColor,
-                    },
-                  ]}
-                >
-                  <View style={styles.sectionHeader}>
-                    <MaterialIcons
-                      name="place"
-                      size={20}
-                      color={theme.colors.primary}
-                    />
-                    <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                      Find Us
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.mapButton}
-                    onPress={() => {
-                      const url = `https://www.openstreetmap.org/?mlat=${salon.latitude}&mlon=${salon.longitude}&zoom=15`;
-                      Linking.openURL(url);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.mapIconContainer}>
-                      <MaterialIcons
-                        name="map"
-                        size={24}
-                        color={theme.colors.white}
-                      />
-                    </View>
-                    <View style={styles.mapInfo}>
-                      <Text style={[styles.mapButtonText, dynamicStyles.text]}>
-                        View on Map
-                      </Text>
-                      <Text
-                        style={[styles.mapSubtext, dynamicStyles.textSecondary]}
-                      >
-                        Tap to open location
-                      </Text>
-                    </View>
-                    <MaterialIcons
-                      name="chevron-right"
-                      size={24}
-                      color={dynamicStyles.textSecondary.color}
-                    />
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* Social Media Links */}
-              {(salon.settings?.facebookUrl ||
-                salon.settings?.instagramUrl ||
-                salon.settings?.twitterUrl) && (
-                <View
-                  style={[
-                    styles.infoSection,
-                    {
-                      borderBottomColor:
-                        dynamicStyles.sectionBorder.borderColor,
-                    },
-                  ]}
-                >
-                  <View style={styles.sectionHeader}>
-                    <MaterialIcons
-                      name="share"
-                      size={20}
-                      color={theme.colors.primary}
-                    />
-                    <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                      Connect With Us
-                    </Text>
-                  </View>
-                  <View style={styles.socialLinksList}>
-                    {salon.settings?.facebookUrl && (
-                      <TouchableOpacity
-                        style={styles.socialLinkItem}
-                        onPress={() =>
-                          Linking.openURL(salon.settings?.facebookUrl || "")
-                        }
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.socialIconContainer}>
-                          <MaterialIcons
-                            name="facebook"
-                            size={22}
-                            color="#1877F2"
-                          />
-                        </View>
-                        <Text
-                          style={[styles.socialLinkText, dynamicStyles.text]}
-                        >
-                          Facebook
-                        </Text>
-                        <MaterialIcons
-                          name="chevron-right"
-                          size={20}
-                          color={dynamicStyles.textSecondary.color}
-                        />
-                      </TouchableOpacity>
-                    )}
-                    {salon.settings?.instagramUrl && (
-                      <TouchableOpacity
-                        style={styles.socialLinkItem}
-                        onPress={() =>
-                          Linking.openURL(salon.settings?.instagramUrl || "")
-                        }
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.socialIconContainer}>
-                          <FontAwesome
-                            name="instagram"
-                            size={24}
-                            color="#E1306C"
-                          />
-                        </View>
-                        <Text
-                          style={[styles.socialLinkText, dynamicStyles.text]}
-                        >
-                          Instagram
-                        </Text>
-                        <MaterialIcons
-                          name="chevron-right"
-                          size={20}
-                          color={dynamicStyles.textSecondary.color}
-                        />
-                      </TouchableOpacity>
-                    )}
-                    {salon.settings?.twitterUrl && (
-                      <TouchableOpacity
-                        style={styles.socialLinkItem}
-                        onPress={() =>
-                          Linking.openURL(salon.settings?.twitterUrl || "")
-                        }
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.socialIconContainer}>
-                          <Feather name="twitter" size={24} color="#1DA1F2" />
-                        </View>
-                        <Text
-                          style={[styles.socialLinkText, dynamicStyles.text]}
-                        >
-                          Twitter
-                        </Text>
-                        <MaterialIcons
-                          name="chevron-right"
-                          size={20}
-                          color={dynamicStyles.textSecondary.color}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              )}
+              </ScrollView>
             </View>
           )}
 
-          {selectedTab === "Services" && (
-            <View style={styles.servicesContent}>
-              {servicesLoading ? (
-                <View style={styles.loadingContainer}>
-                  <Loader message="Loading services..." />
-                </View>
-              ) : services.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <MaterialIcons
-                    name="content-cut"
-                    size={48}
-                    color={dynamicStyles.textSecondary.color}
-                  />
-                  <Text style={[styles.emptyText, dynamicStyles.text]}>
-                    No services available
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.listContainer}>
-                  {services.map((service, index) => (
-                    <TouchableOpacity
-                      key={service.id}
-                      style={[
-                        styles.listItem,
-                        dynamicStyles.listItem,
-                        index === services.length - 1 && styles.listItemLast,
-                      ]}
-                      onPress={() => handleServicePress(service)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.listItemLeft}>
-                        <View
-                          style={[
-                            styles.listItemIcon,
-                            { backgroundColor: theme.colors.primaryLight },
-                          ]}
-                        >
-                          <MaterialIcons
-                            name="content-cut"
-                            size={20}
-                            color={theme.colors.primary}
-                          />
-                        </View>
-                        <View style={styles.listItemContent}>
-                          <Text
-                            style={[styles.listItemTitle, dynamicStyles.text]}
-                            numberOfLines={1}
-                          >
-                            {service.name}
-                          </Text>
-                          {service.description && (
-                            <Text
-                              style={[
-                                styles.listItemSubtitle,
-                                dynamicStyles.textSecondary,
-                              ]}
-                              numberOfLines={2}
-                            >
-                              {service.description}
-                            </Text>
-                          )}
-                          {service.basePrice && (
-                            <Text
-                              style={[
-                                styles.listItemPrice,
-                                { color: theme.colors.primary },
-                              ]}
-                            >
-                              RWF {Number(service.basePrice).toFixed(2)}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                      <MaterialIcons
-                        name="chevron-right"
-                        size={20}
-                        color={dynamicStyles.textSecondary.color}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-          {selectedTab === "Products" && (
-            <View style={styles.productsContent}>
-              {productsLoading ? (
-                <View style={styles.loadingContainer}>
-                  <Loader message="Loading products..." />
-                </View>
-              ) : products.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <MaterialIcons
-                    name="inventory"
-                    size={48}
-                    color={dynamicStyles.textSecondary.color}
-                  />
-                  <Text style={[styles.emptyText, dynamicStyles.text]}>
-                    No products available
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.listContainer}>
-                  {products.map((product, index) => (
-                    <TouchableOpacity
-                      key={product.id}
-                      style={[
-                        styles.listItem,
-                        dynamicStyles.listItem,
-                        index === products.length - 1 && styles.listItemLast,
-                      ]}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.listItemLeft}>
-                        <View
-                          style={[
-                            styles.listItemIcon,
-                            { backgroundColor: theme.colors.primaryLight },
-                          ]}
-                        >
-                          <MaterialIcons
-                            name="inventory"
-                            size={20}
-                            color={theme.colors.primary}
-                          />
-                        </View>
-                        <View style={styles.listItemContent}>
-                          <Text
-                            style={[styles.listItemTitle, dynamicStyles.text]}
-                            numberOfLines={1}
-                          >
-                            {product.name}
-                          </Text>
-                          {product.description && (
-                            <Text
-                              style={[
-                                styles.listItemSubtitle,
-                                dynamicStyles.textSecondary,
-                              ]}
-                              numberOfLines={2}
-                            >
-                              {product.description}
-                            </Text>
-                          )}
-                          <View style={styles.listItemFooter}>
-                            <Text
-                              style={[
-                                styles.listItemPrice,
-                                { color: theme.colors.primary },
-                              ]}
-                            >
-                              {product.price && product.price > 0
-                                ? `RWF ${Number(product.price).toFixed(2)}`
-                                : "Price N/A"}
-                            </Text>
-                            {product.stockQuantity !== undefined &&
-                              product.stockQuantity !== null && (
-                                <Text
-                                  style={[
-                                    styles.listItemStock,
-                                    dynamicStyles.textSecondary,
-                                  ]}
-                                >
-                                  {product.stockQuantity} in stock
-                                </Text>
-                              )}
-                          </View>
-                        </View>
-                      </View>
-                      <MaterialIcons
-                        name="chevron-right"
-                        size={20}
-                        color={dynamicStyles.textSecondary.color}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-          {selectedTab === "Employees" && (
-            <View style={styles.employeesContent}>
-              {employeesLoading ? (
-                <View style={styles.loadingContainer}>
-                  <Loader message="Loading employees..." />
-                </View>
-              ) : employees.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <MaterialIcons
-                    name="people"
-                    size={48}
-                    color={dynamicStyles.textSecondary.color}
-                  />
-                  <Text style={[styles.emptyText, dynamicStyles.text]}>
-                    No employees available
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.listContainer}>
-                  {employees.map((employee, index) => (
-                    <TouchableOpacity
-                      key={employee.id}
-                      style={[
-                        styles.listItem,
-                        dynamicStyles.listItem,
-                        index === employees.length - 1 && styles.listItemLast,
-                      ]}
-                      onPress={() => handleEmployeePress(employee)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.listItemLeft}>
-                        <View
-                          style={[
-                            styles.listItemAvatar,
-                            { backgroundColor: theme.colors.primaryLight },
-                          ]}
-                        >
-                          <Text style={styles.listItemAvatarText}>
-                            {employee.user?.fullName
-                              ? employee.user.fullName
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")
-                                  .toUpperCase()
-                                  .slice(0, 2)
-                              : "EM"}
-                          </Text>
-                        </View>
-                        <View style={styles.listItemContent}>
-                          <Text
-                            style={[styles.listItemTitle, dynamicStyles.text]}
-                            numberOfLines={1}
-                          >
-                            {employee.user?.fullName || "Employee"}
-                          </Text>
-                          {employee.roleTitle && (
-                            <Text
-                              style={[
-                                styles.listItemSubtitle,
-                                dynamicStyles.textSecondary,
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {employee.roleTitle}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                      <MaterialIcons
-                        name="chevron-right"
-                        size={20}
-                        color={dynamicStyles.textSecondary.color}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+          {activeTab === "gallery" && (
+            <View style={styles.galleryContainer}>
+               {!salon.images || salon.images.length === 0 ? (
+                 <Text style={styles.emptyText}>No photos available.</Text>
+               ) : (
+                 <View style={styles.galleryGrid}>
+                   {salon.images.map((img, index) => (
+                     <TouchableOpacity 
+                       key={index} 
+                       style={styles.galleryImageContainer}
+                       onPress={() => {
+                         setSelectedImageIndex(index);
+                         setViewerVisible(true);
+                       }}
+                     >
+                       <Image source={{ uri: img }} style={styles.galleryImage} resizeMode="cover" />
+                     </TouchableOpacity>
+                   ))}
+                 </View>
+               )}
             </View>
           )}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+      </Animated.ScrollView>
+
+      {/* Full Screen Image Viewer */}
+      <ImageViewing
+        images={(salon.images || []).map(img => ({ uri: img }))}
+        imageIndex={selectedImageIndex}
+        visible={viewerVisible}
+        onRequestClose={() => setViewerVisible(false)}
+      />
+    </View>
   );
 }
 
@@ -1623,617 +682,461 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.xl,
+    padding: 20,
+    backgroundColor: theme.colors.background,
   },
   errorText: {
     fontSize: 16,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    color: theme.colors.error || "red",
+    marginBottom: 16,
     textAlign: "center",
-    fontFamily: theme.fonts.medium,
   },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: theme.colors.white,
+    fontWeight: "600",
+  },
+  backLink: {
+    marginTop: 16,
+  },
+  backLinkText: {
+    color: theme.colors.textSecondary,
+  },
+  
+  // Header
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-    borderBottomWidth: 0,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: theme.colors.background,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight || "#E5E5E5",
+    justifyContent: "flex-end",
+    paddingBottom: 12,
   },
   headerTitle: {
-    flex: 1,
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
     textAlign: "center",
-    marginHorizontal: theme.spacing.md,
-    fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
   },
-  headerRight: {
+  floatingHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 101, 
+  },
+  floatingHeaderContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 8, 
+  },
+  circleButton: {
     width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background, 
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight || "#E5E5E5",
   },
+  rightActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  // Hero
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-  salonHeader: {
-    width: "100%",
-    height: 160,
-    justifyContent: "center",
-    alignItems: "center",
+  heroSection: {
+    height: HERO_HEIGHT,
     position: "relative",
-    overflow: "hidden",
+    justifyContent: "flex-end",
+    padding: 20,
   },
-  salonHeaderDecoration: {
-    position: "absolute",
-    top: -40,
-    right: -30,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: theme.colors.primaryLight + "40",
-  },
-  salonImageContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  salonImagePlaceholder: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+  heroPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: theme.colors.primaryLight || "#E6F0FF",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  salonInitials: {
-    color: theme.colors.white,
-    fontSize: 28,
+  heroInitials: {
+    fontSize: 80,
     fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    letterSpacing: 0.5,
+    color: theme.colors.primary,
+    opacity: 0.3,
   },
-  statusBadge: {
-    position: "absolute",
-    bottom: -8,
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.8)", 
+  },
+  heroContent: {
+    zIndex: 2,
+    gap: 8,
+  },
+  salonName: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: theme.colors.text,
+    letterSpacing: -0.5,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 4,
+  },
+  badge: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    color: theme.colors.white,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  badgeSecondary: {
+    backgroundColor: theme.colors.backgroundSecondary || "#F5F5F5",
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight || "#ddd",
+  },
+  badgeTextSecondary: {
+    color: theme.colors.text,
+  },
+  ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs / 2,
-    borderRadius: 12,
-    gap: theme.spacing.xs / 2,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    gap: 6,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.white,
+  ratingText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.text,
+  },
+  dot: {
+    color: theme.colors.textSecondary,
   },
   statusText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  statusOpen: {
+    color: theme.colors.success || "green",
+  },
+  statusClosed: {
+    color: theme.colors.error || "red",
+  },
+  addressText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+
+  // Action Bar
+  actionBar: {
+    flexDirection: "row",
+    padding: 16,
+    gap: 10,
+    backgroundColor: theme.colors.background,
+  },
+  actionButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24, 
+    backgroundColor: theme.colors.backgroundSecondary || "#F5F5F5",
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight || "#EEE",
+  },
+  actionButtonPrimary: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    flex: 2, 
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.text,
+  },
+  actionButtonTextPrimary: {
     color: theme.colors.white,
-    fontSize: 11,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    letterSpacing: 0.5,
   },
-  salonInfo: {
-    padding: theme.spacing.md,
-    paddingTop: theme.spacing.lg,
-  },
-  salonTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  salonTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    letterSpacing: -0.3,
-    lineHeight: 28,
-  },
-  verifiedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs / 2,
-    borderRadius: 12,
-    gap: theme.spacing.xs / 2,
-    borderWidth: 1,
-    borderColor: theme.colors.primaryLight,
-  },
-  verifiedText: {
-    fontSize: 11,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    letterSpacing: 0.3,
-  },
-  contactCards: {
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  contactCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: theme.spacing.md,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  contactIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  contactTextContainer: {
-    flex: 1,
-  },
-  contactLabel: {
-    fontSize: 11,
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  contactText: {
-    fontSize: 14,
-    fontFamily: theme.fonts.medium,
-    lineHeight: 18,
-  },
-  locationCard: {
-    flexDirection: "row",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.md,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  locationIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  locationContent: {
-    flex: 1,
-  },
-  locationLabel: {
-    fontSize: 11,
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  locationText: {
-    fontSize: 14,
-    fontFamily: theme.fonts.medium,
-    lineHeight: 18,
-  },
-  descriptionSection: {
-    marginBottom: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    borderTopWidth: 1,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  sectionHeaderLine: {
-    flex: 1,
-    height: 1,
-  },
-  sectionHeading: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    letterSpacing: 0.3,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: theme.fonts.regular,
-    letterSpacing: 0.1,
-  },
-  viewMoreButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.xs,
-    alignSelf: "flex-start",
-    paddingVertical: theme.spacing.xs,
-  },
-  viewMoreText: {
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    letterSpacing: 0.3,
-  },
-  viewAllButtonBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.xs,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  tabsContainer: {
+
+  // Tabs
+  tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    marginBottom: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: "transparent",
-    gap: theme.spacing.xs,
+    borderBottomColor: theme.colors.borderLight || "#EEE",
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 16,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    alignItems: "center",
-    position: "relative",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    borderRadius: 8,
-    minHeight: 40,
+  tabItem: {
+    marginRight: 24,
+    paddingVertical: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
   },
-  tabActive: {
-    backgroundColor: theme.colors.primaryLight,
+  tabItemActive: {
+    borderBottomColor: theme.colors.primary,
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    letterSpacing: 0.1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
   },
   tabTextActive: {
     color: theme.colors.primary,
+    fontWeight: "700",
   },
-  tabTextInactive: {
-    color: theme.colors.textSecondary,
-  },
-  tabBadge: {
-    minWidth: 20,
-    height: 18,
-    paddingHorizontal: theme.spacing.xs,
-    borderRadius: 9,
-    backgroundColor: theme.colors.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tabBadgeActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  tabBadgeText: {
-    fontSize: 10,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    color: theme.colors.textSecondary,
-  },
-  tabBadgeTextActive: {
-    color: theme.colors.white,
-  },
-  tabUnderline: {
-    position: "absolute",
-    bottom: -1,
-    left: "15%",
-    right: "15%",
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: theme.colors.primary,
-  },
-  overviewContent: {
-    marginTop: theme.spacing.sm,
-  },
-  infoCardsContainer: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-  },
-  infoCard: {
-    flex: 1,
-    padding: theme.spacing.sm,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-  },
-  infoCardLabel: {
-    fontSize: 12,
-    marginTop: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
-    textAlign: "center",
-  },
-  infoCardValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 2,
-    fontFamily: theme.fonts.bold,
-    textAlign: "center",
-  },
-  servicesContent: {
-    marginTop: theme.spacing.sm,
-  },
-  productsContent: {
-    marginTop: theme.spacing.sm,
-  },
-  listContainer: {
-    gap: 0,
-  },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: theme.spacing.md,
-    paddingVertical: theme.spacing.md + 2,
-    borderBottomWidth: 1,
-    borderRadius: 0,
-  },
-  listItemLast: {
-    borderBottomWidth: 0,
-  },
-  listItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: theme.spacing.md,
-  },
-  listItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  listItemAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  listItemAvatarText: {
-    color: theme.colors.primary,
-    fontSize: 16,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-  },
-  listItemContent: {
-    flex: 1,
-    gap: theme.spacing.xs / 2,
-  },
-  listItemTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    lineHeight: 22,
-    marginBottom: theme.spacing.xs / 2,
-  },
-  listItemSubtitle: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    lineHeight: 18,
-    marginTop: theme.spacing.xs / 2,
-  },
-  listItemPrice: {
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.semibold,
-    marginTop: theme.spacing.xs,
-  },
-  listItemFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.xs / 2,
-  },
-  listItemStock: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.xl,
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: theme.spacing.md,
-    fontFamily: theme.fonts.regular,
-  },
-  errorBackButton: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 12,
-    marginTop: theme.spacing.md,
-  },
-  backButtonText: {
-    color: theme.colors.white,
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  employeesContent: {
-    marginTop: theme.spacing.sm,
-  },
-  infoSection: {
-    marginBottom: theme.spacing.xl,
-    paddingBottom: theme.spacing.lg,
-    borderBottomWidth: 1,
+
+  // Content
+  contentSection: {
+    padding: 20,
+    backgroundColor: theme.colors.background,
   },
   sectionHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.text,
+  },
+  sectionAction: {
+    fontSize: 14,
+    color: theme.colors.primary,
     fontWeight: "600",
-    fontFamily: theme.fonts.medium,
   },
-  infoRowItem: {
+  description: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: theme.colors.textSecondary,
+  },
+  readMoreText: {
+    color: theme.colors.primary,
+    fontWeight: "600",
+    marginTop: 8,
+    fontSize: 14,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.borderLight || "#EEE",
+    marginVertical: 24,
+  },
+  infoRow: {
+    gap: 16,
+  },
+  infoItem: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.primaryLight,
-    justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
-  },
-  infoContent: {
-    flex: 1,
+    gap: 12,
   },
   infoLabel: {
-    fontSize: 13,
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+    color: theme.colors.textSecondary,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 14,
-    fontFamily: theme.fonts.medium,
-    lineHeight: 20,
+    fontSize: 15,
+    fontWeight: "500",
+    color: theme.colors.text,
   },
-  specialtiesList: {
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.md,
-  },
-  specialtyItem: {
-    flexDirection: "row",
+  mapPlaceholder: {
+    height: 120,
+    backgroundColor: theme.colors.backgroundSecondary || "#F9F9F9",
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight || "#EEE",
+    gap: 8,
   },
-  specialtyText: {
-    fontSize: 15,
-    fontFamily: theme.fonts.regular,
+  mapText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.text,
+  },
+  
+  // Services
+  servicesContainer: {
+    gap: 12,
+  },
+  serviceItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight || "#EEE",
+    backgroundColor: theme.colors.background,
+  },
+  serviceInfo: {
     flex: 1,
+    marginRight: 16,
   },
-  operatingHoursText: {
-    fontSize: 15,
-    marginTop: theme.spacing.sm,
-    fontFamily: theme.fonts.regular,
-    lineHeight: 22,
+  serviceImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: theme.colors.backgroundSecondary || "#F5F5F5",
   },
+  serviceName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  serviceDuration: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  servicePriceContainer: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  servicePrice: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  bookButtonSmall: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.primaryLight || "#E6F0FF",
+    borderRadius: 16,
+  },
+  bookButtonTextSmall: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 20,
+  },
+
+  // Team
+  teamContainer: {},
+  teamScroll: {
+    gap: 16,
+    paddingRight: 20,
+  },
+  employeeCard: {
+    width: 100,
+    alignItems: "center",
+  },
+  avatarContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.backgroundSecondary || "#F0F0F0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  employeeName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.text,
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  employeeRole: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
+  overviewContainer: {},
+  // Working Hours Styles
   hoursList: {
-    marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.backgroundSecondary || "#F9F9F9",
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
   },
   hourRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    paddingVertical: 4,
+  },
+  todayRow: {
+    // Optional highlight
   },
   dayText: {
     fontSize: 14,
-    fontFamily: theme.fonts.medium,
-    minWidth: 90,
-  },
-  timeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
+    color: theme.colors.text,
+    fontWeight: "500",
+    width: 100,
   },
   timeText: {
     fontSize: 14,
-    fontFamily: theme.fonts.regular,
-  },
-  mapButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primaryLight,
-    gap: theme.spacing.md,
-  },
-  mapIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  mapInfo: {
-    flex: 1,
-  },
-  mapButtonText: {
-    fontSize: 14,
+    color: theme.colors.text,
     fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs / 2,
   },
-  mapSubtext: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
+  closedText: {
+    color: theme.colors.error || "red",
   },
-  socialLinksList: {
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.sm,
+  todayText: {
+    color: theme.colors.primary,
+    fontWeight: "700",
   },
-  socialLinkItem: {
+  
+  // Gallery
+  galleryContainer: {
+    paddingBottom: 20,
+  },
+  galleryGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: 16,
-    gap: theme.spacing.md,
+    flexWrap: "wrap",
+    gap: 12,
   },
-  socialIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.backgroundSecondary,
-    justifyContent: "center",
-    alignItems: "center",
+  galleryImageContainer: {
+    width: "48%", // Roughly 2 columns with gap
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: theme.colors.backgroundSecondary || "#f0f0f0",
   },
-  socialLinkText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
+  galleryImage: {
+    width: "100%",
+    height: "100%",
   },
 });

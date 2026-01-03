@@ -22,6 +22,7 @@ export interface Review {
     id: string;
     user: {
       fullName: string;
+      profileImage?: string;
     };
   };
   salon?: {

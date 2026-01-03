@@ -152,7 +152,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
    * CRITICAL: This function must NOT depend on state to avoid infinite loops
    */
   const refreshPermissions = useCallback(async () => {
-    if (!isAuthenticated || !user || !isEmployee) {
+    if (!isAuthenticated || !user) {
       setState((prev) => ({ ...prev, isLoading: false }));
       return;
     }
@@ -170,6 +170,48 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
     isFetchingRef.current = true;
     lastFetchTimeRef.current = now;
+
+    // HANDLE OWNERS: Fetch their salon directly
+    if (isOwner) {
+      try {
+        const salon = await salonService.getSalonByOwnerId(String(user.id));
+        if (salon) {
+          const salonContext: SalonContext = {
+            salonId: salon.id,
+            salonName: salon.name,
+            employeeId: String(user.id),
+            permissions: [], // Owners imply all permissions
+            permissionCount: 999,
+          };
+          const newState = {
+            isLoading: false,
+            activeSalon: salonContext,
+            availableSalons: [salonContext],
+            permissions: [],
+            permissionData: [],
+            lastFetched: new Date(),
+            lastError: null,
+          };
+          setState((prev) => ({ ...prev, ...newState }));
+          await saveToCache(newState);
+        } else {
+           // Owner has no salon yet
+           setState((prev) => ({ ...prev, isLoading: false }));
+        }
+      } catch (err) {
+        console.error('Error fetching owner salon:', err);
+        setState((prev) => ({ ...prev, isLoading: false }));
+      } finally {
+        isFetchingRef.current = false;
+      }
+      return; // Stop here for owners
+    }
+
+    if (!isEmployee) {
+        setState((prev) => ({ ...prev, isLoading: false }));
+        isFetchingRef.current = false;
+        return;
+    }
 
     try {
       // 1. Get all employee records for this user
@@ -288,7 +330,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [isAuthenticated, user, isEmployee, saveToCache]); // CRITICAL: Removed state.activeSalon from dependencies
+  }, [isAuthenticated, user, isEmployee, isOwner, saveToCache]); // CRITICAL: Removed state.activeSalon from dependencies
 
   // Effect to refresh permissions when app comes to foreground
   useEffect(() => {

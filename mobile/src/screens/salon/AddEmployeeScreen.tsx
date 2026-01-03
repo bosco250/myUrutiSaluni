@@ -14,6 +14,7 @@ import {
   Switch,
 } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../../theme';
 import { useTheme } from '../../context';
@@ -229,17 +230,19 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, dynamicStyles.container]}
-    >
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
       
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
-          style={[styles.backButton, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray200 }]} 
           onPress={() => navigation.goBack()}
+          style={styles.backButton}
         >
           <MaterialIcons name="arrow-back" size={24} color={isDark ? theme.colors.white : theme.colors.text} />
         </TouchableOpacity>
@@ -457,7 +460,8 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
         </TouchableOpacity>
 
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -466,45 +470,41 @@ const styles = StyleSheet.create({
     flex: 1 
   },
   header: { 
-    padding: 20, 
-    paddingTop: Platform.OS === 'android' ? 50 : 60, 
+    paddingHorizontal: 16, 
+    paddingTop: 0, 
+    paddingBottom: 10, 
     flexDirection: 'row', 
     alignItems: 'center' 
   },
   backButton: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 12, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 16 
+    padding: 4,
+    marginRight: 12 
   },
   title: { 
-    fontSize: 22, 
-    fontWeight: 'bold',
+    fontSize: 18, 
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
   },
   content: { 
-    padding: 20, 
-    paddingTop: 10, 
-    paddingBottom: 100 
+    padding: 14,
+    paddingBottom: 80 
   },
   
   // Section Styles
   section: { 
-    marginBottom: 28 
+    marginBottom: 14 
   },
   sectionTitle: { 
-    fontSize: 17, 
-    fontWeight: '600',
+    fontSize: 16, 
+    fontWeight: '700',
     fontFamily: theme.fonts.medium,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   
   // Card Styles
   card: { 
-    borderRadius: 16, 
-    padding: 18, 
+    borderRadius: 14, 
+    padding: 14, 
     borderWidth: 1,
   },
   
@@ -512,15 +512,15 @@ const styles = StyleSheet.create({
   searchBox: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    height: 52, 
+    height: 44, 
     borderWidth: 1, 
-    borderRadius: 14, 
-    paddingHorizontal: 14 
+    borderRadius: 12, 
+    paddingHorizontal: 12 
   },
   searchInput: { 
     flex: 1, 
-    marginLeft: 12, 
-    fontSize: 16,
+    marginLeft: 10, 
+    fontSize: 15,
     fontFamily: theme.fonts.regular,
   },
   resultsList: { 
@@ -535,16 +535,16 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(128, 128, 128, 0.15)' 
   },
   miniAvatar: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
+    width: 36, 
+    height: 36, 
+    borderRadius: 18, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   miniAvatarText: { 
     fontWeight: 'bold', 
     color: '#555',
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.bold,
   },
   
@@ -555,9 +555,9 @@ const styles = StyleSheet.create({
     padding: 4 
   },
   avatar: { 
-    width: 52, 
-    height: 52, 
-    borderRadius: 26, 
+    width: 46, 
+    height: 46, 
+    borderRadius: 23, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
@@ -585,15 +585,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chip: { 
-    paddingHorizontal: 18, 
-    paddingVertical: 10, 
-    borderRadius: 24, 
-    borderWidth: 1.5, 
-    marginRight: 10, 
-    marginVertical: 4 
+    paddingHorizontal: 16, 
+    paddingVertical: 8, 
+    borderRadius: 20, 
+    borderWidth: 1, 
+    marginRight: 8, 
+    marginVertical: 3 
   },
   chipText: { 
-    fontSize: 13, 
+    fontSize: 14, 
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
   },
@@ -608,18 +608,18 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   input: { 
-    height: 52, 
+    height: 44, 
     borderWidth: 1, 
-    borderRadius: 14, 
-    paddingHorizontal: 16, 
-    fontSize: 16,
+    borderRadius: 12, 
+    paddingHorizontal: 14, 
+    fontSize: 15,
     fontFamily: theme.fonts.regular,
   },
   dateButton: { 
-    height: 52, 
+    height: 44, 
     borderWidth: 1, 
-    borderRadius: 14, 
-    paddingHorizontal: 16, 
+    borderRadius: 12, 
+    paddingHorizontal: 14, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center' 
@@ -675,15 +675,15 @@ const styles = StyleSheet.create({
 
   // Submit Button
   submitButton: { 
-    borderRadius: 14, 
-    paddingVertical: 16, 
+    borderRadius: 12, 
+    paddingVertical: 14, 
     alignItems: 'center', 
     justifyContent: 'center',
     marginTop: 10,
   },
   submitText: { 
     color: '#fff', 
-    fontSize: 17, 
+    fontSize: 15, 
     fontWeight: '700',
     fontFamily: theme.fonts.bold,
   },

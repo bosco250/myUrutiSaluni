@@ -114,6 +114,7 @@ export class UsersController {
     UserRole.ASSOCIATION_ADMIN,
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
   )
   @ApiOperation({ summary: 'Update a user' })
   async update(

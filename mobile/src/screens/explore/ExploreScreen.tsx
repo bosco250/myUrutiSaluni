@@ -15,7 +15,8 @@ import {
   Platform,
   UIManager,
 } from "react-native";
-import { SERVICE_CATEGORIES, TARGET_CLIENTELE } from "../../constants/business";
+import * as Location from "expo-location";
+import LeafletMap from "../../components/LeafletMap";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
@@ -43,10 +44,19 @@ type FilterType = string;
 
 export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const { isDark } = useTheme();
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>("For You");
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   
+  // Map View State
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [mapRegion, setMapRegion] = useState({
+    latitude: -1.9441, // Default to Kigali
+    longitude: 30.0619,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+
   // Animation for search expansion (0 = collapsed/title visible, 1 = expanded/search visible)
   const searchAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -67,14 +77,39 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const [showAllSalons, setShowAllSalons] = useState(false);
 
   const filters = useMemo(() => [
-    "For You",
-    ...TARGET_CLIENTELE.map(t => t.label),
-    ...SERVICE_CATEGORIES.map(c => c.label)
+    "All",
+    "Hair", 
+    "Nails", 
+    "Barbershop",
+    "Spa",
+    "Makeup",
+    "Massage",
+    "Other"
   ], []);
 
   useEffect(() => {
     fetchData();
+    requestLocationPermission();
   }, []);
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+    } catch (err) {
+      console.log("Location permission denied or error:", err);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -117,18 +152,25 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     }
 
     // 2. Filter by Chip (Category/Gender)
-    if (selectedFilter === "For You") {
+    if (selectedFilter === "All") {
       return result;
     }
 
     const filterLower = selectedFilter.toLowerCase();
     
     return result.filter((service) => {
+      // Direct category match
       if (service.category?.toLowerCase() === filterLower) return true;
-      if (service.targetGender?.toLowerCase() === filterLower) return true;
       if (service.metadata?.category?.toLowerCase() === filterLower) return true;
-      if (service.metadata?.targetGender?.toLowerCase() === filterLower) return true;
-      if (service.name.toLowerCase().includes(filterLower)) return true;
+      
+      // Smart matching
+      const serviceName = service.name.toLowerCase();
+      if (serviceName.includes(filterLower)) return true;
+      
+      // Gender mapping for specific filters if needed, though we moved to Categories mainly
+      if (filterLower === 'men' && service.targetGender === 'men') return true;
+      if (filterLower === 'women' && service.targetGender === 'women') return true;
+      
       return false;
     });
   }, [selectedFilter, allServices, searchQuery]);
@@ -146,21 +188,23 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
       );
     }
     
-    if (selectedFilter !== "For You") {
+    if (selectedFilter !== "All") {
         const filterLower = selectedFilter.toLowerCase();
-        // Simple gender filtering
-        if (filterLower === 'men') {
-            return result.filter(s => {
-                const target = s.settings?.targetClientele?.toLowerCase();
-                return !target || target === 'men' || target === 'both';
-            });
-        }
-        if (filterLower === 'women') {
-            return result.filter(s => {
-                const target = s.settings?.targetClientele?.toLowerCase();
-                return !target || target === 'women' || target === 'both';
-            });
-        }
+        
+        // Filter salons that offer services in this category
+        // Note: This is a loose approximation based on salon type or name
+        return result.filter(s => {
+             const type = s.businessType?.toLowerCase() || "";
+             const name = s.name.toLowerCase();
+             
+             // Map filter to types
+             if (filterLower === 'hair' && (type.includes('hair') || type.includes('barber') || name.includes('hair') || name.includes('cut'))) return true;
+             if (filterLower === 'nails' && (type.includes('nail') || name.includes('nail'))) return true;
+             if (filterLower === 'barbershop' && (type.includes('barber') || name.includes('barber'))) return true;
+             if (filterLower === 'spa' && (type.includes('spa') || name.includes('spa'))) return true;
+             
+             return type.includes(filterLower) || name.includes(filterLower);
+        });
     }
 
     return result;
@@ -224,8 +268,17 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
           {/* Search Button (Target for opening) - Fades Out */}
           <Animated.View style={{ 
             opacity: searchAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0] }),
-            position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1
+            position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1,
+            flexDirection: 'row', gap: 8
           }}>
+             {/* Map Toggle Button */}
+             <TouchableOpacity 
+                style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}
+                onPress={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+             >
+                <MaterialIcons name={viewMode === 'list' ? "map" : "list"} size={24} color={theme.colors.primary} />
+             </TouchableOpacity>
+
              <TouchableOpacity 
                 style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}
                 onPress={() => setIsSearching(true)}
@@ -256,8 +309,13 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                 onChangeText={setSearchQuery}
                 onBlur={() => !searchQuery && setIsSearching(false)} 
              />
-             <TouchableOpacity onPress={() => { setIsSearching(false); setSearchQuery(""); Keyboard.dismiss(); }}>
-                <MaterialIcons name="close" size={20} color={theme.colors.textSecondary} />
+             {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearBtn}>
+                    <MaterialIcons name="close" size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+             )}
+             <TouchableOpacity onPress={() => { setIsSearching(false); setSearchQuery(""); Keyboard.dismiss(); }} style={styles.closeSearchBtn}>
+                <Text style={styles.cancelText}>Cancel</Text>
              </TouchableOpacity>
           </Animated.View>
         </View>
@@ -294,11 +352,34 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         </View>
       </View>
 
-      {loading ? (
+      {loading && (
         <View style={styles.loadingContainer}>
           <Loader message="Discovering salons..." />
         </View>
-      ) : (
+      )}
+      
+      {/* Map View Rendering */}
+      {!loading && viewMode === 'map' && (
+        <View style={styles.mapContainer}>
+          <LeafletMap
+            region={mapRegion}
+            markers={filteredSalons.map(s => ({
+                id: s.id,
+                latitude: s.latitude || 0,
+                longitude: s.longitude || 0,
+                title: s.name,
+                description: s.address || "",
+            })).filter(m => m.latitude !== 0 && m.longitude !== 0)}
+            onMarkerPress={(marker) => {
+                const salon = filteredSalons.find(s => s.id === marker.id);
+                if (salon) handleSalonPress(salon);
+            }}
+            style={styles.map}
+          />
+        </View>
+      )}
+
+      {!loading && viewMode === 'list' && (
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -359,7 +440,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                   color={theme.colors.primary}
                 />
                 <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>
-                  {selectedFilter === "For You"
+                  {selectedFilter === "All"
                     ? "All Services"
                     : selectedFilter}
                 </Text>
@@ -439,7 +520,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                   color={dynamicStyles.textSecondary.color}
                 />
                 <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-                  {searchQuery.trim() || selectedFilter !== 'For You' ? 'No salons match your criteria' : 'No salons available'}
+                  {searchQuery.trim() || selectedFilter !== 'All' ? 'No salons match your criteria' : 'No salons available'}
                 </Text>
               </View>
             ) : (
@@ -664,5 +745,27 @@ const styles = StyleSheet.create({
   },
   filterChipTextSelected: {
     color: theme.colors.white,
+  },
+  clearBtn: {
+    padding: 4,
+    marginRight: 4,
+  },
+  closeSearchBtn: {
+    marginLeft: 8,
+    paddingVertical: 4,
+  },
+  cancelText: {
+    fontSize: 14,
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.medium,
+  },
+  mapContainer: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  map: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
 });

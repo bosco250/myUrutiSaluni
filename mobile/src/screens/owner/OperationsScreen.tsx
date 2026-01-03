@@ -54,45 +54,30 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
   const [products, setProducts] = useState<SalonProduct[]>([]);
   const [checkIns, setCheckIns] = useState<CheckInItem[]>([]);
 
-  // Dynamic styles with system colors and enhanced theme support
+  // Dynamic styles for premium flat design
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? '#000000' : '#FFFFFF',
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
-      color: isDark ? '#FFFFFF' : '#000000',
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? '#8E8E93' : '#6D6D70',
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-      borderColor: isDark ? '#38383A' : '#E5E5EA',
-      shadowColor: isDark ? '#000000' : '#000000',
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.background,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
-    header: {
-      backgroundColor: isDark ? '#000000' : '#FFFFFF',
-      borderBottomColor: isDark ? '#38383A' : '#E5E5EA',
+    iconBg: {
+      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100,
     },
-    divider: {
-      backgroundColor: isDark ? '#38383A' : '#E5E5EA',
+    border: {
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
-    sectionBackground: {
-      backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7',
-    },
-    primaryButton: {
-      backgroundColor: theme.colors.primary,
-    },
-    outlineButtonBorder: {
-      borderColor: isDark ? '#48484A' : '#C7C7CC',
-    },
-    outlineButtonText: {
-      color: isDark ? '#FFFFFF' : '#000000',
-    },
-    quickActionCard: {
-      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-      borderColor: isDark ? '#38383A' : '#E5E5EA',
-    },
+    primaryText: {
+        color: theme.colors.primary,
+    }
   };
 
   const loadData = useCallback(async () => {
@@ -193,11 +178,11 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
   const getStatusLabel = (status: CheckInItem['status']) => {
     switch (status) {
       case 'checked_in':
-        return 'Checked In';
+        return 'Check In';
       case 'in_progress':
-        return 'In Progress';
+        return 'Active';
       case 'completed':
-        return 'Completed';
+        return 'Done';
       case 'no_show':
         return 'No Show';
       default:
@@ -209,316 +194,260 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+      <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <Loader fullscreen message="Loading operations..." />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+    <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-
-      {/* Header */}
-      <View style={[styles.header, dynamicStyles.header, { borderBottomColor: dynamicStyles.header.borderBottomColor }]}>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>Operations Management</Text>
-        <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>Manage your salon operations</Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        }
-      >
-        {/* Service Menu Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <MaterialIcons name="content-cut" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Menu</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.addButton, dynamicStyles.primaryButton]}
-              onPress={() => navigation.navigate('AddService', { salonId })}
-              activeOpacity={0.8}
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header (Flat) */}
+        <View style={[styles.header, dynamicStyles.border]}>
+            <TouchableOpacity 
+                style={styles.backButton} 
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
             >
-              <MaterialIcons name="add" size={16} color={theme.colors.white} />
-              <Text style={styles.addButtonText}>Add</Text>
+                <MaterialIcons name="chevron-left" size={28} color={dynamicStyles.text.color} />
             </TouchableOpacity>
+            <View>
+                <Text style={[styles.headerTitle, dynamicStyles.text]}>Operations</Text>
+                <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>Salon Management</Text>
+            </View>
+            <View style={{ width: 40 }} /> 
+        </View>
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+            />
+          }
+        >
+          {/* Service Menu Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <MaterialIcons name="content-cut" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Menu</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => navigation.navigate('AddService', { salonId })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addButtonText}>+ Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, dynamicStyles.card]}>
+              {services.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
+                    No services added yet
+                  </Text>
+                </View>
+              ) : (
+                services.map((service, index) => (
+                  <TouchableOpacity
+                    key={service.id}
+                    style={[
+                      styles.serviceRow,
+                      index < services.length - 1 && [styles.serviceRowBorder, dynamicStyles.border],
+                    ]}
+                    onPress={() => navigation.navigate('EditService', { salonId, service, mode: 'edit' })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.serviceInfo}>
+                      <Text style={[styles.serviceName, dynamicStyles.text]}>{service.name}</Text>
+                      <Text style={[styles.serviceDetails, dynamicStyles.textSecondary]}>
+                        {service.duration} min • {service.commission}% comm
+                      </Text>
+                    </View>
+                    <Text style={[styles.servicePrice, dynamicStyles.primaryText]}>
+                        RWF {service.price.toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
           </View>
 
-          <View style={[styles.card, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}>
-            {services.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-                  No services added yet
+          {/* Quick Actions Grid (Flat) */}
+           <View style={styles.section}>
+            <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 12 }]}>Quick Actions</Text>
+            <View style={styles.quickActionsGrid}>
+                {[
+                    { label: 'My Salons', icon: 'store', screen: 'SalonList', color: theme.colors.primary },
+                    { label: 'Staff', icon: 'people', screen: 'StaffManagement', color: '#007AFF' },
+                    { label: 'Reports', icon: 'bar-chart', screen: 'BusinessAnalytics', color: '#5856D6' },
+                    { label: 'New Sale', icon: 'point-of-sale', screen: 'Sales', color: '#34C759' },
+                    { label: 'Commissions', icon: 'payments', screen: 'Commissions', color: '#FF9500' },
+                    { label: 'Settings', icon: 'settings', screen: 'MoreMenu', color: '#8E8E93' },
+                ].map((action, i) => (
+                    <TouchableOpacity
+                        key={i}
+                        style={[styles.quickActionCard, dynamicStyles.card]}
+                        onPress={() => navigation.navigate(action.screen, { salonId })}
+                        activeOpacity={0.7}
+                    >
+                        <View style={[styles.quickActionIcon, { backgroundColor: isDark ? `${action.color}20` : `${action.color}15` }]}>
+                            <MaterialIcons name={action.icon as any} size={24} color={action.color} />
+                        </View>
+                        <Text style={[styles.quickActionLabel, dynamicStyles.text]}>{action.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+          </View>
+
+          {/* Inventory Levels Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <MaterialIcons name="inventory-2" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('StockManagement', { salonId })}
+                activeOpacity={0.7}
+              >
+                  <Text style={styles.viewAllText}>Manage</Text>
+              </TouchableOpacity>
+            </View>
+
+            {products.length === 0 ? (
+              <View style={[styles.card, dynamicStyles.card, styles.emptyState]}>
+                <View style={[styles.emptyIconContainer, dynamicStyles.iconBg]}>
+                  <MaterialIcons name="inventory-2" size={32} color={dynamicStyles.textSecondary.color} />
+                </View>
+                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
+                  No inventory items
                 </Text>
+                <TouchableOpacity
+                  style={styles.addProductButton}
+                  onPress={() => navigation.navigate('AddProduct', { salonId })}
+                >
+                  <Text style={styles.addProductButtonText}>+ Add Product</Text>
+                </TouchableOpacity>
               </View>
             ) : (
-              services.map((service, index) => (
+              products.slice(0, 3).map((product) => (
                 <TouchableOpacity
-                  key={service.id}
+                  key={product.id}
                   style={[
-                    styles.serviceRow,
-                    index < services.length - 1 && [styles.serviceRowBorder, { borderBottomColor: dynamicStyles.divider.backgroundColor }],
+                    styles.inventoryCard,
+                    dynamicStyles.card,
+                    isLowStock(product.stockLevel) && [styles.lowStockCard, { borderColor: theme.colors.error + '60' }],
                   ]}
-                  onPress={() => navigation.navigate('EditService', { salonId, service, mode: 'edit' })}
+                  onPress={() => navigation.navigate('AddProduct', { salonId, product })}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.serviceInfo}>
-                    <Text style={[styles.serviceName, dynamicStyles.text]}>{service.name}</Text>
-                    <Text style={[styles.serviceDetails, dynamicStyles.textSecondary]}>
-                      {service.duration} min • Commission: {service.commission}%
+                  <View style={[
+                    styles.inventoryIcon,
+                    dynamicStyles.iconBg,
+                    isLowStock(product.stockLevel) && { backgroundColor: theme.colors.error + '15' }
+                  ]}>
+                    <MaterialIcons
+                      name="inventory-2"
+                      size={20}
+                      color={isLowStock(product.stockLevel) ? theme.colors.error : theme.colors.primary}
+                    />
+                  </View>
+                  <View style={styles.inventoryInfo}>
+                    <Text style={[styles.inventoryName, dynamicStyles.text]}>{product.name}</Text>
+                    <Text style={[
+                      styles.inventoryStock,
+                      isLowStock(product.stockLevel)
+                        ? { color: theme.colors.error }
+                        : dynamicStyles.textSecondary
+                    ]}>
+                      {isLowStock(product.stockLevel)
+                        ? `Low Stock: ${product.stockLevel} left`
+                        : `${product.stockLevel} in stock`
+                      }
                     </Text>
                   </View>
-                  <Text style={[styles.servicePrice, dynamicStyles.text]}>RWF {service.price.toLocaleString()}</Text>
+                  {isLowStock(product.stockLevel) && (
+                    <View style={[styles.orderButton, { borderColor: theme.colors.error }]}>
+                      <Text style={styles.orderButtonText}>Restock</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))
             )}
           </View>
-        </View>
 
-        {/* Inventory Levels Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <MaterialIcons name="inventory-2" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory Levels</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.outlineButton, dynamicStyles.outlineButtonBorder, { borderColor: dynamicStyles.outlineButtonBorder.borderColor }]}
-              onPress={() => navigation.navigate('StockManagement', { salonId })}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.outlineButtonText, dynamicStyles.outlineButtonText]}>Order</Text>
-            </TouchableOpacity>
-          </View>
-
-          {products.length === 0 ? (
-            <View style={[styles.card, dynamicStyles.card, styles.emptyState, { borderColor: dynamicStyles.card.borderColor }]}>
-              <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-                <MaterialIcons name="inventory-2" size={32} color={dynamicStyles.textSecondary.color} />
+          {/* Today's Check-ins Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <MaterialIcons name="event-available" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
+                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Check-ins</Text>
               </View>
-              <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
-                No inventory items
-              </Text>
               <TouchableOpacity
-                style={[styles.addProductButton, { marginTop: 16, borderColor: theme.colors.primary }]}
-                onPress={() => navigation.navigate('AddProduct', { salonId })}
-              >
-                <Text style={styles.addProductButtonText}>+ Add Product</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            products.slice(0, 3).map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                style={[
-                  styles.inventoryCard,
-                  dynamicStyles.card,
-                  { borderColor: dynamicStyles.card.borderColor },
-                  isLowStock(product.stockLevel) && [styles.lowStockCard, { borderColor: theme.colors.error + '60' }],
-                ]}
-                onPress={() => navigation.navigate('AddProduct', { salonId, product })}
+                onPress={() => navigation.navigate('SalonAppointments', { salonId })}
                 activeOpacity={0.7}
               >
-                <View style={[
-                  styles.inventoryIcon,
-                  { backgroundColor: isLowStock(product.stockLevel) ? theme.colors.error + '20' : theme.colors.primary + '15' }
-                ]}>
-                  <MaterialIcons
-                    name="inventory-2"
-                    size={18}
-                    color={isLowStock(product.stockLevel) ? theme.colors.error : theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.inventoryInfo}>
-                  <Text style={[styles.inventoryName, dynamicStyles.text]}>{product.name}</Text>
-                  <Text style={[
-                    styles.inventoryStock,
-                    isLowStock(product.stockLevel)
-                      ? { color: theme.colors.error }
-                      : dynamicStyles.textSecondary
-                  ]}>
-                    {isLowStock(product.stockLevel)
-                      ? `Low Stock: ${product.stockLevel} units left`
-                      : `Stock: ${product.stockLevel} units`
-                    }
+                <Text style={styles.viewAllText}>Calendar</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, dynamicStyles.card]}>
+              {checkIns.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <View style={[styles.emptyIconContainer, dynamicStyles.iconBg]}>
+                    <MaterialIcons name="event-available" size={32} color={dynamicStyles.textSecondary.color} />
+                  </View>
+                  <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
+                    No check-ins today
                   </Text>
                 </View>
-                {isLowStock(product.stockLevel) && (
-                  <TouchableOpacity
-                    style={[styles.orderButton, { borderColor: theme.colors.error }]}
-                    onPress={() => navigation.navigate('StockManagement', { salonId })}
+              ) : (
+                checkIns.map((checkIn, index) => (
+                  <View
+                    key={checkIn.id}
+                    style={[
+                      styles.checkInRow,
+                      index < checkIns.length - 1 && [styles.serviceRowBorder, dynamicStyles.border],
+                    ]}
                   >
-                    <Text style={styles.orderButtonText}>Order</Text>
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-            ))
-          )}
-
-          {products.length > 3 && (
-            <TouchableOpacity
-              style={styles.viewAllLink}
-              onPress={() => navigation.navigate('StockManagement', { salonId })}
-            >
-              <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
-                View all {products.length} items
-              </Text>
-              <MaterialIcons name="chevron-right" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Today's Check-ins Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <MaterialIcons name="event-available" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Today's Check-ins</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('SalonAppointments', { salonId })}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.linkText, { color: theme.colors.primary }]}>Calendar</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.card, dynamicStyles.card, { borderColor: dynamicStyles.card.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}>
-            {checkIns.length === 0 ? (
-              <View style={styles.emptyState}>
-                <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-                  <MaterialIcons name="event-available" size={32} color={dynamicStyles.textSecondary.color} />
-                </View>
-                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
-                  No check-ins today
-                </Text>
-              </View>
-            ) : (
-              checkIns.map((checkIn, index) => (
-                <View
-                  key={checkIn.id}
-                  style={[
-                    styles.checkInRow,
-                    index < checkIns.length - 1 && [styles.serviceRowBorder, { borderBottomColor: dynamicStyles.divider.backgroundColor }],
-                  ]}
-                >
-                  <View style={[styles.checkInTime, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-                    <Text style={[styles.timeText, dynamicStyles.text]}>
-                      {checkIn.time.split(' ')[0]}
-                    </Text>
-                    <Text style={[styles.timePeriod, dynamicStyles.textSecondary]}>
-                      {checkIn.time.split(' ')[1]}
-                    </Text>
+                    <View style={[styles.checkInTime, dynamicStyles.iconBg]}>
+                      <Text style={[styles.timeText, dynamicStyles.text]}>
+                        {checkIn.time.split(' ')[0]}
+                      </Text>
+                      <Text style={[styles.timePeriod, dynamicStyles.textSecondary]}>
+                        {checkIn.time.split(' ')[1]}
+                      </Text>
+                    </View>
+                    <View style={styles.checkInInfo}>
+                      <Text style={[styles.customerName, dynamicStyles.text]}>{checkIn.customerName}</Text>
+                      <Text style={[styles.checkInService, dynamicStyles.textSecondary]}>
+                        {checkIn.service}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(checkIn.status) + '15' }]}>
+                      <Text style={[styles.checkInStatus, { color: getStatusColor(checkIn.status) }]}>
+                        {getStatusLabel(checkIn.status)}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.checkInInfo}>
-                    <Text style={[styles.customerName, dynamicStyles.text]}>{checkIn.customerName}</Text>
-                    <Text style={[styles.checkInService, dynamicStyles.textSecondary]}>
-                      {checkIn.service}
-                    </Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(checkIn.status) + '20' }]}>
-                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(checkIn.status) }]} />
-                    <Text style={[styles.checkInStatus, { color: getStatusColor(checkIn.status) }]}>
-                      {getStatusLabel(checkIn.status)}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <MaterialIcons name="flash-on" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
+                ))
+              )}
             </View>
           </View>
-          <View style={styles.quickActionsGrid}>
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
-              onPress={() => navigation.navigate('SalonList')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                <MaterialIcons name="store" size={20} color={theme.colors.primary} />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>My Salons</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
-              onPress={() => navigation.navigate('StaffManagement', { salonId })}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#007AFF' + '15' }]}>
-                <MaterialIcons name="people" size={20} color="#007AFF" />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Staff</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
-              onPress={() => navigation.navigate('BusinessAnalytics', { salonId })}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#5856D6' + '15' }]}>
-                <MaterialIcons name="bar-chart" size={20} color="#5856D6" />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Reports</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
-              onPress={() => navigation.navigate('Sales')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#34C759' + '15' }]}>
-                <MaterialIcons name="point-of-sale" size={20} color="#34C759" />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>New Sale</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
-              onPress={() => navigation.navigate('Commissions')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FF9500' + '15' }]}>
-                <MaterialIcons name="payments" size={20} color="#FF9500" />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Commissions</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.quickActionCard, dynamicStyles.quickActionCard, { borderColor: dynamicStyles.quickActionCard.borderColor, shadowColor: dynamicStyles.card.shadowColor }]}
-              onPress={() => navigation.navigate('MoreMenu')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#8E8E93' + '15' }]}>
-                <MaterialIcons name="settings" size={20} color="#8E8E93" />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Settings</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={{ height: 80 }} />
-      </ScrollView>
-    </SafeAreaView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -527,299 +456,239 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1.5,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12, // Reduced height
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 4,
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    fontFamily: theme.fonts.bold,
     marginBottom: 2,
+    textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
+    textAlign: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   sectionIcon: {
-    marginRight: 6,
-  },
-  scrollContent: {
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-  },
-  section: {
-    marginBottom: theme.spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginRight: 8,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm + 2,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: 16,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
   },
   addButtonText: {
-    color: theme.colors.white,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
-    marginLeft: 4,
   },
-  outlineButton: {
-    borderWidth: 1.5,
-    paddingHorizontal: theme.spacing.sm + 2,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: 16,
-  },
-  outlineButtonText: {
-    fontSize: 12,
+  viewAllText: {
+    fontSize: 14,
+    color: theme.colors.primary,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
   },
   card: {
-    borderRadius: 14,
-    padding: theme.spacing.md + 2,
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
   },
+  // Service Rows
   serviceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 12,
   },
   serviceRowBorder: {
     borderBottomWidth: 1,
   },
   serviceInfo: {
     flex: 1,
-    marginRight: theme.spacing.sm,
+    marginRight: 12,
   },
   serviceName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
     marginBottom: 2,
   },
   serviceDetails: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
+    fontSize: 13,
   },
   servicePrice: {
     fontSize: 15,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
+    fontWeight: '700',
   },
+  // Inventory
   inventoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.sm + 2,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    marginBottom: theme.spacing.xs + 2,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
   },
   lowStockCard: {
     backgroundColor: theme.colors.error + '0C',
     borderColor: theme.colors.error + '40',
   },
   inventoryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.sm,
+    marginRight: 12,
   },
   inventoryInfo: {
     flex: 1,
   },
   inventoryName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
     marginBottom: 2,
   },
   inventoryStock: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
+    fontSize: 13,
   },
   orderButton: {
-    borderWidth: 1.5,
-    borderColor: theme.colors.error,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 5,
-    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   orderButtonText: {
     color: theme.colors.error,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
+    fontSize: 11,
+    fontWeight: '700',
   },
-  viewAllLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.xs + 2,
-    marginTop: theme.spacing.xs,
+  addProductButton: {
+    marginTop: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
-  viewAllText: {
+  addProductButtonText: {
+    color: theme.colors.primary,
     fontSize: 13,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
   },
-  linkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
-  },
+  // Check-ins
   checkInRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 12,
   },
   checkInTime: {
     alignItems: 'center',
-    marginRight: theme.spacing.sm,
-    minWidth: 50,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    justifyContent: 'center',
+    marginRight: 12,
+    width: 56,
+    height: 48,
+    borderRadius: 12,
   },
   timeText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
-    fontFamily: theme.fonts.bold,
   },
   timePeriod: {
     fontSize: 10,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
+    marginTop: 1,
   },
   checkInInfo: {
     flex: 1,
-    marginRight: theme.spacing.xs,
+    marginRight: 8,
   },
   customerName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
     marginBottom: 2,
   },
   checkInService: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
+    fontSize: 13,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   checkInStatus: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
+    fontSize: 11,
+    fontWeight: '700',
   },
+  // Quick Actions Grid
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: theme.spacing.xs,
-    marginHorizontal: -theme.spacing.xs / 2,
+    gap: 12,
   },
   quickActionCard: {
-    width: '48%',
-    marginHorizontal: '1%',
-    marginBottom: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    width: '31%', // 3 columns approx
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    marginBottom: 4, // subtle gap adjustment
   },
   quickActionIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  quickActionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
-    textAlign: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.lg,
-  },
-  emptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
+  quickActionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  addProductButton: {
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.sm + 2,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: 16,
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    justifyContent: 'center',
   },
-  addProductButtonText: {
-    color: theme.colors.primary,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: theme.fonts.semibold,
+  emptyIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
   },
 });

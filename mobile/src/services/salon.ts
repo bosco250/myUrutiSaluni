@@ -21,6 +21,7 @@ export interface SalonDetails {
   businessHours?: Record<string, { open: string; close: string; isOpen?: boolean }>;
   settings?: any;
   photos?: string[];
+  images?: string[]; // Add images array
   status: 'active' | 'inactive' | 'pending_approval';
   ownerId: string;
   createdAt: string;
@@ -522,6 +523,7 @@ class SalonService {
       ...service,
       price: service.basePrice ?? service.price,
       duration: service.durationMinutes ?? service.duration,
+      imageUrl: service.imageUrl,
     }));
   }
 
@@ -535,6 +537,8 @@ class SalonService {
     durationMinutes: number;
     category?: string;
     targetGender?: string;
+    imageUrl?: string;
+    images?: string[];
   }): Promise<any> {
     const payload = {
       salonId,
@@ -545,6 +549,8 @@ class SalonService {
       isActive: true,
       category: data.category,
       targetGender: data.targetGender,
+      imageUrl: data.imageUrl,
+      images: data.images,
     };
     
     const response = await api.post<any>('/services', payload);
@@ -562,6 +568,8 @@ class SalonService {
     isActive: boolean;
     category: string;
     targetGender: string;
+    imageUrl: string;
+    images: string[];
   }>): Promise<any> {
     const response = await api.patch<any>(`/services/${serviceId}`, data);
     return response;

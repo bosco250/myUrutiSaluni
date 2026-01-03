@@ -13,8 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
-import { useAuth } from '../../context';
-import { useTheme } from '../../context';
+import { useAuth, useTheme } from '../../context';
 import { salonService, BusinessMetrics, SalonDetails } from '../../services/salon';
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import { api } from '../../services/api';
@@ -54,9 +53,15 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
       color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.background,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
+    border: {
+       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    iconBg: {
+       backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100,
+    }
   };
 
   const loadDashboardData = useCallback(async () => {
@@ -195,109 +200,113 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+      <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <Loader fullscreen message="Loading dashboard..." />
-      </SafeAreaView>
+      </View>
     );
   }
+
+  // Common Header Component
+  const OnboardingHeader = () => (
+    <View style={styles.onboardingHeader}>
+      <Image source={logo} style={styles.onboardingLogo} resizeMode="contain" />
+    </View>
+  );
 
   // Show "Apply for Membership" if user has no membership application
   if (membershipStatus === 'none') {
     return (
       <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        
-        <ScrollView
-          contentContainerStyle={styles.onboardingContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.onboardingHeader}>
-            <Image source={logo} style={styles.onboardingLogo} resizeMode="contain" />
-          </View>
-
-          {/* Welcome Card */}
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primaryLight]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.welcomeCard}
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView
+            contentContainerStyle={styles.onboardingContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.welcomeIconContainer}>
-              <MaterialIcons name="card-membership" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.welcomeTitle}>Welcome, {user?.fullName?.split(' ')[0] || 'Owner'}!</Text>
-            <Text style={styles.welcomeSubtitle}>
-              To start managing your salon business, you need to apply for membership first.
-            </Text>
-          </LinearGradient>
+            <OnboardingHeader />
 
-          {/* Steps Card */}
-          <View style={[styles.stepsCard, dynamicStyles.card]}>
-            <Text style={[styles.stepsTitle, dynamicStyles.text]}>How It Works</Text>
-            
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.primary }]}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.text]}>Apply for Membership</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Submit your business information</Text>
-              </View>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
-                <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>2</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Wait for Approval</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Usually within 24-48 hours</Text>
-              </View>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
-                <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>3</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Create Your Salon</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Set up your salon profile</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* CTA Button */}
-          <TouchableOpacity
-            style={styles.createSalonButton}
-            onPress={() => navigation.navigate('MembershipApplication')}
-            activeOpacity={0.8}
-          >
+            {/* Welcome Card */}
             <LinearGradient
               colors={[theme.colors.primary, theme.colors.primaryLight]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.createSalonGradient}
+              style={styles.welcomeCard}
             >
-              <MaterialIcons name="assignment" size={24} color="#FFFFFF" />
-              <Text style={styles.createSalonText}>Apply for Membership</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Info Card */}
-          <View style={[styles.helpCard, dynamicStyles.card]}>
-            <MaterialIcons name="info-outline" size={24} color={theme.colors.primary} />
-            <View style={styles.helpContent}>
-              <Text style={[styles.helpTitle, dynamicStyles.text]}>Why Apply?</Text>
-              <Text style={[styles.helpDesc, dynamicStyles.textSecondary]}>
-                Membership gives you access to create salons, manage staff, and grow your business on our platform.
+              <View style={styles.welcomeIconContainer}>
+                <MaterialIcons name="card-membership" size={48} color="#FFFFFF" />
+              </View>
+              <Text style={styles.welcomeTitle}>Welcome, {user?.fullName?.split(' ')[0] || 'Owner'}!</Text>
+              <Text style={styles.welcomeSubtitle}>
+                To start managing your salon business, you need to apply for membership first.
               </Text>
-            </View>
-          </View>
+            </LinearGradient>
 
-          <View style={{ height: 100 }} />
-        </ScrollView>
+            {/* Steps Card */}
+            <View style={[styles.stepsCard, dynamicStyles.card]}>
+              <Text style={[styles.stepsTitle, dynamicStyles.text]}>How It Works</Text>
+              
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.primary }]}>
+                  <Text style={styles.stepNumberText}>1</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.text]}>Apply for Membership</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Submit your business information</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
+                  <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>2</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Wait for Approval</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Usually within 24-48 hours</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
+                  <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>3</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Create Your Salon</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Set up your salon profile</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* CTA Button */}
+            <TouchableOpacity
+              style={styles.createSalonButton}
+              onPress={() => navigation.navigate('MembershipApplication')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createSalonGradient}
+              >
+                <MaterialIcons name="assignment" size={24} color="#FFFFFF" />
+                <Text style={styles.createSalonText}>Apply for Membership</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Info Card */}
+            <View style={[styles.helpCard, dynamicStyles.card]}>
+              <MaterialIcons name="info-outline" size={24} color={theme.colors.primary} />
+              <View style={styles.helpContent}>
+                <Text style={[styles.helpTitle, dynamicStyles.text]}>Why Apply?</Text>
+                <Text style={[styles.helpDesc, dynamicStyles.textSecondary]}>
+                  Membership gives you access to create salons, manage staff, and grow your business on our platform.
+                </Text>
+              </View>
+            </View>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
       </View>
     );
   }
@@ -307,100 +316,84 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
     return (
       <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        
-        <ScrollView
-          contentContainerStyle={styles.onboardingContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.onboardingHeader}>
-            <Image source={logo} style={styles.onboardingLogo} resizeMode="contain" />
-          </View>
-
-          {/* Pending Card */}
-          <LinearGradient
-            colors={[theme.colors.warning, '#FF9800']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.welcomeCard}
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView
+            contentContainerStyle={styles.onboardingContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.welcomeIconContainer}>
-              <MaterialIcons name="pending" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.welcomeTitle}>Application Pending</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Your membership application is being reviewed. We'll notify you once it's approved.
-            </Text>
-          </LinearGradient>
+            <OnboardingHeader />
 
-          {/* Status Card */}
-          <View style={[styles.stepsCard, dynamicStyles.card]}>
-            <Text style={[styles.stepsTitle, dynamicStyles.text]}>Application Status</Text>
-            
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.success }]}>
-                <MaterialIcons name="check" size={16} color="#FFFFFF" />
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.text]}>Application Submitted</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Your application has been received</Text>
-              </View>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.warning }]}>
-                <MaterialIcons name="hourglass-top" size={16} color="#FFFFFF" />
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.text]}>Under Review</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Usually takes 24-48 hours</Text>
-              </View>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
-                <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>3</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Approval & Salon Creation</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Coming soon!</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* View Application Button */}
-          <TouchableOpacity
-            style={[styles.createSalonButton, { opacity: 0.9 }]}
-            onPress={() => navigation.navigate('ApplicationSuccess', { status: 'pending' })}
-            activeOpacity={0.8}
-          >
+            {/* Pending Card */}
             <LinearGradient
               colors={[theme.colors.warning, '#FF9800']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.createSalonGradient}
+              style={styles.welcomeCard}
             >
-              <MaterialIcons name="visibility" size={24} color="#FFFFFF" />
-              <Text style={styles.createSalonText}>View Application</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Help Card */}
-          <View style={[styles.helpCard, dynamicStyles.card]}>
-            <MaterialIcons name="help-outline" size={24} color={theme.colors.primary} />
-            <View style={styles.helpContent}>
-              <Text style={[styles.helpTitle, dynamicStyles.text]}>Questions?</Text>
-              <Text style={[styles.helpDesc, dynamicStyles.textSecondary]}>
-                Contact our support team if you have any questions about your application.
+              <View style={styles.welcomeIconContainer}>
+                <MaterialIcons name="pending" size={48} color="#FFFFFF" />
+              </View>
+              <Text style={styles.welcomeTitle}>Application Pending</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Your membership application is being reviewed. We'll notify you once it's approved.
               </Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('ChatList')}>
-              <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
-            </TouchableOpacity>
-          </View>
+            </LinearGradient>
 
-          <View style={{ height: 100 }} />
-        </ScrollView>
+            {/* Status Card */}
+            <View style={[styles.stepsCard, dynamicStyles.card]}>
+              <Text style={[styles.stepsTitle, dynamicStyles.text]}>Application Status</Text>
+              
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.success }]}>
+                  <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.text]}>Application Submitted</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Your application has been received</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.warning }]}>
+                  <MaterialIcons name="hourglass-top" size={16} color="#FFFFFF" />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.text]}>Under Review</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Usually takes 24-48 hours</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
+                  <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>3</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Approval & Salon Creation</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Coming soon!</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* View Application Button */}
+            <TouchableOpacity
+              style={[styles.createSalonButton, { opacity: 0.9 }]}
+              onPress={() => navigation.navigate('ApplicationSuccess', { status: 'pending' })}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[theme.colors.warning, '#FF9800']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createSalonGradient}
+              >
+                <MaterialIcons name="visibility" size={24} color="#FFFFFF" />
+                <Text style={styles.createSalonText}>View Application</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
       </View>
     );
   }
@@ -410,65 +403,63 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
     return (
       <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        
-        <ScrollView
-          contentContainerStyle={styles.onboardingContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.onboardingHeader}>
-            <Image source={logo} style={styles.onboardingLogo} resizeMode="contain" />
-          </View>
-
-          {/* Rejected Card */}
-          <LinearGradient
-            colors={[theme.colors.error, '#D32F2F']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.welcomeCard}
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView
+            contentContainerStyle={styles.onboardingContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.welcomeIconContainer}>
-              <MaterialIcons name="cancel" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.welcomeTitle}>Application Not Approved</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Unfortunately, your membership application was not approved. You can apply again with updated information.
-            </Text>
-          </LinearGradient>
+            <OnboardingHeader />
 
-          {/* Reapply Button */}
-          <TouchableOpacity
-            style={styles.createSalonButton}
-            onPress={() => navigation.navigate('MembershipApplication')}
-            activeOpacity={0.8}
-          >
+            {/* Rejected Card */}
             <LinearGradient
-              colors={[theme.colors.primary, theme.colors.primaryLight]}
+              colors={[theme.colors.error, '#D32F2F']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.createSalonGradient}
+              style={styles.welcomeCard}
             >
-              <MaterialIcons name="refresh" size={24} color="#FFFFFF" />
-              <Text style={styles.createSalonText}>Apply Again</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Help Card */}
-          <View style={[styles.helpCard, dynamicStyles.card]}>
-            <MaterialIcons name="help-outline" size={24} color={theme.colors.primary} />
-            <View style={styles.helpContent}>
-              <Text style={[styles.helpTitle, dynamicStyles.text]}>Need Help?</Text>
-              <Text style={[styles.helpDesc, dynamicStyles.textSecondary]}>
-                Contact our support team to learn more about why your application was not approved.
+              <View style={styles.welcomeIconContainer}>
+                <MaterialIcons name="cancel" size={48} color="#FFFFFF" />
+              </View>
+              <Text style={styles.welcomeTitle}>Application Not Approved</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Unfortunately, your membership application was not approved. You can apply again with updated information.
               </Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('ChatList')}>
-              <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
-            </TouchableOpacity>
-          </View>
+            </LinearGradient>
 
-          <View style={{ height: 100 }} />
-        </ScrollView>
+            {/* Reapply Button */}
+            <TouchableOpacity
+              style={styles.createSalonButton}
+              onPress={() => navigation.navigate('MembershipApplication')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createSalonGradient}
+              >
+                <MaterialIcons name="refresh" size={24} color="#FFFFFF" />
+                <Text style={styles.createSalonText}>Apply Again</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Help Card */}
+            <View style={[styles.helpCard, dynamicStyles.card]}>
+              <MaterialIcons name="help-outline" size={24} color={theme.colors.primary} />
+              <View style={styles.helpContent}>
+                <Text style={[styles.helpTitle, dynamicStyles.text]}>Need Help?</Text>
+                <Text style={[styles.helpDesc, dynamicStyles.textSecondary]}>
+                  Contact our support team to learn more about why your application was not approved.
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('ChatList')}>
+                <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
       </View>
     );
   }
@@ -478,100 +469,84 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
     return (
       <View style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        
-        <ScrollView
-          contentContainerStyle={styles.onboardingContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.onboardingHeader}>
-            <Image source={logo} style={styles.onboardingLogo} resizeMode="contain" />
-          </View>
-
-          {/* Welcome Card */}
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primaryLight]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.welcomeCard}
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView
+            contentContainerStyle={styles.onboardingContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={styles.welcomeIconContainer}>
-              <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
-            </View>
-            <Text style={styles.welcomeTitle}>Welcome, {user?.fullName?.split(' ')[0] || 'Owner'}!</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Your membership has been approved! Now let's set up your salon.
-            </Text>
-          </LinearGradient>
+            <OnboardingHeader />
 
-          {/* Steps Card */}
-          <View style={[styles.stepsCard, dynamicStyles.card]}>
-            <Text style={[styles.stepsTitle, dynamicStyles.text]}>Get Started</Text>
-            
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.success }]}>
-                <MaterialIcons name="check" size={16} color="#FFFFFF" />
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.text]}>Membership Approved</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>You're now a verified salon owner</Text>
-              </View>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.primary }]}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.text]}>Create Your Salon</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Add your salon info and location</Text>
-              </View>
-            </View>
-
-            <View style={styles.stepItem}>
-              <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
-                <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>3</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Add Services & Staff</Text>
-                <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Set up your offerings</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* CTA Button */}
-          <TouchableOpacity
-            style={styles.createSalonButton}
-            onPress={() => navigation.navigate('CreateSalon')}
-            activeOpacity={0.8}
-          >
+            {/* Welcome Card */}
             <LinearGradient
               colors={[theme.colors.primary, theme.colors.primaryLight]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.createSalonGradient}
+              style={styles.welcomeCard}
             >
-              <MaterialIcons name="add-business" size={24} color="#FFFFFF" />
-              <Text style={styles.createSalonText}>Create Your Salon</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Help Card */}
-          <View style={[styles.helpCard, dynamicStyles.card]}>
-            <MaterialIcons name="help-outline" size={24} color={theme.colors.primary} />
-            <View style={styles.helpContent}>
-              <Text style={[styles.helpTitle, dynamicStyles.text]}>Need Help?</Text>
-              <Text style={[styles.helpDesc, dynamicStyles.textSecondary]}>
-                Contact our support team if you have any questions.
+              <View style={styles.welcomeIconContainer}>
+                <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
+              </View>
+              <Text style={styles.welcomeTitle}>Welcome, {user?.fullName?.split(' ')[0] || 'Owner'}!</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Your membership has been approved! Now let's set up your salon.
               </Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('ChatList')}>
-              <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
-            </TouchableOpacity>
-          </View>
+            </LinearGradient>
 
-          <View style={{ height: 100 }} />
-        </ScrollView>
+            {/* Steps Card */}
+            <View style={[styles.stepsCard, dynamicStyles.card]}>
+              <Text style={[styles.stepsTitle, dynamicStyles.text]}>Get Started</Text>
+              
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.success }]}>
+                  <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.text]}>Membership Approved</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>You're now a verified salon owner</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.primary }]}>
+                  <Text style={styles.stepNumberText}>2</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.text]}>Create Your Salon</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Add your salon info and location</Text>
+                </View>
+              </View>
+
+              <View style={styles.stepItem}>
+                <View style={[styles.stepNumber, { backgroundColor: theme.colors.borderLight }]}>
+                  <Text style={[styles.stepNumberText, { color: theme.colors.textSecondary }]}>3</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={[styles.stepLabel, dynamicStyles.textSecondary]}>Add Services & Staff</Text>
+                  <Text style={[styles.stepDesc, dynamicStyles.textSecondary]}>Set up your offerings</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* CTA Button */}
+            <TouchableOpacity
+              style={styles.createSalonButton}
+              onPress={() => navigation.navigate('CreateSalon')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.createSalonGradient}
+              >
+                <MaterialIcons name="add-business" size={24} color="#FFFFFF" />
+                <Text style={styles.createSalonText}>Create Your Salon</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
       </View>
     );
   }
@@ -579,25 +554,11 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
   return (
     <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-          />
-        }
-      >
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Image source={logo} style={styles.logo} resizeMode="contain" />
-            <Text style={[styles.dashboardLabel, dynamicStyles.textSecondary]}>
-              Owner Dashboard
-            </Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity 
@@ -618,289 +579,244 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
               onPress={() => navigation.navigate('Profile')}
               activeOpacity={0.7}
             >
-              <Image source={profileImage} style={styles.profileImage} />
+              <Image 
+                source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                style={styles.profileImage}
+                onError={(e) => console.log('Owner dashboard avatar load error:', e.nativeEvent.error)}
+              />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Revenue Card */}
-        <View style={styles.revenueCardContainer}>
-          <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primaryLight]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.revenueCard}
-          >
-            <View style={styles.revenueContent}>
-              <View>
-                <Text style={styles.revenueLabel}>Today's Revenue</Text>
-                <Text style={styles.revenueValue}>
-                  RWF {(metrics?.today.revenue || 0).toLocaleString()}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+            />
+          }
+        >
+          {/* Revenue Card (Flat Design) */}
+          <View style={styles.revenueCardContainer}>
+            <LinearGradient
+              colors={[theme.colors.primary, theme.colors.primaryLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.revenueCard}
+            >
+              <View style={styles.revenueContent}>
+                <View>
+                  <Text style={styles.revenueLabel}>Today's Revenue</Text>
+                  <Text style={styles.revenueValue}>
+                    RWF {(metrics?.today.revenue || 0).toLocaleString()}
+                  </Text>
+                  <View style={styles.revenueChangeContainer}>
+                    <View style={styles.revenueChangeBadge}>
+                      <MaterialIcons 
+                        name={revenueChange.isPositive ? 'trending-up' : 'trending-down'} 
+                        size={14} 
+                        color="#FFFFFF" 
+                      />
+                      <Text style={styles.revenueChangeText}>
+                        {revenueChange.isPositive ? '+' : '-'}{revenueChange.value}%
+                      </Text>
+                    </View>
+                    <Text style={styles.revenueChangeLabel}>vs yesterday</Text>
+                  </View>
+                </View>
+                <View style={styles.revenueIconContainer}>
+                  <MaterialIcons name="show-chart" size={32} color="rgba(255,255,255,0.9)" />
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+
+          {/* Quick Actions (Flat Grid) */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
+            <View style={styles.quickActionsRow}>
+              {[
+                { label: 'Loans', icon: 'request-quote', screen: 'ComingSoon', params: { featureName: 'Loans' } },
+                { label: 'Appointments', icon: 'event', screen: 'SalonAppointments', params: {} },
+                { label: 'Airtel Agent', icon: 'support-agent', screen: 'ComingSoon', params: { featureName: 'Airtel Agent' } },
+              ].map((action, i) => (
+                <TouchableOpacity 
+                  key={i}
+                  style={[styles.quickActionCard, dynamicStyles.card]}
+                  onPress={() => navigation.navigate(action.screen, action.params)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.quickActionIcon, dynamicStyles.iconBg]}>
+                    <MaterialIcons name={action.icon as any} size={24} color={theme.colors.primary} />
+                  </View>
+                  <Text style={[styles.quickActionLabel, dynamicStyles.text]}>{action.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Business Overview (Flat Cards) */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Business Overview</Text>
+            <View style={styles.overviewGrid}>
+              
+              {/* Bookings Today */}
+              <View style={[styles.overviewCard, dynamicStyles.card]}>
+                <View style={styles.overviewCardHeader}>
+                  <View style={[styles.overviewIconContainer, dynamicStyles.iconBg]}>
+                    <MaterialIcons name="event-available" size={20} color={theme.colors.primary} />
+                  </View>
+                  <View style={[styles.changeBadgePositive, { backgroundColor: isDark ? 'rgba(76,175,80,0.1)' : '#E8F5E9' }]}>
+                    <Text style={{ color: theme.colors.success, fontSize: 10, fontWeight: '700' }}>+12%</Text>
+                  </View>
+                </View>
+                <Text style={[styles.overviewValue, dynamicStyles.text]}>
+                  {metrics?.today.appointments || 0}
                 </Text>
-                <View style={styles.revenueChangeContainer}>
-                  <View style={styles.revenueChangeBadge}>
-                    <MaterialIcons 
-                      name={revenueChange.isPositive ? 'trending-up' : 'trending-down'} 
-                      size={14} 
-                      color="#FFFFFF" 
-                    />
-                    <Text style={styles.revenueChangeText}>
-                      {revenueChange.isPositive ? '+' : '-'}{revenueChange.value}%
-                    </Text>
+                <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
+                  Bookings Today
+                </Text>
+              </View>
+
+              {/* Staff Members */}
+              <View style={[styles.overviewCard, dynamicStyles.card]}>
+                <View style={styles.overviewCardHeader}>
+                  <View style={[styles.overviewIconContainer, dynamicStyles.iconBg]}>
+                    <MaterialIcons name="people" size={20} color={theme.colors.primary} />
                   </View>
-                  <Text style={styles.revenueChangeLabel}>vs yesterday</Text>
+                  <View style={[styles.statusBadgeActive, { backgroundColor: 'rgba(33,150,243,0.1)' }]}>
+                    <Text style={{ color: theme.colors.info, fontSize: 10, fontWeight: '700' }}>ACTIVE</Text>
+                  </View>
                 </View>
+                <Text style={[styles.overviewValue, dynamicStyles.text]}>
+                  {metrics?.staffPerformance?.length || 0}
+                </Text>
+                <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
+                  Staff Members
+                </Text>
               </View>
-              <View style={styles.revenueIconContainer}>
-                <MaterialIcons name="show-chart" size={32} color="rgba(255,255,255,0.9)" />
-              </View>
-            </View>
-          </LinearGradient>
-        </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
-          <View style={styles.quickActionsRow}>
-            <TouchableOpacity 
-              style={[styles.quickActionCard, dynamicStyles.card]}
-              onPress={() => navigation.navigate('Bookings')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { 
-                backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
-              }]}>
-                <MaterialIcons name="request-quote" size={24} color={theme.colors.primary} />
+              {/* Rating */}
+              <View style={[styles.overviewCard, dynamicStyles.card]}>
+                <View style={styles.overviewCardHeader}>
+                  <View style={[styles.overviewIconContainer, dynamicStyles.iconBg]}>
+                    <MaterialIcons name="star" size={20} color={theme.colors.warning} />
+                  </View>
+                  <View style={[styles.statusBadgeActive, { backgroundColor: isDark ? 'rgba(76,175,80,0.1)' : '#E8F5E9' }]}>
+                    <Text style={{ color: theme.colors.success, fontSize: 10, fontWeight: '700' }}>EXCELLENT</Text>
+                  </View>
+                </View>
+                <Text style={[styles.overviewValue, dynamicStyles.text]}>4.8</Text>
+                <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
+                  Customer Rating
+                </Text>
               </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Loans</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.quickActionCard, dynamicStyles.card]}
-              onPress={() => navigation.navigate('SalonAppointments')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { 
-                backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
-              }]}>
-                <MaterialIcons name="event" size={24} color={theme.colors.primary} />
+              {/* New Customers */}
+              <View style={[styles.overviewCard, dynamicStyles.card]}>
+                <View style={styles.overviewCardHeader}>
+                  <View style={[styles.overviewIconContainer, dynamicStyles.iconBg]}>
+                    <MaterialIcons name="person-add" size={20} color={theme.colors.secondary} />
+                  </View>
+                  <View style={[styles.changeBadgePositive, { backgroundColor: isDark ? 'rgba(76,175,80,0.1)' : '#E8F5E9' }]}>
+                    <Text style={{ color: theme.colors.success, fontSize: 10, fontWeight: '700' }}>+8</Text>
+                  </View>
+                </View>
+                <Text style={[styles.overviewValue, dynamicStyles.text]}>
+                  {metrics?.today.newCustomers || 0}
+                </Text>
+                <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
+                  New Customers
+                </Text>
               </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Appointments</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.quickActionCard, dynamicStyles.card]}
-              onPress={() => navigation.navigate('Wallet')}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.quickActionIcon, { 
-                backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
-              }]}>
-                <MaterialIcons name="support-agent" size={24} color={theme.colors.primary} />
-              </View>
-              <Text style={[styles.quickActionLabel, dynamicStyles.text]}>Airtel Agent</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Business Overview */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Business Overview</Text>
-          <View style={styles.overviewGrid}>
-            {/* Bookings Today Card */}
-            <View style={[styles.overviewCard, dynamicStyles.card]}>
-              <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { 
-                  backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15` 
-                }]}>
-                  <MaterialIcons name="event-available" size={20} color={theme.colors.primary} />
-                </View>
-                <View style={[styles.changeBadgePositive, {
-                  backgroundColor: isDark ? `${theme.colors.success}20` : '#E8F5E9'
-                }]}>
-                  <Text style={[styles.changeBadgeText, {
-                    color: isDark ? theme.colors.success : '#4CAF50'
-                  }]}>+12%</Text>
-                </View>
-              </View>
-              <Text style={[styles.overviewValue, dynamicStyles.text]}>
-                {metrics?.today.appointments || 0}
-              </Text>
-              <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
-                Bookings Today
-              </Text>
-            </View>
-
-            {/* Staff Members Card */}
-            <View style={[styles.overviewCard, dynamicStyles.card]}>
-              <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { 
-                  backgroundColor: isDark ? `${theme.colors.primary}20` : '#E3F2FD' 
-                }]}>
-                  <MaterialIcons 
-                    name="people" 
-                    size={20} 
-                    color={isDark ? theme.colors.primary : '#2196F3'} 
-                  />
-                </View>
-                <View style={[styles.statusBadgeActive, {
-                  backgroundColor: isDark ? `${theme.colors.primary}20` : '#E3F2FD'
-                }]}>
-                  <Text style={[styles.statusBadgeText, {
-                    color: isDark ? theme.colors.primary : '#2196F3'
-                  }]}>ACTIVE</Text>
-                </View>
-              </View>
-              <Text style={[styles.overviewValue, dynamicStyles.text]}>
-                {metrics?.staffPerformance?.length || 0}
-              </Text>
-              <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
-                Staff Members
-              </Text>
-            </View>
-
-            {/* Customer Satisfaction Card */}
-            <View style={[styles.overviewCard, dynamicStyles.card]}>
-              <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { 
-                  backgroundColor: isDark ? `${theme.colors.warning}20` : '#FFF3E0' 
-                }]}>
-                  <MaterialIcons 
-                    name="star" 
-                    size={20} 
-                    color={isDark ? theme.colors.warning : '#FF9800'} 
-                  />
-                </View>
-                <View style={[styles.statusBadgeExcellent, {
-                  backgroundColor: isDark ? `${theme.colors.success}20` : '#E8F5E9'
-                }]}>
-                  <Text style={[styles.statusBadgeTextGreen, {
-                    color: isDark ? theme.colors.success : '#4CAF50'
-                  }]}>EXCELLENT</Text>
-                </View>
-              </View>
-              <Text style={[styles.overviewValue, dynamicStyles.text]}>4.8</Text>
-              <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
-                Customer Rating
-              </Text>
-            </View>
-
-            {/* New Customers Card */}
-            <View style={[styles.overviewCard, dynamicStyles.card]}>
-              <View style={styles.overviewCardHeader}>
-                <View style={[styles.overviewIconContainer, { 
-                  backgroundColor: isDark ? `${theme.colors.secondary}20` : '#F3E5F5' 
-                }]}>
-                  <MaterialIcons 
-                    name="person-add" 
-                    size={20} 
-                    color={isDark ? theme.colors.secondary : '#9C27B0'} 
-                  />
-                </View>
-                <View style={[styles.changeBadgePositive, {
-                  backgroundColor: isDark ? `${theme.colors.success}20` : '#E8F5E9'
-                }]}>
-                  <Text style={[styles.changeBadgeText, {
-                    color: isDark ? theme.colors.success : '#4CAF50'
-                  }]}>+8</Text>
-                </View>
-              </View>
-              <Text style={[styles.overviewValue, dynamicStyles.text]}>
-                {metrics?.today.newCustomers || 0}
-              </Text>
-              <Text style={[styles.overviewLabel, dynamicStyles.textSecondary]}>
-                New Customers
-              </Text>
             </View>
           </View>
-        </View>
 
-        {/* Top Services */}
-        {metrics?.topServices && metrics.topServices.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Top Services</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('BusinessAnalytics')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[styles.listCard, dynamicStyles.card]}>
-              {metrics.topServices.slice(0, 4).map((service, index) => (
-                <View 
-                  key={service.serviceId} 
-                  style={[
-                    styles.serviceRow,
-                    index < metrics.topServices.slice(0, 4).length - 1 && styles.serviceRowBorder
-                  ]}
+          {/* Top Services (Flat List) */}
+          {metrics?.topServices && metrics.topServices.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Top Services</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('BusinessAnalytics')}
+                  activeOpacity={0.7}
                 >
-                  <View style={[styles.serviceRank, {
-                    backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15`
-                  }]}>
-                    <Text style={[styles.rankNumber, {
-                      color: theme.colors.primary
-                    }]}>{index + 1}</Text>
+                  <Text style={styles.viewAllText}>View All</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.listCard, dynamicStyles.card]}>
+                {metrics.topServices.slice(0, 4).map((service, index) => (
+                  <View 
+                    key={service.serviceId} 
+                    style={[
+                      styles.serviceRow,
+                      styles.serviceRowPadding,
+                      index < metrics.topServices.slice(0, 4).length - 1 && [styles.serviceRowBorder, dynamicStyles.border]
+                    ]}
+                  >
+                    <View style={[styles.serviceRank, { backgroundColor: theme.colors.primary }]}>
+                      <Text style={styles.rankNumber}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.serviceInfo}>
+                      <Text style={[styles.serviceName, dynamicStyles.text]}>{service.serviceName}</Text>
+                      <Text style={[styles.serviceStats, dynamicStyles.textSecondary]}>
+                        {service.bookings} bookings
+                      </Text>
+                    </View>
+                    <Text style={styles.serviceRevenue}>RWF {service.revenue.toLocaleString()}</Text>
                   </View>
-                  <View style={styles.serviceInfo}>
-                    <Text style={[styles.serviceName, dynamicStyles.text]}>{service.serviceName}</Text>
-                    <Text style={[styles.serviceStats, dynamicStyles.textSecondary]}>
-                      {service.bookings} bookings
-                    </Text>
-                  </View>
-                  <Text style={styles.serviceRevenue}>RWF {service.revenue.toLocaleString()}</Text>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Staff Performance */}
-        {metrics?.staffPerformance && metrics.staffPerformance.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Staff Performance</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('StaffManagement')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.viewAllText}>Manage</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[styles.listCard, dynamicStyles.card]}>
-              {metrics.staffPerformance.slice(0, 3).map((staff, index) => (
-                <View 
-                  key={staff.employeeId} 
-                  style={[
-                    styles.staffRow,
-                    index < metrics.staffPerformance.slice(0, 3).length - 1 && styles.serviceRowBorder
-                  ]}
+          {/* Staff Performance (Flat List) */}
+          {metrics?.staffPerformance && metrics.staffPerformance.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Staff Performance</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('StaffManagement')}
+                  activeOpacity={0.7}
                 >
-                  <View style={[styles.staffAvatar, {
-                    backgroundColor: isDark ? `${theme.colors.primary}20` : `${theme.colors.primary}15`
-                  }]}>
-                    <MaterialIcons name="person" size={20} color={theme.colors.primary} />
+                  <Text style={styles.viewAllText}>Manage</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.listCard, dynamicStyles.card]}>
+                {metrics.staffPerformance.slice(0, 3).map((staff, index) => (
+                  <View 
+                    key={staff.employeeId} 
+                    style={[
+                      styles.staffRow,
+                      styles.serviceRowPadding,
+                      index < metrics.staffPerformance.slice(0, 3).length - 1 && [styles.serviceRowBorder, dynamicStyles.border]
+                    ]}
+                  >
+                    <View style={[styles.staffAvatar, dynamicStyles.iconBg]}>
+                      <MaterialIcons name="person" size={20} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.staffInfo}>
+                      <Text style={[styles.staffName, dynamicStyles.text]}>{staff.employeeName}</Text>
+                      <Text style={[styles.staffStats, dynamicStyles.textSecondary]}>
+                        {staff.appointments} appointments
+                      </Text>
+                    </View>
+                    <View style={styles.staffRating}>
+                      <MaterialIcons name="star" size={14} color="#FFB300" />
+                      <Text style={[styles.ratingText, dynamicStyles.text]}>{staff.rating.toFixed(1)}</Text>
+                    </View>
                   </View>
-                  <View style={styles.staffInfo}>
-                    <Text style={[styles.staffName, dynamicStyles.text]}>{staff.employeeName}</Text>
-                    <Text style={[styles.staffStats, dynamicStyles.textSecondary]}>
-                      {staff.appointments} appointments • RWF {staff.revenue.toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={styles.staffRating}>
-                    <MaterialIcons name="star" size={16} color="#FFB300" />
-                    <Text style={styles.ratingText}>{staff.rating.toFixed(1)}</Text>
-                  </View>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Bottom spacing */}
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
@@ -908,10 +824,9 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingTop: StatusBar.currentHeight || 0,
+    paddingBottom: 40,
   },
   
   // Header
@@ -919,9 +834,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   headerLeft: {
     flex: 1,
@@ -930,59 +844,49 @@ const styles = StyleSheet.create({
     width: 100,
     height: 36,
   },
-  dashboardLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-    fontFamily: theme.fonts.regular,
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: 16,
   },
   notificationButton: {
+    padding: 4,
     position: 'relative',
-    padding: theme.spacing.xs,
   },
   notificationBadge: {
     position: 'absolute',
     top: 0,
     right: 0,
     backgroundColor: theme.colors.error,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: theme.colors.background, // Match container
   },
   notificationBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
   },
   profileImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
   },
 
   // Revenue Card
   revenueCardContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
+    paddingHorizontal: 20,
+    marginTop: 8,
   },
   revenueCard: {
     borderRadius: 20,
-    padding: theme.spacing.xl,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    padding: 24,
   },
   revenueContent: {
     flexDirection: 'row',
@@ -992,44 +896,43 @@ const styles = StyleSheet.create({
   revenueLabel: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
-    fontFamily: theme.fonts.regular,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   revenueValue: {
-    fontSize: 40,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '800', // Premium bold
     color: '#FFFFFF',
-    fontFamily: theme.fonts.bold,
+    letterSpacing: -0.5,
   },
   revenueChangeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.sm,
+    marginTop: 12,
+    gap: 8,
   },
   revenueChangeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     gap: 4,
   },
   revenueChangeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontFamily: theme.fonts.medium,
   },
   revenueChangeLabel: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.8)',
-    fontFamily: theme.fonts.regular,
+    fontWeight: '500',
   },
   revenueIconContainer: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
@@ -1038,44 +941,37 @@ const styles = StyleSheet.create({
 
   // Section
   section: {
-    paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xl,
+    paddingHorizontal: 20,
+    marginTop: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.text,
-    fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.md,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   viewAllText: {
     fontSize: 14,
     color: theme.colors.primary,
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
   },
 
-  // Quick Actions
+  // Quick Actions (Flat)
   quickActionsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
+    gap: 12,
   },
   quickActionCard: {
     flex: 1,
     borderRadius: 16,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
     borderWidth: 1,
   },
   quickActionIcon: {
@@ -1084,147 +980,109 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
   quickActionLabel: {
     fontSize: 12,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
     textAlign: 'center',
   },
 
-  // Overview Grid
+  // Overview Grid (Flat)
   overviewGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+    gap: 12,
   },
   overviewCard: {
-    width: '48.5%',
+    width: '48%', // Approx half
     borderRadius: 16,
-    padding: theme.spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 16,
     borderWidth: 1,
   },
   overviewCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   overviewIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   overviewValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.xs,
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: -0.5,
   },
   overviewLabel: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
+    fontWeight: '500',
   },
   changeBadgePositive: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  changeBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   statusBadgeActive: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
-  },
-  statusBadgeExcellent: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeTextGreen: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
 
-  // List Cards
+  // List Cards (Flat)
   listCard: {
     borderRadius: 16,
-    padding: theme.spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
     borderWidth: 1,
+    overflow: 'hidden',
   },
   serviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+  },
+  serviceRowPadding: {
+    padding: 16,
   },
   serviceRowBorder: {
     borderBottomWidth: 1,
   },
   serviceRank: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: 12,
   },
   rankNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   serviceInfo: {
     flex: 1,
   },
   serviceName: {
     fontSize: 15,
-    fontWeight: '500',
-    color: theme.colors.text,
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   serviceStats: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-    fontFamily: theme.fonts.regular,
   },
   serviceRevenue: {
     fontSize: 15,
     fontWeight: '600',
     color: theme.colors.primary,
-    fontFamily: theme.fonts.medium,
   },
-
-  // Staff Row
+  // Staff
   staffRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
   },
   staffAvatar: {
     width: 40,
@@ -1232,45 +1090,36 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: 12,
   },
   staffInfo: {
     flex: 1,
   },
   staffName: {
     fontSize: 15,
-    fontWeight: '500',
-    color: theme.colors.text,
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
   },
   staffStats: {
     fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-    fontFamily: theme.fonts.regular,
   },
   staffRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
     gap: 4,
   },
   ratingText: {
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: theme.fonts.medium,
   },
 
-  // Onboarding styles
+  // Onboarding (Simplified)
   onboardingContent: {
-    padding: theme.spacing.lg,
-    paddingTop: (StatusBar.currentHeight || 0) + theme.spacing.lg,
+    padding: 24,
   },
   onboardingHeader: {
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 32,
+    marginTop: 20,
   },
   onboardingLogo: {
     width: 120,
@@ -1278,64 +1127,60 @@ const styles = StyleSheet.create({
   },
   welcomeCard: {
     borderRadius: 20,
-    padding: theme.spacing.xl,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 24,
   },
   welcomeIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
   welcomeTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#FFFFFF',
-    fontFamily: theme.fonts.bold,
     textAlign: 'center',
+    marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 15,
     color: 'rgba(255,255,255,0.9)',
-    fontFamily: theme.fonts.regular,
     textAlign: 'center',
-    marginTop: theme.spacing.sm,
     lineHeight: 22,
   },
   stepsCard: {
     borderRadius: 16,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    padding: 20,
+    marginBottom: 24,
     borderWidth: 1,
   },
   stepsTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.md,
+    fontWeight: '700',
+    marginBottom: 16,
   },
   stepItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
+    marginBottom: 20,
   },
   stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: 12,
   },
   stepNumberText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
-    fontFamily: theme.fonts.medium,
   },
   stepContent: {
     flex: 1,
@@ -1343,51 +1188,45 @@ const styles = StyleSheet.create({
   },
   stepLabel: {
     fontSize: 15,
-    fontWeight: '500',
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   stepDesc: {
     fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
   },
   createSalonButton: {
     borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 24,
   },
   createSalonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.md + 4,
-    gap: theme.spacing.sm,
+    paddingVertical: 16,
+    gap: 8,
   },
   createSalonText: {
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
-    fontFamily: theme.fonts.medium,
   },
   helpCard: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 14,
-    padding: theme.spacing.md,
+    padding: 16,
     borderWidth: 1,
   },
   helpContent: {
     flex: 1,
-    marginLeft: theme.spacing.md,
+    marginLeft: 12,
   },
   helpTitle: {
     fontSize: 15,
-    fontWeight: '500',
-    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
   },
   helpDesc: {
     fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
   },
 });

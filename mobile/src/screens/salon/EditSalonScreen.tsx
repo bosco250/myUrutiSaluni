@@ -17,6 +17,9 @@ import { theme } from '../../theme';
 import { useTheme } from '../../context';
 import { Button } from '../../components';
 import { salonService, SalonDetails } from '../../services/salon';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadService } from '../../services/upload';
+import { Image } from 'react-native';
 
 interface EditSalonScreenProps {
   navigation: {
@@ -49,10 +52,55 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
     openTime: '08:00',
     closeTime: '20:00',
     isOpenSunday: false,
+    images: [] as string[],
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!initialSalon);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Gallery permission is required to upload photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0].uri) {
+      handleImageUpload(result.assets[0].uri);
+    }
+  };
+
+  const handleImageUpload = async (uri: string) => {
+      setUploading(true);
+      try {
+        const response = await uploadService.uploadServiceImage(uri);
+        setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, response.url]
+        }));
+      } catch (error) {
+        Alert.alert('Upload Failed', 'Failed to upload image. Please try again.');
+        console.error(error);
+      } finally {
+        setUploading(false);
+      }
+  };
+
+  const removeImage = (index: number) => {
+      setFormData(prev => ({
+          ...prev,
+          images: prev.images.filter((_, i) => i !== index)
+      }));
+  };
 
   const dynamicStyles = {
     container: {
@@ -98,6 +146,7 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
       openTime,
       closeTime,
       isOpenSunday: !!salon.businessHours?.sunday?.isOpen,
+      images: salon.images || salon.photos || [],
     });
   }, []);
 
@@ -180,6 +229,7 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
         district: formData.district.trim() || undefined,
         website: formData.website.trim() || undefined,
         registrationNumber: formData.registrationNumber.trim() || undefined,
+        images: formData.images,
         settings: {
             businessHours, // For some backends
             operatingHours: businessHours // For other backends/explore compatibility
@@ -236,7 +286,29 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.sectionTitle, dynamicStyles.text, { marginTop: 0 }]}>Basic Information</Text>
+        <Text style={[styles.sectionTitle, dynamicStyles.text, { marginTop: 0 }]}>Salon Photos</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
+            <TouchableOpacity style={[styles.addPhotoButton, { borderColor: theme.colors.primary }]} onPress={pickImage} disabled={uploading}>
+                {uploading ? (
+                    <Text style={{ color: theme.colors.primary }}>Uploading...</Text>
+                ) : (
+                    <>
+                        <MaterialIcons name="add-a-photo" size={24} color={theme.colors.primary} />
+                        <Text style={{ color: theme.colors.primary, fontSize: 12, marginTop: 4 }}>Add Photo</Text>
+                    </>
+                )}
+            </TouchableOpacity>
+            {formData.images.map((img, index) => (
+                <View key={index} style={styles.photoWrapper}>
+                    <Image source={{ uri: img }} style={styles.photo} />
+                    <TouchableOpacity style={styles.removePhotoButton} onPress={() => removeImage(index)}>
+                        <MaterialIcons name="close" size={16} color="white" />
+                    </TouchableOpacity>
+                </View>
+            ))}
+        </ScrollView>
+
+        <Text style={[styles.sectionTitle, dynamicStyles.text]}>Basic Information</Text>
         
         {/* Form */}
         <View style={styles.form}>
@@ -520,5 +592,42 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+  },
+  photosContainer: {
+      flexDirection: 'row',
+      marginBottom: 20,
+  },
+  addPhotoButton: {
+      width: 100,
+      height: 100,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
+  },
+  photoWrapper: {
+      width: 100,
+      height: 100,
+      marginRight: 10,
+      borderRadius: 12,
+      overflow: 'hidden',
+      position: 'relative',
+  },
+  photo: {
+      width: '100%',
+      height: '100%',
+  },
+  removePhotoButton: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
   }
 });

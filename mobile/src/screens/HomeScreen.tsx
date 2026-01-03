@@ -426,7 +426,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               onPress={() => navigation?.navigate("Profile")}
               activeOpacity={0.7}
             >
-              <Image source={profileImage} style={styles.profileImage} />
+              <Image 
+                source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                style={styles.profileImage}
+                onError={(e) => console.log('Home avatar load error:', e.nativeEvent.error)}
+              />
             </TouchableOpacity>
           </View>
         </View>

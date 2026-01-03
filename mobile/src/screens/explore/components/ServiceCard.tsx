@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../../theme";
 import { useTheme } from "../../../context";
@@ -23,6 +23,7 @@ export default function ServiceCard({
   title,
   author,
   likes = 0,
+  image,
   onPress,
   onLike,
   variant = "grid",
@@ -35,6 +36,12 @@ export default function ServiceCard({
   const resolvedPrice = service?.basePrice !== undefined ? Number(service.basePrice) : undefined;
   const resolvedDuration = service?.durationMinutes;
   
+  // Resolve Image
+  const resolvedImage = 
+    (service?.images && service.images.length > 0 ? service.images[0] : null) || 
+    service?.imageUrl || 
+    image;
+
   // Resolve Category Label and Color
   const categoryValue = service?.category || service?.metadata?.category || "Other";
   const categoryOption = SERVICE_CATEGORIES.find(c => c.value === categoryValue);
@@ -104,8 +111,12 @@ export default function ServiceCard({
         activeOpacity={0.9}
       >
         {/* Compact Image */}
-        <View style={[styles.listImage, { backgroundColor: categoryColor + '20' }]}> 
-             <Text style={[styles.initials, { color: categoryColor, fontSize: 20 }]}>{getInitials(resolvedTitle)}</Text>
+        <View style={[styles.listImage, { backgroundColor: categoryColor + '20', overflow: 'hidden' }]}> 
+             {resolvedImage ? (
+                <Image source={{ uri: resolvedImage }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+             ) : (
+                <Text style={[styles.initials, { color: categoryColor, fontSize: 20 }]}>{getInitials(resolvedTitle)}</Text>
+             )}
         </View>
 
         <View style={styles.listContent}>
@@ -144,8 +155,12 @@ export default function ServiceCard({
       onPress={onPress}
       activeOpacity={0.9}
     >
-      <View style={[styles.imageContainer, { backgroundColor: categoryColor + '20' }]}>
-          <Text style={[styles.initials, { color: categoryColor }]}>{getInitials(resolvedTitle)}</Text>
+      <View style={[styles.imageContainer, { backgroundColor: categoryColor + '20', overflow: 'hidden' }]}>
+          {resolvedImage ? (
+             <Image source={{ uri: resolvedImage }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          ) : (
+             <Text style={[styles.initials, { color: categoryColor }]}>{getInitials(resolvedTitle)}</Text>
+          )}
           <View style={styles.badgeOverlay}>
               <View style={[styles.categoryBadge, { backgroundColor: theme.colors.background, opacity: 0.95 }]}>
                    <Text style={[styles.categoryText, { color: categoryColor, fontWeight: '700' }]}>{categoryLabel}</Text>

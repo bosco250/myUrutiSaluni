@@ -5,15 +5,42 @@ import { tokenStorage } from './tokenStorage';
 const USER_KEY = '@auth_user';
 
 /**
- * User data structure returned from backend and saved to AsyncStorage
- * This includes all essential user information needed for API authentication
+ * User data structure with complete profile information
  */
 export interface User {
-  id: number; // User ID - used for API requests and user identification
-  email: string; // User email address
-  phone?: string; // User phone number (optional)
-  fullName: string; // User's full name
-  role: string; // User role (e.g., 'customer', 'salon_employee', 'salon_owner')
+  id: string;
+  email: string;
+  phone?: string;
+  fullName: string;
+  role: string;
+  avatarUrl?: string;
+  // Personal
+  dateOfBirth?: string;
+  gender?: string;
+  maritalStatus?: string;
+  nationality?: string;
+  nationalId?: string;
+  // Address
+  address?: string;
+  city?: string;
+  district?: string;
+  sector?: string;
+  cell?: string;
+  // Emergency Contact
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  // Professional
+  bio?: string;
+  yearsOfExperience?: number;
+  skills?: string[];
+  // Banking
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
+  momoNumber?: string;
+  // System
+  profileCompletion?: number;
 }
 
 export interface LoginResponse {
@@ -178,6 +205,41 @@ class AuthService {
     } catch (error) {
       console.error('Error setting user:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Update user profile and save to storage
+   */
+  async updateProfile(userId: string, profileData: Partial<User>): Promise<User> {
+    try {
+      const response = await api.patch<User>(`/users/${userId}`, profileData);
+      
+      // Update local storage with merged data
+      const currentUser = await this.getUser();
+      const updatedUser = { ...currentUser, ...response };
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      this.user = updatedUser;
+      
+      return updatedUser;
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      throw new Error(error.message || 'Failed to update profile');
+    }
+  }
+
+  /**
+   * Refresh user data from server
+   */
+  async refreshUserFromServer(userId: string): Promise<User | null> {
+    try {
+      const response = await api.get<User>(`/users/${userId}`);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response));
+      this.user = response;
+      return response;
+    } catch (error) {
+      console.error('Error refreshing user from server:', error);
+      return null;
     }
   }
 

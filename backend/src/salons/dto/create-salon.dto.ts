@@ -96,4 +96,9 @@ export class CreateSalonDto {
   @IsOptional()
   @IsObject()
   settings?: Record<string, any>;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString({ each: true })
+  images?: string[];
 }

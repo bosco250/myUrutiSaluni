@@ -506,7 +506,11 @@ export default function StaffDashboardScreen({
               onPress={() => navigation.navigate("Profile")}
               activeOpacity={0.7}
             >
-              <Image source={profileImage} style={styles.profileImage} />
+              <Image 
+                source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                style={styles.profileImage} 
+                onError={(e) => console.log('Staff dashboard avatar load error:', e.nativeEvent.error)}
+              />
             </TouchableOpacity>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>

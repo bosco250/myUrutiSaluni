@@ -38,6 +38,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
+import { UploadsModule } from './uploads/uploads.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -75,6 +77,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     ChatModule,
     ReviewsModule,
     PaymentsModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [

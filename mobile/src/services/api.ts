@@ -215,14 +215,25 @@ class ApiService {
     const { requireAuth = true, isLoginRequest = false } = options;
     const headers = await this.getHeaders(requireAuth);
 
+    const isFormData = (data as any) instanceof FormData;
+    const body = isFormData ? data : JSON.stringify(data);
+
+    // Merge headers first
+    const mergedHeaders = {
+      ...headers,
+      ...options.headers,
+    };
+
+    if (isFormData) {
+      // Explicitly remove Content-Type to let the engine set the boundary
+      delete (mergedHeaders as any)['Content-Type'];
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
-        headers: {
-          ...headers,
-          ...options.headers,
-        },
-        body: JSON.stringify(data),
+        headers: mergedHeaders,
+        body: body as any,
       });
 
       return this.handleResponse<T>(response, isLoginRequest);

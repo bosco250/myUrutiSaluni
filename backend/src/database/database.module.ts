@@ -19,6 +19,7 @@ import { Product } from '../inventory/entities/product.entity';
 import { InventoryMovement } from '../inventory/entities/inventory-movement.entity';
 import { AttendanceLog } from '../attendance/entities/attendance-log.entity';
 import { ChartOfAccount } from '../accounting/entities/chart-of-account.entity';
+import { Expense } from '../accounting/entities/expense.entity';
 import { JournalEntry } from '../accounting/entities/journal-entry.entity';
 import { JournalEntryLine } from '../accounting/entities/journal-entry-line.entity';
 import { Invoice } from '../accounting/entities/invoice.entity';
@@ -107,6 +108,7 @@ import { CustomerFavorite } from '../customers/entities/customer-favorite.entity
           Review,
           Payment,
           CustomerFavorite,
+          Expense,
         ];
 
         // Use PostgreSQL by default, SQLite only if explicitly set

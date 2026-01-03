@@ -105,6 +105,24 @@ const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
         requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
       },
       {
+        id: 'expenses',
+        icon: 'receipt-long',
+        label: 'Expenses',
+        description: 'Track expenses',
+        screen: 'Expenses',
+        iconColor: theme.colors.error,
+        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+      },
+      {
+        id: 'accounting',
+        icon: 'account-balance',
+        label: 'Accounting',
+        description: 'Financial overview',
+        screen: 'Accounting',
+        iconColor: theme.colors.info || theme.colors.primary,
+        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+      },
+      {
         id: 'employee-schedules',
         icon: 'calendar-today',
         label: 'Team Schedule',
@@ -309,7 +327,7 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     const screensNeedingSalonId = [
       'AddProduct', 'AddService', 'StockManagement', 'SalonSettings',
       'SalonAppointments', 'CustomerManagement', 'Sales', 'StaffManagement',
-      'EmployeePermissions', 'Operations'
+      'EmployeePermissions', 'Operations', 'Expenses', 'Accounting'
     ];
     if (screensNeedingSalonId.includes(screen) && employeeSalonId) {
       navigation.navigate(screen, { salonId: employeeSalonId });
@@ -405,7 +423,11 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           onPress={() => navigation.navigate('Profile')}
           activeOpacity={0.7}
         >
-          <Image source={profileImage} style={styles.profileImage} />
+          <Image 
+            source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+            style={styles.profileImage} 
+            onError={(e) => console.log('More menu avatar load error:', e.nativeEvent.error)}
+          />
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, dynamicStyles.text]}>
               {user?.fullName || getRoleName(user?.role)}

@@ -29,16 +29,22 @@
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-image-viewing": "^0.2.2",
     "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "react-native-webview": "^13.16.0"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
+    "@types/react": "~18.3.12",
+    "dotenv": "^16.4.5",
     "eslint": "^8.57.1",
     "eslint-config-expo": "~10.0.0",
     "metro-minify-terser": "^0.83.3",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "@types/react": "~18.3.12"
   },
   "private": true
 }

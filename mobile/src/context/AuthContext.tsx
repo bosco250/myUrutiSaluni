@@ -21,6 +21,7 @@ interface AuthContextType {
   register: (credentials: RegisterCredentials) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUser: (profileData: Partial<User>) => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,7 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
 
       // Load token and user data from AsyncStorage in parallel for faster startup
-      // This restores the session when app restarts
       const [savedToken, savedUser] = await Promise.all([
         authService.getToken(),
         authService.getUser(),
@@ -64,13 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authService.login({ email, password });
 
-      // Update state with token and all user data (id, email, phone, fullName, role)
       setToken(response.access_token);
       setUser(response.user);
 
       return response;
     } catch (error) {
-      // Re-throw error so calling component can handle it
       throw error;
     }
   };
@@ -81,13 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authService.register(credentials);
 
-      // Update state with token and all user data (id, email, phone, fullName, role)
       setToken(response.access_token);
       setUser(response.user);
 
       return response;
     } catch (error) {
-      // Re-throw error so calling component can handle it
       throw error;
     }
   };
@@ -96,12 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.logout();
 
-      // Clear state
       setToken(null);
       setUser(null);
     } catch (error) {
       console.error("Error during logout:", error);
-      // Even if logout fails, clear local state
       setToken(null);
       setUser(null);
     }
@@ -118,6 +112,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Update user profile and immediately reflect changes in context
+   */
+  const updateUser = async (profileData: Partial<User>): Promise<User> => {
+    if (!user?.id) {
+      throw new Error("No user logged in");
+    }
+
+    try {
+      // Call API to update profile
+      const updatedUser = await authService.updateProfile(user.id, profileData);
+      
+      // Immediately update local state so UI reflects changes
+      setUser(updatedUser);
+      
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -127,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     refreshUser,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
