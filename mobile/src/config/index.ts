@@ -1,7 +1,22 @@
-// Environment configuration using Expo constants
-// This reads from .env file using expo-constants
+// Environment configuration - all values are defined directly here
+// No .env file needed for mobile
 
-import Constants from 'expo-constants';
+// Configuration values
+const CONFIG = {
+  // API URL - change this to your backend URL
+  // For development on physical device, use your computer's IP address
+  // For emulator, use 10.0.2.2 (Android) or localhost (iOS)
+  API_URL: 'http://192.168.1.76:4000/api', // Change to your IP
+  
+  // App info
+  APP_NAME: 'URUTI Saluni',
+  APP_VERSION: '1.0.0',
+  
+  // Optional: External services (only if needed)
+  CLOUDINARY_CLOUD_NAME: '',
+  CLOUDINARY_UPLOAD_PRESET: '',
+  GOOGLE_MAPS_API_KEY: '',
+};
 
 // Environment variables interface
 interface Env {
@@ -9,38 +24,20 @@ interface Env {
   appName: string;
   appVersion: string;
   cloudinaryCloudName?: string;
-  cloudinaryApiKey?: string;
   cloudinaryUploadPreset?: string;
-  expoProjectId?: string;
   googleMapsApiKey?: string;
 }
 
-// Get environment variables from Expo config
+// Get environment variables from config
 const getEnvVars = (): Env => {
-  const extra = Constants.expoConfig?.extra || {};
-  
   return {
-    apiUrl: extra.apiUrl || getDefaultApiUrl(),
-    appName: extra.appName || 'URUTI Saluni',
-    appVersion: extra.appVersion || '1.0.0',
-    cloudinaryCloudName: extra.cloudinaryCloudName,
-    cloudinaryApiKey: extra.cloudinaryApiKey,
-    cloudinaryUploadPreset: extra.cloudinaryUploadPreset,
-    expoProjectId: extra.expoProjectId,
-    googleMapsApiKey: extra.googleMapsApiKey,
+    apiUrl: CONFIG.API_URL,
+    appName: CONFIG.APP_NAME,
+    appVersion: CONFIG.APP_VERSION,
+    cloudinaryCloudName: CONFIG.CLOUDINARY_CLOUD_NAME || undefined,
+    cloudinaryUploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET || undefined,
+    googleMapsApiKey: CONFIG.GOOGLE_MAPS_API_KEY || undefined,
   };
-};
-
-// Default API URL for development
-const getDefaultApiUrl = (): string => {
-  if (!__DEV__) {
-    return 'https://api.production.com/api';
-  }
-  
-  // Warn if API_URL is missing in development
-  console.warn('⚠️ API_URL is not set in mobile/.env. Using http://localhost:4000/api as default. Use your computer IP for physical devices!');
-  
-  return 'http://localhost:4000/api';
 };
 
 // Export environment configuration
@@ -53,3 +50,4 @@ export const config = {
   appName: env.appName,
   isDevelopment: __DEV__,
 };
+
