@@ -1,5 +1,18 @@
-import { IsString, IsBoolean, IsOptional, IsUUID, IsEnum, IsInt, Min, IsDateString } from 'class-validator';
-import { CommunicationType, CommunicationDirection, CommunicationStatus } from '../entities/communication.entity';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  IsInt,
+  Min,
+  IsDateString,
+} from 'class-validator';
+import {
+  CommunicationType,
+  CommunicationDirection,
+  CommunicationStatus,
+} from '../entities/communication.entity';
 
 export class CreateCommunicationDto {
   @IsUUID()
@@ -63,4 +76,3 @@ export class CreateCommunicationDto {
   @IsOptional()
   metadata?: Record<string, any>;
 }
-

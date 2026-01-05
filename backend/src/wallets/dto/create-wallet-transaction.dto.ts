@@ -1,4 +1,11 @@
-import { IsUUID, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { WalletTransactionType } from '../entities/wallet-transaction.entity';
 
@@ -27,4 +34,3 @@ export class CreateWalletTransactionDto {
   @IsUUID()
   referenceId?: string;
 }
-

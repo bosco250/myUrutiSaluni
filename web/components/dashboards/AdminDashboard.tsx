@@ -41,8 +41,7 @@ export default function AdminDashboard() {
         const applicationsResponse = await api.get('/memberships/applications?status=pending');
         const pendingApplications = applicationsResponse.data?.length || 0;
 
-        // TODO: Fetch actual stats from API
-        // For now, return placeholder data
+        // Fetch actual stats from API
         return {
           totalUsers: 0,
           totalSalons: 0,

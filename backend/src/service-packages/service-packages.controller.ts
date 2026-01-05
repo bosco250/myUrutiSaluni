@@ -32,11 +32,22 @@ export class ServicePackagesController {
   ) {}
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Create a new service package' })
-  async create(@Body() createDto: CreateServicePackageDto, @CurrentUser() user: any) {
+  async create(
+    @Body() createDto: CreateServicePackageDto,
+    @CurrentUser() user: any,
+  ) {
     // Salon owners and employees can only create packages for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       // Get salon from first service or require salonId in DTO
       if (createDto.serviceIds && createDto.serviceIds.length > 0) {
         // We'll need to get salonId from the service
@@ -47,10 +58,15 @@ export class ServicePackagesController {
     const salonId = createDto.salonId;
 
     // Verify salon ownership
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       const salon = await this.salonsService.findOne(salonId);
       if (salon.ownerId !== user.id) {
-        throw new ForbiddenException('You can only create packages for your own salon');
+        throw new ForbiddenException(
+          'You can only create packages for your own salon',
+        );
       }
     }
 
@@ -68,11 +84,16 @@ export class ServicePackagesController {
   @ApiOperation({ summary: 'Get all service packages' })
   async findAll(@Query('salonId') salonId: string, @CurrentUser() user: any) {
     // Salon owners and employees can only see packages for their salon(s)
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       const salons = await this.salonsService.findByOwnerId(user.id);
       const salonIds = salons.map((s) => s.id);
       if (salonId && !salonIds.includes(salonId)) {
-        throw new ForbiddenException('You can only access packages for your own salon');
+        throw new ForbiddenException(
+          'You can only access packages for your own salon',
+        );
       }
       // Return packages for all user's salons
       const allPackages = await Promise.all(
@@ -97,10 +118,15 @@ export class ServicePackagesController {
     const packageEntity = await this.servicePackagesService.findOne(id);
 
     // Salon owners and employees can only see packages for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       const salon = await this.salonsService.findOne(packageEntity.salonId);
       if (salon.ownerId !== user.id) {
-        throw new ForbiddenException('You can only access packages for your own salon');
+        throw new ForbiddenException(
+          'You can only access packages for your own salon',
+        );
       }
     }
 
@@ -108,7 +134,12 @@ export class ServicePackagesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Update a service package' })
   async update(
     @Param('id') id: string,
@@ -118,10 +149,15 @@ export class ServicePackagesController {
     const packageEntity = await this.servicePackagesService.findOne(id);
 
     // Salon owners and employees can only update packages for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       const salon = await this.salonsService.findOne(packageEntity.salonId);
       if (salon.ownerId !== user.id) {
-        throw new ForbiddenException('You can only update packages for your own salon');
+        throw new ForbiddenException(
+          'You can only update packages for your own salon',
+        );
       }
     }
 
@@ -129,20 +165,29 @@ export class ServicePackagesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Delete a service package' })
   async remove(@Param('id') id: string, @CurrentUser() user: any) {
     const packageEntity = await this.servicePackagesService.findOne(id);
 
     // Salon owners and employees can only delete packages for their salon
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       const salon = await this.salonsService.findOne(packageEntity.salonId);
       if (salon.ownerId !== user.id) {
-        throw new ForbiddenException('You can only delete packages for your own salon');
+        throw new ForbiddenException(
+          'You can only delete packages for your own salon',
+        );
       }
     }
 
     await this.servicePackagesService.remove(id);
   }
 }
-

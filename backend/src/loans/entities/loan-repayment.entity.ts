@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Loan } from './loan.entity';
 
 @Entity('loan_repayments')
@@ -21,7 +30,12 @@ export class LoanRepayment {
   @Column({ name: 'due_date', type: 'date' })
   dueDate: Date;
 
-  @Column({ name: 'principal_amount', type: 'decimal', precision: 14, scale: 2 })
+  @Column({
+    name: 'principal_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+  })
   principalAmount: number;
 
   @Column({ name: 'interest_amount', type: 'decimal', precision: 14, scale: 2 })
@@ -30,7 +44,13 @@ export class LoanRepayment {
   @Column({ name: 'total_amount', type: 'decimal', precision: 14, scale: 2 })
   totalAmount: number;
 
-  @Column({ name: 'paid_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'paid_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   paidAmount: number;
 
   @Column({ name: 'paid_date', type: 'date', nullable: true })
@@ -45,7 +65,13 @@ export class LoanRepayment {
   @Column({ name: 'is_overdue', default: false })
   isOverdue: boolean;
 
-  @Column({ name: 'late_fee', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'late_fee',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   lateFee: number;
 
   @Column({ length: 32, default: 'pending' })
@@ -57,4 +83,3 @@ export class LoanRepayment {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

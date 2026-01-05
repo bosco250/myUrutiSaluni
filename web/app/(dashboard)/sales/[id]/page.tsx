@@ -34,6 +34,7 @@ interface SaleItem {
     id: string;
     name: string;
     sku?: string;
+    taxRate?: number;
   };
   salonEmployee?: {
     id: string;
@@ -78,7 +79,7 @@ interface Sale {
 
 export default function SaleDetailPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER]}>
       <SaleDetailContent />
     </ProtectedRoute>
   );
@@ -87,6 +88,7 @@ export default function SaleDetailPage() {
 function SaleDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuthStore();
   const saleId = params.id as string;
 
   const { data: sale, isLoading, error } = useQuery<Sale>({
@@ -134,7 +136,6 @@ function SaleDetailContent() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to download PDF:', error);
       alert('Failed to download PDF receipt. Please try again.');
     }
   };
@@ -156,20 +157,47 @@ function SaleDetailContent() {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
-          <p className="text-danger mb-4">Failed to load sale details.</p>
+          <p className="text-danger mb-4">
+            {error ? 'Failed to load sale details. You may not have permission to view this sale.' : 'Sale not found.'}
+          </p>
           <Button onClick={() => router.push('/sales/history')} variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Sales History
+            Back to {user?.role === UserRole.CUSTOMER ? 'Purchase History' : 'Sales History'}
           </Button>
         </div>
       </div>
     );
   }
 
-  const subtotal = sale.items?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
-  const totalDiscount = sale.items?.reduce((sum, item) => sum + item.discountAmount, 0) || 0;
-  const tax = 0; // Calculate tax if needed
-  const total = subtotal - totalDiscount + tax;
+  // Calculate subtotal (before discount)
+  const subtotal = sale.items?.reduce((sum, item) => {
+    const unitPrice = Number(item.unitPrice) || 0;
+    const quantity = Number(item.quantity) || 0;
+    return sum + (unitPrice * quantity);
+  }, 0) || 0;
+  
+  // Calculate total discount
+  const totalDiscount = sale.items?.reduce((sum, item) => {
+    return sum + (Number(item.discountAmount) || 0);
+  }, 0) || 0;
+  
+  // Calculate tax for products (tax is applied to amount after discount)
+  const tax = sale.items?.reduce((sum, item) => {
+    if (item.product) {
+      const unitPrice = Number(item.unitPrice) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const discountAmount = Number(item.discountAmount) || 0;
+      const itemSubtotal = unitPrice * quantity;
+      const itemAfterDiscount = Math.max(0, itemSubtotal - discountAmount);
+      const taxRate = Number(item.product.taxRate) || 0;
+      const itemTax = (itemAfterDiscount * taxRate) / 100;
+      return sum + Math.max(0, itemTax);
+    }
+    return sum;
+  }, 0) || 0;
+  
+  // Total = (Subtotal - Discount) + Tax
+  const calculatedTotal = Math.max(0, subtotal - totalDiscount + tax);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -184,9 +212,11 @@ function SaleDetailContent() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">Sale Details</h1>
+            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
+              {user?.role === UserRole.CUSTOMER ? 'Purchase Details' : 'Sale Details'}
+            </h1>
             <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-              Sale ID: <span className="font-mono">{sale.id}</span>
+              {user?.role === UserRole.CUSTOMER ? 'Receipt' : 'Sale'} ID: <span className="font-mono">{sale.id}</span>
             </p>
           </div>
         </div>
@@ -199,10 +229,12 @@ function SaleDetailContent() {
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>
-          <Button onClick={() => router.push('/sales')} variant="primary">
-            <Receipt className="w-4 h-4 mr-2" />
-            New Sale
-          </Button>
+          {user?.role !== UserRole.CUSTOMER && (
+            <Button onClick={() => router.push('/sales')} variant="primary">
+              <Receipt className="w-4 h-4 mr-2" />
+              New Sale
+            </Button>
+          )}
         </div>
       </div>
 
@@ -238,7 +270,7 @@ function SaleDetailContent() {
         <div className="p-6 space-y-6">
           {/* Customer & Employee Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sale.customer && (
+            {sale.customer && user?.role !== UserRole.CUSTOMER && (
               <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="w-5 h-5 text-primary" />
@@ -251,7 +283,7 @@ function SaleDetailContent() {
                 )}
               </div>
             )}
-            {sale.createdBy && (
+            {sale.createdBy && user?.role !== UserRole.CUSTOMER && (
               <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-5 h-5 text-primary" />
@@ -299,7 +331,7 @@ function SaleDetailContent() {
                             </>
                           )}
                         </div>
-                        {item.salonEmployee && (
+                        {item.salonEmployee && user?.role !== UserRole.CUSTOMER && (
                           <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                             Assigned to: {item.salonEmployee.user?.fullName || item.salonEmployee.roleTitle || 'Employee'}
                           </p>
@@ -348,7 +380,7 @@ function SaleDetailContent() {
               )}
               <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark pt-2 border-t border-border-light dark:border-border-dark">
                 <span>Total</span>
-                <span className="text-primary">{sale.currency || 'RWF'} {sale.totalAmount.toLocaleString()}</span>
+                <span className="text-primary">{sale.currency || 'RWF'} {Number(sale.totalAmount || calculatedTotal).toLocaleString()}</span>
               </div>
             </div>
           </div>

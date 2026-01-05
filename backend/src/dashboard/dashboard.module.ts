@@ -7,4 +7,3 @@ import { DashboardController } from './dashboard.controller';
   providers: [DashboardService],
 })
 export class DashboardModule {}
-

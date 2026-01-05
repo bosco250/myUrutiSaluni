@@ -1,10 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Salon } from './entities/salon.entity';
 import { SalonEmployee } from './entities/salon-employee.entity';
 import { MembershipsService } from '../memberships/memberships.service';
 import { MembershipStatus } from '../memberships/entities/membership.entity';
+import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SalonsService {
@@ -15,12 +23,14 @@ export class SalonsService {
     private salonEmployeesRepository: Repository<SalonEmployee>,
     @Inject(forwardRef(() => MembershipsService))
     private membershipsService: MembershipsService,
+    @Inject(forwardRef(() => NotificationOrchestratorService))
+    private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
 
   async create(salonData: Partial<Salon>): Promise<Salon> {
     const salon = this.salonsRepository.create(salonData);
     const savedSalon = await this.salonsRepository.save(salon);
-    
+
     // Auto-create membership for the salon
     try {
       await this.membershipsService.createMembership({
@@ -30,21 +40,72 @@ export class SalonsService {
       });
     } catch (error) {
       // Log error but don't fail salon creation if membership creation fails
-      console.error('Failed to create membership for salon:', error);
+      // Error is silently handled to allow salon creation to proceed
     }
-    
+
     return savedSalon;
   }
 
   async findAll(): Promise<Salon[]> {
-    return this.salonsRepository.find({ relations: ['owner'] });
+    const salons = await this.salonsRepository.find({ relations: ['owner'] });
+    // Add employee count to each salon
+    for (const salon of salons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+    return salons;
   }
 
   async findByOwnerId(ownerId: string): Promise<Salon[]> {
-    return this.salonsRepository.find({
+    const salons = await this.salonsRepository.find({
       where: { ownerId },
       relations: ['owner'],
     });
+    // Add employee count to each salon
+    for (const salon of salons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+    return salons;
+  }
+
+  async findSalonsForUser(userId: string): Promise<Salon[]> {
+    // Get salons owned by user
+    const ownedSalons = await this.salonsRepository.find({
+      where: { ownerId: userId },
+      relations: ['owner'],
+    });
+
+    // Get salons where user is an employee
+    const employeeRecords = await this.salonEmployeesRepository.find({
+      where: { userId },
+      relations: ['salon', 'salon.owner'],
+    });
+
+    const employmentSalons = employeeRecords
+      .map((emp) => emp.salon)
+      .filter((salon) => !!salon);
+
+    // Merge and deduplicate
+    const allSalonsMap = new Map<string, Salon>();
+    ownedSalons.forEach((s) => allSalonsMap.set(s.id, s));
+    employmentSalons.forEach((s) => allSalonsMap.set(s.id, s));
+
+    const allSalons = Array.from(allSalonsMap.values());
+
+    // Add employee count to each salon
+    for (const salon of allSalons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+
+    return allSalons;
   }
 
   async findOne(id: string): Promise<Salon> {
@@ -55,6 +116,11 @@ export class SalonsService {
     if (!salon) {
       throw new NotFoundException(`Salon with ID ${id} not found`);
     }
+    // Add employee count
+    const employeeCount = await this.salonEmployeesRepository.count({
+      where: { salonId: salon.id },
+    });
+    (salon as any).employeeCount = employeeCount;
     return salon;
   }
 
@@ -68,7 +134,9 @@ export class SalonsService {
   }
 
   // Employee management
-  async addEmployee(employeeData: Partial<SalonEmployee>): Promise<SalonEmployee> {
+  async addEmployee(
+    employeeData: Partial<SalonEmployee>,
+  ): Promise<SalonEmployee> {
     // Check if employee already exists for this salon
     const existing = await this.salonEmployeesRepository.findOne({
       where: {
@@ -76,13 +144,37 @@ export class SalonsService {
         userId: employeeData.userId,
       },
     });
-    
+
     if (existing) {
-      throw new BadRequestException('This user is already an employee of this salon');
+      throw new BadRequestException(
+        'This user is already an employee of this salon',
+      );
     }
-    
+
     const employee = this.salonEmployeesRepository.create(employeeData);
-    return this.salonEmployeesRepository.save(employee);
+    const savedEmployee = await this.salonEmployeesRepository.save(employee);
+
+    // Send notification to the new employee
+    try {
+      // Fetch salon details for the notification
+      const salon = await this.salonsRepository.findOne({
+        where: { id: savedEmployee.salonId },
+      });
+
+      await this.notificationOrchestrator.notify(
+        NotificationType.EMPLOYEE_ASSIGNED,
+        {
+          userId: savedEmployee.userId,
+          salonName: salon?.name,
+          employeeName: savedEmployee.user?.fullName, // Note: user might not be loaded here, might need to fetch if critical
+        },
+      );
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error('Failed to send employee assignment notification:', error);
+    }
+
+    return savedEmployee;
   }
 
   async getSalonEmployees(salonId: string): Promise<SalonEmployee[]> {
@@ -93,7 +185,10 @@ export class SalonsService {
     });
   }
 
-  async isUserEmployeeOfSalon(userId: string, salonId: string): Promise<boolean> {
+  async isUserEmployeeOfSalon(
+    userId: string,
+    salonId: string,
+  ): Promise<boolean> {
     const employee = await this.salonEmployeesRepository.findOne({
       where: {
         salonId,
@@ -103,7 +198,10 @@ export class SalonsService {
     return !!employee;
   }
 
-  async updateEmployee(employeeId: string, updateData: Partial<SalonEmployee>): Promise<SalonEmployee> {
+  async updateEmployee(
+    employeeId: string,
+    updateData: Partial<SalonEmployee>,
+  ): Promise<SalonEmployee> {
     await this.salonEmployeesRepository.update(employeeId, updateData);
     const employee = await this.salonEmployeesRepository.findOne({
       where: { id: employeeId },
@@ -128,5 +226,35 @@ export class SalonsService {
       relations: ['user', 'salon'],
     });
   }
-}
 
+  async findEmployeeByUserId(
+    userId: string,
+    salonId?: string,
+  ): Promise<SalonEmployee | null> {
+    const where: any = { userId };
+    if (salonId) {
+      where.salonId = salonId;
+    }
+    return this.salonEmployeesRepository.findOne({
+      where,
+      relations: ['user', 'salon'],
+    });
+  }
+
+  async findAllEmployeesByUserId(userId: string): Promise<SalonEmployee[]> {
+    return this.salonEmployeesRepository.find({
+      where: { userId },
+      relations: ['user', 'salon'],
+    });
+  }
+
+  async search(query: string): Promise<Salon[]> {
+    return this.salonsRepository
+      .createQueryBuilder('salon')
+      .leftJoinAndSelect('salon.owner', 'owner')
+      .where('salon.name ILIKE :query', { query: `%${query}%` })
+      .orWhere('salon.address ILIKE :query', { query: `%${query}%` })
+      .orWhere('salon.city ILIKE :query', { query: `%${query}%` })
+      .getMany();
+  }
+}

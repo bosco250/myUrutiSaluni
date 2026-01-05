@@ -13,7 +13,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import 'multer';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
@@ -22,7 +29,11 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
-import { ResourceCategory, ResourceType, ResourceStatus } from './entities/resource.entity';
+import {
+  ResourceCategory,
+  ResourceType,
+  ResourceStatus,
+} from './entities/resource.entity';
 import { FileUploadService } from '../common/services/file-upload.service';
 
 @ApiTags('Resources')
@@ -96,7 +107,13 @@ export class ResourcesController {
     @Query('search') search?: string,
     @CurrentUser() user?: any,
   ) {
-    return this.resourcesService.findAll(user?.role, category, type, status, search);
+    return this.resourcesService.findAll(
+      user?.role,
+      category,
+      type,
+      status,
+      search,
+    );
   }
 
   @Get('featured')
@@ -107,7 +124,10 @@ export class ResourcesController {
 
   @Get('category/:category')
   @ApiOperation({ summary: 'Get resources by category' })
-  getByCategory(@Param('category') category: ResourceCategory, @CurrentUser() user?: any) {
+  getByCategory(
+    @Param('category') category: ResourceCategory,
+    @CurrentUser() user?: any,
+  ) {
     return this.resourcesService.getByCategory(category, user?.role);
   }
 
@@ -150,8 +170,8 @@ export class ResourcesController {
     if (mimeType.startsWith('video/')) return ResourceType.VIDEO;
     if (mimeType.startsWith('audio/')) return ResourceType.AUDIO;
     if (mimeType.startsWith('image/')) return ResourceType.IMAGE;
-    if (mimeType === 'application/pdf' || mimeType.includes('document')) return ResourceType.DOCUMENT;
+    if (mimeType === 'application/pdf' || mimeType.includes('document'))
+      return ResourceType.DOCUMENT;
     return ResourceType.DOCUMENT;
   }
 }
-

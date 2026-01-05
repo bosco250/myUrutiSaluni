@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 
 @Entity('services')
@@ -20,6 +29,12 @@ export class Service {
   @Column({ length: 255 })
   name: string;
 
+  @Column({ name: 'image_url', nullable: true })
+  imageUrl: string;
+
+  @Column({ type: 'json', nullable: true })
+  images: string[];
+
   @Column({ type: 'text', nullable: true })
   description: string;
 
@@ -32,6 +47,12 @@ export class Service {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ length: 50, nullable: true })
+  category: string;
+
+  @Column({ name: 'target_gender', length: 20, nullable: true })
+  targetGender: string;
+
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 
@@ -41,4 +62,3 @@ export class Service {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

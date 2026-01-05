@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+// Root/health endpoints for uptime checks
 @ApiTags('Health')
 @Controller()
 export class AppController {
@@ -23,4 +24,3 @@ export class AppController {
     };
   }
 }
-

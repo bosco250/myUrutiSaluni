@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ForbiddenException, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ForbiddenException,
+  Query,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -8,6 +19,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { RequirePermission } from '../auth/decorators/require-employee-permission.decorator';
+import { EmployeePermission } from '../common/enums/employee-permission.enum';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -24,16 +37,28 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER)
-  @ApiOperation({ summary: 'Get all users (for searching/selecting employees)' })
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
+  @RequirePermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES)
+  @ApiOperation({
+    summary: 'Get all users (for searching/selecting employees)',
+  })
   findAll(@CurrentUser() user: any, @Query('role') role?: UserRole) {
     // District leaders can only see users in their district (simplified for now)
     if (user.role === UserRole.DISTRICT_LEADER) {
       // TODO: Filter by district when district info is available
       return this.usersService.findAll(role);
     }
-    // Salon owners can see users to add as employees (limited fields)
-    if (user.role === UserRole.SALON_OWNER) {
+    // Salon owners and employees can see users to add as employees (limited fields)
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       return this.usersService.findAllForEmployeeSelection();
     }
     return this.usersService.findAll(role);
@@ -45,25 +70,52 @@ export class UsersController {
     return this.usersService.findOne(user.id);
   }
 
+  @Post('names')
+  @ApiOperation({
+    summary: 'Get user names by IDs (for commission transactions)',
+    description:
+      'Allows fetching user names for commission-related transactions. Returns only id and fullName.',
+  })
+  async getUserNames(@Body() body: { userIds: string[] }) {
+    // Allow salon owners and employees to fetch names for commission transactions
+    // This is needed for displaying "Paid to" / "Paid by" in wallet history
+    return this.usersService.findNamesByIds(body.userIds || []);
+  }
+
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get a user by ID' })
   async findOne(@Param('id') id: string, @CurrentUser() user: any) {
     // Users can always see their own profile
     if (id === user.id) {
       return this.usersService.findOne(id);
     }
-    
+
     // Salon owners and employees can only see their own profile
-    if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SALON_EMPLOYEE
+    ) {
       throw new ForbiddenException('You can only view your own profile');
     }
-    
+
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
   @ApiOperation({ summary: 'Update a user' })
   async update(
     @Param('id') id: string,
@@ -73,20 +125,34 @@ export class UsersController {
     // Users can update their own profile (limited fields)
     if (id === user.id) {
       // Salon owners and employees can only update limited fields
-      if (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) {
-        const { role, isActive, membershipNumber, ...limitedFields } = updateUserDto;
+      if (
+        user.role === UserRole.SALON_OWNER ||
+        user.role === UserRole.SALON_EMPLOYEE
+      ) {
+        /* eslint-disable @typescript-eslint/no-unused-vars */
+        const {
+          role: _,
+          isActive: __,
+          membershipNumber: ___,
+          ...limitedFields
+        } = updateUserDto;
+        /* eslint-enable @typescript-eslint/no-unused-vars */
         return this.usersService.update(id, limitedFields);
       }
       // Regular users cannot update membership number
-      const { membershipNumber, ...userFields } = updateUserDto;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { membershipNumber: _, ...userFields } = updateUserDto;
       return this.usersService.update(id, userFields);
     }
-    
+
     // Only admins can update other users
-    if (user.role !== UserRole.SUPER_ADMIN && user.role !== UserRole.ASSOCIATION_ADMIN) {
+    if (
+      user.role !== UserRole.SUPER_ADMIN &&
+      user.role !== UserRole.ASSOCIATION_ADMIN
+    ) {
       throw new ForbiddenException('You can only update your own profile');
     }
-    
+
     return this.usersService.update(id, updateUserDto);
   }
 
@@ -107,4 +173,3 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 }
-

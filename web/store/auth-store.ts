@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { authService } from '@/lib/auth';
+import { authService, clearAllSessionData } from '@/lib/auth';
 
 export interface User {
   id: string;
@@ -66,7 +66,8 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => {
         set({ user: null, token: null });
-        authService.logout();
+        // Clear all session data including localStorage
+        clearAllSessionData();
       },
       isAuthenticated: () => {
         const state = get();

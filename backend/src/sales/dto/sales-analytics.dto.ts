@@ -17,4 +17,3 @@ export class SalesAnalyticsDto {
   @IsDateString()
   endDate?: string;
 }
-

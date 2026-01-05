@@ -1,6 +1,21 @@
-import { IsString, IsBoolean, IsOptional, IsUUID, IsEnum, IsDateString, IsArray, ValidateNested, IsNumber, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { InspectionStatus, ComplianceStatus, ChecklistItem, Violation, CorrectiveAction } from '../entities/inspection.entity';
+import {
+  InspectionStatus,
+  ComplianceStatus,
+} from '../entities/inspection.entity';
 
 export class ChecklistItemDto {
   @IsString()
@@ -181,4 +196,3 @@ export class CreateInspectionDto {
   @IsDateString()
   certificateExpiryDate?: string;
 }
-

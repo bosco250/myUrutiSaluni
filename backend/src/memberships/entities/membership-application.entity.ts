@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
 export enum ApplicationStatus {
@@ -47,6 +56,12 @@ export class MembershipApplication {
   @Column({ name: 'tax_id', length: 128, nullable: true })
   taxId: string;
 
+  @Column({ type: 'double precision', nullable: true })
+  latitude: number;
+
+  @Column({ type: 'double precision', nullable: true })
+  longitude: number;
+
   @Column({
     type: 'varchar',
     length: 32,
@@ -77,4 +92,3 @@ export class MembershipApplication {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

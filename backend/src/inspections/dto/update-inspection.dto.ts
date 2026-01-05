@@ -15,4 +15,3 @@ export class UpdateInspectionDto extends PartialType(CreateInspectionDto) {
   @IsDateString()
   completedAt?: string;
 }
-

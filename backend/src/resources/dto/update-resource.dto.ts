@@ -7,4 +7,3 @@ export class UpdateResourceDto extends PartialType(CreateResourceDto) {
   @IsDateString()
   publishedAt?: string;
 }
-

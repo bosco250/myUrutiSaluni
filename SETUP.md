@@ -24,8 +24,8 @@ Or install separately:
 cd backend
 npm install
 
-# Frontend
-cd ../frontend
+# Web
+cd ../web
 npm install
 ```
 
@@ -96,9 +96,9 @@ AIRTEL_CLIENT_ID=your-airtel-client-id
 AIRTEL_CLIENT_SECRET=your-airtel-client-secret
 ```
 
-#### Frontend (.env.local)
+#### Web (.env.local)
 
-Copy `frontend/.env.example` to `frontend/.env.local`:
+Copy `web/.env.example` to `web/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
@@ -117,13 +117,13 @@ npm run start:dev
 The backend will be available at `http://localhost:3000`
 API documentation at `http://localhost:3000/api/docs`
 
-**Terminal 2 - Frontend:**
+**Terminal 2 - Web:**
 ```bash
-cd frontend
+cd web
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3001`
+The web application will be available at `http://localhost:3001`
 
 ### 5. Initial Setup
 
@@ -153,7 +153,7 @@ salon-association-platform/
 │   │   ├── dashboard/      # Dashboard & analytics
 │   │   └── notifications/  # Notifications
 │   └── package.json
-├── frontend/               # Next.js frontend
+├── web/                   # Next.js web application
 │   ├── app/               # Next.js app directory
 │   ├── components/        # React components
 │   └── lib/               # Utilities & API client
@@ -203,7 +203,7 @@ salon-association-platform/
 
 ### Port Conflicts
 - Change `PORT` in backend `.env` if 3000 is in use
-- Change frontend port in `package.json` scripts if 3001 is in use
+- Change web port in `package.json` scripts if 3001 is in use
 
 ### TypeORM Synchronization
 - In development, `synchronize: true` auto-creates tables

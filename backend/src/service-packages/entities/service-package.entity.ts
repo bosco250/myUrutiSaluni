@@ -41,10 +41,22 @@ export class ServicePackage {
   @Column({ name: 'package_price', type: 'decimal', precision: 12, scale: 2 })
   packagePrice: number;
 
-  @Column({ name: 'original_price', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({
+    name: 'original_price',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
   originalPrice?: number;
 
-  @Column({ name: 'discount_percentage', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'discount_percentage',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   discountPercentage?: number;
 
   @Column({ name: 'duration_minutes', default: 0 })
@@ -68,4 +80,3 @@ export class ServicePackage {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

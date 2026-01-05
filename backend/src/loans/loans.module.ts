@@ -8,10 +8,11 @@ import { LoanRepayment } from './entities/loan-repayment.entity';
 import { CreditScore } from './entities/credit-score.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Loan, LoanProduct, LoanRepayment, CreditScore])],
+  imports: [
+    TypeOrmModule.forFeature([Loan, LoanProduct, LoanRepayment, CreditScore]),
+  ],
   controllers: [LoansController],
   providers: [LoansService],
   exports: [LoansService],
 })
 export class LoansModule {}
-

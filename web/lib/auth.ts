@@ -1,4 +1,5 @@
 import api from './api';
+import { secureStorage } from './secure-storage';
 
 export interface LoginCredentials {
   email: string;
@@ -24,6 +25,88 @@ export interface AuthResponse {
   };
 }
 
+/**
+ * Clears all session data from localStorage and secureStorage
+ * This should be called when session expires or user logs out
+ * to prevent unauthorized access to stored data
+ * 
+ * This function comprehensively clears:
+ * - All auth tokens and user data
+ * - Zustand persist storage
+ * - Secure storage items
+ * - Any other auth-related localStorage items
+ * - Finally clears ALL localStorage as a safety measure
+ */
+export function clearAllSessionData(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // First, clear secureStorage items (items with salon_app_ prefix)
+    // This must be done before clearing localStorage
+    secureStorage.clear();
+    
+    // Clear known auth-related items explicitly
+    const knownAuthKeys = [
+      'token',
+      'user',
+      'auth-storage', // Zustand persist storage
+    ];
+    
+    knownAuthKeys.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove localStorage key: ${key}`, error);
+      }
+    });
+    
+    // Clear any other potential auth-related items by scanning
+    // We collect keys first to avoid iteration issues
+    const keysToRemove: string[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          const lowerKey = key.toLowerCase();
+          // Remove any item that might be auth-related
+          if (
+            lowerKey.includes('auth') ||
+            lowerKey.includes('token') ||
+            lowerKey.includes('session') ||
+            lowerKey.includes('user') ||
+            lowerKey.startsWith('salon_app_')
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Error scanning localStorage keys:', error);
+    }
+    
+    // Remove all identified keys
+    keysToRemove.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove localStorage key: ${key}`, error);
+      }
+    });
+
+    // As a final safety measure, clear ALL localStorage
+    // This ensures no sensitive data remains, even if we missed something
+    localStorage.clear();
+  } catch (error) {
+    console.error('Error clearing session data:', error);
+    // If individual removal fails, try clearing everything as last resort
+    try {
+      localStorage.clear();
+    } catch (clearError) {
+      console.error('Failed to clear localStorage:', clearError);
+    }
+  }
+}
+
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>('/auth/login', credentials);
@@ -44,10 +127,7 @@ export const authService = {
   },
 
   logout() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    }
+    clearAllSessionData();
   },
 
   getToken(): string | null {

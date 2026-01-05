@@ -70,13 +70,13 @@ export default function RegisterPage() {
   const hasFormData = typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark px-4 py-12">
+      <div className="max-w-md w-full bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl p-8 border border-border-light dark:border-border-dark">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
             {isFromMembership ? 'Step 2 of 3: Create Account' : 'Create Account'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-text-light dark:text-text-dark opacity-70">
             {isFromMembership
               ? 'Complete your membership application by creating your account'
               : 'Join the Salon Association Platform'}
@@ -84,23 +84,23 @@ export default function RegisterPage() {
         </div>
 
         {isFromMembership && hasFormData && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-600 font-bold text-sm">2</span>
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">2</span>
                 </div>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-blue-900 mb-1">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">
                   Membership Application in Progress
                 </p>
-                <div className="space-y-1 text-xs text-blue-800">
+                <div className="space-y-1 text-xs text-blue-800 dark:text-blue-400">
                   <p>✓ Step 1: Form completed and saved</p>
                   <p>⏳ Step 2: Creating account (current step)</p>
                   <p>⏸️ Step 3: Auto-submit application (next)</p>
                 </div>
-                <p className="text-xs text-blue-700 mt-2 font-medium">
+                <p className="text-xs text-blue-700 dark:text-blue-400 mt-2 font-medium">
                   Your form data is safely stored and will be automatically submitted after
                   registration.
                 </p>
@@ -110,14 +110,17 @@ export default function RegisterPage() {
         )}
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="fullName"
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
               Full Name
             </label>
             <input
@@ -126,13 +129,16 @@ export default function RegisterPage() {
               required
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="John Doe"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
               Email
             </label>
             <input
@@ -141,13 +147,16 @@ export default function RegisterPage() {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="your@email.com"
             />
           </div>
 
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="phone"
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
               Phone (Optional)
             </label>
             <input
@@ -155,13 +164,16 @@ export default function RegisterPage() {
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="+250 788 123 456"
             />
           </div>
 
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="role"
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
               I want to register as
             </label>
             <select
@@ -173,13 +185,13 @@ export default function RegisterPage() {
                   role: e.target.value as 'customer' | 'salon_owner' | 'salon_employee',
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              className="w-full px-4 py-2 text-text-light dark:text-text-dark bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             >
               <option value="customer">Customer (I want to use salon services)</option>
               <option value="salon_owner">Salon Owner (I want to manage my salon business)</option>
               <option value="salon_employee">Salon Employee (I work at a salon)</option>
             </select>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-text-light dark:text-text-dark opacity-60">
               {formData.role === 'salon_owner'
                 ? "You'll need to apply for membership after registration to access salon management features."
                 : formData.role === 'salon_employee'
@@ -189,7 +201,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
               Password
             </label>
             <div className="relative">
@@ -200,34 +215,39 @@ export default function RegisterPage() {
                 minLength={6}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 pr-12 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light dark:text-text-dark opacity-60 hover:opacity-100 focus:outline-none transition-opacity"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-            <p className="mt-1 text-xs text-gray-500">Minimum 6 characters</p>
+            <p className="mt-1 text-xs text-text-light dark:text-text-dark opacity-60">
+              Minimum 6 characters
+            </p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-text-light dark:text-text-dark opacity-70">
             Already have an account?{' '}
-            <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link
+              href="/login"
+              className="text-primary hover:opacity-80 font-medium transition-opacity"
+            >
               Sign in
             </Link>
           </p>

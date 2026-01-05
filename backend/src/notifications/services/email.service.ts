@@ -1,98 +1,138 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { SmtpConfigService } from '../config/smtp.config';
+import {
+  EmailTemplateService,
+  EmailTemplateVariables,
+} from './email-template.service';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter;
 
-  constructor(private configService: ConfigService) {
-    // Initialize email transporter
-    // For production, configure with actual SMTP settings
+  constructor(
+    private smtpConfig: SmtpConfigService,
+    private templateService: EmailTemplateService,
+  ) {
+    this.initializeTransporter();
+  }
+
+  private initializeTransporter(): void {
+    const config = this.smtpConfig.getConfig();
+
+    // Check if SMTP is properly configured
+    if (!config.user || !config.password || config.host === 'localhost') {
+      this.logger.warn(
+        '⚠️  SMTP not configured - email notifications will be disabled',
+      );
+      this.transporter = null;
+      return;
+    }
+
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST', 'smtp.gmail.com'),
-      port: this.configService.get('SMTP_PORT', 587),
-      secure: false,
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
       auth: {
-        user: this.configService.get('SMTP_USER'),
-        pass: this.configService.get('SMTP_PASSWORD'),
+        user: config.user,
+        pass: config.password,
       },
+    });
+
+    // Verify connection (async, don't block)
+    this.transporter.verify((error) => {
+      if (error) {
+        this.logger.warn(
+          'SMTP connection verification failed (emails may not work):',
+          error.message,
+        );
+      } else {
+        this.logger.log('✅ SMTP connection verified successfully');
+      }
     });
   }
 
-  async sendEmail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
-    try {
-      // In development, log instead of actually sending
-      if (this.configService.get('NODE_ENV') === 'development') {
-        this.logger.log(`[DEV] Email would be sent to ${to}`);
-        this.logger.log(`Subject: ${subject}`);
-        this.logger.log(`Body: ${text || html.substring(0, 100)}...`);
-        return true;
+  async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    // If SMTP not configured, skip email sending
+    if (!this.transporter) {
+      this.logger.warn(
+        `⚠️ Email attempt to ${to} failed: SMTP not configured. Please check your .env file.`,
+      );
+      return {
+        success: false,
+        error: 'SMTP not configured - check server logs',
+      };
+    }
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const config = this.smtpConfig.getConfig();
+        const textContent = text || html.replace(/<[^>]*>/g, '');
+
+        const info = await this.transporter.sendMail({
+          from: `"${config.fromName}" <${config.fromEmail}>`,
+          to,
+          subject,
+          text: textContent,
+          html,
+        });
+
+        this.logger.log(
+          `✅ Email sent successfully to ${to} (attempt ${attempt}): ${info.messageId}`,
+        );
+        return { success: true, messageId: info.messageId };
+      } catch (error: any) {
+        lastError = error;
+        this.logger.warn(
+          `Failed to send email to ${to} (attempt ${attempt}/${maxRetries}): ${error.message}`,
+        );
+
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
       }
+    }
 
-      const info = await this.transporter.sendMail({
-        from: this.configService.get('SMTP_FROM', 'noreply@salonju.com'),
-        to,
-        subject,
-        text: text || html.replace(/<[^>]*>/g, ''),
-        html,
-      });
+    this.logger.error(
+      `❌ Failed to send email to ${to} after ${maxRetries} attempts:`,
+      lastError,
+    );
+    return {
+      success: false,
+      error: lastError?.message || 'Unknown error',
+    };
+  }
 
-      this.logger.log(`Email sent successfully to ${to}: ${info.messageId}`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Failed to send email to ${to}:`, error);
-      return false;
+  async sendEmailNotification(params: {
+    to: string;
+    subject: string;
+    template: string;
+    variables: EmailTemplateVariables;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const html = this.templateService.renderTemplate(
+        params.template,
+        params.variables,
+      );
+      const text = html.replace(/<[^>]*>/g, '');
+
+      return await this.sendEmail(params.to, params.subject, html, text);
+    } catch (error: any) {
+      this.logger.error(`Failed to send email notification:`, error);
+      return {
+        success: false,
+        error: error.message || 'Template rendering failed',
+      };
     }
   }
-
-  async sendAppointmentReminder(
-    to: string,
-    customerName: string,
-    appointmentDate: Date,
-    salonName: string,
-    serviceName: string,
-  ): Promise<boolean> {
-    const subject = `Appointment Reminder - ${salonName}`;
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #6366f1; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; }
-            .info-box { background: white; padding: 15px; border-radius: 4px; margin: 15px 0; border-left: 4px solid #6366f1; }
-            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Appointment Reminder</h1>
-            </div>
-            <div class="content">
-              <p>Hello ${customerName},</p>
-              <p>This is a reminder about your upcoming appointment:</p>
-              <div class="info-box">
-                <p><strong>Salon:</strong> ${salonName}</p>
-                <p><strong>Service:</strong> ${serviceName}</p>
-                <p><strong>Date & Time:</strong> ${appointmentDate.toLocaleString()}</p>
-              </div>
-              <p>We look forward to seeing you!</p>
-              <p>If you need to reschedule or cancel, please contact us as soon as possible.</p>
-            </div>
-            <div class="footer">
-              <p>This is an automated message from SalonJu</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return this.sendEmail(to, subject, html);
-  }
 }
-

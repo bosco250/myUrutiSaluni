@@ -1,7 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
@@ -9,7 +11,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Building2, CheckCircle, XCircle, Clock, AlertCircle, Phone, Mail, MapPin } from 'lucide-react';
+import { Building2, CheckCircle, XCircle, Clock, AlertCircle, Phone, Mail, MapPin, Navigation, Loader2 } from 'lucide-react';
+import LocationPicker from '@/components/maps/LocationPicker';
 
 interface MembershipApplication {
   id: string;
@@ -37,8 +40,14 @@ export default function MembershipApplyPage() {
   );
 }
 
+interface MembershipStatus {
+  isMember: boolean;
+  application: MembershipApplication | null;
+}
+
 function MembershipApplyContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { isSalonOwner } = usePermissions();
   const [formData, setFormData] = useState({
@@ -51,8 +60,24 @@ function MembershipApplyContent() {
     businessDescription: '',
     registrationNumber: '',
     taxId: '',
+    latitude: '',
+    longitude: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState('');
+  const [mapKey, setMapKey] = useState(0);
+
+  // Check membership status (this checks if user is actually an approved member)
+  const { data: membershipStatus, isLoading: checkingMembership } = useQuery<MembershipStatus>({
+    queryKey: ['membership-status', user?.id],
+    queryFn: async () => {
+      const response = await api.get('/memberships/status');
+      return response.data;
+    },
+    enabled: !!user,
+    retry: false,
+  });
 
   // Check existing application
   const { data: existingApplication, isLoading: checkingApplication } = useQuery<MembershipApplication>({
@@ -67,10 +92,39 @@ function MembershipApplyContent() {
 
   const createApplicationMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await api.post('/memberships/apply', data);
+      // Prepare data for API - exclude latitude/longitude strings, add as numbers if valid
+      const { latitude, longitude, ...restData } = data;
+      const apiData: any = { ...restData };
+      
+      // Handle latitude - only include if it's a valid number
+      if (latitude && latitude.trim() !== '') {
+        const latNum = parseFloat(latitude);
+        if (!isNaN(latNum)) {
+          apiData.latitude = latNum;
+        }
+      }
+      
+      // Handle longitude - only include if it's a valid number
+      if (longitude && longitude.trim() !== '') {
+        const lngNum = parseFloat(longitude);
+        if (!isNaN(lngNum)) {
+          apiData.longitude = lngNum;
+        }
+      }
+      
+      const response = await api.post('/memberships/apply', apiData);
       return response.data;
     },
     onSuccess: () => {
+      // Invalidate and refetch all membership-related queries
+      queryClient.invalidateQueries({ queryKey: ['membership-status', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['membership-application', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['membership'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'] }); // Also invalidate salon memberships
+      // Refetch immediately
+      queryClient.refetchQueries({ queryKey: ['membership-status', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['membership-application', user?.id] });
+      queryClient.refetchQueries({ queryKey: ['memberships'] }); // Refetch salon memberships
       router.push('/membership/status');
     },
   });
@@ -121,30 +175,127 @@ function MembershipApplyContent() {
     }
   };
 
-  if (checkingApplication) {
+  const reverseGeocode = async (lat: number, lon: number): Promise<{
+    address: string;
+    city: string;
+    district: string;
+    country: string;
+  }> => {
+    try {
+      const response = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch address: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data || data.error) {
+        throw new Error(data.error || 'No address data returned');
+      }
+
+      return {
+        address: data.address || '',
+        city: data.city || '',
+        district: data.district || '',
+        country: data.country || 'Rwanda',
+      };
+    } catch (error: any) {
+      return {
+        address: `Location at ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
+        city: '',
+        district: '',
+        country: 'Rwanda',
+      };
+    }
+  };
+
+  const handleGetCurrentLocation = async () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const geocoded = await reverseGeocode(latitude, longitude);
+
+          setFormData(prev => ({
+            ...prev,
+            businessAddress: geocoded.address || prev.businessAddress || '',
+            city: geocoded.city !== undefined ? geocoded.city : (prev.city || ''),
+            district: geocoded.district !== undefined ? geocoded.district : (prev.district || ''),
+            latitude: latitude.toString(),
+            longitude: longitude.toString(),
+          }));
+
+          setErrors(prev => ({
+            ...prev,
+            businessAddress: '',
+            city: '',
+            district: '',
+          }));
+        } catch (error: any) {
+          setLocationError('Failed to get address from location. Please enter manually.');
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      (error) => {
+        setLocationError('Failed to get your location. Please enable location access or enter manually.');
+        setLocationLoading(false);
+      }
+    );
+  };
+
+  const handleMapLocationSelect = async (lat: number, lng: number) => {
+    updateField('latitude', lat.toString());
+    updateField('longitude', lng.toString());
+    
+    const geocoded = await reverseGeocode(lat, lng);
+    setFormData(prev => ({
+      ...prev,
+      businessAddress: geocoded.address || prev.businessAddress || '',
+      city: geocoded.city !== undefined ? geocoded.city : (prev.city || ''),
+      district: geocoded.district !== undefined ? geocoded.district : (prev.district || ''),
+    }));
+  };
+
+  if (checkingApplication || checkingMembership) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">Checking application status...</p>
+            <p className="text-text-light/60 dark:text-text-dark/60">Checking membership status...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // If user is already a salon owner, they're already approved
-  if (isSalonOwner()) {
+  // If user is actually an approved member (has approved membership application), show success
+  if (membershipStatus?.isMember) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="bg-success/10 border border-success rounded-2xl p-6 text-center">
           <CheckCircle className="w-16 h-16 mx-auto mb-4 text-success" />
           <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">
-            You're Already a Member!
+            You're Already an Approved Member!
           </h2>
           <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
-            You have been approved as a salon owner and can now add salons and employees.
+            Your membership has been approved. You can now add salons and employees.
           </p>
           <Button onClick={() => router.push('/salons')} variant="primary">
             Go to Salons
@@ -154,7 +305,7 @@ function MembershipApplyContent() {
     );
   }
 
-  // If application exists, show status
+  // If application exists, show status (even if user has SALON_OWNER role but no approved membership)
   if (existingApplication) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -281,6 +432,52 @@ function MembershipApplyContent() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={handleGetCurrentLocation}
+                    disabled={locationLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed border border-primary/20"
+                  >
+                    {locationLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Getting your location...
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="w-5 h-5" />
+                        Use Current Location
+                      </>
+                    )}
+                  </button>
+                  {locationError && (
+                    <p className="text-danger text-sm mt-2 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {locationError}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                  Select Location on Map
+                </label>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-3">
+                  Click on the map to set your business location. The address will be automatically filled.
+                </p>
+                <LocationPicker
+                  key={mapKey}
+                  latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
+                  longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
+                  onLocationSelect={handleMapLocationSelect}
+                  onReverseGeocode={handleMapLocationSelect}
+                  height="400px"
+                />
+              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Business Address <span className="text-danger">*</span>
@@ -521,4 +718,5 @@ function ApplicationStatusView({ application }: { application: MembershipApplica
     </div>
   );
 }
+
 

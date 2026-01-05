@@ -16,7 +16,6 @@ import { UpdateWaitlistEntryDto } from './dto/update-waitlist-entry.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { WaitlistStatus } from './entities/waitlist-entry.entity';
 
@@ -48,7 +47,10 @@ export class WaitlistController {
     UserRole.SALON_EMPLOYEE,
   )
   @ApiOperation({ summary: 'Get all waitlist entries' })
-  findAll(@Query('salonId') salonId?: string, @Query('status') status?: WaitlistStatus) {
+  findAll(
+    @Query('salonId') salonId?: string,
+    @Query('status') status?: WaitlistStatus,
+  ) {
     return this.waitlistService.findAll(salonId, status);
   }
 
@@ -60,7 +62,10 @@ export class WaitlistController {
     UserRole.SALON_EMPLOYEE,
   )
   @ApiOperation({ summary: 'Get next available customer from waitlist' })
-  getNextAvailable(@Query('salonId') salonId: string, @Query('serviceId') serviceId?: string) {
+  getNextAvailable(
+    @Query('salonId') salonId: string,
+    @Query('serviceId') serviceId?: string,
+  ) {
     return this.waitlistService.getNextAvailable(salonId, serviceId);
   }
 
@@ -111,7 +116,8 @@ export class WaitlistController {
   @ApiOperation({ summary: 'Convert waitlist entry to appointment' })
   convertToAppointment(
     @Param('id') id: string,
-    @Body() body: {
+    @Body()
+    body: {
       scheduledStart: string;
       scheduledEnd: string;
       salonEmployeeId?: string;
@@ -138,4 +144,3 @@ export class WaitlistController {
     return this.waitlistService.remove(id);
   }
 }
-

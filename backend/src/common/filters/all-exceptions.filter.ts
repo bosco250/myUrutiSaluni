@@ -25,7 +25,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       if (typeof exceptionResponse === 'object') {
         message = (exceptionResponse as any).message || exception.message;
         errors = (exceptionResponse as any).errors;
@@ -34,14 +34,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     } else if (exception instanceof QueryFailedError) {
       status = HttpStatus.BAD_REQUEST;
-      
+
       // Handle specific database errors
       const error = exception as any;
       const errorMessage = exception.message || 'Database query failed';
-      
+
       // Extract SQLite error details
       if (errorMessage.includes('NOT NULL constraint')) {
-        const match = errorMessage.match(/NOT NULL constraint failed: (\w+\.\w+)/);
+        const match = errorMessage.match(
+          /NOT NULL constraint failed: (\w+\.\w+)/,
+        );
         if (match) {
           message = `Required field missing: ${match[1]}`;
         } else {
@@ -53,11 +55,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = 'Foreign key constraint violation';
       } else {
         // Show the actual database error message in development
-        message = process.env.NODE_ENV === 'development' 
-          ? errorMessage 
-          : 'Database query failed';
+        message =
+          process.env.NODE_ENV === 'development'
+            ? errorMessage
+            : 'Database query failed';
       }
-      
+
       this.logger.error(`Database error: ${errorMessage}`, exception.stack);
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -71,9 +74,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       method: request.method,
       message,
       ...(errors && { errors }),
-      ...(process.env.NODE_ENV === 'development' && exception instanceof Error && { 
-        stack: exception.stack 
-      }),
+      ...(process.env.NODE_ENV === 'development' &&
+        exception instanceof Error && {
+          stack: exception.stack,
+        }),
     };
 
     response.status(status).json(errorResponse);

@@ -1,6 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { HealthCheckService, TypeOrmHealthIndicator, HealthCheck } from '@nestjs/terminus';
+import {
+  HealthCheckService,
+  TypeOrmHealthIndicator,
+  HealthCheck,
+} from '@nestjs/terminus';
 import { Public } from '../decorators/public.decorator';
 
 @ApiTags('Health')
@@ -18,9 +22,7 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Application is healthy' })
   @ApiResponse({ status: 503, description: 'Application is unhealthy' })
   check() {
-    return this.health.check([
-      () => this.db.pingCheck('database'),
-    ]);
+    return this.health.check([() => this.db.pingCheck('database')]);
   }
 
   @Get('ready')

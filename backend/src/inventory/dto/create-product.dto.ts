@@ -1,4 +1,11 @@
-import { IsUUID, IsString, IsNumber, IsOptional, IsBoolean, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateProductDto {
@@ -37,4 +44,3 @@ export class CreateProductDto {
   @IsBoolean()
   isInventoryItem?: boolean;
 }
-

@@ -53,7 +53,7 @@ JWT_SECRET=your-secret-key-here
 PORT=3000
 ```
 
-**Frontend** (`frontend/.env.local`):
+**Web** (`web/.env.local`):
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 ```
@@ -66,15 +66,15 @@ cd backend
 npm run start:dev
 ```
 
-**Terminal 2 - Frontend:**
+**Terminal 2 - Web:**
 ```bash
-cd frontend
+cd web
 npm run dev
 ```
 
 ### Step 5: Access the Application
 
-- **Frontend**: http://localhost:3001
+- **Web**: http://localhost:3001
 - **Backend API**: http://localhost:3000/api
 - **API Docs**: http://localhost:3000/api/docs
 
@@ -144,7 +144,7 @@ Authorization: Bearer <your-token>
 - Or kill process: `lsof -ti:3000 | xargs kill`
 
 ### Module Not Found
-- Run `npm install` in backend and frontend directories
+- Run `npm install` in backend and web directories
 - Check `node_modules` exists
 
 ## 📖 Documentation

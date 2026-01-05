@@ -1,5 +1,8 @@
 import { DataSource } from 'typeorm';
-import { Appointment, AppointmentStatus } from '../../appointments/entities/appointment.entity';
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../../appointments/entities/appointment.entity';
 import { Salon } from '../../salons/entities/salon.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { Service } from '../../services/entities/service.entity';
@@ -16,7 +19,9 @@ export async function seedAppointments(dataSource: DataSource) {
 
   // Check existing appointments
   const existingAppointmentsCount = await appointmentRepository.count();
-  console.log(`📊 Current database state: ${existingAppointmentsCount} existing appointment(s)`);
+  console.log(
+    `📊 Current database state: ${existingAppointmentsCount} existing appointment(s)`,
+  );
 
   // Get existing data
   const salons = await salonRepository.find({ take: 10 });
@@ -37,14 +42,11 @@ export async function seedAppointments(dataSource: DataSource) {
     return;
   }
 
-  console.log(`📋 Found ${salons.length} salons, ${customers.length} customers, ${services.length} services`);
+  console.log(
+    `📋 Found ${salons.length} salons, ${customers.length} customers, ${services.length} services`,
+  );
 
-  // Helper function to add days/hours to a date
-  const addDays = (date: Date, days: number): Date => {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-  };
+  // Helper function to add hours to a date
 
   const addHours = (date: Date, hours: number): Date => {
     const result = new Date(date);
@@ -60,17 +62,28 @@ export async function seedAppointments(dataSource: DataSource) {
   for (let i = 0; i < 15; i++) {
     const salon = salons[Math.floor(Math.random() * salons.length)];
     const service = services[Math.floor(Math.random() * services.length)];
-    const customer = customers.length > 0 ? customers[Math.floor(Math.random() * customers.length)] : null;
-    const owner = salonOwners.find(o => o.id === salon.ownerId) || salonOwners[0];
+    const customer =
+      customers.length > 0
+        ? customers[Math.floor(Math.random() * customers.length)]
+        : null;
+    const owner =
+      salonOwners.find((o) => o.id === salon.ownerId) || salonOwners[0];
 
     const daysAgo = Math.floor(Math.random() * 30) + 1; // 1-30 days ago
     const hour = Math.floor(Math.random() * 8) + 9; // 9 AM - 5 PM
     const scheduledStart = new Date(now);
     scheduledStart.setDate(scheduledStart.getDate() - daysAgo);
     scheduledStart.setHours(hour, Math.random() < 0.5 ? 0 : 30, 0, 0);
-    const scheduledEnd = addHours(scheduledStart, service.durationMinutes ? service.durationMinutes / 60 : 1);
+    const scheduledEnd = addHours(
+      scheduledStart,
+      service.durationMinutes ? service.durationMinutes / 60 : 1,
+    );
 
-    const statuses = [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW];
+    const statuses = [
+      AppointmentStatus.COMPLETED,
+      AppointmentStatus.CANCELLED,
+      AppointmentStatus.NO_SHOW,
+    ];
     const status = statuses[Math.floor(Math.random() * statuses.length)];
 
     appointments.push({
@@ -81,11 +94,12 @@ export async function seedAppointments(dataSource: DataSource) {
       scheduledEnd,
       status,
       createdById: owner?.id || null,
-      notes: status === AppointmentStatus.COMPLETED 
-        ? 'Service completed successfully' 
-        : status === AppointmentStatus.CANCELLED 
-        ? 'Customer cancelled appointment' 
-        : 'Customer did not show up',
+      notes:
+        status === AppointmentStatus.COMPLETED
+          ? 'Service completed successfully'
+          : status === AppointmentStatus.CANCELLED
+            ? 'Customer cancelled appointment'
+            : 'Customer did not show up',
     });
   }
 
@@ -93,15 +107,26 @@ export async function seedAppointments(dataSource: DataSource) {
   for (let i = 0; i < 10; i++) {
     const salon = salons[Math.floor(Math.random() * salons.length)];
     const service = services[Math.floor(Math.random() * services.length)];
-    const customer = customers.length > 0 ? customers[Math.floor(Math.random() * customers.length)] : null;
-    const owner = salonOwners.find(o => o.id === salon.ownerId) || salonOwners[0];
+    const customer =
+      customers.length > 0
+        ? customers[Math.floor(Math.random() * customers.length)]
+        : null;
+    const owner =
+      salonOwners.find((o) => o.id === salon.ownerId) || salonOwners[0];
 
     const hour = Math.floor(Math.random() * 8) + 9; // 9 AM - 5 PM
     const scheduledStart = new Date(now);
     scheduledStart.setHours(hour, Math.random() < 0.5 ? 0 : 30, 0, 0);
-    const scheduledEnd = addHours(scheduledStart, service.durationMinutes ? service.durationMinutes / 60 : 1);
+    const scheduledEnd = addHours(
+      scheduledStart,
+      service.durationMinutes ? service.durationMinutes / 60 : 1,
+    );
 
-    const statuses = [AppointmentStatus.BOOKED, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS];
+    const statuses = [
+      AppointmentStatus.BOOKED,
+      AppointmentStatus.CONFIRMED,
+      AppointmentStatus.IN_PROGRESS,
+    ];
     const status = statuses[Math.floor(Math.random() * statuses.length)];
 
     appointments.push({
@@ -112,11 +137,12 @@ export async function seedAppointments(dataSource: DataSource) {
       scheduledEnd,
       status,
       createdById: owner?.id || null,
-      notes: status === AppointmentStatus.CONFIRMED 
-        ? 'Appointment confirmed by customer' 
-        : status === AppointmentStatus.IN_PROGRESS
-        ? 'Service in progress'
-        : 'Appointment booked',
+      notes:
+        status === AppointmentStatus.CONFIRMED
+          ? 'Appointment confirmed by customer'
+          : status === AppointmentStatus.IN_PROGRESS
+            ? 'Service in progress'
+            : 'Appointment booked',
     });
   }
 
@@ -124,15 +150,22 @@ export async function seedAppointments(dataSource: DataSource) {
   for (let i = 0; i < 25; i++) {
     const salon = salons[Math.floor(Math.random() * salons.length)];
     const service = services[Math.floor(Math.random() * services.length)];
-    const customer = customers.length > 0 ? customers[Math.floor(Math.random() * customers.length)] : null;
-    const owner = salonOwners.find(o => o.id === salon.ownerId) || salonOwners[0];
+    const customer =
+      customers.length > 0
+        ? customers[Math.floor(Math.random() * customers.length)]
+        : null;
+    const owner =
+      salonOwners.find((o) => o.id === salon.ownerId) || salonOwners[0];
 
     const daysAhead = Math.floor(Math.random() * 30) + 1; // 1-30 days ahead
     const hour = Math.floor(Math.random() * 8) + 9; // 9 AM - 5 PM
     const scheduledStart = new Date(now);
     scheduledStart.setDate(scheduledStart.getDate() + daysAhead);
     scheduledStart.setHours(hour, Math.random() < 0.5 ? 0 : 30, 0, 0);
-    const scheduledEnd = addHours(scheduledStart, service.durationMinutes ? service.durationMinutes / 60 : 1);
+    const scheduledEnd = addHours(
+      scheduledStart,
+      service.durationMinutes ? service.durationMinutes / 60 : 1,
+    );
 
     const statuses = [AppointmentStatus.BOOKED, AppointmentStatus.CONFIRMED];
     const status = statuses[Math.floor(Math.random() * statuses.length)];
@@ -145,9 +178,10 @@ export async function seedAppointments(dataSource: DataSource) {
       scheduledEnd,
       status,
       createdById: owner?.id || null,
-      notes: status === AppointmentStatus.CONFIRMED 
-        ? 'Appointment confirmed' 
-        : 'Appointment booked, awaiting confirmation',
+      notes:
+        status === AppointmentStatus.CONFIRMED
+          ? 'Appointment confirmed'
+          : 'Appointment booked, awaiting confirmation',
     });
   }
 
@@ -183,6 +217,7 @@ export async function seedAppointments(dataSource: DataSource) {
   console.log(`✅ Appointments seeding completed!`);
   console.log(`   - Created: ${created} appointments`);
   console.log(`   - Skipped: ${skipped} appointments (already exist)`);
-  console.log(`   - Total appointments in database: ${await appointmentRepository.count()}`);
+  console.log(
+    `   - Total appointments in database: ${await appointmentRepository.count()}`,
+  );
 }
-

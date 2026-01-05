@@ -1,4 +1,10 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
@@ -20,9 +26,25 @@ export class RegisterDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ required: false, enum: ['super_admin', 'association_admin', 'district_leader', 'salon_owner', 'salon_employee', 'customer'] })
+  @ApiProperty({
+    required: false,
+    enum: [
+      'super_admin',
+      'association_admin',
+      'district_leader',
+      'salon_owner',
+      'salon_employee',
+      'customer',
+    ],
+  })
   @IsOptional()
-  @IsEnum(['super_admin', 'association_admin', 'district_leader', 'salon_owner', 'salon_employee', 'customer'])
+  @IsEnum([
+    'super_admin',
+    'association_admin',
+    'district_leader',
+    'salon_owner',
+    'salon_employee',
+    'customer',
+  ])
   role?: string;
 }
-

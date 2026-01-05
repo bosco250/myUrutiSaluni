@@ -17,6 +17,7 @@ import {
   Settings,
   LogOut,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
@@ -27,8 +28,10 @@ const menuItems = [
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Memberships', href: '/memberships', icon: Users },
   { name: 'Appointments', href: '/appointments', icon: Calendar },
+  { name: 'Services', href: '/services', icon: Sparkles },
   { name: 'Sales & POS', href: '/sales', icon: ShoppingCart },
   { name: 'Commissions', href: '/commissions', icon: TrendingUp },
+  { name: 'Payroll', href: '/payroll', icon: DollarSign },
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Accounting', href: '/accounting', icon: DollarSign },
   { name: 'Loans', href: '/loans', icon: CreditCard },

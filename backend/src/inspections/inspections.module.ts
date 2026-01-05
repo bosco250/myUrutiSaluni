@@ -11,4 +11,3 @@ import { Inspection } from './entities/inspection.entity';
   exports: [InspectionsService],
 })
 export class InspectionsModule {}
-

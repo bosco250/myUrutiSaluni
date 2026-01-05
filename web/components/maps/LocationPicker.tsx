@@ -1,20 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 
-// Fix for default marker icon in Next.js
-if (typeof window !== 'undefined') {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  });
-}
+// Dynamically import the map components to avoid SSR issues
+const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), {
+  ssr: false,
+});
+const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), {
+  ssr: false,
+});
+const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
 
 interface LocationPickerProps {
   latitude?: number;
@@ -24,41 +21,55 @@ interface LocationPickerProps {
   height?: string;
 }
 
-function MapClickHandler({
-  onLocationSelect,
-  onReverseGeocode,
-}: {
-  onLocationSelect: (lat: number, lng: number) => void;
-  onReverseGeocode?: (lat: number, lng: number) => Promise<void>;
-}) {
-  const [isGeocoding, setIsGeocoding] = useState(false);
+// MapClickHandler component that uses the hook - dynamically imported
+const MapClickHandler = dynamic(
+  () =>
+    Promise.all([import('react-leaflet'), import('react'), import('lucide-react')]).then(
+      ([leafletMod, reactMod, lucideMod]) => {
+        const { useMapEvents } = leafletMod;
+        const { useState } = reactMod;
+        const { Loader2 } = lucideMod;
 
-  useMapEvents({
-    click: async (e) => {
-      const { lat, lng } = e.latlng;
-      onLocationSelect(lat, lng);
+        return function MapClickHandlerComponent({
+          onLocationSelect,
+          onReverseGeocode,
+        }: {
+          onLocationSelect: (lat: number, lng: number) => void;
+          onReverseGeocode?: (lat: number, lng: number) => Promise<void>;
+        }) {
+          const [isGeocoding, setIsGeocoding] = useState(false);
 
-      if (onReverseGeocode) {
-        setIsGeocoding(true);
-        try {
-          await onReverseGeocode(lat, lng);
-        } catch (error: any) {
-          console.error('Reverse geocoding error:', error);
-          // Error is handled in the parent component, just log it here
-        } finally {
-          setIsGeocoding(false);
-        }
+          useMapEvents({
+            click: async (e: any) => {
+              const { lat, lng } = e.latlng;
+              onLocationSelect(lat, lng);
+
+              if (onReverseGeocode) {
+                setIsGeocoding(true);
+                try {
+                  await onReverseGeocode(lat, lng);
+                } catch (error: any) {
+                  console.error('Reverse geocoding error:', error);
+                } finally {
+                  setIsGeocoding(false);
+                }
+              }
+            },
+          });
+
+          return isGeocoding ? (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-sm text-text-light dark:text-text-dark">
+                Getting address...
+              </span>
+            </div>
+          ) : null;
+        };
       }
-    },
-  });
-
-  return isGeocoding ? (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
-      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-      <span className="text-sm text-text-light dark:text-text-dark">Getting address...</span>
-    </div>
-  ) : null;
-}
+    ),
+  { ssr: false }
+);
 
 export default function LocationPicker({
   latitude,
@@ -69,12 +80,30 @@ export default function LocationPicker({
 }: LocationPickerProps) {
   const [mounted, setMounted] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([-1.9441, 30.0619]); // Default: Kigali, Rwanda
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
 
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
-    
+
     setMounted(true);
+
+    // Dynamically load leaflet and fix icon issue
+    Promise.all([
+      import('leaflet'),
+      // @ts-ignore - CSS import
+      import('leaflet/dist/leaflet.css'),
+    ]).then(([L]) => {
+      // Fix for default marker icon in Next.js
+      delete (L.default.Icon.Default.prototype as any)._getIconUrl;
+      L.default.Icon.Default.mergeOptions({
+        iconRetinaUrl:
+          'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      });
+      setLeafletLoaded(true);
+    });
 
     // If coordinates are provided, use them
     if (latitude && longitude) {
@@ -94,7 +123,7 @@ export default function LocationPicker({
     }
   }, [latitude, longitude]);
 
-  if (!mounted) {
+  if (!mounted || !leafletLoaded) {
     return (
       <div
         className="w-full bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl flex items-center justify-center"
@@ -109,7 +138,10 @@ export default function LocationPicker({
   }
 
   return (
-    <div className="w-full rounded-xl overflow-hidden border border-border-light dark:border-border-dark relative" style={{ height }}>
+    <div
+      className="w-full rounded-xl overflow-hidden border border-border-light dark:border-border-dark relative"
+      style={{ height }}
+    >
       <MapContainer
         center={mapCenter}
         zoom={latitude && longitude ? 16 : 13}
@@ -122,10 +154,7 @@ export default function LocationPicker({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {latitude && longitude && (
-          <Marker 
-            position={[latitude, longitude]}
-            key={`${latitude}-${longitude}`}
-          />
+          <Marker position={[latitude, longitude]} key={`${latitude}-${longitude}`} />
         )}
         <MapClickHandler onLocationSelect={onLocationSelect} onReverseGeocode={onReverseGeocode} />
       </MapContainer>
@@ -137,4 +166,3 @@ export default function LocationPicker({
     </div>
   );
 }
-

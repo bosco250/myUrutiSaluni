@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 
 export enum MembershipStatus {
@@ -39,7 +48,12 @@ export class Membership {
   @Column({ name: 'end_date', type: 'date', nullable: true })
   endDate: Date;
 
-  @Column({ name: 'membership_number', unique: true, length: 128, nullable: true })
+  @Column({
+    name: 'membership_number',
+    unique: true,
+    length: 128,
+    nullable: true,
+  })
   membershipNumber: string;
 
   @Column({ type: 'simple-json', default: '{}' })
@@ -51,4 +65,3 @@ export class Membership {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

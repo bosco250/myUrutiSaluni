@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Salon } from '../../salons/entities/salon.entity';
 
@@ -41,4 +49,3 @@ export class CreditScore {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

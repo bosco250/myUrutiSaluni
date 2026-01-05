@@ -38,35 +38,61 @@ export class InspectionsController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Get all inspections' })
-  findAll(@Query('salonId') salonId?: string, @Query('status') status?: InspectionStatus) {
+  findAll(
+    @Query('salonId') salonId?: string,
+    @Query('status') status?: InspectionStatus,
+  ) {
     return this.inspectionsService.findAll(salonId, status);
   }
 
   @Get('upcoming')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Get upcoming inspections' })
   getUpcoming(@Query('days') days?: number) {
-    return this.inspectionsService.getUpcomingInspections(days ? parseInt(days.toString()) : 30);
+    return this.inspectionsService.getUpcomingInspections(
+      days ? parseInt(days.toString()) : 30,
+    );
   }
 
   @Get('overdue')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Get overdue inspections' })
   getOverdue() {
     return this.inspectionsService.getOverdueInspections();
   }
 
   @Get('statistics')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Get compliance statistics' })
   getStatistics(@Query('salonId') salonId?: string) {
     return this.inspectionsService.getComplianceStatistics(salonId);
   }
 
   @Get('salon/:salonId/history')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+  )
   @ApiOperation({ summary: 'Get salon inspection history' })
   getSalonHistory(@Param('salonId') salonId: string) {
     return this.inspectionsService.getSalonInspectionHistory(salonId);
@@ -98,4 +124,3 @@ export class InspectionsController {
     return this.inspectionsService.remove(id);
   }
 }
-

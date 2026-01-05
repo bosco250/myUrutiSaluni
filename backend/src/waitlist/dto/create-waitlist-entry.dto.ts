@@ -1,4 +1,13 @@
-import { IsString, IsBoolean, IsOptional, IsUUID, IsDateString, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsUUID,
+  IsDateString,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class CreateWaitlistEntryDto {
   @IsUUID()
@@ -40,4 +49,3 @@ export class CreateWaitlistEntryDto {
   @IsOptional()
   expiresAt?: Date;
 }
-

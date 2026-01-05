@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CustomerStyleReference } from './entities/customer-style-reference.entity';
@@ -28,7 +32,9 @@ export class CustomerStyleReferencesService {
     return this.styleReferencesRepository.save(reference);
   }
 
-  async findByCustomerId(customerId: string): Promise<CustomerStyleReference[]> {
+  async findByCustomerId(
+    customerId: string,
+  ): Promise<CustomerStyleReference[]> {
     return this.styleReferencesRepository.find({
       where: { customerId },
       relations: ['appointment'],
@@ -91,8 +97,8 @@ export class CustomerStyleReferencesService {
       return;
     }
 
-    throw new ForbiddenException('You are not allowed to modify this reference');
+    throw new ForbiddenException(
+      'You are not allowed to modify this reference',
+    );
   }
 }
-
-

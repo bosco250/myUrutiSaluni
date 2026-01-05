@@ -49,4 +49,3 @@ export class Customer {
   @OneToMany(() => CustomerStyleReference, (reference) => reference.customer)
   styleReferences: CustomerStyleReference[];
 }
-

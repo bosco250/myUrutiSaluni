@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 
 @Entity('products')
@@ -23,10 +32,22 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ name: 'unit_price', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({
+    name: 'unit_price',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
   unitPrice: number;
 
-  @Column({ name: 'tax_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({
+    name: 'tax_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+  })
   taxRate: number;
 
   @Column({ name: 'is_inventory_item', default: true })
@@ -41,4 +62,3 @@ export class Product {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

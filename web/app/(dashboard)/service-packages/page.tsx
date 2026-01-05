@@ -335,7 +335,6 @@ function ServicePackageModal({
         validTo: formData.validTo ? new Date(formData.validTo).toISOString() : undefined,
       });
     } catch (error) {
-      console.error('Error saving package:', error);
       alert('Failed to save package. Please try again.');
     } finally {
       setIsSubmitting(false);

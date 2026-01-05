@@ -61,5 +61,3 @@ export class CustomerStyleReference {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-
-

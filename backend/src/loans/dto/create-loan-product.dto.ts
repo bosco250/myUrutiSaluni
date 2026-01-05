@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsOptional, IsEnum, IsBoolean, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { LoanProductType } from '../entities/loan-product.entity';
 
@@ -46,4 +53,3 @@ export class CreateLoanProductDto {
   @IsBoolean()
   requiresGuarantor?: boolean;
 }
-

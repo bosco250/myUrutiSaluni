@@ -78,13 +78,31 @@ export class Inspection {
   @Column({ name: 'checklist_items', type: 'simple-json', default: '[]' })
   checklistItems: ChecklistItem[];
 
-  @Column({ name: 'overall_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'overall_score',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   overallScore?: number;
 
-  @Column({ name: 'total_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'total_score',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   totalScore?: number;
 
-  @Column({ name: 'max_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  @Column({
+    name: 'max_score',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
   maxScore?: number;
 
   @Column({ type: 'text', nullable: true })
@@ -156,4 +174,3 @@ export interface CorrectiveAction {
   status: 'pending' | 'in_progress' | 'completed';
   evidence?: string[];
 }
-

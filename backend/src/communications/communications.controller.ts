@@ -49,8 +49,14 @@ export class CommunicationsController {
     UserRole.SALON_EMPLOYEE,
   )
   @ApiOperation({ summary: 'Get all communications' })
-  findAll(@Query('customerId') customerId?: string, @Query('limit') limit?: number) {
-    return this.communicationsService.findAll(customerId, limit ? parseInt(limit.toString()) : 100);
+  findAll(
+    @Query('customerId') customerId?: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.communicationsService.findAll(
+      customerId,
+      limit ? parseInt(limit.toString()) : 100,
+    );
   }
 
   @Get('timeline/:customerId')
@@ -156,4 +162,3 @@ export class CommunicationsController {
     return this.communicationsService.remove(id);
   }
 }
-

@@ -25,7 +25,11 @@ export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
     UserRole.SALON_EMPLOYEE,
     UserRole.CUSTOMER,
   ],
-  [UserRole.SALON_OWNER]: [UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER],
+  [UserRole.SALON_OWNER]: [
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  ],
   [UserRole.SALON_EMPLOYEE]: [UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER],
   [UserRole.CUSTOMER]: [UserRole.CUSTOMER],
 };
@@ -33,7 +37,10 @@ export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
 /**
  * Check if a user role has permission to perform an action
  */
-export function hasPermission(userRole: UserRole, requiredRoles: UserRole[]): boolean {
+export function hasPermission(
+  userRole: UserRole,
+  requiredRoles: UserRole[],
+): boolean {
   const userPermissions = ROLE_HIERARCHY[userRole] || [];
   return requiredRoles.some((role) => userPermissions.includes(role));
 }
@@ -63,4 +70,3 @@ export function canAccessResource(
   // Users can always access their own resources
   return resourceOwnerId === currentUserId;
 }
-

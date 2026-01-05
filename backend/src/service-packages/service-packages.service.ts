@@ -15,7 +15,10 @@ export class ServicePackagesService {
     private servicesRepository: Repository<Service>,
   ) {}
 
-  async create(salonId: string, createDto: CreateServicePackageDto): Promise<ServicePackage> {
+  async create(
+    salonId: string,
+    createDto: CreateServicePackageDto,
+  ): Promise<ServicePackage> {
     // Fetch services
     const services = await this.servicesRepository.find({
       where: { id: In(createDto.serviceIds) },
@@ -26,14 +29,22 @@ export class ServicePackagesService {
     }
 
     // Calculate total duration
-    const totalDuration = services.reduce((sum, service) => sum + (service.durationMinutes || 0), 0);
+    const totalDuration = services.reduce(
+      (sum, service) => sum + (service.durationMinutes || 0),
+      0,
+    );
 
     // Calculate original price if not provided
-    const originalPrice = createDto.originalPrice || services.reduce((sum, service) => sum + (service.basePrice || 0), 0);
+    const originalPrice =
+      createDto.originalPrice ||
+      services.reduce((sum, service) => sum + (service.basePrice || 0), 0);
 
     // Calculate discount percentage if not provided
-    const discountPercentage = createDto.discountPercentage || 
-      (originalPrice > 0 ? ((originalPrice - createDto.packagePrice) / originalPrice) * 100 : 0);
+    const discountPercentage =
+      createDto.discountPercentage ||
+      (originalPrice > 0
+        ? ((originalPrice - createDto.packagePrice) / originalPrice) * 100
+        : 0);
 
     const packageEntity = this.packagesRepository.create({
       salonId,
@@ -74,7 +85,10 @@ export class ServicePackagesService {
     return packageEntity;
   }
 
-  async update(id: string, updateDto: UpdateServicePackageDto): Promise<ServicePackage> {
+  async update(
+    id: string,
+    updateDto: UpdateServicePackageDto,
+  ): Promise<ServicePackage> {
     const packageEntity = await this.findOne(id);
 
     if (updateDto.serviceIds) {
@@ -90,18 +104,27 @@ export class ServicePackagesService {
 
       // Recalculate duration
       if (!updateDto.durationMinutes) {
-        packageEntity.durationMinutes = services.reduce((sum, service) => sum + (service.durationMinutes || 0), 0);
+        packageEntity.durationMinutes = services.reduce(
+          (sum, service) => sum + (service.durationMinutes || 0),
+          0,
+        );
       }
 
       // Recalculate original price
       if (!updateDto.originalPrice) {
-        packageEntity.originalPrice = services.reduce((sum, service) => sum + (service.basePrice || 0), 0);
+        packageEntity.originalPrice = services.reduce(
+          (sum, service) => sum + (service.basePrice || 0),
+          0,
+        );
       }
     }
 
     // Recalculate discount if prices changed
     if (updateDto.packagePrice && packageEntity.originalPrice) {
-      packageEntity.discountPercentage = ((packageEntity.originalPrice - updateDto.packagePrice) / packageEntity.originalPrice) * 100;
+      packageEntity.discountPercentage =
+        ((packageEntity.originalPrice - updateDto.packagePrice) /
+          packageEntity.originalPrice) *
+        100;
     }
 
     Object.assign(packageEntity, updateDto);
@@ -113,4 +136,3 @@ export class ServicePackagesService {
     await this.packagesRepository.remove(packageEntity);
   }
 }
-

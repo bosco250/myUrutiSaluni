@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Sale } from './sale.entity';
 import { Service } from '../../services/entities/service.entity';
 import { Product } from '../../inventory/entities/product.entity';
@@ -43,7 +50,13 @@ export class SaleItem {
   @Column({ type: 'decimal', precision: 12, scale: 3, default: 1 })
   quantity: number;
 
-  @Column({ name: 'discount_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({
+    name: 'discount_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
   discountAmount: number;
 
   @Column({ name: 'line_total', type: 'decimal', precision: 14, scale: 2 })
@@ -52,4 +65,3 @@ export class SaleItem {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

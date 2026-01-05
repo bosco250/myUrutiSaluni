@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
@@ -36,16 +36,18 @@ function ProfileContent() {
       return response.data;
     },
     enabled: !!authUser?.id,
-    onSuccess: (data) => {
-      if (data) {
-        setFormData({
-          fullName: data.fullName || '',
-          phone: data.phone || '',
-          email: data.email || '',
-        });
-      }
-    },
   });
+
+  // Update form data when customer data is loaded
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        fullName: customer.fullName || '',
+        phone: customer.phone || '',
+        email: customer.email || '',
+      });
+    }
+  }, [customer]);
 
   // Update mutation
   const updateMutation = useMutation({
@@ -157,7 +159,7 @@ function ProfileContent() {
             <Button
               type="button"
               onClick={() => router.back()}
-              variant="ghost"
+              variant="outline"
               className="flex-1"
             >
               Cancel

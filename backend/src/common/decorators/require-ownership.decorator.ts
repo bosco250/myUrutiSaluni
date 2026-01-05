@@ -6,4 +6,3 @@ import { SetMetadata } from '@nestjs/common';
  */
 export const RequireOwnership = (resourceIdParam: string = 'id') =>
   SetMetadata('requireOwnership', resourceIdParam);
-

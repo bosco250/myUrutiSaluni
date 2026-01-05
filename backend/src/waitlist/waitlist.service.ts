@@ -1,12 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
-import { WaitlistEntry, WaitlistStatus } from './entities/waitlist-entry.entity';
+import {
+  WaitlistEntry,
+  WaitlistStatus,
+} from './entities/waitlist-entry.entity';
 import { CreateWaitlistEntryDto } from './dto/create-waitlist-entry.dto';
 import { UpdateWaitlistEntryDto } from './dto/update-waitlist-entry.dto';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationChannel, NotificationType } from '../notifications/entities/notification.entity';
+import {
+  NotificationChannel,
+  NotificationType,
+} from '../notifications/entities/notification.entity';
 import { addDays, isBefore } from 'date-fns';
 
 @Injectable()
@@ -24,7 +34,9 @@ export class WaitlistService {
 
     const entry = this.waitlistRepository.create({
       ...createDto,
-      preferredDate: createDto.preferredDate ? new Date(createDto.preferredDate) : undefined,
+      preferredDate: createDto.preferredDate
+        ? new Date(createDto.preferredDate)
+        : undefined,
       expiresAt,
       status: WaitlistStatus.PENDING,
       priority: createDto.priority || 0,
@@ -34,7 +46,10 @@ export class WaitlistService {
     return this.waitlistRepository.save(entry);
   }
 
-  async findAll(salonId?: string, status?: WaitlistStatus): Promise<WaitlistEntry[]> {
+  async findAll(
+    salonId?: string,
+    status?: WaitlistStatus,
+  ): Promise<WaitlistEntry[]> {
     const where: any = {};
     if (salonId) where.salonId = salonId;
     if (status) where.status = status;
@@ -59,7 +74,10 @@ export class WaitlistService {
     return entry;
   }
 
-  async update(id: string, updateDto: UpdateWaitlistEntryDto): Promise<WaitlistEntry> {
+  async update(
+    id: string,
+    updateDto: UpdateWaitlistEntryDto,
+  ): Promise<WaitlistEntry> {
     const entry = await this.findOne(id);
 
     if (updateDto.preferredDate) {
@@ -87,7 +105,9 @@ export class WaitlistService {
     const waitlistEntry = await this.findOne(waitlistId);
 
     if (waitlistEntry.status === WaitlistStatus.BOOKED) {
-      throw new BadRequestException('This waitlist entry has already been converted to an appointment');
+      throw new BadRequestException(
+        'This waitlist entry has already been converted to an appointment',
+      );
     }
 
     // Create appointment
@@ -123,7 +143,10 @@ export class WaitlistService {
     return { waitlistEntry, appointment };
   }
 
-  async contactCustomer(waitlistId: string, notes?: string): Promise<WaitlistEntry> {
+  async contactCustomer(
+    waitlistId: string,
+    notes?: string,
+  ): Promise<WaitlistEntry> {
     const entry = await this.findOne(waitlistId);
 
     entry.status = WaitlistStatus.CONTACTED;
@@ -148,7 +171,10 @@ export class WaitlistService {
     return this.waitlistRepository.save(entry);
   }
 
-  async getNextAvailable(salonId: string, serviceId?: string): Promise<WaitlistEntry | null> {
+  async getNextAvailable(
+    salonId: string,
+    serviceId?: string,
+  ): Promise<WaitlistEntry | null> {
     const where: any = {
       salonId,
       status: WaitlistStatus.PENDING,
@@ -191,4 +217,3 @@ export class WaitlistService {
     return expiredEntries.length;
   }
 }
-

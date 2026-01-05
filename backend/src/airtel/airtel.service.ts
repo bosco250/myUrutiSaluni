@@ -22,8 +22,11 @@ export class AirtelService {
     return this.airtelAgentsRepository.find({ relations: ['user', 'salon'] });
   }
 
-  async createTransaction(transactionData: Partial<AirtelTransaction>): Promise<AirtelTransaction> {
-    const transaction = this.airtelTransactionsRepository.create(transactionData);
+  async createTransaction(
+    transactionData: Partial<AirtelTransaction>,
+  ): Promise<AirtelTransaction> {
+    const transaction =
+      this.airtelTransactionsRepository.create(transactionData);
     return this.airtelTransactionsRepository.save(transaction);
   }
 
@@ -34,4 +37,3 @@ export class AirtelService {
     });
   }
 }
-

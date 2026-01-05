@@ -1,4 +1,12 @@
-import { IsEnum, IsOptional, IsString, IsNumber, IsDateString, IsUUID, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsDateString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PaymentMethod } from '../entities/membership-payment.entity';
 
@@ -17,7 +25,11 @@ export class CreateMembershipPaymentDto {
   @Min(2020)
   paymentYear: number;
 
-  @ApiProperty({ description: 'Installment number (1 or 2)', minimum: 1, maximum: 2 })
+  @ApiProperty({
+    description: 'Installment number (1 or 2)',
+    minimum: 1,
+    maximum: 2,
+  })
   @IsNumber()
   @Min(1)
   installmentNumber: number;
@@ -63,4 +75,3 @@ export class RecordPaymentDto {
   @IsString()
   notes?: string;
 }
-

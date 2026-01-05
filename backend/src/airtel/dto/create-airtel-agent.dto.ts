@@ -30,4 +30,3 @@ export class CreateAirtelAgentDto {
   @IsString()
   agentLiteId?: string;
 }
-

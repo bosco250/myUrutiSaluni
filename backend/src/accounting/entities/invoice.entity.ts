@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 
@@ -43,7 +52,13 @@ export class Invoice {
   @Column({ type: 'decimal', precision: 14, scale: 2 })
   subtotal: number;
 
-  @Column({ name: 'tax_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'tax_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   taxAmount: number;
 
   @Column({ name: 'total_amount', type: 'decimal', precision: 14, scale: 2 })
@@ -59,7 +74,13 @@ export class Invoice {
   })
   status: InvoiceStatus;
 
-  @Column({ name: 'paid_amount', type: 'decimal', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'paid_amount',
+    type: 'decimal',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   paidAmount: number;
 
   @Column({ name: 'paid_at', type: 'timestamp', nullable: true })
@@ -74,4 +95,3 @@ export class Invoice {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

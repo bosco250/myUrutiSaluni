@@ -12,4 +12,3 @@ import { AirtelTransaction } from './entities/airtel-transaction.entity';
   exports: [AirtelService],
 })
 export class AirtelModule {}
-

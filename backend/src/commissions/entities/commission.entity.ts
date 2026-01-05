@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
 import { SaleItem } from '../../sales/entities/sale-item.entity';
 
@@ -37,10 +45,26 @@ export class Commission {
   @Column({ name: 'paid_at', type: 'timestamp', nullable: true })
   paidAt: Date;
 
+  @Column({
+    name: 'payment_method',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+  })
+  paymentMethod: 'cash' | 'bank_transfer' | 'mobile_money' | 'payroll';
+
+  @Column({ name: 'payment_reference', length: 255, nullable: true })
+  paymentReference: string;
+
+  @Column({ name: 'paid_by', nullable: true })
+  paidById: string;
+
+  @Column({ name: 'payroll_item_id', nullable: true })
+  payrollItemId: string;
+
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-

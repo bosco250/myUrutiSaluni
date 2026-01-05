@@ -1,4 +1,15 @@
-import { IsString, IsNumber, IsBoolean, IsOptional, IsArray, IsUUID, MinLength, MaxLength, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsArray,
+  IsUUID,
+  MinLength,
+  MaxLength,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class CreateServicePackageDto {
   @IsString()
@@ -50,4 +61,3 @@ export class CreateServicePackageDto {
   @IsUUID()
   salonId: string;
 }
-

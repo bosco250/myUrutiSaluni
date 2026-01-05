@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
@@ -28,10 +28,18 @@ import { WaitlistModule } from './waitlist/waitlist.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { InspectionsModule } from './inspections/inspections.module';
 import { ResourcesModule } from './resources/resources.module';
+import { PayrollModule } from './payroll/payroll.module';
 import { CommonModule } from './common/common.module';
+import { SearchModule } from './search/search.module';
+import { GeminiModule } from './gemini/gemini.module';
+import { ChatModule } from './chat/chat.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { PaymentsModule } from './payments/payments.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -39,6 +47,13 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    // RATE LIMITING: 100 requests per minute per IP
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests
+      },
+    ]),
     DatabaseModule,
     CommonModule,
     AuthModule,
@@ -64,6 +79,13 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     CommunicationsModule,
     InspectionsModule,
     ResourcesModule,
+    PayrollModule,
+    SearchModule,
+    GeminiModule,
+    ChatModule,
+    ReviewsModule,
+    PaymentsModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -80,7 +102,11 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    // RATE LIMITING: Apply to all endpoints
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
-

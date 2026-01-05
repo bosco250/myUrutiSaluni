@@ -13,4 +13,3 @@ import { MembershipsModule } from '../memberships/memberships.module';
   exports: [ReportsService],
 })
 export class ReportsModule {}
-

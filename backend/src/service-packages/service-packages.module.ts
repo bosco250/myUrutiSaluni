@@ -13,4 +13,3 @@ import { SalonsModule } from '../salons/salons.module';
   exports: [ServicePackagesService],
 })
 export class ServicePackagesModule {}
-

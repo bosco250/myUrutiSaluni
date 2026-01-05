@@ -29,4 +29,3 @@ export class AirtelController {
     return this.airtelService.getAgentTransactions(agentId);
   }
 }
-

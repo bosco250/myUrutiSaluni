@@ -1,4 +1,10 @@
-import { IsString, IsEnum, IsUUID, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsUUID,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { AccountType } from '../entities/chart-of-account.entity';
 
@@ -30,4 +36,3 @@ export class CreateAccountDto {
   @IsBoolean()
   isActive?: boolean;
 }
-

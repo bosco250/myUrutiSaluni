@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, In } from 'typeorm';
-import { Resource, ResourceType, ResourceCategory, ResourceStatus } from './entities/resource.entity';
+import { Repository } from 'typeorm';
+import {
+  Resource,
+  ResourceType,
+  ResourceCategory,
+  ResourceStatus,
+} from './entities/resource.entity';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
 
@@ -12,7 +21,10 @@ export class ResourcesService {
     private resourcesRepository: Repository<Resource>,
   ) {}
 
-  async create(createDto: CreateResourceDto, createdById: string): Promise<Resource> {
+  async create(
+    createDto: CreateResourceDto,
+    createdById: string,
+  ): Promise<Resource> {
     const resource = this.resourcesRepository.create({
       ...createDto,
       createdById,
@@ -21,7 +33,8 @@ export class ResourcesService {
       isPublic: createDto.isPublic ?? true,
       accessRoles: createDto.accessRoles || [],
       tags: createDto.tags || [],
-      publishedAt: createDto.status === ResourceStatus.PUBLISHED ? new Date() : undefined,
+      publishedAt:
+        createDto.status === ResourceStatus.PUBLISHED ? new Date() : undefined,
     });
 
     return this.resourcesRepository.save(resource);
@@ -34,12 +47,18 @@ export class ResourcesService {
     status?: ResourceStatus,
     search?: string,
   ): Promise<Resource[]> {
-    const query = this.resourcesRepository.createQueryBuilder('resource')
+    const query = this.resourcesRepository
+      .createQueryBuilder('resource')
       .leftJoinAndSelect('resource.createdBy', 'createdBy')
-      .where('resource.status = :status', { status: status || ResourceStatus.PUBLISHED });
+      .where('resource.status = :status', {
+        status: status || ResourceStatus.PUBLISHED,
+      });
 
     // Filter by expiration
-    query.andWhere('(resource.expiresAt IS NULL OR resource.expiresAt > :now)', { now: new Date() });
+    query.andWhere(
+      '(resource.expiresAt IS NULL OR resource.expiresAt > :now)',
+      { now: new Date() },
+    );
 
     // Access control - check if user role has access
     if (userRole) {
@@ -66,7 +85,8 @@ export class ResourcesService {
       );
     }
 
-    query.orderBy('resource.isFeatured', 'DESC')
+    query
+      .orderBy('resource.isFeatured', 'DESC')
       .addOrderBy('resource.publishedAt', 'DESC')
       .addOrderBy('resource.createdAt', 'DESC');
 
@@ -92,7 +112,11 @@ export class ResourcesService {
       throw new NotFoundException('Resource has expired');
     }
 
-    if (!resource.isPublic && userRole && !resource.accessRoles.includes(userRole)) {
+    if (
+      !resource.isPublic &&
+      userRole &&
+      !resource.accessRoles.includes(userRole)
+    ) {
       throw new BadRequestException('You do not have access to this resource');
     }
 
@@ -111,7 +135,10 @@ export class ResourcesService {
     }
 
     // If status is being changed to published, set publishedAt
-    if (updateDto.status === ResourceStatus.PUBLISHED && resource.status !== ResourceStatus.PUBLISHED) {
+    if (
+      updateDto.status === ResourceStatus.PUBLISHED &&
+      resource.status !== ResourceStatus.PUBLISHED
+    ) {
       updateDto.publishedAt = new Date().toISOString();
     }
 
@@ -135,7 +162,10 @@ export class ResourcesService {
     }
   }
 
-  async getByCategory(category: ResourceCategory, userRole?: string): Promise<Resource[]> {
+  async getByCategory(
+    category: ResourceCategory,
+    userRole?: string,
+  ): Promise<Resource[]> {
     return this.findAll(userRole, category);
   }
 
@@ -175,4 +205,3 @@ export class ResourcesService {
     };
   }
 }
-

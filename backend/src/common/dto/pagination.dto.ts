@@ -3,11 +3,11 @@ import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class PaginationDto {
-  @ApiPropertyOptional({ 
-    description: 'Page number', 
-    minimum: 1, 
+  @ApiPropertyOptional({
+    description: 'Page number',
+    minimum: 1,
     default: 1,
-    example: 1 
+    example: 1,
   })
   @IsOptional()
   @Type(() => Number)
@@ -15,12 +15,12 @@ export class PaginationDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ 
-    description: 'Number of items per page', 
-    minimum: 1, 
-    maximum: 100, 
+  @ApiPropertyOptional({
+    description: 'Number of items per page',
+    minimum: 1,
+    maximum: 100,
     default: 10,
-    example: 10 
+    example: 10,
   })
   @IsOptional()
   @Type(() => Number)
@@ -29,17 +29,17 @@ export class PaginationDto {
   @Max(100)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Sort field',
-    example: 'createdAt' 
+    example: 'createdAt',
   })
   @IsOptional()
   sortBy?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Sort order', 
+  @ApiPropertyOptional({
+    description: 'Sort order',
     enum: ['ASC', 'DESC'],
-    example: 'DESC' 
+    example: 'DESC',
   })
   @IsOptional()
   sortOrder?: 'ASC' | 'DESC' = 'DESC';

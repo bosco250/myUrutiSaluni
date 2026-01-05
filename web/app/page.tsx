@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
@@ -20,7 +22,6 @@ import {
   Sparkles,
   BarChart3,
   Wallet,
-  FileText,
   MapPin,
   Phone,
   Mail

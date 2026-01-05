@@ -14,8 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 config();
 
 // Admin credentials
-const ADMIN_EMAIL = 'admin@salonassociation.com';
-const ADMIN_PASSWORD = 'Admin@1234';
+const ADMIN_EMAIL = 'admin@supper.com';
+const ADMIN_PASSWORD = '123456';
 const ADMIN_NAME = 'Super Admin';
 const ADMIN_PHONE = '+250788123456';
 const ADMIN_ROLE = UserRole.SUPER_ADMIN;
@@ -54,7 +54,7 @@ async function createAdmin() {
 
     // Check if admin already exists
     const existingAdmin = await userRepository.findOne({
-      where: [{ email: ADMIN_EMAIL }, { role: ADMIN_ROLE }],
+      where: { email: ADMIN_EMAIL },
     });
 
     if (existingAdmin) {

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
@@ -50,6 +54,22 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { phone } });
   }
 
+  async findNamesByIds(
+    userIds: string[],
+  ): Promise<Array<{ id: string; fullName: string }>> {
+    if (!userIds || userIds.length === 0) {
+      return [];
+    }
+    const users = await this.usersRepository.find({
+      where: userIds.map((id) => ({ id })),
+      select: ['id', 'fullName'],
+    });
+    return users.map((user) => ({
+      id: user.id,
+      fullName: user.fullName || 'Unknown',
+    }));
+  }
+
   async update(id: string, updateData: Partial<User>): Promise<User> {
     await this.usersRepository.update(id, updateData);
     return this.findOne(id);
@@ -59,25 +79,30 @@ export class UsersService {
     await this.usersRepository.delete(id);
   }
 
-  async assignMembershipNumber(userId: string, membershipNumber?: string): Promise<User> {
+  async assignMembershipNumber(
+    userId: string,
+    membershipNumber?: string,
+  ): Promise<User> {
     const user = await this.findOne(userId);
-    
+
     if (membershipNumber) {
       // Check if the membership number is already taken
       const existing = await this.usersRepository.findOne({
         where: { membershipNumber },
       });
-      
+
       if (existing && existing.id !== userId) {
-        throw new BadRequestException(`Membership number ${membershipNumber} is already assigned to another user`);
+        throw new BadRequestException(
+          `Membership number ${membershipNumber} is already assigned to another user`,
+        );
       }
-      
+
       user.membershipNumber = membershipNumber;
     } else {
       // Generate a new membership number if not provided
       user.membershipNumber = await this.generateMemberMembershipNumber();
     }
-    
+
     return this.usersRepository.save(user);
   }
 
@@ -91,7 +116,9 @@ export class UsersService {
 
     while (!isUnique && attempts < maxAttempts) {
       const year = new Date().getFullYear();
-      const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+      const random = Math.floor(Math.random() * 1000000)
+        .toString()
+        .padStart(6, '0');
       membershipNumber = `MEMBER-${year}-${random}`;
 
       // Check if this membership number already exists
@@ -116,4 +143,3 @@ export class UsersService {
     return membershipNumber!;
   }
 }
-

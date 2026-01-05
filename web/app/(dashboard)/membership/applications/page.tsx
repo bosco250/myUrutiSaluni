@@ -85,14 +85,6 @@ function MembershipApplicationsContent() {
             const userResponse = await api.get(`/users/${applicantId}`);
             const updatedUser = userResponse.data;
             
-            console.log('User role after approval:', {
-              userId: updatedUser.id,
-              email: updatedUser.email,
-              role: updatedUser.role,
-              expectedRole: 'salon_owner',
-              match: updatedUser.role === 'salon_owner'
-            });
-            
             if (updatedUser.role === 'salon_owner') {
               alert(
                 '✅ Application approved successfully!\n\n' +
@@ -109,7 +101,6 @@ function MembershipApplicationsContent() {
               );
             }
           } catch (err) {
-            console.error('Failed to verify role update:', err);
             alert(
               '✅ Application approved successfully!\n\n' +
               '⚠️ Could not verify role update. Please check the database manually.\n\n' +
@@ -127,7 +118,6 @@ function MembershipApplicationsContent() {
       }
     },
     onError: (error: any) => {
-      console.error('Approval error:', error);
       alert(error?.response?.data?.message || 'Failed to review application. Please try again.');
     },
   });

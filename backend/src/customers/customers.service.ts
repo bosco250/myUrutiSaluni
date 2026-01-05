@@ -35,7 +35,10 @@ export class CustomersService {
   }
 
   async findByUserId(userId: string): Promise<Customer | null> {
-    return this.customersRepository.findOne({ where: { userId }, relations: ['user'] });
+    return this.customersRepository.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
   }
 
   async update(id: string, updateData: Partial<Customer>): Promise<Customer> {
@@ -47,4 +50,3 @@ export class CustomersService {
     await this.customersRepository.delete(id);
   }
 }
-

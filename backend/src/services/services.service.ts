@@ -17,18 +17,24 @@ export class ServicesService {
 
   async findAll(salonId?: string): Promise<Service[]> {
     if (salonId) {
-      return this.servicesRepository.find({ where: { salonId }, relations: ['salon'] });
+      return this.servicesRepository.find({
+        where: { salonId },
+        relations: ['salon'],
+      });
     }
     return this.servicesRepository.find({ relations: ['salon'] });
   }
 
   async findOne(id: string): Promise<Service> {
-    return this.servicesRepository.findOne({ where: { id }, relations: ['salon'] });
+    return this.servicesRepository.findOne({
+      where: { id },
+      relations: ['salon'],
+    });
   }
 
   async findBySalonIds(salonIds: string[]): Promise<Service[]> {
     return this.servicesRepository.find({
-      where: salonIds.map(id => ({ salonId: id })),
+      where: salonIds.map((id) => ({ salonId: id })),
       relations: ['salon'],
     });
   }
@@ -41,5 +47,13 @@ export class ServicesService {
   async remove(id: string): Promise<void> {
     await this.servicesRepository.delete(id);
   }
-}
 
+  async search(query: string): Promise<Service[]> {
+    return this.servicesRepository
+      .createQueryBuilder('service')
+      .leftJoinAndSelect('service.salon', 'salon')
+      .where('service.name ILIKE :query', { query: `%${query}%` })
+      .orWhere('service.description ILIKE :query', { query: `%${query}%` })
+      .getMany();
+  }
+}

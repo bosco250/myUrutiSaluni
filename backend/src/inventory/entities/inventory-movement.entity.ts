@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Salon } from '../../salons/entities/salon.entity';
 import { Product } from './product.entity';
 import { User } from '../../users/entities/user.entity';
@@ -57,4 +65,3 @@ export class InventoryMovement {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
-
