@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 import { seedSalons } from './seed-salons';
 import { seedMembershipApplications } from './seed-membership-applications';
 import { seedAppointments } from './seed-appointments';
+import { seedAdmin } from './seed-admin';
 import { User } from '../../users/entities/user.entity';
 import { Salon } from '../../salons/entities/salon.entity';
 import { SalonEmployee } from '../../salons/entities/salon-employee.entity';
@@ -119,6 +120,7 @@ async function runSeeds() {
     console.log('✓ Database connection established\n');
 
     // Run seed functions
+    await seedAdmin(dataSource);
     await seedSalons(dataSource);
     await seedMembershipApplications(dataSource);
     await seedAppointments(dataSource);
