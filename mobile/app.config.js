@@ -10,7 +10,7 @@ export default ({ config }) => {
     slug: 'uruti-saluni',
     version: process.env.APP_VERSION || '1.0.0',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: './assets/Logo.png',
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
@@ -20,11 +20,11 @@ export default ({ config }) => {
     },
     ios: {
       supportsTablet: true,
-      icon: './assets/icon.png',
+      icon: './assets/Logo.png',
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/adaptive-icon.png',
+        foregroundImage: './assets/Logo.png',
         backgroundColor: '#ffffff',
       },
       edgeToEdgeEnabled: true,
@@ -37,14 +37,14 @@ export default ({ config }) => {
       ],
     },
     web: {
-      favicon: './assets/favicon.png',
+      favicon: './assets/Logo.png',
     },
     plugins: [
       'expo-font',
       [
         'expo-notifications',
         {
-          icon: './assets/icon.png',
+          icon: './assets/Logo.png',
           color: '#C89B68',
         },
       ],

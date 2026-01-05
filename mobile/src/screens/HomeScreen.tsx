@@ -218,6 +218,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       icon: "auto-awesome",
       label: "AI Pickup",
       onPress: () => navigation?.navigate("AIFaceScan"),
+      badge: "NEW",
     },
     {
       icon: "workspace-premium",
@@ -473,6 +474,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                   icon={action.icon}
                   label={action.label}
                   onPress={action.onPress}
+                  badge={(action as any).badge}
                 />
               </View>
             ))}
@@ -481,31 +483,33 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
         {/* Upcoming Appointments Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleWithIcon}>
-              <View style={styles.sectionIcon} />
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: dynamicStyles.text.color },
-                ]}
+          {upcomingAppointments.length > 0 && (
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleWithIcon}>
+                <View style={styles.sectionIcon} />
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: dynamicStyles.text.color },
+                  ]}
+                >
+                  Upcoming Appointments
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                onPress={() => navigation?.navigate("Bookings")}
+                activeOpacity={0.7}
               >
-                Upcoming Appointments
-              </Text>
+                <Text style={styles.viewAllLink}>View All</Text>
+                <MaterialIcons
+                  name="arrow-forward"
+                  size={16}
+                  color={theme.colors.primary}
+                />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => navigation?.navigate("Bookings")}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.viewAllLink}>View All</Text>
-              <MaterialIcons
-                name="arrow-forward"
-                size={16}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
+          )}
 
           {appointmentsLoading ? (
             <View style={styles.loadingContainer}>
@@ -547,27 +551,37 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               );
             })
           ) : (
-            <View style={styles.emptyContainer}>
-              <MaterialIcons
-                name="event-busy"
-                size={48}
-                color={dynamicStyles.textSecondary.color}
-              />
-              <Text
-                style={[
-                  styles.emptyText,
-                  { color: dynamicStyles.textSecondary.color },
-                ]}
+            <View style={styles.premiumEmptyState}>
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.primaryLight]}
+                style={styles.premiumEmptyGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                No upcoming appointments
-              </Text>
-              <TouchableOpacity
-                style={styles.bookNowButton}
-                onPress={() => navigation?.navigate("Explore")}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.bookNowText}>Book Now</Text>
-              </TouchableOpacity>
+                {/* Decorative background elements for premium feel */}
+                <View style={styles.decoCircle1} />
+                <View style={styles.decoCircle2} />
+                <View style={styles.decoStar1} />
+                
+                <View style={styles.premiumEmptyContent}>
+                  <View style={styles.iconContainer}>
+                    <MaterialIcons name="auto-awesome" size={32} color="#FFF" />
+                  </View>
+                  <Text style={styles.premiumEmptyTitle}>Start Your Beauty Journey</Text>
+                  <Text style={styles.premiumEmptySubtitle}>
+                    Discover top-rated salons and professional stylists near you. Treat yourself to a new look today!
+                  </Text>
+                  
+                  <TouchableOpacity 
+                    style={styles.premiumBookButton}
+                    onPress={() => navigation?.navigate("Explore")}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.premiumBookButtonText}>Explore Services</Text>
+                    <MaterialIcons name="arrow-forward" size={18} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
             </View>
           )}
         </View>
@@ -1081,5 +1095,110 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.white,
     fontFamily: theme.fonts.medium,
+  },
+  // Premium Empty State
+  premiumEmptyState: {
+    marginVertical: theme.spacing.sm,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  premiumEmptyGradient: {
+    padding: theme.spacing.lg,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 220,
+  },
+  premiumEmptyContent: {
+    alignItems: "center",
+    zIndex: 2,
+    width: "100%",
+  },
+  premiumEmptyTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: theme.colors.textInverse,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
+    fontFamily: theme.fonts.bold,
+    textAlign: "center",
+  },
+  premiumEmptySubtitle: {
+    fontSize: 14,
+    color: theme.colors.textInverse,
+    opacity: 0.95,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: theme.spacing.lg,
+    maxWidth: "90%",
+  },
+  premiumBookButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm + 4,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  premiumBookButtonText: {
+    color: theme.colors.primary,
+    fontSize: 15,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.4)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  // Decorative elements
+  decoCircle1: {
+    position: "absolute",
+    top: -30,
+    right: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  decoCircle2: {
+    position: "absolute",
+    bottom: -40,
+    left: -20,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  decoStar1: {
+    position: "absolute",
+    top: 40,
+    left: 40,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   ActivityIndicator,
@@ -30,6 +30,7 @@ import {
   NavigationTab,
 } from "./navigationConfig";
 import BottomNavigation from "../components/common/BottomNavigation";
+import SwipeableTabNavigator from "../components/common/SwipeableTabNavigator";
 import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
 import { useEmployeePermissionCheck } from "../hooks/useEmployeePermissionCheck";
 import { checkNavigationPermission } from "../utils/navigationGuard";
@@ -457,7 +458,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     }
   }, [onNavigationReady, handleNavigate]);
 
-  const handleGoBack = () => {
+  const handleGoBack = useCallback(() => {
     if (screenHistory.length > 1) {
       const newHistory = [...screenHistory];
       newHistory.pop(); // Remove current screen
@@ -485,7 +486,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       setCurrentScreen(homeScreen);
       setScreenHistory([{ name: homeScreen, params: {} }]);
     }
-  };
+  }, [screenHistory, user?.role]);
 
   // Handle tab press - role aware - memoized to prevent re-renders
   const handleTabPress = React.useCallback(
@@ -615,6 +616,78 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     ]
   );
 
+  // ========================================================================
+  // SWIPE NAVIGATION HOOKS - Must be before any conditional returns
+  // ========================================================================
+  
+  // Get current navigation tabs for the user's role
+  const currentTabs = useMemo(() => {
+    return getNavigationTabsForRole(
+      user?.role,
+      safeCheckPermission,
+      isOwner || false,
+      isAdmin || false,
+      hasOwnerLevelPermissions || false,
+      currentScreen
+    );
+  }, [user?.role, safeCheckPermission, isOwner, isAdmin, hasOwnerLevelPermissions, currentScreen]);
+
+  // Map tab IDs to screen names for rendering
+  const getScreenNameForTab = useCallback((tabId: string): string => {
+    const tab = currentTabs.find(t => t.id === tabId);
+    if (!tab) return "Home";
+    
+    // Map Screen enum to screen name
+    switch (tab.screen) {
+      case Screen.HOME: return "Home";
+      case Screen.BOOKINGS: return "Bookings";
+      case Screen.EXPLORE: return "Explore";
+      case Screen.NOTIFICATIONS: return "Notifications";
+      case Screen.PROFILE: return "Profile";
+      case Screen.STAFF_DASHBOARD: return "StaffDashboard";
+      case Screen.OWNER_DASHBOARD: return "OwnerDashboard";
+      case Screen.ADMIN_DASHBOARD: return "AdminDashboard";
+      case Screen.OPERATIONS: return "Operations";
+      case Screen.FINANCE: return "Finance";
+      case Screen.SALON_LIST: return "SalonList";
+      case Screen.MORE_MENU: return "MoreMenu";
+      case Screen.WORK_LOG: return "WorkLog";
+      case Screen.CHAT: return "ChatList";
+      default: 
+        // Handle string screen names
+        const screenValue = tab.screen as unknown;
+        if (typeof screenValue === "string") {
+          return screenValue;
+        }
+        return "Home";
+    }
+  }, [currentTabs]);
+
+  // Screen to show
+  const screenToShow = currentScreen || "Home";
+
+  // Check if current screen is a main tab (swipeable) or a detail screen
+  const isMainTabScreen = useMemo(() => {
+    return currentTabs.some(tab => {
+      const tabScreenName = getScreenNameForTab(tab.id);
+      return tabScreenName === screenToShow;
+    });
+  }, [currentTabs, screenToShow, getScreenNameForTab]);
+
+  // Render screen for a specific tab
+  const renderTabScreen = useCallback((tabId: string) => {
+    const screenName = getScreenNameForTab(tabId);
+    return renderScreen(screenName, handleNavigate, handleGoBack, {});
+  }, [getScreenNameForTab, handleNavigate, handleGoBack]);
+
+  // Handle swipe navigation - update both active tab and current screen
+  const handleSwipeChange = useCallback((tabId: string) => {
+    const screenName = getScreenNameForTab(tabId);
+    setActiveTab(tabId);
+    setCurrentScreen(screenName as any);
+    setScreenHistory([{ name: screenName as any, params: {} }]);
+  }, [getScreenNameForTab]);
+
   // Show loading state while checking authentication
   // Add timeout to prevent infinite loading
   const [loadingTimeout, setLoadingTimeout] = useState(false);
@@ -661,16 +734,27 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
 
   // After authentication, show main app screens using screen router
   if (isAuthenticated) {
-    const screenToShow = currentScreen || "Home";
-
     try {
       return (
         <View style={{ flex: 1 }}>
-          {renderScreen(
-            screenToShow,
-            handleNavigate,
-            handleGoBack,
-            screenParams
+          {/* Main Content Area */}
+          {isMainTabScreen ? (
+            // Swipeable tabs for main navigation screens
+            <SwipeableTabNavigator
+              tabs={currentTabs}
+              activeTabId={activeTab}
+              onTabChange={handleSwipeChange}
+              renderScreen={(tabId) => renderTabScreen(tabId)}
+              enabled={currentTabs.length > 1}
+            />
+          ) : (
+            // Detail screens render directly without swipe
+            renderScreen(
+              screenToShow,
+              handleNavigate,
+              handleGoBack,
+              screenParams
+            )
           )}
 
           {/* Bottom Navigation */}

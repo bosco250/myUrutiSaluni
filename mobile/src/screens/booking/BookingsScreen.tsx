@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { Loader } from "../../components/common";
@@ -643,71 +644,75 @@ export default function BookingsScreen({ navigation }: BookingsScreenProps) {
           </View>
 
           {filteredAppointments.length === 0 ? (
-            <View style={[styles.emptyCard, dynamicStyles.card]}>
-              <View style={[styles.appointmentIconContainer, { width: 64, height: 64, borderRadius: 32, marginBottom: theme.spacing.md }]}>
-                <MaterialIcons
-                  name={
-                    selectedDate !== null
-                      ? "event-busy"
-                      : selectedFilter === "completed"
-                        ? "check-circle-outline"
-                        : selectedFilter === "cancelled"
-                          ? "cancel"
-                          : "event-busy"
-                  }
-                  size={32}
-                  color={theme.colors.primary}
-                />
-              </View>
-              <Text style={[styles.emptyText, dynamicStyles.text]}>
-                {selectedDate !== null
-                  ? `No appointments on ${selectedDate.toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "short",
-                        day: "numeric",
-                      }
-                    )}`
-                  : selectedFilter === "completed"
-                    ? "No completed appointments yet"
-                    : selectedFilter === "cancelled"
-                      ? "No cancelled appointments"
-                      : selectedFilter === "upcoming"
-                        ? "No upcoming appointments"
-                        : selectedFilter === "confirmed"
-                          ? "No confirmed appointments"
-                          : "No appointments found"}
-              </Text>
-              <Text style={[styles.emptySubtext, dynamicStyles.textSecondary]}>
-                {selectedDate !== null
-                  ? "Try selecting a different date or create a new booking"
-                  : "Create a new booking to get started"}
-              </Text>
-              <TouchableOpacity
-                style={styles.exploreButton}
-                onPress={() => navigation?.navigate("Explore")}
-                activeOpacity={0.7}
+            <View style={styles.premiumEmptyState}>
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.primaryLight]}
+                style={styles.premiumEmptyGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <MaterialIcons
-                  name="add"
-                  size={16}
-                  color={theme.colors.white}
-                />
-                <Text style={styles.exploreButtonText}>New Booking</Text>
-              </TouchableOpacity>
-              {selectedDate !== null && (
-                <TouchableOpacity
-                  style={styles.clearDateButton}
-                  onPress={() => setSelectedDate(null)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[styles.clearDateButtonText, dynamicStyles.text]}
-                  >
-                    Clear Date Filter
+                {/* Decorative background elements */}
+                <View style={styles.decoCircle1} />
+                <View style={styles.decoCircle2} />
+                <View style={styles.decoStar1} />
+
+                <View style={styles.premiumEmptyContent}>
+                  <View style={styles.premiumIconContainer}>
+                    <MaterialIcons
+                      name={
+                        selectedDate !== null
+                          ? "event-busy"
+                          : selectedFilter === "completed"
+                            ? "check-circle-outline"
+                            : selectedFilter === "cancelled"
+                              ? "cancel"
+                              : "auto-awesome"
+                      }
+                      size={32}
+                      color="#FFF"
+                    />
+                  </View>
+                  
+                  <Text style={styles.premiumEmptyTitle}>
+                    {selectedDate !== null
+                      ? `No Plans for ${selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                      : selectedFilter === "completed"
+                        ? "No History Yet"
+                        : selectedFilter === "cancelled"
+                          ? "All Good!"
+                          : "Schedule Your Next Visit"}
                   </Text>
-                </TouchableOpacity>
-              )}
+                  
+                  <Text style={styles.premiumEmptySubtitle}>
+                    {selectedDate !== null
+                      ? "The day is clear! Perfect time for a spontaneous self-care session."
+                      : selectedFilter === "completed"
+                        ? "You haven't completed any appointments yet. Time to start your journey!"
+                        : selectedFilter === "cancelled"
+                          ? "You have no cancelled appointments."
+                          : "Explore our top-rated salons and treat yourself to a fresh new look."}
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.premiumBookButton}
+                    onPress={() => navigation?.navigate("Explore")}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.premiumBookButtonText}>Explore Services</Text>
+                    <MaterialIcons name="arrow-forward" size={18} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                  
+                  {selectedDate !== null && (
+                    <TouchableOpacity
+                      style={styles.premiumClearButton}
+                      onPress={() => setSelectedDate(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.premiumClearButtonText}>View All Dates</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </LinearGradient>
             </View>
           ) : (
             <View>
@@ -1278,5 +1283,121 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
+  },
+  // Premium Empty State Styles
+  premiumEmptyState: {
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+    marginHorizontal: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  premiumEmptyGradient: {
+    padding: theme.spacing.xl,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 300,
+  },
+  premiumEmptyContent: {
+    alignItems: "center",
+    zIndex: 2,
+    width: "100%",
+  },
+  premiumIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.4)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: theme.spacing.lg,
+  },
+  premiumEmptyTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: theme.colors.textInverse,
+    marginBottom: theme.spacing.sm,
+    fontFamily: theme.fonts.bold,
+    textAlign: "center",
+  },
+  premiumEmptySubtitle: {
+    fontSize: 15,
+    color: theme.colors.textInverse,
+    opacity: 0.95,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+  },
+  premiumBookButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: theme.spacing.md,
+  },
+  premiumBookButtonText: {
+    color: theme.colors.primary,
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+  },
+  premiumClearButton: {
+    paddingVertical: theme.spacing.sm,
+  },
+  premiumClearButtonText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+    textDecorationLine: "underline",
+    opacity: 0.9,
+  },
+  // Decorative elements
+  decoCircle1: {
+    position: "absolute",
+    top: -40,
+    right: -40,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  decoCircle2: {
+    position: "absolute",
+    bottom: -60,
+    left: -30,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  decoStar1: {
+    position: "absolute",
+    top: 60,
+    left: 40,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
 });
