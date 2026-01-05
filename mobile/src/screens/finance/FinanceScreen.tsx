@@ -17,6 +17,7 @@ import { api } from "../../services/api";
 import { salesService } from "../../services/sales";
 import { salonService } from "../../services/salon";
 import { Loader } from "../../components/common";
+import { SalonRequirementGuard } from '../../components/SalonRequirementGuard';
 
 interface FinanceScreenProps {
   navigation: {
@@ -908,6 +909,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   }
 
   return (
+    <SalonRequirementGuard navigation={navigation}>
     <SafeAreaView
       style={[styles.container, dynamicStyles.container]}
       edges={["top"]}
@@ -954,6 +956,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         <View key="bottom-spacing" style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
+    </SalonRequirementGuard>
   );
 }
 

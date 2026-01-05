@@ -10,7 +10,7 @@ export default ({ config }) => {
     slug: 'uruti-saluni',
     version: process.env.APP_VERSION || '1.0.0',
     orientation: 'portrait',
-    icon: './assets/Logo.png',
+    icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
@@ -20,31 +20,45 @@ export default ({ config }) => {
     },
     ios: {
       supportsTablet: true,
-      icon: './assets/Logo.png',
+      icon: './assets/icon.png',
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/Logo.png',
+        foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
       },
-      edgeToEdgeEnabled: true,
+      edgeToEdgeEnabled: false,
       predictiveBackGestureEnabled: false,
       package: 'com.douce11.urutisaluni',
       permissions: [
         'RECEIVE_BOOT_COMPLETED',
         'VIBRATE',
         'com.android.alarm.permission.SET_ALARM',
+        'INTERNET',
+        'ACCESS_NETWORK_STATE',
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'READ_MEDIA_IMAGES',
       ],
     },
     web: {
-      favicon: './assets/Logo.png',
+      favicon: './assets/favicon.png',
     },
     plugins: [
       'expo-font',
       [
+        'expo-build-properties',
+        {
+          android: {
+            usesCleartextTraffic: true,
+          },
+        },
+      ],
+      [
         'expo-notifications',
         {
-          icon: './assets/Logo.png',
+          icon: './assets/icon.png',
           color: '#C89B68',
         },
       ],

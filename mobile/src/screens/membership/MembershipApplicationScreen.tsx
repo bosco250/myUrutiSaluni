@@ -14,12 +14,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
-import {api} from "../../services/api";
+import { api } from "../../services/api";
 
 interface MembershipApplicationScreenProps {
   navigation: {
@@ -77,9 +76,7 @@ export default function MembershipApplicationScreen({
   const checkExistingApplication = useCallback(async () => {
     try {
       const response = await api.get("/memberships/applications/my");
-      // Response IS the data directly, not response.data
       if (response && (response as any).id) {
-        // User already has an application, redirect to status screen
         Alert.alert(
           "Application Exists",
           "You already have a submitted application. Redirecting to status...",
@@ -104,35 +101,22 @@ export default function MembershipApplicationScreen({
     }
   }, [navigation]);
 
-  // Check if user already has an application on mount
   useEffect(() => {
     checkExistingApplication();
   }, [checkExistingApplication]);
 
-  const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? "#1C1C1E" : theme.colors.background,
-    },
-    text: {
-      color: isDark ? "#FFFFFF" : theme.colors.text,
-    },
-    textSecondary: {
-      color: isDark ? "#8E8E93" : theme.colors.textSecondary,
-    },
-    card: {
-      backgroundColor: isDark ? "#2C2C2E" : "#FFFFFF",
-      borderColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-    },
-    input: {
-      backgroundColor: isDark ? "#2C2C2E" : "#F5F5F5",
-      color: isDark ? "#FFFFFF" : theme.colors.text,
-      borderColor: isDark ? "#3A3A3C" : "#E0E0E0",
-    },
+  const dynamic = {
+    bg: isDark ? theme.colors.gray900 : theme.colors.background,
+    text: isDark ? "#FFFFFF" : theme.colors.text,
+    subtext: isDark ? "#8E8E93" : theme.colors.textSecondary,
+    cardBg: isDark ? theme.colors.gray800 : "#FFFFFF",
+    border: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    inputBg: isDark ? theme.colors.gray800 : "#FAFAFA",
+    primaryLight: isDark ? 'rgba(255,255,255,0.1)' : theme.colors.primary + '10',
   };
 
   const updateFormData = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
@@ -147,7 +131,6 @@ export default function MembershipApplicationScreen({
       } else if (formData.businessName.length < 3) {
         newErrors.businessName = "Business name must be at least 3 characters";
       }
-
       if (!formData.businessDescription.trim()) {
         newErrors.businessDescription = "Business description is required";
       } else if (formData.businessDescription.length < 20) {
@@ -157,11 +140,9 @@ export default function MembershipApplicationScreen({
       if (!formData.businessAddress.trim()) {
         newErrors.businessAddress = "Business address is required";
       }
-
       if (!formData.city.trim()) {
         newErrors.city = "City is required";
       }
-
       if (!formData.district.trim()) {
         newErrors.district = "District is required";
       }
@@ -169,14 +150,12 @@ export default function MembershipApplicationScreen({
       if (!formData.phone.trim()) {
         newErrors.phone = "Phone number is required";
       } else {
-        // More flexible phone validation for Rwanda
         const phoneClean = formData.phone.replace(/[\s-]/g, "");
         const isValid = /^(\+?250|0)?7[0-9]{8}$/.test(phoneClean);
         if (!isValid) {
           newErrors.phone = "Format: 0782345678 or +250782345678";
         }
       }
-
       if (!formData.email.trim()) {
         newErrors.email = "Email is required";
       } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -189,10 +168,7 @@ export default function MembershipApplicationScreen({
   };
 
   const handleNext = () => {
-    if (!validateStep()) {
-      return;
-    }
-
+    if (!validateStep()) return;
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -209,13 +185,9 @@ export default function MembershipApplicationScreen({
   };
 
   const handleSubmit = async () => {
-    if (!validateStep()) {
-      return;
-    }
-
+    if (!validateStep()) return;
     setLoading(true);
     try {
-      // Submit data matching backend DTO fields exactly
       const applicationData: any = {
         businessName: formData.businessName.trim(),
         businessAddress: formData.businessAddress.trim(),
@@ -226,31 +198,23 @@ export default function MembershipApplicationScreen({
         businessDescription: formData.businessDescription.trim(),
       };
 
-      // Add optional fields only if they have values
       if (formData.registrationNumber?.trim()) {
         applicationData.registrationNumber = formData.registrationNumber.trim();
       }
       if (formData.taxId?.trim()) {
         applicationData.taxId = formData.taxId.trim();
       }
-      // Include coordinates even if they're 0 (valid coordinates)
       if (formData.latitude !== undefined && formData.latitude !== null) {
         applicationData.latitude = formData.latitude;
       }
       if (formData.longitude !== undefined && formData.longitude !== null) {
         applicationData.longitude = formData.longitude;
       }
-
-      console.log("Submitting application...", applicationData);
       
       const response = await api.post("/memberships/apply", applicationData);
-      console.log("Application submitted successfully:", response);
-      
+      console.log(response);  
       navigation.navigate("ApplicationSuccess", { status: "pending" });
     } catch (error: any) {
-      console.error("Submission error:", error);
-      console.error("Error response:", error.response?.data);
-      
       Alert.alert(
         "Submission Failed",
         error.response?.data?.message || error.message || "Failed to submit application. Please try again."
@@ -265,27 +229,17 @@ export default function MembershipApplicationScreen({
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "We need location permission to get your current position."
-        );
+        Alert.alert("Permission Denied", "We need location permission to get your current position.");
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
 
-      // Reverse geocode to get address
       try {
-        const addresses = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-
+        const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
         if (addresses && addresses.length > 0) {
           const address = addresses[0];
-          
-          // Auto-fill form fields with geocoded data
           setFormData(prev => ({
             ...prev,
             latitude,
@@ -294,34 +248,14 @@ export default function MembershipApplicationScreen({
             city: address.city || prev.city,
             district: address.subregion || address.district || prev.district,
           }));
-
-          Alert.alert(
-            "Location Set",
-            "Address fields have been auto-filled. Please verify and update if needed."
-          );
+          Alert.alert("Location Set", "Address fields have been auto-filled. Please verify and update if needed.");
         } else {
-          // No address found, just set coordinates
-          setFormData(prev => ({
-            ...prev,
-            latitude,
-            longitude,
-          }));
-          Alert.alert(
-            "Location Set",
-            "Location captured but address not found. Please fill in manually."
-          );
+          setFormData(prev => ({ ...prev, latitude, longitude }));
+          Alert.alert("Location Set", "Location captured but address not found. Please fill in manually.");
         }
       } catch {
-        // Geocoding failed, just set coordinates
-        setFormData(prev => ({
-          ...prev,
-          latitude,
-          longitude,
-        }));
-        Alert.alert(
-          "Location Set",
-          "Location captured. Please fill in address details manually."
-        );
+        setFormData(prev => ({ ...prev, latitude, longitude }));
+        Alert.alert("Location Set", "Location captured. Please fill in address details manually.");
       }
     } catch {
       Alert.alert("Error", "Failed to get current location. Please try again.");
@@ -333,16 +267,9 @@ export default function MembershipApplicationScreen({
   const handleMapSelect = async (latitude: number, longitude: number) => {
     setLoadingLocation(true);
     try {
-      // Reverse geocode to get address
-      const addresses = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
+      const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
       if (addresses && addresses.length > 0) {
         const address = addresses[0];
-        
-        // Auto-fill form fields with geocoded data
         setFormData(prev => ({
           ...prev,
           latitude,
@@ -351,141 +278,70 @@ export default function MembershipApplicationScreen({
           city: address.city || prev.city,
           district: address.subregion || address.district || prev.district,
         }));
-
         setShowMap(false);
-        Alert.alert(
-          "Location Selected",
-          "Address fields have been auto-filled. Please verify and update if needed."
-        );
+        Alert.alert("Location Selected", "Address fields have been auto-filled. Please verify and update if needed.");
       } else {
-        // No address found, just set coordinates
-        setFormData(prev => ({
-          ...prev,
-          latitude,
-          longitude,
-        }));
+        setFormData(prev => ({ ...prev, latitude, longitude }));
         setShowMap(false);
-        Alert.alert(
-          "Location Selected",
-          "Please fill in address details manually."
-        );
+        Alert.alert("Location Selected", "Please fill in address details manually.");
       }
     } catch {
-      // Geocoding failed, just set coordinates
-      setFormData(prev => ({
-        ...prev,
-        latitude,
-        longitude,
-      }));
+      setFormData(prev => ({ ...prev, latitude, longitude }));
       setShowMap(false);
-      Alert.alert(
-        "Location Selected",
-        "Please fill in address details manually."
-      );
+      Alert.alert("Location Selected", "Please fill in address details manually.");
     } finally {
       setLoadingLocation(false);
     }
   };
 
-
-
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
-      {Array.from({ length: totalSteps }).map((_, index) => {
-        const stepNumber = index + 1;
-        const isCompleted = stepNumber < currentStep;
-        const isActive = stepNumber === currentStep;
-
-        return (
-          <View key={stepNumber} style={styles.progressStepWrapper}>
-            {index > 0 && (
-              <View
-                style={[
-                  styles.progressLine,
-                  isCompleted && styles.progressLineCompleted,
-                ]}
-              />
-            )}
-            <View
-              style={[
-                styles.progressDot,
-                isActive && styles.progressDotActive,
-                isCompleted && styles.progressDotCompleted,
-              ]}
-            >
-              {isCompleted ? (
-                <MaterialIcons name="check" size={16} color="#FFFFFF" />
-              ) : (
-                <Text
-                  style={[
-                    styles.progressDotText,
-                    isActive && styles.progressDotTextActive,
-                  ]}
-                >
-                  {stepNumber}
-                </Text>
-              )}
-            </View>
-          </View>
-        );
-      })}
+       <View style={[styles.progressBar, { backgroundColor: dynamic.border }]}>
+          <View style={[styles.progressFill, { width: `${(currentStep / totalSteps) * 100}%`, backgroundColor: theme.colors.primary }]} />
+       </View>
+       <Text style={[styles.progressText, { color: dynamic.subtext }]}>Step {currentStep} of {totalSteps}</Text>
     </View>
   );
 
-  const renderInputField = (
-    label: string,
-    field: keyof FormData,
-    options: {
-      placeholder?: string;
-      keyboardType?: "default" | "email-address" | "phone-pad";
-      multiline?: boolean;
-      icon?: string;
-      required?: boolean;
-      helperText?: string;
-    } = {}
-  ) => {
+  const renderInputField = (label: string, field: keyof FormData, options: any = {}) => {
     const hasError = !!errors[field];
-    
     return (
       <View style={styles.inputGroup}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>
+        <Text style={[styles.inputLabel, { color: dynamic.text }]}>
           {label} {options.required && <Text style={{ color: theme.colors.error }}>*</Text>}
         </Text>
-        {options.helperText && !hasError && (
-          <Text style={[styles.helperText, dynamicStyles.textSecondary]}>
-            {options.helperText}
-          </Text>
-        )}
         <View style={[
           styles.inputContainer,
-          dynamicStyles.input,
+          options.multiline && styles.multilineContainer,
+          { backgroundColor: dynamic.inputBg, borderColor: dynamic.border },
           hasError && styles.inputError,
         ]}>
           {options.icon && (
-            <MaterialIcons
-              name={options.icon as any}
-              size={20}
-              color={hasError ? theme.colors.error : dynamicStyles.textSecondary.color}
-              style={styles.inputIcon}
+            <MaterialIcons 
+                name={options.icon as any} 
+                size={20} 
+                color={hasError ? theme.colors.error : dynamic.subtext} 
+                style={[styles.inputIcon, options.multiline && { marginTop: 12 }]} 
             />
           )}
           <TextInput
             style={[
-              styles.input,
-              options.icon && styles.inputWithIcon,
-              options.multiline && styles.multilineInput,
-              { color: dynamicStyles.text.color },
+                styles.input, 
+                options.icon && styles.inputWithIcon, 
+                options.multiline && styles.multilineInput, 
+                { color: dynamic.text }
             ]}
             value={String(formData[field] || "")}
             onChangeText={(text) => updateFormData(field, text)}
             placeholder={options.placeholder || `Enter ${label.toLowerCase()}`}
-            placeholderTextColor={dynamicStyles.textSecondary.color}
+            placeholderTextColor={dynamic.subtext}
             keyboardType={options.keyboardType || "default"}
             multiline={options.multiline}
             numberOfLines={options.multiline ? 4 : 1}
             editable={!loading}
           />
         </View>
+        {options.helperText && !hasError && <Text style={[styles.helperText, { color: dynamic.subtext }]}>{options.helperText}</Text>}
         {hasError && (
           <View style={styles.errorContainer}>
             <MaterialIcons name="error-outline" size={16} color={theme.colors.error} />
@@ -496,170 +352,73 @@ export default function MembershipApplicationScreen({
     );
   };
 
+  const renderStepHeader = (icon: string, title: string, subtitle: string, color: string) => (
+    <View style={styles.stepHeader}>
+      <View style={[styles.stepIconBg, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon as any} size={32} color={color} />
+      </View>
+      <Text style={[styles.stepTitle, { color: dynamic.text }]}>{title}</Text>
+      <Text style={[styles.stepSubtitle, { color: dynamic.subtext }]}>{subtitle}</Text>
+    </View>
+  );
+
   const renderStep1 = () => (
     <View style={styles.stepContent}>
-      <View style={styles.stepHeader}>
-        <LinearGradient
-          colors={[theme.colors.primary + "20", theme.colors.primary + "10"]}
-          style={styles.stepIconBg}
-        >
-          <MaterialIcons name="business" size={32} color={theme.colors.primary} />
-        </LinearGradient>
-        <Text style={[styles.stepTitle, dynamicStyles.text]}>
-          Business Information
-        </Text>
-        <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-          Tell us about your salon business
-        </Text>
-      </View>
-
-      {renderInputField("Business Name", "businessName", {
-        placeholder: "e.g., Beauty Palace Salon",
-        icon: "storefront",
-        required: true,
-        helperText: "The official name of your salon",
-      })}
-      {renderInputField("Business Description", "businessDescription", {
-        placeholder: "Describe your salon services, specialties, and what makes you unique",
-        multiline: true,
-        icon: "description",
-        required: true,
-        helperText: "Provide a detailed description (minimum 20 characters)",
-      })}
-      {renderInputField("Registration Number", "registrationNumber", {
-        placeholder: "Business registration number",
-        icon: "badge",
-        helperText: "Optional - if your business is registered",
-      })}
-      {renderInputField("Tax ID", "taxId", {
-        placeholder: "Tax identification number",
-        icon: "receipt",
-        helperText: "Optional - if you have a tax ID",
-      })}
+      {renderStepHeader("business", "Business Information", "Tell us about your salon business", theme.colors.primary)}
+      {renderInputField("Business Name", "businessName", { placeholder: "e.g., Beauty Palace Salon", icon: "storefront", required: true })}
+      {renderInputField("Business Description", "businessDescription", { placeholder: "Describe your salon services...", multiline: true, icon: "description", required: true, helperText: "Min 20 characters" })}
+      {renderInputField("Registration Number", "registrationNumber", { placeholder: "Registered Business Number (RDB)", icon: "badge", helperText: "Optional" })}
+      {renderInputField("Tax ID / TIN", "taxId", { placeholder: "Tax Identification Number", icon: "receipt", helperText: "Optional" })}
     </View>
   );
 
   const renderStep2 = () => (
     <View style={styles.stepContent}>
-      <View style={styles.stepHeader}>
-        <LinearGradient
-          colors={[theme.colors.primary + "20", theme.colors.primary + "10"]}
-          style={styles.stepIconBg}
-        >
-          <MaterialIcons name="location-on" size={32} color={theme.colors.primary} />
-        </LinearGradient>
-        <Text style={[styles.stepTitle, dynamicStyles.text]}>
-          Location Details
-        </Text>
-        <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-          Where is your salon located?
-        </Text>
-      </View>
-
-      {/* Location Buttons */}
+      {renderStepHeader("location-on", "Location Details", "Where is your salon located?", theme.colors.primary)}
       <View style={styles.locationButtonsContainer}>
-        <TouchableOpacity
-          style={[styles.locationButton, dynamicStyles.card]}
-          onPress={getCurrentLocation}
-          disabled={loadingLocation}
-          activeOpacity={0.7}
-        >
-          {loadingLocation ? (
-            <ActivityIndicator size="small" color={theme.colors.primary} />
-          ) : (
-            <MaterialIcons name="my-location" size={24} color={theme.colors.primary} />
-          )}
-          <Text style={[styles.locationButtonText, dynamicStyles.text]}>
-            Use Current Location
-          </Text>
+        <TouchableOpacity style={[styles.locationButton, { backgroundColor: dynamic.cardBg, borderColor: theme.colors.primary }]} onPress={getCurrentLocation} disabled={loadingLocation} activeOpacity={0.7}>
+          {loadingLocation ? <ActivityIndicator size="small" color={theme.colors.primary} /> : <MaterialIcons name="my-location" size={24} color={theme.colors.primary} />}
+          <Text style={[styles.locationButtonText, { color: theme.colors.primary }]}>Current Location</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.locationButton, dynamicStyles.card]}
-          onPress={() => setShowMap(true)}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={[styles.locationButton, { backgroundColor: dynamic.cardBg, borderColor: dynamic.border }]} onPress={() => setShowMap(true)} activeOpacity={0.7}>
           <MaterialIcons name="map" size={24} color={theme.colors.secondary} />
-          <Text style={[styles.locationButtonText, dynamicStyles.text]}>
-            Select on Map
-          </Text>
+          <Text style={[styles.locationButtonText, { color: dynamic.text }]}>Select on Map</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Show coordinates if set */}
       {formData.latitude && formData.longitude && (
         <View style={[styles.coordinatesCard, { backgroundColor: theme.colors.success + "10", borderColor: theme.colors.success + "30" }]}>
           <MaterialIcons name="check-circle" size={20} color={theme.colors.success} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.coordinatesLabel, { color: theme.colors.success }]}>
-              Location Set
-            </Text>
-            <Text style={[styles.coordinatesText, dynamicStyles.textSecondary]}>
-              {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-            </Text>
+            <Text style={[styles.coordinatesLabel, { color: theme.colors.success }]}>Location Captured</Text>
+            <Text style={[styles.coordinatesText, { color: dynamic.subtext }]}>{formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}</Text>
           </View>
         </View>
       )}
-
-      {renderInputField("Business Address", "businessAddress", {
-        placeholder: "Street address, building name, etc.",
-        multiline: true,
-        icon: "place",
-        required: true,
-        helperText: "Full physical address of your salon",
-      })}
-      {renderInputField("City", "city", {
-        placeholder: "e.g., Kigali",
-        icon: "location-city",
-        required: true,
-      })}
-      {renderInputField("District", "district", {
-        placeholder: "e.g., Gasabo, Kicukiro, Nyarugenge",
-        icon: "map",
-        required: true,
-      })}
-
-      {/* Map Modal */}
+      {renderInputField("Business Address", "businessAddress", { placeholder: "Street address, building name", multiline: true, icon: "place", required: true })}
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+         <View style={{ flex: 1 }}>{renderInputField("City", "city", { placeholder: "Kigali", required: true })}</View>
+         <View style={{ flex: 1 }}>{renderInputField("District", "district", { placeholder: "Gasabo", required: true })}</View>
+      </View>
       {showMap && (
         <View style={styles.mapModal}>
-          <View style={[styles.mapModalContent, dynamicStyles.card]}>
-            <View style={styles.mapModalHeader}>
-              <Text style={[styles.mapModalTitle, dynamicStyles.text]}>
-                Select Salon Location
-              </Text>
+          <View style={[styles.mapModalContent, { backgroundColor: dynamic.cardBg }]}>
+            <View style={[styles.mapModalHeader, { borderBottomColor: dynamic.border }]}>
+              <Text style={[styles.mapModalTitle, { color: dynamic.text }]}>Select Salon Location</Text>
               <TouchableOpacity onPress={() => setShowMap(false)} activeOpacity={0.7}>
-                <MaterialIcons name="close" size={24} color={dynamicStyles.text.color} />
+                <MaterialIcons name="close" size={24} color={dynamic.text} />
               </TouchableOpacity>
             </View>
             <MapView
               style={styles.map}
               provider={PROVIDER_DEFAULT}
-              initialRegion={{
-                latitude: formData.latitude || -1.9441,
-                longitude: formData.longitude || 30.0619,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              }}
-              onPress={(e) => handleMapSelect(
-                e.nativeEvent.coordinate.latitude,
-                e.nativeEvent.coordinate.longitude
-              )}
+              initialRegion={{ latitude: formData.latitude || -1.9441, longitude: formData.longitude || 30.0619, latitudeDelta: 0.0922, longitudeDelta: 0.0421 }}
+              onPress={(e) => handleMapSelect(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)}
             >
-              {formData.latitude && formData.longitude && (
-                <Marker
-                  coordinate={{
-                    latitude: formData.latitude,
-                    longitude: formData.longitude,
-                  }}
-                  title="Salon Location"
-                />
-              )}
+              {formData.latitude && formData.longitude && <Marker coordinate={{ latitude: formData.latitude, longitude: formData.longitude }} title="Salon Location" />}
             </MapView>
-            <View style={styles.mapInstructions}>
+            <View style={[styles.mapInstructions, { borderTopColor: dynamic.border }]}>
               <MaterialIcons name="info" size={16} color={theme.colors.primary} />
-              <Text style={[styles.mapInstructionsText, dynamicStyles.textSecondary]}>
-                Tap on the map to set your salon's location
-              </Text>
+              <Text style={[styles.mapInstructionsText, { color: dynamic.subtext }]}>Tap to set location</Text>
             </View>
           </View>
         </View>
@@ -669,457 +428,110 @@ export default function MembershipApplicationScreen({
 
   const renderStep3 = () => (
     <View style={styles.stepContent}>
-      <View style={styles.stepHeader}>
-        <LinearGradient
-          colors={[theme.colors.success + "20", theme.colors.success + "10"]}
-          style={styles.stepIconBg}
-        >
-          <MaterialIcons name="contacts" size={32} color={theme.colors.success} />
-        </LinearGradient>
-        <Text style={[styles.stepTitle, dynamicStyles.text]}>
-          Contact Information
-        </Text>
-        <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-          How can customers reach you?
-        </Text>
-      </View>
-
-      {renderInputField("Phone Number", "phone", {
-        placeholder: "+250 7XX XXX XXX",
-        keyboardType: "phone-pad",
-        icon: "phone",
-        required: true,
-        helperText: "Format: +250 7XX XXX XXX or 07XX XXX XXX",
-      })}
-      {renderInputField("Email Address", "email", {
-        placeholder: "business@example.com",
-        keyboardType: "email-address",
-        icon: "email",
-        required: true,
-        helperText: "We'll send application updates to this email",
-      })}
-
+      {renderStepHeader("contacts", "Contact Information", "How can customers reach you?", theme.colors.success)}
+      {renderInputField("Phone Number", "phone", { placeholder: "+250 7XX XXX XXX", keyboardType: "phone-pad", icon: "phone", required: true, helperText: "Format: 07XX XXX XXX" })}
+      {renderInputField("Email Address", "email", { placeholder: "business@example.com", keyboardType: "email-address", icon: "email", required: true })}
       <View style={[styles.infoCard, { backgroundColor: theme.colors.primary + "10", borderColor: theme.colors.primary + "30" }]}>
         <MaterialIcons name="info" size={20} color={theme.colors.primary} />
-        <Text style={[styles.infoText, dynamicStyles.text]}>
-          By submitting, you agree to our terms. Your application will be reviewed within 2-3 business days.
-        </Text>
+        <Text style={[styles.infoText, { color: dynamic.text }]}>By submitting, you agree to our terms. Your application will be reviewed within 2-3 business days.</Text>
       </View>
     </View>
   );
 
-  const renderCurrentStep = () => {
-    if (currentStep === 1) return renderStep1();
-    if (currentStep === 2) return renderStep2();
-    if (currentStep === 3) return renderStep3();
-    return null;
-  };
-
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: dynamic.bg }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-
       {checkingExisting ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, dynamicStyles.text]}>
-            Checking application status...
-          </Text>
+          <Text style={[styles.loadingText, { color: dynamic.text }]}>Checking application status...</Text>
         </View>
       ) : (
         <>
-          {/* Header */}
-          <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBack}
-          activeOpacity={0.7}
-          disabled={loading}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
-          />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          Membership Application
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      {/* Progress Bar */}
-      {renderProgressBar()}
-
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {renderCurrentStep()}
-
-          {/* Bottom Buttons - Inside ScrollView */}
-          <View style={[styles.bottomBar, dynamicStyles.card]}>
-            <Text style={[styles.stepIndicator, dynamicStyles.textSecondary]}>
-              Step {currentStep} of {totalSteps}
-            </Text>
-            <TouchableOpacity
-              style={[styles.nextButton, loading && styles.nextButtonDisabled]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-              disabled={loading}
-            >
-              <LinearGradient
-                colors={loading 
-                  ? [theme.colors.border, theme.colors.borderLight] 
-                  : [theme.colors.primary, theme.colors.primaryLight]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.nextButtonGradient}
-              >
-                {loading ? (
-                  <Text style={styles.nextButtonText}>Submitting...</Text>
-                ) : (
-                  <>
-                    <Text style={styles.nextButtonText}>
-                      {currentStep === totalSteps ? "Submit Application" : "Continue"}
-                    </Text>
-                    <MaterialIcons
-                      name={currentStep === totalSteps ? "check" : "arrow-forward"}
-                      size={20}
-                      color="#FFFFFF"
-                    />
-                  </>
-                )}
-              </LinearGradient>
+          <View style={[styles.header, { borderBottomColor: dynamic.border }]}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7} disabled={loading}>
+              <MaterialIcons name="arrow-back" size={24} color={dynamic.text} />
             </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: dynamic.text }]}>Membership Application</Text>
+            <View style={styles.placeholder} />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {renderProgressBar()}
+          <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {currentStep === 1 ? renderStep1() : currentStep === 2 ? renderStep2() : renderStep3()}
+              <View style={[styles.bottomBar, { borderTopColor: dynamic.border }]}>
+                <TouchableOpacity
+                  style={[styles.nextButton, { backgroundColor: loading ? theme.colors.border : theme.colors.primary }, loading && styles.nextButtonDisabled]}
+                  onPress={handleNext}
+                  activeOpacity={0.8}
+                  disabled={loading}
+                >
+                    {loading ? <Text style={styles.nextButtonText}>Processing...</Text> : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                         <Text style={styles.nextButtonText}>{currentStep === totalSteps ? "Submit Application" : "Continue"}</Text>
+                        <MaterialIcons name={currentStep === totalSteps ? "check" : "arrow-forward"} size={20} color="#FFFFFF" />
+                      </View>
+                    )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </>
       )}
     </SafeAreaView>
   );
 }
 
+// Compacted Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    textAlign: "center",
-  },
-  placeholder: {
-    width: 40,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
-  },
-  progressStepWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  progressLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: theme.colors.borderLight,
-    marginHorizontal: -4,
-  },
-  progressLineCompleted: {
-    backgroundColor: theme.colors.primary,
-  },
-  progressDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  progressDotActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  progressDotCompleted: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  progressDotText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.medium,
-  },
-  progressDotTextActive: {
-    color: "#FFFFFF",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-  },
-  stepContent: {
-    gap: theme.spacing.md,
-  },
-  stepHeader: {
-    alignItems: "center",
-    marginBottom: theme.spacing.lg,
-  },
-  stepIconBg: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.md,
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
-    textAlign: "center",
-  },
-  stepSubtitle: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  inputGroup: {
-    gap: theme.spacing.xs,
-  },
-  inputLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    marginBottom: 4,
-  },
-  helperText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginBottom: 4,
-    lineHeight: 18,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    overflow: "hidden",
-  },
-  inputError: {
-    borderColor: theme.colors.error,
-    borderWidth: 2,
-  },
-  inputIcon: {
-    marginLeft: theme.spacing.md,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
-  },
-  inputWithIcon: {
-    paddingLeft: theme.spacing.xs,
-  },
-  multilineInput: {
-    minHeight: 100,
-    textAlignVertical: "top",
-    paddingTop: theme.spacing.md,
-  },
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    marginTop: 4,
-  },
-  errorText: {
-    fontSize: 13,
-    color: theme.colors.error,
-    fontFamily: theme.fonts.regular,
-    flex: 1,
-  },
-  infoCard: {
-    flexDirection: "row",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    borderWidth: 1,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    lineHeight: 18,
-  },
-  bottomBar: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.xl,
-  },
-  stepIndicator: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
-    textAlign: "center",
-  },
-  nextButton: {
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  nextButtonDisabled: {
-    opacity: 0.6,
-  },
-  nextButtonGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md + 2,
-    gap: theme.spacing.xs,
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    fontFamily: theme.fonts.medium,
-  },
-  locationButtonsContainer: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  locationButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: theme.spacing.xs,
-  },
-  locationButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    fontFamily: theme.fonts.medium,
-  },
-  coordinatesCard: {
-    flexDirection: "row",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  coordinatesLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  coordinatesText: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
-  },
-  mapModal: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.lg,
-  },
-  mapModalContent: {
-    width: "100%",
-    maxHeight: 500,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  mapModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
-  },
-  mapModalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  map: {
-    width: "100%",
-    height: 350,
-  },
-  mapInstructions: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.md,
-    gap: theme.spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
-  },
-  mapInstructionsText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.xl,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.md,
-  },
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1 },
+  backButton: { padding: 8, marginRight: 8 },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: "600", textAlign: "center" },
+  placeholder: { width: 40 },
+  progressContainer: { flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 20, gap: 12 },
+  progressBar: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#E0E0E0', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
+  progressText: { fontSize: 13, fontWeight: '600' },
+  keyboardView: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 24, paddingBottom: 40 },
+  stepContent: { gap: 24 },
+  stepHeader: { alignItems: "center", marginBottom: 8 },
+  stepIconBg: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginBottom: 16 },
+  stepTitle: { fontSize: 24, fontWeight: "800", textAlign: "center", marginBottom: 8, letterSpacing: -0.5 },
+  stepSubtitle: { fontSize: 15, textAlign: "center", maxWidth: '80%', lineHeight: 20 },
+  inputGroup: { gap: 8, marginBottom: 4 },
+  inputLabel: { fontSize: 14, fontWeight: "700", marginBottom: 4 },
+  helperText: { fontSize: 12, marginTop: 4 },
+  inputContainer: { flexDirection: "row", alignItems: "center", borderRadius: 12, borderWidth: 1, minHeight: 54, backgroundColor: '#FAFAFA' },
+  multilineContainer: { alignItems: "flex-start" },
+  inputError: { borderColor: theme.colors.error },
+  inputIcon: { marginLeft: 16, marginRight: 12 },
+  input: { flex: 1, height: '100%', fontSize: 16, paddingRight: 16, minHeight: 54 },
+  inputWithIcon: { paddingLeft: 0 },
+  multilineInput: { height: 120, textAlignVertical: "top", paddingTop: 16, paddingBottom: 16 },
+  errorContainer: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  errorText: { fontSize: 12, color: theme.colors.error, fontWeight: '500' },
+  infoCard: { flexDirection: "row", padding: 16, borderRadius: 12, gap: 12, marginTop: 8, borderWidth: 1 },
+  infoText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  bottomBar: { marginTop: 32, paddingTop: 24, borderTopWidth: 1 },
+  nextButton: { borderRadius: 50, height: 56, alignItems: 'center', justifyContent: 'center', width: '100%', elevation: 4, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+  nextButtonDisabled: { opacity: 0.7 },
+  nextButtonText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
+  locationButtonsContainer: { flexDirection: "row", gap: 12 },
+  locationButton: { flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, borderRadius: 16, borderWidth: 1.5, gap: 8, height: 100 },
+  locationButtonText: { fontSize: 13, fontWeight: "600", textAlign: "center" },
+  coordinatesCard: { flexDirection: "row", padding: 16, borderRadius: 12, gap: 12, borderWidth: 1, alignItems: "center" },
+  coordinatesLabel: { fontSize: 14, fontWeight: "700" },
+  coordinatesText: { fontSize: 13, marginTop: 2 },
+  mapModal: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.6)", justifyContent: "center", alignItems: "center", padding: 24 },
+  mapModalContent: { width: "100%", maxHeight: 500, borderRadius: 24, overflow: "hidden", elevation: 10 },
+  mapModalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1 },
+  mapModalTitle: { fontSize: 18, fontWeight: "700" },
+  map: { width: "100%", height: 350 },
+  mapInstructions: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12, borderTopWidth: 1 },
+  mapInstructionsText: { fontSize: 13, flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
+  loadingText: { fontSize: 16, marginTop: 16 },
 });

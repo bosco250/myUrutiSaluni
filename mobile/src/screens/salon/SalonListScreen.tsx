@@ -12,8 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
+import { Alert } from "react-native";
 import { useTheme, useAuth } from "../../context";
 import { salonService, SalonDetails } from "../../services/salon";
+import { api } from "../../services/api";
 import { Loader } from "../../components/common";
 
 interface SalonListScreenProps {
@@ -99,6 +101,71 @@ const SalonListScreen = React.memo(function SalonListScreen({
     }
   };
 
+  const handleCreateSalon = async () => {
+    // 1. Check if user already has a membership number in their profile
+    // This is the fastest check
+    if (user?.membershipNumber) {
+      navigation.navigate("CreateSalon");
+      return;
+    }
+  
+    // 2. If no membership number, check for existing applications via API
+    try {
+      setLoading(true);
+      // We expect the backend to return the user's application if it exists
+      const response = await api.get("/memberships/applications/my");
+      
+      const application = response as any;
+      
+      if (application && application.status) {
+        if (application.status === 'approved') {
+           // If approved but profile not updated yet, we can technically allow (or ask to refresh)
+           // Ideally, we should sync profile here or just let them proceed
+           navigation.navigate("CreateSalon");
+        } else if (application.status === 'pending') {
+          Alert.alert(
+            "Verification in Progress",
+            "Your membership application is currently under review. You will be notified once it is approved.",
+            [{ text: "OK" }]
+          );
+        } else if (application.status === 'rejected') {
+          Alert.alert(
+            "Application Rejected",
+            `Your membership application was rejected. Reason: ${application.rejectionReason || "Not specified"}. Please contact support or re-apply.`,
+            [{ text: "OK" }]
+          );
+        }
+      } else {
+         // No application found or empty response
+         promptForMembership();
+      }
+    } catch (error: any) {
+      // 404 means no application found
+      if (error?.status === 404 || error?.message?.includes('404')) {
+        promptForMembership();
+      } else {
+        console.error("Error checking membership:", error);
+        Alert.alert("Error", "Failed to verify membership status. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const promptForMembership = () => {
+    Alert.alert(
+      "Membership Required",
+      "You need an active membership to register a salon. Would you like to apply now?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Apply Now", 
+          onPress: () => navigation.navigate("MembershipInfo") 
+        }
+      ]
+    );
+  };
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "active": return "Active";
@@ -173,7 +240,7 @@ const SalonListScreen = React.memo(function SalonListScreen({
       </Text>
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => navigation.navigate("CreateSalon")}
+        onPress={handleCreateSalon}
         activeOpacity={0.9}
       >
         <Text style={styles.primaryButtonText}>Register Salon</Text>
@@ -202,7 +269,7 @@ const SalonListScreen = React.memo(function SalonListScreen({
         </View>
         <TouchableOpacity 
             style={styles.addButton}
-            onPress={() => navigation.navigate("CreateSalon")}
+            onPress={handleCreateSalon}
         >
             <MaterialIcons name="add" size={24} color={theme.colors.primary} />
         </TouchableOpacity>

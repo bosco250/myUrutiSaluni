@@ -14,6 +14,7 @@ import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
 import { salonService, SalonProduct } from '../../services/salon';
 import { Loader } from '../../components/common';
+import { SalonRequirementGuard } from '../../components/SalonRequirementGuard';
 
 interface OperationsScreenProps {
   navigation: {
@@ -202,7 +203,8 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
   }
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SalonRequirementGuard navigation={navigation}>
+      <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header (Flat) */}
@@ -447,7 +449,8 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
           <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
-    </View>
+      </View>
+    </SalonRequirementGuard>
   );
 }
 
