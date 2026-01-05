@@ -5,6 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { json, urlencoded } from 'express';
+import * as compression from 'compression';
 import * as os from 'os';
 import { AppModule } from './app.module';
 
@@ -21,6 +22,9 @@ async function bootstrap() {
     bodyParser: true,
     rawBody: false,
   });
+
+  // PERFORMANCE: Enable compression for faster responses
+  app.use(compression());
 
   // Increase body size limit for image uploads (10MB)
   // Must be applied before other middleware

@@ -3,9 +3,22 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 export class AddUserProfileFields1735912000000 implements MigrationInterface {
   name = 'AddUserProfileFields1735912000000';
 
+  // Helper to safely add column (skip if exists)
+  private async addColumnIfNotExists(
+    queryRunner: QueryRunner,
+    table: string,
+    column: TableColumn,
+  ): Promise<void> {
+    const hasColumn = await queryRunner.hasColumn(table, column.name);
+    if (!hasColumn) {
+      await queryRunner.addColumn(table, column);
+    }
+  }
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Avatar URL
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'avatar_url',
@@ -16,7 +29,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
     );
 
     // Personal Details
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'date_of_birth',
@@ -26,7 +40,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'gender',
@@ -36,7 +51,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'marital_status',
@@ -46,7 +62,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'nationality',
@@ -56,7 +73,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'national_id',
@@ -67,7 +85,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
     );
 
     // Address
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'address',
@@ -77,7 +96,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'city',
@@ -87,7 +107,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'district',
@@ -97,7 +118,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'sector',
@@ -107,7 +129,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'cell',
@@ -118,7 +141,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
     );
 
     // Emergency Contact
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'emergency_contact_name',
@@ -128,7 +152,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'emergency_contact_phone',
@@ -138,7 +163,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'emergency_contact_relationship',
@@ -149,7 +175,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
     );
 
     // Professional
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'bio',
@@ -158,7 +185,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'years_of_experience',
@@ -167,7 +195,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'skills',
@@ -177,7 +206,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
     );
 
     // Banking
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'bank_name',
@@ -187,7 +217,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'bank_account_number',
@@ -197,7 +228,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'bank_account_name',
@@ -207,7 +239,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
       }),
     );
 
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'momo_number',
@@ -218,7 +251,8 @@ export class AddUserProfileFields1735912000000 implements MigrationInterface {
     );
 
     // Profile Completion
-    await queryRunner.addColumn(
+    await this.addColumnIfNotExists(
+      queryRunner,
       'users',
       new TableColumn({
         name: 'profile_completion',

@@ -146,9 +146,12 @@ import { CustomerFavorite } from '../customers/entities/customer-favorite.entity
                 ? { rejectUnauthorized: false }
                 : false,
             extra: {
-              max: 20,
-              connectionTimeoutMillis: 5000,
-              idleTimeoutMillis: 30000,
+              // PERFORMANCE: Increased pool for high concurrency
+              max: 100, // Maximum connections (was 20)
+              min: 10, // Minimum connections to keep ready
+              connectionTimeoutMillis: 10000, // Wait up to 10s for connection
+              idleTimeoutMillis: 30000, // Close idle connections after 30s
+              statement_timeout: 30000, // Query timeout 30s (prevent long-running queries)
             },
           };
         }

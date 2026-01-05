@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
@@ -46,6 +47,13 @@ import { UploadsModule } from './uploads/uploads.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    // RATE LIMITING: 100 requests per minute per IP
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests
+      },
+    ]),
     DatabaseModule,
     CommonModule,
     AuthModule,
@@ -93,6 +101,11 @@ import { UploadsModule } from './uploads/uploads.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // RATE LIMITING: Apply to all endpoints
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })
