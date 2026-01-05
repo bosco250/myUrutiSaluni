@@ -18,6 +18,7 @@ import { salonService, BusinessMetrics, SalonDetails } from '../../services/salo
 import { useUnreadNotifications } from '../../hooks/useUnreadNotifications';
 import { api } from '../../services/api';
 import { Loader } from '../../components/common';
+import { SalonRequirementGuard } from '../../components/SalonRequirementGuard';
 
 // Import logo
 const logo = require('../../../assets/Logo.png');
@@ -324,20 +325,15 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
             <OnboardingHeader />
 
             {/* Pending Card */}
-            <LinearGradient
-              colors={[theme.colors.warning, '#FF9800']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.welcomeCard}
-            >
-              <View style={styles.welcomeIconContainer}>
-                <MaterialIcons name="pending" size={48} color="#FFFFFF" />
+            <View style={[styles.statusCard, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]}>
+              <View style={[styles.statusIconBox, { backgroundColor: theme.colors.warning + '15' }]}>
+                <MaterialIcons name="hourglass-top" size={40} color={theme.colors.warning} />
               </View>
-              <Text style={styles.welcomeTitle}>Application Pending</Text>
-              <Text style={styles.welcomeSubtitle}>
+              <Text style={[styles.statusTitle, { color: isDark ? theme.colors.white : theme.colors.text }]}>Application Pending</Text>
+              <Text style={[styles.statusSubtitle, { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary }]}>
                 Your membership application is being reviewed. We'll notify you once it's approved.
               </Text>
-            </LinearGradient>
+            </View>
 
             {/* Status Card */}
             <View style={[styles.stepsCard, dynamicStyles.card]}>
@@ -376,19 +372,12 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 
             {/* View Application Button */}
             <TouchableOpacity
-              style={[styles.createSalonButton, { opacity: 0.9 }]}
+              style={[styles.actionButton, { backgroundColor: theme.colors.warning }]}
               onPress={() => navigation.navigate('ApplicationSuccess', { status: 'pending' })}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={[theme.colors.warning, '#FF9800']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.createSalonGradient}
-              >
-                <MaterialIcons name="visibility" size={24} color="#FFFFFF" />
-                <Text style={styles.createSalonText}>View Application</Text>
-              </LinearGradient>
+              <MaterialIcons name="visibility" size={20} color={theme.colors.white} />
+              <Text style={styles.actionButtonText}>View Application</Text>
             </TouchableOpacity>
 
             <View style={{ height: 40 }} />
@@ -411,36 +400,24 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
             <OnboardingHeader />
 
             {/* Rejected Card */}
-            <LinearGradient
-              colors={[theme.colors.error, '#D32F2F']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.welcomeCard}
-            >
-              <View style={styles.welcomeIconContainer}>
-                <MaterialIcons name="cancel" size={48} color="#FFFFFF" />
+            <View style={[styles.statusCard, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]}>
+              <View style={[styles.statusIconBox, { backgroundColor: theme.colors.error + '15' }]}>
+                <MaterialIcons name="cancel" size={40} color={theme.colors.error} />
               </View>
-              <Text style={styles.welcomeTitle}>Application Not Approved</Text>
-              <Text style={styles.welcomeSubtitle}>
-                Unfortunately, your membership application was not approved. You can apply again with updated information.
+              <Text style={[styles.statusTitle, { color: isDark ? theme.colors.white : theme.colors.text }]}>Application Not Approved</Text>
+              <Text style={[styles.statusSubtitle, { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary }]}>
+                Unfortunately, your application was not approved. You can apply again with updated information.
               </Text>
-            </LinearGradient>
+            </View>
 
             {/* Reapply Button */}
             <TouchableOpacity
-              style={styles.createSalonButton}
+              style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => navigation.navigate('MembershipApplication')}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.createSalonGradient}
-              >
-                <MaterialIcons name="refresh" size={24} color="#FFFFFF" />
-                <Text style={styles.createSalonText}>Apply Again</Text>
-              </LinearGradient>
+              <MaterialIcons name="refresh" size={20} color={theme.colors.white} />
+              <Text style={styles.actionButtonText}>Apply Again</Text>
             </TouchableOpacity>
 
             {/* Help Card */}
@@ -552,6 +529,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
   }
 
   return (
+    <SalonRequirementGuard navigation={navigation}>
     <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -815,418 +793,94 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
           )}
 
           <View style={{ height: 40 }} />
+          <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
-    </View>
+      </View>
+    </SalonRequirementGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  logo: {
-    width: 100,
-    height: 36,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  notificationButton: {
-    padding: 4,
-    position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: theme.colors.error,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: theme.colors.background, // Match container
-  },
-  notificationBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-  },
-
-  // Revenue Card
-  revenueCardContainer: {
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  revenueCard: {
-    borderRadius: 20,
-    padding: 24,
-  },
-  revenueContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  revenueLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  revenueValue: {
-    fontSize: 34,
-    fontWeight: '800', // Premium bold
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  revenueChangeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    gap: 8,
-  },
-  revenueChangeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4,
-  },
-  revenueChangeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  revenueChangeLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
-  },
-  revenueIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Section
-  section: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-
-  // Quick Actions (Flat)
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  quickActionCard: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickActionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  // Overview Grid (Flat)
-  overviewGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  overviewCard: {
-    width: '48%', // Approx half
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-  },
-  overviewCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  overviewIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  overviewValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  overviewLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  changeBadgePositive: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  statusBadgeActive: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-
-  // List Cards (Flat)
-  listCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  serviceRowPadding: {
-    padding: 16,
-  },
-  serviceRowBorder: {
-    borderBottomWidth: 1,
-  },
-  serviceRank: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  rankNumber: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  serviceStats: {
-    fontSize: 13,
-  },
-  serviceRevenue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.primary,
-  },
-  // Staff
-  staffRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  staffAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  staffInfo: {
-    flex: 1,
-  },
-  staffName: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  staffStats: {
-    fontSize: 13,
-  },
-  staffRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // Onboarding (Simplified)
-  onboardingContent: {
-    padding: 24,
-  },
-  onboardingHeader: {
-    alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
-  },
-  onboardingLogo: {
-    width: 120,
-    height: 40,
-  },
-  welcomeCard: {
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  welcomeIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  welcomeSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  stepsCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-  },
-  stepsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  stepNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  stepNumberText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  stepContent: {
-    flex: 1,
-    paddingTop: 4,
-  },
-  stepLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  stepDesc: {
-    fontSize: 13,
-  },
-  createSalonButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  createSalonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  },
-  createSalonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  helpCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-  },
-  helpContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  helpTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  helpDesc: {
-    fontSize: 13,
-  },
+  container: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16 },
+  headerLeft: { flex: 1 },
+  logo: { width: 100, height: 36 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  notificationButton: { padding: 4, position: 'relative' },
+  notificationBadge: { position: 'absolute', top: 0, right: 0, backgroundColor: theme.colors.error, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: theme.colors.background },
+  notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' },
+  profileImage: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.borderLight },
+  revenueCardContainer: { paddingHorizontal: 20, marginTop: 8 },
+  revenueCard: { borderRadius: 20, padding: 24 },
+  revenueContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  revenueLabel: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginBottom: 8, fontWeight: '500' },
+  revenueValue: { fontSize: 34, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
+  revenueChangeContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 8 },
+  revenueChangeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
+  revenueChangeText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  revenueChangeLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
+  revenueIconContainer: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  section: { paddingHorizontal: 20, marginTop: 24 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  viewAllText: { fontSize: 14, color: theme.colors.primary, fontWeight: '600' },
+  quickActionsRow: { flexDirection: 'row', gap: 12 },
+  quickActionCard: { flex: 1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 12, alignItems: 'center', borderWidth: 1 },
+  quickActionIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  quickActionLabel: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  overviewCard: { width: '48%', borderRadius: 16, padding: 16, borderWidth: 1 },
+  overviewCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  overviewIconContainer: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  overviewValue: { fontSize: 24, fontWeight: '700', marginBottom: 4, letterSpacing: -0.5 },
+  overviewLabel: { fontSize: 13, fontWeight: '500' },
+  changeBadgePositive: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  statusBadgeActive: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  listCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  serviceRow: { flexDirection: 'row', alignItems: 'center' },
+  serviceRowPadding: { padding: 16 },
+  serviceRowBorder: { borderBottomWidth: 1 },
+  serviceRank: { width: 24, height: 24, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  rankNumber: { fontSize: 12, fontWeight: 'bold', color: '#FFFFFF' },
+  serviceInfo: { flex: 1 },
+  serviceName: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  serviceStats: { fontSize: 13 },
+  serviceRevenue: { fontSize: 15, fontWeight: '600', color: theme.colors.primary },
+  staffRow: { flexDirection: 'row', alignItems: 'center' },
+  staffAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  staffInfo: { flex: 1 },
+  staffName: { fontSize: 15, fontWeight: '600' },
+  staffStats: { fontSize: 13 },
+  staffRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingText: { fontSize: 14, fontWeight: '600' },
+  onboardingContent: { padding: 24 },
+  onboardingHeader: { alignItems: 'center', marginBottom: 32, marginTop: 20 },
+  onboardingLogo: { width: 120, height: 40 },
+  welcomeCard: { borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 24 },
+  welcomeIconContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  welcomeTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', marginBottom: 8 },
+  welcomeSubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.9)', textAlign: 'center', lineHeight: 22 },
+  stepsCard: { borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1 },
+  stepsTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
+  stepItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
+  stepNumber: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  stepNumberText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  stepContent: { flex: 1, paddingTop: 4 },
+  stepLabel: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  stepDesc: { fontSize: 13 },
+  createSalonButton: { borderRadius: 14, overflow: 'hidden', marginBottom: 24 },
+  createSalonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 8 },
+  createSalonText: { fontSize: 17, fontWeight: '600', color: '#FFFFFF' },
+  helpCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 16, borderWidth: 1 },
+  helpContent: { flex: 1, marginLeft: 12 },
+  helpTitle: { fontSize: 15, fontWeight: '600' },
+  helpDesc: { fontSize: 13 },
+  statusCard: { borderRadius: 24, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1 },
+  statusIconBox: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  statusTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 12, letterSpacing: -0.5 },
+  statusSubtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 50, paddingVertical: 16, paddingHorizontal: 32, gap: 10, marginBottom: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8 },
+  actionButtonText: { fontSize: 16, fontWeight: '700', color: theme.colors.white },
 });

@@ -28,6 +28,7 @@ import { Loader } from "../../components/common";
 import { getPreviousWeek, getNextWeek } from "../../utils/dateHelpers";
 import { useEmployeePermissionCheck } from "../../hooks/useEmployeePermissionCheck";
 import { EmployeePermission } from "../../constants/employeePermissions";
+import { SalonRequirementGuard } from '../../components/SalonRequirementGuard';
 
 
 interface SalonAppointmentsScreenProps {
@@ -2161,6 +2162,7 @@ export default function SalonAppointmentsScreen({
   }
 
   return (
+    <SalonRequirementGuard navigation={navigation}>
     <SafeAreaView
       style={[styles.container, dynamicStyles.container]}
       edges={["top"]}
@@ -2382,6 +2384,7 @@ export default function SalonAppointmentsScreen({
       {renderReassignModal()}
       {renderNotesModal()}
     </SafeAreaView>
+    </SalonRequirementGuard>
   );
 }
 
