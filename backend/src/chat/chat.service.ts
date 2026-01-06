@@ -55,28 +55,35 @@ export class ChatService {
     }
 
     const type = createDto.type || ConversationType.CUSTOMER_EMPLOYEE;
-    const employeeId = createDto.employeeId;
+    const salonEmployeeId = createDto.employeeId;
     let salonId = createDto.salonId;
+    let employeeUserId: string | undefined;
 
-    // Multi-tenant: Ensure salonId is automatically set when employeeId is provided
-    if (employeeId && !salonId) {
-      const employee = await this.salonsService.findEmployeeById(employeeId);
-      if (employee && employee.salon) {
-        salonId = employee.salon.id;
+    // Multi-tenant: Resolve employeeId to actual User ID (FK references User table, not SalonEmployee)
+    if (salonEmployeeId) {
+      const employee =
+        await this.salonsService.findEmployeeById(salonEmployeeId);
+      if (employee && employee.user) {
+        // Use the User ID, not the SalonEmployee ID
+        employeeUserId = employee.user.id;
+        // Also get salonId if not provided
+        if (!salonId && employee.salon) {
+          salonId = employee.salon.id;
+        }
         this.logger.log(
-          `Auto-set salonId ${salonId} for employee ${employeeId}`,
+          `Resolved SalonEmployee ${salonEmployeeId} -> User ${employeeUserId} (salon: ${salonId})`,
         );
       } else {
         throw new NotFoundException(
-          `Employee ${employeeId} not found or has no salon`,
+          `Employee ${salonEmployeeId} not found or has no user account`,
         );
       }
     }
 
-    // Find existing conversation - include salonId in search for multi-tenant isolation
+    // Find existing conversation - use employeeUserId (User ID) for lookup
     const where: any = { customerId };
-    if (type === ConversationType.CUSTOMER_EMPLOYEE && employeeId) {
-      where.employeeId = employeeId;
+    if (type === ConversationType.CUSTOMER_EMPLOYEE && employeeUserId) {
+      where.employeeId = employeeUserId;
       // Multi-tenant: Include salonId in conversation lookup
       if (salonId) {
         where.salonId = salonId;
@@ -95,14 +102,14 @@ export class ChatService {
     if (!conversation) {
       conversation = this.conversationRepository.create({
         customerId,
-        employeeId,
+        employeeId: employeeUserId, // Use User ID, not SalonEmployee ID
         salonId, // Always set salonId for multi-tenant isolation
         appointmentId: createDto.appointmentId,
         type,
       });
       conversation = await this.conversationRepository.save(conversation);
       this.logger.log(
-        `Created new conversation: ${conversation.id} (salon: ${salonId})`,
+        `Created new conversation: ${conversation.id} (salon: ${salonId}, employeeUserId: ${employeeUserId})`,
       );
     }
 
