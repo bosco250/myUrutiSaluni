@@ -297,13 +297,26 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
   };
 
   const getOtherPartyName = (): string => {
+    // Try employee first
     if (conversation?.employee) {
-      return conversation.employee.fullName || "Employee";
+      return (
+        conversation.employee.fullName ||
+        conversation.employee.email?.split("@")[0] ||
+        "Employee"
+      );
     }
+    // Try salon
     if (conversation?.salon) {
       return conversation.salon.name || "Salon";
     }
-    return "Unknown";
+    // Fallback: Check if IDs exist but relations weren't loaded
+    if (conversation?.employeeId) {
+      return "Loading...";
+    }
+    if (conversation?.salonId) {
+      return "Loading...";
+    }
+    return "Chat";
   };
 
   const getOtherPartyAvatar = () => {

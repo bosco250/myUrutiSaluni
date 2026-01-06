@@ -54,7 +54,7 @@ export default function TestNotificationScreen({ navigation }: TestNotificationS
 
     setTesting(true);
     try {
-      const response = await api.post('/notifications/test-push');
+      const response = await api.post<{ success: boolean; message?: string }>('/notifications/test-push', {});
       
       if (response.success) {
         Alert.alert(
@@ -84,7 +84,7 @@ export default function TestNotificationScreen({ navigation }: TestNotificationS
   const testAllChannels = async () => {
     setTestingAll(true);
     try {
-      const response = await api.post('/notifications/test-all-channels');
+      const response = await api.post<{ success: boolean; message?: string }>('/notifications/test-all-channels', {});
       
       if (response.success) {
         Alert.alert(

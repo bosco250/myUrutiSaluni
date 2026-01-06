@@ -113,7 +113,9 @@ export class SalesController {
     UserRole.SALON_OWNER,
     UserRole.SALON_EMPLOYEE,
   )
-  @RequireEmployeePermission(EmployeePermission.VIEW_SALES_REPORTS)
+  // NOTE: Removed @RequireEmployeePermission(VIEW_SALES_REPORTS) - all employees can view
+  // sales for their salon. The endpoint already filters to only show their salon's data (lines 143-147).
+  // VIEW_SALES_REPORTS is for advanced analytics access, not basic sales viewing.
   @ApiOperation({ summary: 'Get all sales' })
   async findAll(
     @Query('salonId') salonId: string | undefined,
