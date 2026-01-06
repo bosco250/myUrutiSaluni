@@ -72,6 +72,12 @@ import GrantPermissionsScreen from "../screens/owner/GrantPermissionsScreen";
 
 // Admin screens
 import SalonManagementScreen from "../screens/admin/SalonManagementScreen";
+import MembershipApplicationsScreen from "../screens/admin/MembershipApplicationsScreen";
+import ApplicationDetailScreen from "../screens/admin/ApplicationDetailScreen";
+import MemberListScreen from "../screens/admin/MemberListScreen";
+import AdminSettingsScreen from "../screens/admin/AdminSettingsScreen";
+import SystemReportsScreen from "../screens/admin/SystemReportsScreen";
+
 
 // Salon management screens
 import SalonListScreen from "../screens/salon/SalonListScreen";
@@ -500,18 +506,37 @@ export const renderScreen = (
         <SalonManagementScreen navigation={navigation} />
       );
 
-    case "UserManagement":
-    case "SystemReports":
     case "MembershipApprovals":
       return (
-        <View style={styles.placeholderContainer}>
-          <Text style={styles.placeholderTitle}>{screenName}</Text>
-          <Text style={styles.placeholderText}>Coming Soon</Text>
-          <Text style={styles.placeholderSubtext}>
-            This feature is currently under development.
-          </Text>
-        </View>
+        <MembershipApplicationsScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
       );
+
+    case "ApplicationDetail":
+      return (
+        <ApplicationDetailScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
+
+    case "MemberList":
+      return (
+        <MemberListScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
+
+    case "AdminSettings":
+      return <AdminSettingsScreen navigation={navigation} />;
+
+    case "SystemReports": // Was SYSTEM_REPORTS in config, checks navigationConfig screen mapping
+      return <SystemReportsScreen navigation={navigation} />;
+
+
 
     // Sales screens
     case "Sales":

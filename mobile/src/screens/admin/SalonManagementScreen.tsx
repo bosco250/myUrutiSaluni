@@ -1,428 +1,186 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  StatusBar,
-  Image,
-  RefreshControl,
-  SafeAreaView,
-} from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, StatusBar, Image, RefreshControl, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { salonService, SalonDetails } from '../../services/salon';
 import { useTheme } from '../../context';
 
-// Filter types
-type FilterStatus = 'all' | 'active' | 'pending_approval' | 'inactive';
-
-const FILTER_OPTIONS: { id: FilterStatus; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'active', label: 'Active' },
-  { id: 'pending_approval', label: 'Pending' },
-  { id: 'inactive', label: 'Inactive' },
-];
-
-export default function SalonManagementScreen({ navigation }: { navigation: any }) {
+export default function SalonManagementScreen({ navigation }: any) {
   const { isDark } = useTheme();
-  
-  // State
   const [salons, setSalons] = useState<SalonDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterStatus>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending_approval' | 'inactive'>('all');
 
-  const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-    },
-    text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    textSecondary: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
-    },
-    card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-    },
-    input: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    chip: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
-    },
-    chipActive: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-    },
-    chipText: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
-    },
-    chipTextActive: {
-      color: '#FFFFFF',
-    },
-  };
+  const colors = useMemo(() => ({
+    bg: isDark ? '#111827' : '#F9FAFB',
+    card: isDark ? '#1F2937' : '#FFFFFF',
+    text: isDark ? '#F9FAFB' : '#111827',
+    subtext: isDark ? '#9CA3AF' : '#6B7280',
+    border: isDark ? '#374151' : '#E5E7EB',
+    primary: theme.colors.primary,
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+  }), [isDark]);
 
-  // Fetch salons
   const fetchSalons = useCallback(async () => {
     try {
-      const filters = {
+      const data = await salonService.getAllSalons({ 
         status: activeFilter !== 'all' ? activeFilter : undefined,
-        search: searchQuery || undefined,
-      };
-      const data = await salonService.getAllSalons(filters);
+        search: searchQuery || undefined 
+      });
       setSalons(data);
-    } catch (error) {
-      console.error('Failed to fetch salons:', error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [activeFilter, searchQuery]);
 
-  // Initial load
-  useEffect(() => {
-    fetchSalons();
-  }, [fetchSalons]);
+  useEffect(() => { fetchSalons(); }, [fetchSalons]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchSalons();
-  };
+  const stats = useMemo(() => ({
+    total: salons.length,
+    active: salons.filter(s => s.status === 'active').length,
+    pending: salons.filter(s => s.status === 'pending_approval').length,
+    inactive: salons.filter(s => s.status === 'inactive').length
+  }), [salons]);
 
-  // Render salon card
-  const renderSalonItem = ({ item }: { item: SalonDetails }) => {
-    // Determine status color
-    let statusColor = theme.colors.textSecondary;
-    let statusLabel: string = item.status;
-    
-    switch (item.status) {
-      case 'active':
-        statusColor = theme.colors.success;
-        statusLabel = 'Active';
-        break;
-      case 'pending_approval':
-        statusColor = theme.colors.warning;
-        statusLabel = 'Pending';
-        break;
-      case 'inactive':
-        statusColor = theme.colors.error;
-        statusLabel = 'Inactive';
-        break;
-    }
+  const StatCard = ({ label, value, color, icon }: any) => (
+    <View style={[s.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+       <View style={[s.statIcon, { backgroundColor: color + '15' }]}>
+         <MaterialIcons name={icon} size={18} color={color} />
+       </View>
+       <View>
+         <Text style={[s.statVal, { color: colors.text }]}>{value}</Text>
+         <Text style={[s.statLbl, { color: colors.subtext }]}>{label}</Text>
+       </View>
+    </View>
+  );
+
+  const renderItem = ({ item }: { item: SalonDetails }) => {
+    const statusColor = item.status === 'active' ? colors.success : item.status === 'pending_approval' ? colors.warning : colors.error;
+    const statusLabel = item.status === 'pending_approval' ? 'Pending' : item.status.charAt(0).toUpperCase() + item.status.slice(1);
 
     return (
-      <TouchableOpacity
-        style={[styles.card, dynamicStyles.card]}
+      <TouchableOpacity 
+        style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}
         onPress={() => navigation.navigate('OwnerSalonDetail', { salonId: item.id })}
         activeOpacity={0.7}
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.salonIconContainer}>
-             {item.photos && item.photos.length > 0 ? (
-               <Image source={{ uri: item.photos[0] }} style={styles.salonImage} />
-             ) : (
-               <View style={[styles.placeholderIcon, { backgroundColor: theme.colors.primary + '15' }]}>
-                 <MaterialIcons name="store" size={24} color={theme.colors.primary} />
+        <View style={s.cardRow}>
+           <Image 
+             source={item.photos?.[0] ? { uri: item.photos[0] } : require('../../../assets/icon.png')} 
+             style={[s.thumb, { backgroundColor: colors.border }]} 
+           />
+           <View style={{ flex: 1, gap: 4 }}>
+             <View style={s.rowBetween}>
+               <Text style={[s.name, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+               <View style={[s.badge, { backgroundColor: statusColor + '15' }]}>
+                 <Text style={[s.badgeText, { color: statusColor }]}>{statusLabel}</Text>
                </View>
-             )}
-          </View>
-          <View style={styles.cardInfo}>
-            <Text style={[styles.salonName, dynamicStyles.text]} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <Text style={[styles.salonAddress, dynamicStyles.textSecondary]} numberOfLines={1}>
-              {item.city}, {item.district}
-            </Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
-            <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
-          </View>
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]} />
-
-        <View style={styles.cardFooter}>
-          <View style={styles.footerItem}>
-             <MaterialIcons name="phone" size={16} color={dynamicStyles.textSecondary.color} />
-             <Text style={[styles.footerText, dynamicStyles.textSecondary]}>
-               {item.phone || 'No phone'}
-             </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('OwnerSalonDetail', { salonId: item.id })}
-          >
-            <Text style={styles.actionButtonText}>Manage</Text>
-            <MaterialIcons name="chevron-right" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
+             </View>
+             <Text style={[s.meta, { color: colors.subtext }]}>{item.city}, {item.district}</Text>
+             <View style={[s.row, { marginTop: 6, gap: 12 }]}>
+                {item.phone && (
+                  <View style={s.row}><MaterialIcons name="phone" size={14} color={colors.subtext} /><Text style={[s.metaSmall, { color: colors.subtext }]}> {item.phone}</Text></View>
+                )}
+                <View style={s.row}><MaterialIcons name="star" size={14} color="#FBBF24" /><Text style={[s.metaSmall, { color: colors.subtext }]}> {item.rating || 'N/A'}</Text></View>
+             </View>
+           </View>
+           <MaterialIcons name="chevron-right" size={24} color={colors.subtext} />
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>Salon Management</Text>
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
+         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
+           <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+         </TouchableOpacity>
+         <Text style={[s.title, { color: colors.text }]}>Salons</Text>
+         <TouchableOpacity onPress={() => fetchSalons()} style={{ padding: 4 }}>
+           <MaterialIcons name="refresh" size={24} color={colors.text} />
+         </TouchableOpacity>
       </View>
 
-      {/* Search & Filter */}
-      <View style={styles.filterSection}>
-        <View style={[styles.searchContainer, dynamicStyles.input]}>
-          <MaterialIcons name="search" size={20} color={dynamicStyles.textSecondary.color} />
-          <TextInput
-            style={[styles.searchInput, { color: dynamicStyles.text.color }]}
-            placeholder="Search salons..."
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <MaterialIcons name="close" size={20} color={dynamicStyles.textSecondary.color} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <FlatList
-          horizontal
-          data={FILTER_OPTIONS}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipContainer}
-          renderItem={({ item }) => {
-            const isActive = activeFilter === item.id;
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.chip,
-                  dynamicStyles.chip,
-                  isActive && dynamicStyles.chipActive
-                ]}
-                onPress={() => setActiveFilter(item.id)}
-              >
-                <Text style={[
-                  styles.chipText,
-                  dynamicStyles.chipText,
-                  isActive && dynamicStyles.chipTextActive
-                ]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
+      <View style={s.statsRow}>
+         <StatCard label="Total" value={stats.total} color={colors.primary} icon="store" />
+         <StatCard label="Active" value={stats.active} color={colors.success} icon="check-circle" />
+         <StatCard label="Pending" value={stats.pending} color={colors.warning} icon="hourglass-empty" />
       </View>
 
-      {/* List */}
-      {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={salons}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSalonItem}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <MaterialIcons name="store-mall-directory" size={64} color={theme.colors.gray300} />
-              <Text style={[styles.emptyText, dynamicStyles.text]}>No salons found</Text>
-              <Text style={[styles.emptySubtext, dynamicStyles.textSecondary]}>
-                Try adjusting your filters or search query
-              </Text>
-            </View>
-          }
-        />
-      )}
+      <View style={[s.controls, { borderBottomColor: colors.border }]}>
+         <View style={[s.search, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <MaterialIcons name="search" size={20} color={colors.subtext} />
+            <TextInput 
+              style={[s.input, { color: colors.text }]} 
+              placeholder="Search salons..." 
+              placeholderTextColor={colors.subtext}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+         </View>
+         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {(['all', 'active', 'pending_approval', 'inactive'] as const).map(f => (
+               <TouchableOpacity 
+                 key={f} 
+                 style={[s.tab, activeFilter === f && { backgroundColor: colors.primary }]}
+                 onPress={() => setActiveFilter(f)}
+               >
+                 <Text style={[s.tabText, { color: activeFilter === f ? '#FFF' : colors.text }]}>
+                   {f === 'pending_approval' ? 'Pending' : f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                 </Text>
+               </TouchableOpacity>
+            ))}
+         </ScrollView>
+      </View>
+
+      <FlatList
+        data={salons}
+        renderItem={renderItem}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchSalons(); }} tintColor={colors.primary} />}
+        ListEmptyComponent={!loading ? <View style={s.center}><Text style={{ color: colors.subtext }}>No salons found</Text></View> : null}
+      />
+      {loading && !refreshing && <View style={s.loader}><ActivityIndicator size="large" color={colors.primary} /></View>}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-    marginRight: theme.spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
-  },
-  filterSection: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: theme.spacing.md,
-    height: 48,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: theme.spacing.sm,
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
-  },
-  chipContainer: {
-    paddingRight: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: theme.spacing.xs,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: theme.fonts.medium,
-  },
-  listContent: {
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-    paddingBottom: 100, 
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Card Styles
-  card: {
-    borderRadius: 16,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  salonIconContainer: {
-    marginRight: theme.spacing.md,
-  },
-  salonImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-  },
-  placeholderIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  salonName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
-    marginBottom: 2,
-  },
-  salonAddress: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.bold,
-    textTransform: 'uppercase',
-  },
-  divider: {
-    height: 1,
-    marginVertical: theme.spacing.md,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  footerText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    fontFamily: theme.fonts.medium,
-  },
-  emptyContainer: {
-    padding: theme.spacing.xl,
-    alignItems: 'center',
-    marginTop: theme.spacing.xl,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: theme.spacing.md,
-    fontFamily: theme.fonts.bold,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: theme.spacing.sm,
-    fontFamily: theme.fonts.regular,
-  },
+const s = StyleSheet.create({
+  container: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  title: { fontSize: 20, fontWeight: '800' },
+  statsRow: { flexDirection: 'row', padding: 12, gap: 8 },
+  statCard: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 12, borderWidth: 1, gap: 10 },
+  statIcon: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  statVal: { fontSize: 16, fontWeight: 'bold' },
+  statLbl: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
+  controls: { paddingHorizontal: 12, paddingBottom: 12, gap: 12, borderBottomWidth: 1 },
+  search: { flexDirection: 'row', alignItems: 'center', height: 44, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, gap: 8 },
+  input: { flex: 1, fontSize: 16, height: '100%' },
+  tab: { paddingHorizontal: 14, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' }, // Pill tabs
+  tabText: { fontSize: 13, fontWeight: '600' },
+  list: { padding: 12, gap: 12 },
+  card: { padding: 12, borderRadius: 16, borderWidth: 1, elevation: 1 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  thumb: { width: 56, height: 56, borderRadius: 12 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  name: { fontSize: 16, fontWeight: '700', flex: 1 },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  badgeText: { fontSize: 11, fontWeight: '700' },
+  meta: { fontSize: 13, fontWeight: '500' },
+  metaSmall: { fontSize: 12, fontWeight: '500' },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  center: { padding: 40, alignItems: 'center' },
+  loader: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }
 });

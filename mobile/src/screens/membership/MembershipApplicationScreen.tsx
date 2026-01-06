@@ -209,7 +209,7 @@ export default function MembershipApplicationScreen({
         applicationData.longitude = formData.longitude;
       }
       
-      const response = await api.post("/memberships/apply", applicationData);
+      await api.post("/memberships/apply", applicationData);
       navigation.navigate("ApplicationSuccess", { status: "pending" });
     } catch (error: any) {
       Alert.alert(

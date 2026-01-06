@@ -73,6 +73,16 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
         return;
       }
 
+      // Safeguard: If user is admin, they shouldn't be here. Redirect to Admin Dashboard.
+      const role = user.role?.toLowerCase();
+      if (role?.includes('admin') || role === 'district_leader') {
+        // console.log('[OwnerDashboard] User is admin, redirecting to AdminDashboard');
+        // Prevent membership check which fails for admins
+        navigation.navigate('AdminDashboard');
+        setLoading(false);
+        return;
+      }
+
       // PERFORMANCE OPTIMIZATION: Load all data in parallel with timeout
       const timeout = (ms: number) => new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), ms)
@@ -175,7 +185,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
       }
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, navigation, user?.role]);
 
   useEffect(() => {
     loadDashboardData();

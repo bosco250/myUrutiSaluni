@@ -5,26 +5,25 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useAuth, useTheme } from '../../context';
 import { salonService, CreateSalonDto } from '../../services/salon';
 import { uploadService } from '../../services/upload';
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
-// Step Components
+// Step Components 
 import { Step1BasicInfo } from './steps/Step1_BasicInfo';
 import { Step2Location } from './steps/Step2_Location';
+import { Step3BusinessHours } from './steps/Step3_BusinessHours';
+import { Step4ContactInfo } from './steps/Step4_ContactInfo';
 
 interface CreateSalonScreenProps {
   navigation: {
@@ -127,12 +126,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
   const [errors, setErrors] = useState<FormErrors>({});
   const [workingHours, setWorkingHours] = useState<WorkingHours>(DEFAULT_WORKING_HOURS);
   
-  // Time picker state
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedTimeInfo, setSelectedTimeInfo] = useState<{
-    day: keyof WorkingHours;
-    field: 'openTime' | 'closeTime';
-  } | null>(null);
+
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -195,6 +189,9 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       color: isDark ? '#FFFFFF' : theme.colors.text,
       borderColor: isDark ? '#4A4A4C' : (theme.colors.borderLight || '#E0E0E0'),
     },
+    border: {
+      borderColor: isDark ? '#374151' : '#E5E7EB',
+    }
   };
 
   const prefillForm = useCallback(() => {
@@ -257,42 +254,38 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     }
   }, [editingSalon]);
 
-  // Senior Dev: Memoize callbacks to prevent unnecessary re-renders
-  const updateFormData = useCallback((field: keyof FormData, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setErrors(prev => {
-      if (prev[field]) {
-        const { [field]: removed, ...rest } = prev;
-        return rest;
-      }
-      return prev;
-    });
-  }, []);
-
-  // Senior Dev: Memoize business type toggle handler
-  const handleToggleBusinessType = useCallback((value: string) => {
-    setFormData(prev => {
-      const currentTypes = prev.businessTypes;
-      if (currentTypes.includes(value)) {
-        return { ...prev, businessTypes: currentTypes.filter(t => t !== value) };
-      } else {
-        return { ...prev, businessTypes: [...currentTypes, value] };
-      }
-    });
-    setErrors(prev => {
-      if (prev.businessTypes) {
-        const { businessTypes: removed, ...rest } = prev;
-        return rest;
-      }
-      return prev;
-    });
-  }, []);
-
+  // Load salon data if in edit mode
   useEffect(() => {
     if (mode === 'edit' && editingSalon) {
       prefillForm();
     }
   }, [mode, editingSalon, prefillForm]);
+
+  const updateFormData = useCallback((field: keyof FormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user types
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  }, [errors]);
+
+  const handleToggleBusinessType = useCallback((type: string) => {
+    setFormData(prev => {
+      const currentTypes = prev.businessTypes;
+      const newTypes = currentTypes.includes(type)
+        ? currentTypes.filter(t => t !== type)
+        : [...currentTypes, type];
+      
+      return { ...prev, businessTypes: newTypes };
+    });
+    if (errors.businessTypes) {
+        setErrors(prev => { const e = { ...prev }; delete e.businessTypes; return e; });
+    }
+  }, [errors]);
 
   const validateStep = (): boolean => {
     const newErrors: FormErrors = {};
@@ -461,43 +454,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     }
   };
 
-  // Senior Dev: Debounce map interactions to reduce geocoding API calls
-  const updateDayHours = (day: keyof WorkingHours, field: keyof DayHours, value: boolean | string) => {
-    setWorkingHours(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
-      },
-    }));
-  };
 
-  const openTimePicker = (day: keyof WorkingHours, field: 'openTime' | 'closeTime') => {
-    setSelectedTimeInfo({ day, field });
-    setShowTimePicker(true);
-  };
-
-  const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowTimePicker(Platform.OS === 'ios');
-    
-    if (event.type === 'set' && selectedDate && selectedTimeInfo) {
-      const hours = selectedDate.getHours().toString().padStart(2, '0');
-      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
-      const timeString = `${hours}:${minutes}`;
-      updateDayHours(selectedTimeInfo.day, selectedTimeInfo.field, timeString);
-    }
-    
-    if (Platform.OS === 'android') {
-      setSelectedTimeInfo(null);
-    }
-  };
-
-  const timeStringToDate = (timeStr: string): Date => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours || 0, minutes || 0, 0, 0);
-    return date;
-  };
 
   // RENDER HELPERS
   const renderProgressBar = () => (
@@ -505,9 +462,9 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       {STEPS.map((step, index) => (
         <React.Fragment key={step}>
           <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, index <= currentStep && styles.stepCircleActive]}>
+            <View style={[styles.stepCircle, index <= currentStep && styles.stepCircleActive, { borderColor: theme.colors.primary }]}>
               {index < currentStep ? (
-                <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                <MaterialIcons name="check" size={14} color="#FFFFFF" />
               ) : (
                 <Text style={[styles.stepNumber, index <= currentStep && styles.stepNumberActive]}>
                   {index + 1}
@@ -517,7 +474,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
             <Text style={[
                 styles.stepLabel, 
                 dynamicStyles.textSecondary,
-                index === currentStep && { color: theme.colors.primary }
+                index === currentStep && { color: theme.colors.primary, fontWeight: '700' }
             ]}>
               {step}
             </Text>
@@ -530,200 +487,67 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     </View>
   );
 
-
-
-  // Senior Dev: Use extracted Step1 component
   const renderStep1 = () => (
     <Step1BasicInfo
-      formData={formData}
-      errors={errors}
-      isDark={isDark}
-      dynamicStyles={dynamicStyles}
-      onUpdateField={updateFormData}
-      onToggleBusinessType={handleToggleBusinessType}
-      onUpdateTargetClientele={(value) => {
-        setFormData(prev => ({ ...prev, targetClientele: value }));
-        if (errors.targetClientele) setErrors(prev => ({ ...prev, targetClientele: '' }));
-      }}
+        formData={formData}
+        errors={errors}
+        isDark={isDark}
+        dynamicStyles={dynamicStyles}
+        onUpdateField={updateFormData}
+        onToggleBusinessType={handleToggleBusinessType}
+        onUpdateTargetClientele={(value) => {
+            setFormData(prev => ({ ...prev, targetClientele: value }));
+            if (errors.targetClientele) setErrors(prev => ({ ...prev, targetClientele: '' }));
+        }}
     />
   );
 
-  // Senior Dev: Use extracted Step2 component
   const renderStep2 = () => (
-    <Step2Location
-      formData={formData}
-      errors={errors}
-      isDark={isDark}
-      dynamicStyles={dynamicStyles}
-      onUpdateField={updateFormData}
-      onLocationSelected={(lat, lng, address, city, district) => {
-        setFormData(prev => ({
-          ...prev,
-          latitude: lat,
-          longitude: lng,
-          address: address || prev.address,
-          city: city || prev.city,
-          district: district || prev.district,
-        }));
-        // Clear location-related errors
-        setErrors(prev => ({
-          ...prev,
-          address: '',
-          city: '',
-          district: '',
-        }));
-      }}
+      <Step2Location
+        formData={formData}
+        errors={errors}
+        isDark={isDark}
+        dynamicStyles={dynamicStyles}
+        onUpdateField={updateFormData}
+        onLocationSelected={(lat, lng, address, city, district) => {
+            setFormData(prev => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            address: address || prev.address,
+            city: city || prev.city,
+            district: district || prev.district,
+            }));
+            setErrors(prev => ({
+            ...prev,
+            address: '',
+            city: '',
+            district: '',
+            }));
+        }}
     />
   );
-
-  const DAYS: { key: keyof WorkingHours; label: string }[] = [
-    { key: 'monday', label: 'Monday' },
-    { key: 'tuesday', label: 'Tuesday' },
-    { key: 'wednesday', label: 'Wednesday' },
-    { key: 'thursday', label: 'Thursday' },
-    { key: 'friday', label: 'Friday' },
-    { key: 'saturday', label: 'Saturday' },
-    { key: 'sunday', label: 'Sunday' },
-  ];
 
   const renderStep3 = () => (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, dynamicStyles.text]}>Business Hours</Text>
-      <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-        Set your salon's working hours and photos
-      </Text>
-
-
-      {DAYS.map(({ key, label }) => (
-        <View key={key} style={[styles.dayRow, dynamicStyles.card]}>
-          <View style={styles.dayInfo}>
-            <TouchableOpacity
-              style={[styles.dayToggle, workingHours[key].isOpen && styles.dayToggleActive]}
-              onPress={() => updateDayHours(key, 'isOpen', !workingHours[key].isOpen)}
-            >
-              <MaterialIcons
-                name={workingHours[key].isOpen ? 'check-box' : 'check-box-outline-blank'}
-                size={22}
-                color={workingHours[key].isOpen ? theme.colors.primary : dynamicStyles.textSecondary.color}
-              />
-            </TouchableOpacity>
-            <Text style={[styles.dayLabel, dynamicStyles.text, !workingHours[key].isOpen && { opacity: 0.5 }]}>
-              {label}
-            </Text>
-          </View>
-          
-          {workingHours[key].isOpen ? (
-            <View style={styles.timeContainer}>
-              <TouchableOpacity
-                style={[styles.timeButton, dynamicStyles.input]}
-                onPress={() => openTimePicker(key, 'openTime')}
-              >
-                <MaterialIcons name="schedule" size={16} color={theme.colors.primary} />
-                <Text style={[styles.timeButtonText, dynamicStyles.text]}>{workingHours[key].openTime}</Text>
-              </TouchableOpacity>
-              <Text style={[styles.timeSeparator, dynamicStyles.textSecondary]}>to</Text>
-              <TouchableOpacity
-                style={[styles.timeButton, dynamicStyles.input]}
-                onPress={() => openTimePicker(key, 'closeTime')}
-              >
-                <MaterialIcons name="schedule" size={16} color={theme.colors.primary} />
-                <Text style={[styles.timeButtonText, dynamicStyles.text]}>{workingHours[key].closeTime}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <Text style={[styles.closedText, dynamicStyles.textSecondary]}>Closed</Text>
-          )}
-        </View>
-      ))}
-
-      {showTimePicker && selectedTimeInfo && (
-        <DateTimePicker
-          value={timeStringToDate(workingHours[selectedTimeInfo.day][selectedTimeInfo.field])}
-          mode="time"
-          is24Hour={true}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleTimeChange}
-        />
-      )}
-    </View>
+    <Step3BusinessHours
+      workingHours={workingHours}
+      onUpdateWorkingHours={setWorkingHours}
+      isDark={isDark}
+      dynamicStyles={dynamicStyles}
+    />
   );
 
   const renderStep4 = () => (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, dynamicStyles.text]}>Contact Information</Text>
-      <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-        How can customers reach you?
-      </Text>
-      <View style={styles.inputGroup}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>Phone Number *</Text>
-        <View style={[styles.inputContainer, dynamicStyles.input, errors.phone && styles.inputError]}>
-          <MaterialIcons name="phone" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
-          <TextInput
-            style={[styles.input, { color: dynamicStyles.input.color }]}
-            placeholder="+250 XXX XXX XXX"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            value={formData.phone}
-            onChangeText={(value) => updateFormData('phone', value)}
-            keyboardType="phone-pad"
-          />
-        </View>
-        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-      </View>
-      
-      <View style={styles.inputGroup}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>Email</Text>
-        <View style={[styles.inputContainer, dynamicStyles.input]}>
-          <MaterialIcons name="email" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
-          <TextInput
-            style={[styles.input, { color: dynamicStyles.input.color }]}
-            placeholder="salon@example.com"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            value={formData.email}
-            onChangeText={(value) => updateFormData('email', value)}
-            keyboardType="email-address"
-          />
-        </View>
-      </View>
-      
-      <View style={styles.inputGroup}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>Website</Text>
-        <View style={[styles.inputContainer, dynamicStyles.input]}>
-          <MaterialIcons name="language" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
-          <TextInput
-            style={[styles.input, { color: dynamicStyles.input.color }]}
-            placeholder="https://www.yoursalon.com"
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            value={formData.website}
-            onChangeText={(value) => updateFormData('website', value)}
-          />
-        </View>
-      </View>
-
-      {/* Salon Photos Section */}
-      <View style={{ marginBottom: 20, marginTop: 10 }}>
-          <Text style={[styles.inputLabel, dynamicStyles.text, { marginBottom: 10 }]}>Salon Photos</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosContainer}>
-              <TouchableOpacity style={[styles.addPhotoButton, { borderColor: theme.colors.primary }]} onPress={pickImage} disabled={uploading}>
-                  {uploading ? (
-                      <ActivityIndicator size="small" color={theme.colors.primary} />
-                  ) : (
-                      <>
-                          <MaterialIcons name="add-a-photo" size={24} color={theme.colors.primary} />
-                          <Text style={{ color: theme.colors.primary, fontSize: 10, marginTop: 4, textAlign: 'center' }}>Add Photo</Text>
-                      </>
-                  )}
-              </TouchableOpacity>
-              {formData.images.map((img, index) => (
-                  <View key={index} style={styles.photoWrapper}>
-                      <Image source={{ uri: img }} style={styles.photo} />
-                      <TouchableOpacity style={styles.removePhotoButton} onPress={() => removeImage(index)}>
-                          <MaterialIcons name="close" size={16} color="#FFF" />
-                      </TouchableOpacity>
-                  </View>
-              ))}
-          </ScrollView>
-      </View>
-    </View>
+    <Step4ContactInfo
+      formData={formData}
+      errors={errors}
+      isDark={isDark}
+      dynamicStyles={dynamicStyles}
+      onUpdateField={updateFormData}
+      onPickImage={pickImage}
+      onRemoveImage={removeImage}
+      uploading={uploading}
+    />
   );
 
   const renderCurrentStep = () => {
@@ -737,24 +561,25 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.primaryLight]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>{mode === 'edit' ? 'Edit Salon' : 'Create Your Salon'}</Text>
-          <Text style={styles.headerSubtitle}>Step {currentStep + 1} of {STEPS.length}</Text>
+      {/* Admin Style Standard Header */}
+      <View style={[styles.header, { borderBottomColor: dynamicStyles.border.borderColor }]}>
+        <View style={styles.headerTopRow}>
+            <TouchableOpacity 
+              style={[styles.backButton, { backgroundColor: dynamicStyles.card.backgroundColor, borderColor: dynamicStyles.border.borderColor }]} 
+              onPress={handleBack}
+            >
+              <MaterialIcons name="arrow-back" size={20} color={dynamicStyles.text.color} />
+            </TouchableOpacity>
+            <View style={styles.headerTitles}>
+                <Text style={[styles.headerTitle, dynamicStyles.text]}>{mode === 'edit' ? 'Edit Salon' : 'Create Salon'}</Text>
+                <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>Step {currentStep + 1} of {STEPS.length}</Text>
+            </View>
+            <View style={{ width: 40 }} /> 
         </View>
-        <View style={styles.placeholder} />
-      </LinearGradient>
+      </View>
 
       {renderProgressBar()}
 
@@ -771,10 +596,10 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           {renderCurrentStep()}
         </ScrollView>
 
-        <View style={[styles.bottomBar, dynamicStyles.card]}>
+        <View style={[styles.bottomBar, dynamicStyles.card, { borderTopColor: dynamicStyles.border.borderColor }]}>
           {currentStep > 0 && (
             <TouchableOpacity
-              style={[styles.secondaryButton, dynamicStyles.card]}
+              style={[styles.secondaryButton, dynamicStyles.card, { borderColor: dynamicStyles.border.borderColor }]}
               onPress={handleBack}
             >
               <Text style={[styles.secondaryButtonText, dynamicStyles.text]}>Back</Text>
@@ -785,33 +610,30 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
               styles.primaryButton,
               currentStep === 0 && styles.fullWidthButton,
               submitting && styles.buttonDisabled,
+              { backgroundColor: theme.colors.primary }
             ]}
             onPress={handleNext}
             disabled={submitting}
           >
-            <LinearGradient
-              colors={[theme.colors.primary, theme.colors.primaryLight]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.buttonGradient}
-            >
-              {submitting ? (
-                <>
+             {submitting ? (
+                <View style={styles.buttonContent}>
                   <ActivityIndicator color="#FFFFFF" size="small" />
                   <Text style={styles.primaryButtonText}>{mode === 'edit' ? 'Updating...' : 'Creating...'}</Text>
-                </>
+                </View>
               ) : (
-                <Text style={styles.primaryButtonText}>
-                  {currentStep === STEPS.length - 1 
-                    ? (mode === 'edit' ? 'Update Salon' : 'Create Salon') 
-                    : 'Next'}
-                </Text>
+                <View style={styles.buttonContent}>
+                   <Text style={styles.primaryButtonText}>
+                    {currentStep === STEPS.length - 1 
+                      ? (mode === 'edit' ? 'Update Salon' : 'Create Salon') 
+                      : 'Next'}
+                  </Text>
+                  {currentStep < STEPS.length - 1 && <MaterialIcons name="arrow-forward" size={18} color="#FFF" style={{ marginLeft: 4 }} />}
+                </View>
               )}
-            </LinearGradient>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -820,42 +642,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : StatusBar.currentHeight!,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
-  headerContent: {
+  headerTitles: {
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: theme.fonts.regular,
   },
   backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  placeholder: {
     width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   progressContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingVertical: 20,
     paddingHorizontal: 20,
   },
   stepContainer: {
@@ -863,36 +684,38 @@ const styles = StyleSheet.create({
     width: 60,
   },
   stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   stepCircleActive: {
     backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   stepNumber: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: '#9CA3AF',
   },
   stepNumberActive: {
     color: '#FFFFFF',
   },
   stepLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
   },
   stepLine: {
     flex: 1,
-    height: 2,
-    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+    height: 1,
+    backgroundColor: '#E5E7EB',
     marginHorizontal: 4,
-    marginBottom: 16, // Align with circles
+    marginBottom: 20, // Align with circles
   },
   stepLineActive: {
     backgroundColor: theme.colors.primary,
@@ -908,46 +731,49 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   stepContent: {
-    gap: 14,
+    gap: 16,
   },
   stepTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 2,
+    fontFamily: theme.fonts.bold,
+    marginBottom: 4,
   },
   stepSubtitle: {
     fontSize: 14,
-    marginBottom: 14,
+    fontFamily: theme.fonts.regular,
+    marginBottom: 20,
   },
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   labelRow: {
-    flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: theme.fonts.medium,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    minHeight: 44,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    minHeight: 48,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: theme.fonts.regular,
     paddingVertical: 12,
   },
   multilineInput: {
-    height: 100,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
   inputError: {
@@ -956,22 +782,14 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.error,
     fontSize: 12,
+    fontFamily: theme.fonts.regular,
     marginTop: 4,
-    marginLeft: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  halfWidth: {
-    flex: 1,
   },
   dayRow: {
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(150, 150, 150, 0.1)',
   },
   dayInfo: {
     flexDirection: 'row',
@@ -1002,7 +820,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   timeButtonText: {
     marginLeft: 8,
@@ -1021,38 +838,36 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: 'row',
     padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.1)',
   },
   secondaryButton: {
     flex: 1,
-    height: 48,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
-    marginRight: 10,
+    borderRadius: 8,
+    marginRight: 12,
     borderWidth: 1,
-    borderColor: 'rgba(150, 150, 150, 0.2)',
   },
   secondaryButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
   primaryButton: {
     flex: 2,
-    height: 48,
-    borderRadius: 12,
-    overflow: 'hidden',
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fullWidthButton: {
     flex: 1,
-  },
-  buttonGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -1060,17 +875,16 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
-  // Photos styles
   photosContainer: {
     marginBottom: 16,
   },
   addPhotoButton: {
     width: 100,
     height: 100,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderStyle: 'dashed',
     justifyContent: 'center',
@@ -1084,7 +898,7 @@ const styles = StyleSheet.create({
   photo: {
     width: 140,
     height: 100,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   removePhotoButton: {
     position: 'absolute',

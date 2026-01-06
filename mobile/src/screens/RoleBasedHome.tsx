@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import HomeScreen from './HomeScreen';
 import { useAuth } from '../context';
@@ -10,14 +10,17 @@ import { theme } from '../theme';
  */
 export default function RoleBasedHome({ navigation }: any) {
   const { user } = useAuth();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (user?.role) {
+    if (user?.role && !hasRedirected.current) {
       const role = user.role.toLowerCase();
       
       // Only customers should see the regular HomeScreen
       // All other roles get redirected to their dashboards
       if (role !== 'customer') {
+        hasRedirected.current = true;
+        
         // Redirect to appropriate dashboard
         if (role === 'salon_employee') {
           navigation?.navigate?.('StaffDashboard');

@@ -22,6 +22,7 @@ export interface SalonDetails {
   settings?: any;
   photos?: string[];
   images?: string[]; // Add images array
+  rating?: number;
   status: 'active' | 'inactive' | 'pending_approval';
   ownerId: string;
   createdAt: string;

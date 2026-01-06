@@ -191,6 +191,15 @@ const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
         requiredPermissions: [EmployeePermission.MANAGE_SALON_PROFILE, EmployeePermission.VIEW_SALON_SETTINGS, EmployeePermission.UPDATE_SALON_SETTINGS, EmployeePermission.MANAGE_BUSINESS_HOURS],
       },
       {
+        id: 'admin-settings',
+        icon: 'settings',
+        label: 'Admin Settings',
+        description: 'System preferences',
+        screen: 'AdminSettings',
+        iconColor: theme.colors.primary,
+        ownerOnly: true,
+      },
+      {
         id: 'explore',
         icon: 'explore',
         label: 'Explore Salons',

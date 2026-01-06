@@ -25,6 +25,7 @@ interface Step2LocationProps {
     text: { color: string };
     textSecondary: { color: string };
     input: { backgroundColor: string; color: string; borderColor: string };
+    card?: { backgroundColor: string };
   };
   onUpdateField: (field: keyof FormData, value: string) => void;
   onLocationSelected: (lat: number, lng: number, address: string, city?: string, district?: string) => void;
@@ -38,6 +39,12 @@ export const Step2Location: React.FC<Step2LocationProps> = React.memo(({
   onUpdateField,
   onLocationSelected,
 }) => {
+  const cardStyle = [
+    styles.card,
+    dynamicStyles.card || { backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF' },
+    isDark ? { borderWidth: 1, borderColor: '#3A3A3C' } : { borderWidth: 1, borderColor: '#E5E7EB' }
+  ];
+
   const renderInputField = (
     label: string,
     field: keyof FormData,
@@ -45,20 +52,23 @@ export const Step2Location: React.FC<Step2LocationProps> = React.memo(({
       placeholder?: string;
       icon?: string;
       required?: boolean;
+      compact?: boolean;
     } = {}
   ) => (
-    <View style={styles.inputGroup}>
-      <View style={styles.labelRow}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>
-          {label}
-          {options.required && <Text style={{ color: theme.colors.error }}> *</Text>}
-        </Text>
-      </View>
-      <View style={[styles.inputContainer, dynamicStyles.input, errors[field] && styles.inputError]}>
+    <View style={[styles.inputGroup, options.compact && styles.inputGroupCompact]}>
+      <Text style={[styles.inputLabel, dynamicStyles.text]}>
+        {label}
+        {options.required && <Text style={{ color: theme.colors.error }}> *</Text>}
+      </Text>
+      <View style={[
+        styles.inputContainer,
+        dynamicStyles.input,
+        errors[field] && styles.inputError
+      ]}>
         {options.icon && (
           <MaterialIcons
             name={options.icon as any}
-            size={20}
+            size={18}
             color={dynamicStyles.textSecondary.color}
             style={styles.inputIcon}
           />
@@ -80,33 +90,57 @@ export const Step2Location: React.FC<Step2LocationProps> = React.memo(({
   };
 
   return (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, dynamicStyles.text]}>Location</Text>
-      <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-        Where is your salon located?
-      </Text>
-
-      <MapErrorBoundary isDark={isDark}>
-        <OpenStreetMapView
-          latitude={formData.latitude}
-          longitude={formData.longitude}
-          onLocationSelected={handleLocationSelected}
-          isDark={isDark}
-        />
-      </MapErrorBoundary>
-
-      {renderInputField('Street Address', 'address', {
-        placeholder: 'Tap map above or enter address',
-        icon: 'location-on',
-        required: true,
-      })}
-
-      <View style={styles.row}>
-        <View style={styles.halfWidth}>
-          {renderInputField('City', 'city', { placeholder: 'City', required: true })}
+    <View style={styles.container}>
+      {/* Card 1: Interactive Map */}
+      <View style={cardStyle}>
+        <View style={styles.sectionHeader}>
+          <MaterialIcons name="map" size={20} color={theme.colors.primary} />
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Pin Location</Text>
         </View>
-        <View style={styles.halfWidth}>
-          {renderInputField('District', 'district', { placeholder: 'District' })}
+        <Text style={[styles.helperText, dynamicStyles.textSecondary]}>
+          Tap on the map to allow customers to find you easily.
+        </Text>
+        
+        <View style={styles.mapContainer}>
+          <MapErrorBoundary isDark={isDark}>
+            <OpenStreetMapView
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              onLocationSelected={handleLocationSelected}
+              isDark={isDark}
+            />
+          </MapErrorBoundary>
+        </View>
+      </View>
+
+      {/* Card 2: Address Details */}
+      <View style={cardStyle}>
+        <View style={styles.sectionHeader}>
+          <MaterialIcons name="place" size={20} color={theme.colors.primary} />
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Address Details</Text>
+        </View>
+
+        {renderInputField('Street Address', 'address', {
+          placeholder: 'e.g. 123 Main St',
+          icon: 'location-on',
+          required: true,
+          compact: true
+        })}
+
+        <View style={styles.row}>
+          <View style={styles.halfWidth}>
+            {renderInputField('City', 'city', { 
+              placeholder: 'City', 
+              required: true,
+              compact: true 
+            })}
+          </View>
+          <View style={styles.halfWidth}>
+            {renderInputField('District', 'district', { 
+              placeholder: 'District',
+              compact: true 
+            })}
+          </View>
         </View>
       </View>
     </View>
@@ -116,17 +150,83 @@ export const Step2Location: React.FC<Step2LocationProps> = React.memo(({
 Step2Location.displayName = 'Step2Location';
 
 const styles = StyleSheet.create({
-  stepContent: { paddingBottom: 20 },
-  stepTitle: { fontSize: 22, fontWeight: 'bold', fontFamily: theme.fonts.bold, marginBottom: 8 },
-  stepSubtitle: { fontSize: 14, fontFamily: theme.fonts.regular, marginBottom: 20 },
-  inputGroup: { marginBottom: 16 },
-  labelRow: { marginBottom: 8 },
-  inputLabel: { fontSize: 14, fontWeight: '500', fontFamily: theme.fonts.medium },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 50 },
-  inputIcon: { marginRight: 8 },
-  input: { flex: 1, fontSize: 15, fontFamily: theme.fonts.regular, paddingVertical: 12 },
-  inputError: { borderColor: theme.colors.error },
-  errorText: { color: theme.colors.error, fontSize: 12, fontFamily: theme.fonts.regular, marginTop: 4 },
-  row: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  halfWidth: { flex: 1 },
+  container: {
+    gap: 16,
+    paddingBottom: 24,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 0,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+  },
+  helperText: {
+    fontSize: 13,
+    marginBottom: 12,
+    marginTop: -8,
+    fontFamily: theme.fonts.regular,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputGroupCompact: {
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 6,
+    fontFamily: theme.fonts.medium,
+    opacity: 0.9,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    minHeight: 44,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    paddingVertical: 8,
+  },
+  inputError: {
+    borderColor: theme.colors.error,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: 11,
+    marginTop: 2,
+    marginLeft: 2,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  mapContainer: {
+    height: 200,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.2)',
+  },
 });

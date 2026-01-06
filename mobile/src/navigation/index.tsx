@@ -219,7 +219,6 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
 
   // Sync activeTab with current screen based on role
   // This ensures the correct tab is highlighted when navigating
-  // MOVED OUT of conditional block to fix hook error
   useEffect(() => {
     // Only sync if authenticated and not loading, and we have a valid screen
     if (isAuthenticated && !isLoading && currentScreen && user?.role) {
@@ -286,7 +285,8 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
         console.error("Error syncing activeTab:", error);
       }
     }
-  }, [currentScreen, user?.role, isAuthenticated, isLoading, activeTab]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScreen, user?.role, isAuthenticated, isLoading]); // Removed activeTab from dependencies to prevent loop
 
   // Handle Android hardware back button
   const handleBackPress = useCallback(() => {
@@ -564,6 +564,8 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
           targetScreen = "SalonManagement";
         } else if (tab.screen === Screen.MEMBERSHIP_APPROVALS) {
           targetScreen = "MembershipApprovals";
+        } else if (tab.screen === Screen.SYSTEM_REPORTS) {
+          targetScreen = "SystemReports";
         } else if (tab.screen === Screen.OPERATIONS) {
           targetScreen = "Operations";
         } else if (tab.screen === Screen.FINANCE) {
