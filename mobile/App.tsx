@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
+import { View, ActivityIndicator, Text, StyleSheet, Platform } from "react-native";
 import { AppProvider } from "./src/context";
 import Navigation from "./src/navigation";
 import { theme } from "./src/theme";
@@ -33,7 +33,7 @@ export default function App() {
     <SafeAreaProvider>
       <AppProvider>
         <Navigation />
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
       </AppProvider>
     </SafeAreaProvider>
   );

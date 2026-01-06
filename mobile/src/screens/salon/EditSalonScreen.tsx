@@ -20,6 +20,7 @@ import { salonService, SalonDetails } from '../../services/salon';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadService } from '../../services/upload';
 import { Image } from 'react-native';
+import { OpenStreetMapView } from '../owner/components/OpenStreetMapView';
 
 interface EditSalonScreenProps {
   navigation: {
@@ -53,6 +54,8 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
     closeTime: '20:00',
     isOpenSunday: false,
     images: [] as string[],
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!initialSalon);
@@ -147,6 +150,8 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
       closeTime,
       isOpenSunday: !!salon.businessHours?.sunday?.isOpen,
       images: salon.images || salon.photos || [],
+      latitude: salon.latitude || salon.lat,
+      longitude: salon.longitude || salon.lng,
     });
   }, []);
 
@@ -230,6 +235,8 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
         website: formData.website.trim() || undefined,
         registrationNumber: formData.registrationNumber.trim() || undefined,
         images: formData.images,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         settings: {
             businessHours, // For some backends
             operatingHours: businessHours // For other backends/explore compatibility
@@ -254,6 +261,17 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
     if (typeof value === 'string' && errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleLocationSelected = (lat: number, lng: number, address?: string, city?: string, district?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      address: address || prev.address,
+      city: city || prev.city,
+      district: district || prev.district,
+    }));
   };
 
   if (initialLoading) {
@@ -424,6 +442,14 @@ export default function EditSalonScreen({ navigation, route }: EditSalonScreenPr
                 />
             </View>
           </View>
+
+          {/* Location Map */}
+          <OpenStreetMapView
+            latitude={formData.latitude}
+            longitude={formData.longitude}
+            onLocationSelected={handleLocationSelected}
+            isDark={isDark}
+          />
 
           <Text style={[styles.sectionTitle, dynamicStyles.text]}>Operating Hours</Text>
           <Text style={[styles.helperText, dynamicStyles.textSecondary]}>Set your standard opening hours (Mon-Sat).</Text>

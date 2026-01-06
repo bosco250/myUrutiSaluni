@@ -403,4 +403,45 @@ export class NotificationsService {
       where: { userId },
     });
   }
+
+  /**
+   * Send test notification via all channels for testing purposes
+   */
+  async sendTestNotification(
+    userId: string,
+    title: string,
+    body: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`🧪 Sending test notification to user ${userId}`);
+
+      // Send via orchestrator to test all channels
+      await this.orchestrator.notify(
+        NotificationType.SYSTEM_ALERT,
+        {
+          userId,
+          message: body,
+          recipientEmail: 'test@example.com', // This will be replaced with actual user email
+        },
+        {
+          channels: [
+            NotificationChannel.IN_APP,
+            NotificationChannel.PUSH,
+            NotificationChannel.EMAIL,
+          ],
+          priority: 'high',
+        },
+      );
+
+      this.logger.log(
+        `✅ Test notification sent successfully to user ${userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to send test notification to user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
 }

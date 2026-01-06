@@ -64,6 +64,7 @@ export class PushNotificationService {
 
   /**
    * Send a push notification to a single user
+   * Optimized for immediate delivery like WhatsApp
    */
   async sendPushNotification(
     expoPushToken: string,
@@ -86,30 +87,43 @@ export class PushNotificationService {
       sound: 'default',
       title,
       body,
-      data,
+      data: {
+        ...data,
+        timestamp: new Date().toISOString(), // Add timestamp for immediate processing
+      },
       channelId: options?.channelId || 'default',
-      priority: options?.priority || 'high', // Always use high priority for immediate delivery
+      priority: 'high', // Always use high priority for WhatsApp-like delivery
       badge: options?.badge,
     };
 
     try {
-      // Send immediately without any delay - like WhatsApp instant delivery
+      // Use fetch with optimized settings for immediate delivery
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(this.expoPushUrl, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
           'Accept-encoding': 'gzip, deflate',
           'Content-Type': 'application/json',
+          'User-Agent': 'UrutiSaluni/1.0.0', // Custom user agent
         },
         body: JSON.stringify(message),
-        // No timeout - ensure immediate delivery attempt
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const result = await response.json();
       const ticket = result.data?.[0] as ExpoPushTicket;
 
       if (ticket?.status === 'ok') {
-        this.logger.log(`📱 Push notification sent: ${title}`);
+        this.logger.log(`📱 Push notification sent immediately: ${title}`);
         return true;
       } else {
         this.logger.error(
@@ -118,8 +132,79 @@ export class PushNotificationService {
         );
         return false;
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        this.logger.error('Push notification timeout - retrying...');
+        // Retry once on timeout
+        return this.sendPushNotificationWithRetry(
+          expoPushToken,
+          title,
+          body,
+          data,
+          options,
+        );
+      }
       this.logger.error(`Error sending push notification:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Retry mechanism for failed push notifications
+   */
+  private async sendPushNotificationWithRetry(
+    expoPushToken: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>,
+    options?: {
+      channelId?: string;
+      priority?: 'default' | 'normal' | 'high';
+      badge?: number;
+    },
+  ): Promise<boolean> {
+    const message: ExpoPushMessage = {
+      to: expoPushToken,
+      sound: 'default',
+      title,
+      body,
+      data: {
+        ...data,
+        timestamp: new Date().toISOString(),
+        retry: true,
+      },
+      channelId: options?.channelId || 'default',
+      priority: 'high',
+      badge: options?.badge,
+    };
+
+    try {
+      const response = await fetch(this.expoPushUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+          'User-Agent': 'UrutiSaluni/1.0.0',
+        },
+        body: JSON.stringify(message),
+      });
+
+      const result = await response.json();
+      const ticket = result.data?.[0] as ExpoPushTicket;
+
+      if (ticket?.status === 'ok') {
+        this.logger.log(`📱 Push notification sent on retry: ${title}`);
+        return true;
+      } else {
+        this.logger.error(
+          `Push notification retry failed:`,
+          ticket?.message || result,
+        );
+        return false;
+      }
+    } catch (error) {
+      this.logger.error(`Push notification retry error:`, error);
       return false;
     }
   }

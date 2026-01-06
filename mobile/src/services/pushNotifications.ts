@@ -28,6 +28,8 @@ try {
 if (Notifications && notificationsAvailable && !isExpoGo) {
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
+      console.log('📬 Incoming notification:', notification.request.content.title);
+      
       // Always show notification in system tray, even when app is in foreground
       // This mimics WhatsApp behavior - notifications always visible
       return {
@@ -40,15 +42,17 @@ if (Notifications && notificationsAvailable && !isExpoGo) {
     },
   });
 
-  // Set notification presentation options for iOS
+  // Set notification categories for iOS interactive notifications
   if (Platform.OS === "ios") {
-    Notifications.setNotificationChannelAsync("default", {
-      name: "Default",
-      importance: Notifications.AndroidImportance.MAX,
-      sound: "default",
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#C89B68",
-    });
+    Notifications.setNotificationCategoryAsync('appointment', [
+      {
+        identifier: 'view',
+        buttonTitle: 'View',
+        options: {
+          opensAppToForeground: true,
+        },
+      },
+    ]);
   }
 }
 
@@ -106,21 +110,23 @@ class PushNotificationsService {
         return null;
       }
 
-      // Get Expo push token
+      // Get Expo push token - handle APK builds without project ID
+      let tokenResponse;
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
         Constants.easConfig?.projectId;
 
-      if (!projectId) {
-        // For development, use experienceId
-        const tokenResponse = await Notifications.getExpoPushTokenAsync();
-        token = tokenResponse.data;
-      } else {
-        const tokenResponse = await Notifications.getExpoPushTokenAsync({
+      if (projectId) {
+        // Production build with project ID
+        tokenResponse = await Notifications.getExpoPushTokenAsync({
           projectId,
         });
-        token = tokenResponse.data;
+      } else {
+        // Development or APK build without project ID
+        tokenResponse = await Notifications.getExpoPushTokenAsync();
       }
+      
+      token = tokenResponse.data;
 
       this.expoPushToken = token;
       console.log("📱 Expo Push Token:", token);

@@ -12,6 +12,38 @@ import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { theme } from '../../../theme';
 
+// Nominatim API for reliable geocoding
+const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`
+    );
+    const data = await response.json();
+    
+    if (data && data.address) {
+      const addr = data.address;
+      
+      // Build address string
+      const addressParts = [
+        addr.house_number,
+        addr.road || addr.street
+      ].filter(Boolean);
+      const address = addressParts.join(' ');
+      
+      // For Rwanda: extract proper administrative levels
+      const district = addr.state_district || addr.county || addr.state || '';
+      const city = addr.city || addr.town || addr.village || addr.municipality || '';
+      
+      return { address, city, district };
+    }
+    
+    throw new Error('No address found');
+  } catch (error) {
+    console.error('Nominatim geocoding error:', error);
+    throw error;
+  }
+};
+
 interface SafeMapViewProps {
   latitude?: number;
   longitude?: number;
@@ -128,32 +160,36 @@ export const OpenStreetMapView: React.FC<SafeMapViewProps> = ({
         setCurrentLat(data.latitude);
         setCurrentLng(data.longitude);
         
-        // Get address with proper Rwanda administrative levels
-        Location.reverseGeocodeAsync({
-          latitude: data.latitude,
-          longitude: data.longitude
-        }).then(results => {
-          if (results[0]) {
-            const place = results[0];
-            const addressParts = [
-              place.streetNumber,
-              place.street
-            ].filter(Boolean);
-            const address = addressParts.join(' ');
-            
-            // For Rwanda: use proper administrative levels
-            // District = place.subregion (administrative level 2)
-            // City/Town = place.city or place.locality
-            const district = place.subregion || place.region || '';
-            const city = place.city || place.locality || place.town || '';
-            
+        // Use Nominatim API for reliable geocoding in production
+        fetchAddressFromCoordinates(data.latitude, data.longitude)
+          .then(({ address, city, district }) => {
             onLocationSelected(data.latitude, data.longitude, address, city, district);
-          } else {
-            onLocationSelected(data.latitude, data.longitude, '', '', '');
-          }
-        }).catch(() => {
-          onLocationSelected(data.latitude, data.longitude, '', '', '');
-        });
+          })
+          .catch(() => {
+            // Fallback to expo-location if Nominatim fails
+            Location.reverseGeocodeAsync({
+              latitude: data.latitude,
+              longitude: data.longitude
+            }).then(results => {
+              if (results[0]) {
+                const place = results[0];
+                const addressParts = [
+                  place.streetNumber,
+                  place.street
+                ].filter(Boolean);
+                const address = addressParts.join(' ');
+                
+                const district = place.subregion || place.region || '';
+                const city = place.city || place.district || '';
+                
+                onLocationSelected(data.latitude, data.longitude, address, city, district);
+              } else {
+                onLocationSelected(data.latitude, data.longitude, '', '', '');
+              }
+            }).catch(() => {
+              onLocationSelected(data.latitude, data.longitude, '', '', '');
+            });
+          });
       }
     } catch (error) {
       console.error('Map message error:', error);
@@ -172,7 +208,6 @@ export const OpenStreetMapView: React.FC<SafeMapViewProps> = ({
 
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
-        timeout: 15000,
       });
 
       const { latitude: lat, longitude: lng } = location.coords;
@@ -181,27 +216,30 @@ export const OpenStreetMapView: React.FC<SafeMapViewProps> = ({
 
       // Get address with proper Rwanda administrative levels
       try {
-        const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-        if (results[0]) {
-          const place = results[0];
-          const addressParts = [
-            place.streetNumber,
-            place.street
-          ].filter(Boolean);
-          const address = addressParts.join(' ');
-          
-          // For Rwanda: use proper administrative levels
-          // District = place.subregion (administrative level 2)
-          // City/Town = place.city or place.locality
-          const district = place.subregion || place.region || '';
-          const city = place.city || place.locality || place.town || '';
-          
-          onLocationSelected(lat, lng, address, city, district);
-        } else {
+        const { address, city, district } = await fetchAddressFromCoordinates(lat, lng);
+        onLocationSelected(lat, lng, address, city, district);
+      } catch {
+        // Fallback to expo-location
+        try {
+          const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+          if (results[0]) {
+            const place = results[0];
+            const addressParts = [
+              place.streetNumber,
+              place.street
+            ].filter(Boolean);
+            const address = addressParts.join(' ');
+            
+            const district = place.subregion || place.region || '';
+            const city = place.city || place.district || '';
+            
+            onLocationSelected(lat, lng, address, city, district);
+          } else {
+            onLocationSelected(lat, lng, '', '', '');
+          }
+        } catch {
           onLocationSelected(lat, lng, '', '', '');
         }
-      } catch {
-        onLocationSelected(lat, lng, '', '', '');
       }
     } catch (error) {
       console.error('GPS error:', error);
