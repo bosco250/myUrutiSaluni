@@ -19,6 +19,7 @@ import { useTheme, useAuth } from "../../context";
 import { Loader } from "../../components/common";
 import { api } from "../../services/api";
 import { uploadService } from "../../services/upload";
+import { useRefreshControl } from "../../hooks/useRefreshControl";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
@@ -117,6 +118,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setCheckingMembership(false);
     }
   }, [isEmployee]);
+
+  // Refresh control for pull-to-refresh
+  const { refreshControl } = useRefreshControl({
+    onRefresh: checkMembershipStatus,
+    isDark,
+  });
 
   useEffect(() => {
     checkMembershipStatus();
@@ -227,6 +234,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>

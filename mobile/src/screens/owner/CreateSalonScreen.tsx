@@ -14,8 +14,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { theme } from '../../theme';
 import { useAuth, useTheme } from '../../context';
 import { salonService, CreateSalonDto } from '../../services/salon';
@@ -23,6 +21,10 @@ import { uploadService } from '../../services/upload';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
+// Step Components
+import { Step1BasicInfo } from './steps/Step1_BasicInfo';
+import { Step2Location } from './steps/Step2_Location';
 
 interface CreateSalonScreenProps {
   navigation: {
@@ -93,24 +95,6 @@ const DEFAULT_WORKING_HOURS: WorkingHours = {
 
 const STEPS = ['Basic Info', 'Location', 'Business', 'Contact'];
 
-// Business Type Options
-const BUSINESS_TYPES = [
-  { value: 'hair_salon', label: 'Hair Salon' },
-  { value: 'beauty_spa', label: 'Beauty Spa' },
-  { value: 'nail_salon', label: 'Nail Salon' },
-  { value: 'barbershop', label: 'Barbershop' },
-  { value: 'full_service', label: 'Full Service' },
-  { value: 'mobile', label: 'Mobile Service' },
-  { value: 'other', label: 'Other' },
-];
-
-// Target Clientele Options
-const TARGET_CLIENTELE = [
-  { value: 'men', label: 'Men', icon: 'male' as const },
-  { value: 'women', label: 'Women', icon: 'female' as const },
-  { value: 'both', label: 'Both', icon: 'people' as const },
-];
-
 export default function CreateSalonScreen({ navigation, route }: CreateSalonScreenProps) {
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -141,13 +125,6 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
   });
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [, setLocationPermission] = useState(false);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: -1.9403,
-    longitude: 29.8739,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  });
   const [workingHours, setWorkingHours] = useState<WorkingHours>(DEFAULT_WORKING_HOURS);
   
   // Time picker state
@@ -216,7 +193,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     input: {
       backgroundColor: isDark ? '#3A3A3C' : '#F5F5F5',
       color: isDark ? '#FFFFFF' : theme.colors.text,
-      borderColor: isDark ? '#4A4A4C' : theme.colors.borderLight,
+      borderColor: isDark ? '#4A4A4C' : (theme.colors.borderLight || '#E0E0E0'),
     },
   };
 
@@ -255,11 +232,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     });
 
     if (editingSalon.latitude && editingSalon.longitude) {
-      setMapRegion(prev => ({
-        ...prev,
-        latitude: editingSalon.latitude,
-        longitude: editingSalon.longitude,
-      }));
+      // Location coordinates are handled by Step2Location component
     }
 
     if (editingSalon.businessHours) {
@@ -284,78 +257,42 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     }
   }, [editingSalon]);
 
-  const getCurrentLocation = useCallback(async () => {
-    try {
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-      setFormData(prev => ({ ...prev, latitude, longitude }));
-      setMapRegion(prev => ({ ...prev, latitude, longitude }));
-      await reverseGeocodeLocation(latitude, longitude);
-    } catch {
-      console.error('Error getting location');
-    }
+  // Senior Dev: Memoize callbacks to prevent unnecessary re-renders
+  const updateFormData = useCallback((field: keyof FormData, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => {
+      if (prev[field]) {
+        const { [field]: removed, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
   }, []);
 
-  const requestLocationPermission = useCallback(async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    setLocationPermission(status === 'granted');
-    if (status === 'granted' && mode !== 'edit') {
-      getCurrentLocation();
-    }
-  }, [mode, getCurrentLocation]);
-
-  useEffect(() => {
-    requestLocationPermission();
-  }, [requestLocationPermission]);
+  // Senior Dev: Memoize business type toggle handler
+  const handleToggleBusinessType = useCallback((value: string) => {
+    setFormData(prev => {
+      const currentTypes = prev.businessTypes;
+      if (currentTypes.includes(value)) {
+        return { ...prev, businessTypes: currentTypes.filter(t => t !== value) };
+      } else {
+        return { ...prev, businessTypes: [...currentTypes, value] };
+      }
+    });
+    setErrors(prev => {
+      if (prev.businessTypes) {
+        const { businessTypes: removed, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
+  }, []);
 
   useEffect(() => {
     if (mode === 'edit' && editingSalon) {
       prefillForm();
     }
   }, [mode, editingSalon, prefillForm]);
-
-  const reverseGeocodeLocation = async (latitude: number, longitude: number) => {
-    try {
-      const results = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (results && results.length > 0) {
-        const place = results[0];
-        
-        const streetParts: string[] = [];
-        if (place.streetNumber) streetParts.push(place.streetNumber);
-        if (place.street) streetParts.push(place.street);
-        if (place.name && place.name !== place.street) streetParts.push(place.name);
-        if (streetParts.length === 0 && place.district) {
-          streetParts.push(place.district);
-        }
-        const streetAddress = streetParts.length > 0 ? streetParts.join(', ') : place.formattedAddress || '';
-        const rwandaDistrict = place.subregion || place.district || '';
-        const rwandaCity = place.city || (place.region?.includes('Kigali') ? 'Kigali' : '') || '';
-        
-        setFormData(prev => ({
-          ...prev,
-          address: streetAddress || prev.address,
-          city: rwandaCity || prev.city,
-          district: rwandaDistrict || prev.district,
-        }));
-        
-        setErrors(prev => ({
-          ...prev,
-          address: '',
-          city: '',
-          district: '',
-        }));
-      }
-    } catch {
-      console.error('[CreateSalon] Reverse geocoding error');
-    }
-  };
-
-  const updateFormData = (field: keyof FormData, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
 
   const validateStep = (): boolean => {
     const newErrors: FormErrors = {};
@@ -366,6 +303,12 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       }
       if (!formData.description.trim()) {
         newErrors.description = 'Description is required';
+      }
+      if (!formData.targetClientele) {
+        newErrors.targetClientele = 'Target clientele is required';
+      }
+      if (formData.businessTypes.length === 0) {
+        newErrors.businessTypes = 'At least one business type is required';
       }
     }
 
@@ -440,7 +383,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           licenseNumber: formData.licenseNumber.trim() || undefined,
           taxId: formData.taxId.trim() || undefined,
         },
-        images: formData.images,
+        images: formData.images || [],
       };
 
       if (mode === 'edit' && editingSalon?.id) {
@@ -477,6 +420,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
              }
           });
 
+          console.log('Creating salon with data:', cleanedData);
           const newSalon = await salonService.createSalon(cleanedData);
           
           Alert.alert(
@@ -491,8 +435,10 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           );
       }
     } catch (error: any) {
-      console.error('[CreateSalon] Error:', error?.message || 'Unknown error');
+      console.error('[CreateSalon] Error:', error);
       let errorMessage = 'Failed to submit. Please try again.';
+      
+      // Better error handling
       if (error?.response?.data?.message) {
         errorMessage = Array.isArray(error.response.data.message)
           ? error.response.data.message.join('\n')
@@ -515,12 +461,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     }
   };
 
-  const handleMapPress = async (event: any) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    setFormData(prev => ({ ...prev, latitude, longitude }));
-    await reverseGeocodeLocation(latitude, longitude);
-  };
-
+  // Senior Dev: Debounce map interactions to reduce geocoding API calls
   const updateDayHours = (day: keyof WorkingHours, field: keyof DayHours, value: boolean | string) => {
     setWorkingHours(prev => ({
       ...prev,
@@ -589,221 +530,50 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
     </View>
   );
 
-  const renderInputField = (
-    label: string,
-    field: keyof FormData,
-    options: {
-      placeholder?: string;
-      keyboardType?: 'default' | 'email-address' | 'phone-pad';
-      multiline?: boolean;
-      icon?: string;
-      required?: boolean;
-    } = {}
-  ) => (
-    <View style={styles.inputGroup}>
-      <View style={styles.labelRow}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>
-          {label}
-          {options.required && <Text style={{ color: theme.colors.error }}> *</Text>}
-        </Text>
-      </View>
-      <View style={[styles.inputContainer, dynamicStyles.input, errors[field] && styles.inputError]}>
-        {options.icon && (
-          <MaterialIcons
-            name={options.icon as any}
-            size={20}
-            color={dynamicStyles.textSecondary.color}
-            style={styles.inputIcon}
-          />
-        )}
-        <TextInput
-          style={[
-            styles.input,
-            { color: dynamicStyles.input.color },
-            options.multiline && styles.multilineInput,
-          ]}
-          placeholder={options.placeholder}
-          placeholderTextColor={dynamicStyles.textSecondary.color}
-          value={String(formData[field] || '')}
-          onChangeText={(value) => updateFormData(field, value)}
-          keyboardType={options.keyboardType || 'default'}
-          multiline={options.multiline}
-          numberOfLines={options.multiline ? 4 : 1}
-        />
-      </View>
-      {errors[field] && (
-        <Text style={styles.errorText}>{errors[field]}</Text>
-      )}
-    </View>
-  );
 
+
+  // Senior Dev: Use extracted Step1 component
   const renderStep1 = () => (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, dynamicStyles.text]}>Basic Information</Text>
-      <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-        Tell us about your salon
-      </Text>
-      
-
-
-      {renderInputField('Salon Name', 'name', {
-        placeholder: 'Enter your salon name',
-        icon: 'store',
-        required: true,
-      })}
-
-      {/* Business Type Picker */}
-      <View style={styles.inputGroup}>
-        <View style={styles.labelRow}>
-          <Text style={[styles.inputLabel, dynamicStyles.text]}>
-            Business Type <Text style={{ color: theme.colors.error }}>*</Text>
-          </Text>
-        </View>
-        <View style={[styles.pickerContainer, dynamicStyles.input, errors.businessTypes && styles.inputError]}>
-          <MaterialIcons name="business" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
-            {BUSINESS_TYPES.map((type) => {
-              const isSelected = formData.businessTypes.includes(type.value);
-              return (
-                <TouchableOpacity
-                  key={type.value}
-                  style={[
-                    styles.pickerOption,
-                    isSelected && styles.pickerOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setFormData(prev => {
-                      const currentTypes = prev.businessTypes;
-                      if (currentTypes.includes(type.value)) {
-                        // Remove if already selected
-                        return { ...prev, businessTypes: currentTypes.filter(t => t !== type.value) };
-                      } else {
-                        // Add if not selected
-                        return { ...prev, businessTypes: [...currentTypes, type.value] };
-                      }
-                    });
-                    if (errors.businessTypes) setErrors(prev => ({ ...prev, businessTypes: '' }));
-                  }}
-                >
-                  <MaterialIcons
-                    name={isSelected ? 'check-box' : 'check-box-outline-blank'}
-                    size={18}
-                    color={isSelected ? '#FFFFFF' : dynamicStyles.textSecondary.color}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={[
-                    styles.pickerOptionText,
-                    dynamicStyles.text,
-                    isSelected && styles.pickerOptionTextSelected,
-                  ]}>
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-        {errors.businessTypes && <Text style={styles.errorText}>{errors.businessTypes}</Text>}
-      </View>
-
-      {/* Target Clientele Checkboxes */}
-      <View style={styles.inputGroup}>
-        <View style={styles.labelRow}>
-          <Text style={[styles.inputLabel, dynamicStyles.text]}>
-            Target Clientele <Text style={{ color: theme.colors.error }}>*</Text>
-          </Text>
-        </View>
-        <View style={styles.checkboxRow}>
-          {TARGET_CLIENTELE.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.checkboxOption,
-                dynamicStyles.input,
-                formData.targetClientele === option.value && styles.checkboxOptionSelected,
-              ]}
-              onPress={() => {
-                setFormData(prev => ({ ...prev, targetClientele: option.value }));
-                if (errors.targetClientele) setErrors(prev => ({ ...prev, targetClientele: '' }));
-              }}
-            >
-              <MaterialIcons
-                name={formData.targetClientele === option.value ? 'check-circle' : 'radio-button-unchecked'}
-                size={22}
-                color={formData.targetClientele === option.value ? theme.colors.primary : dynamicStyles.textSecondary.color}
-              />
-              <Text style={[
-                styles.checkboxLabel,
-                dynamicStyles.text,
-                formData.targetClientele === option.value && { color: theme.colors.primary, fontWeight: '600' },
-              ]}>
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {errors.targetClientele && <Text style={styles.errorText}>{errors.targetClientele}</Text>}
-      </View>
-
-      {renderInputField('Registration Number', 'registrationNumber', {
-        placeholder: 'Business Registration Number',
-        icon: 'verified-user',
-      })}
-      
-      {renderInputField('Description', 'description', {
-        placeholder: 'Describe your salon and services...',
-        icon: 'description',
-        multiline: true,
-        required: true,
-      })}
-    </View>
+    <Step1BasicInfo
+      formData={formData}
+      errors={errors}
+      isDark={isDark}
+      dynamicStyles={dynamicStyles}
+      onUpdateField={updateFormData}
+      onToggleBusinessType={handleToggleBusinessType}
+      onUpdateTargetClientele={(value) => {
+        setFormData(prev => ({ ...prev, targetClientele: value }));
+        if (errors.targetClientele) setErrors(prev => ({ ...prev, targetClientele: '' }));
+      }}
+    />
   );
 
+  // Senior Dev: Use extracted Step2 component
   const renderStep2 = () => (
-    <View style={styles.stepContent}>
-      <Text style={[styles.stepTitle, dynamicStyles.text]}>Location</Text>
-      <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
-        Where is your salon located?
-      </Text>
-      {renderInputField('Street Address', 'address', {
-        placeholder: 'Enter street address',
-        icon: 'location-on',
-        required: true,
-      })}
-      <View style={styles.row}>
-        <View style={styles.halfWidth}>
-          {renderInputField('City', 'city', { placeholder: 'City', required: true })}
-        </View>
-        <View style={styles.halfWidth}>
-          {renderInputField('District', 'district', { placeholder: 'District' })}
-        </View>
-      </View>
-      <View style={styles.mapContainer}>
-        <Text style={[styles.inputLabel, dynamicStyles.text]}>Pin Location on Map</Text>
-        <View style={styles.mapWrapper}>
-          <MapView
-            provider={PROVIDER_DEFAULT}
-            style={styles.map}
-            region={mapRegion}
-            onPress={handleMapPress}
-          >
-            {formData.latitude !== undefined && formData.longitude !== undefined && (
-              <Marker
-                coordinate={{ latitude: formData.latitude, longitude: formData.longitude }}
-              />
-            )}
-          </MapView>
-          <TouchableOpacity style={styles.locationButton} onPress={getCurrentLocation}>
-            <MaterialIcons name="my-location" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {formData.latitude !== undefined && formData.longitude !== undefined && (
-          <Text style={[styles.coordinatesText, dynamicStyles.textSecondary]}>
-            📍 {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-          </Text>
-        )}
-      </View>
-    </View>
+    <Step2Location
+      formData={formData}
+      errors={errors}
+      isDark={isDark}
+      dynamicStyles={dynamicStyles}
+      onUpdateField={updateFormData}
+      onLocationSelected={(lat, lng, address, city, district) => {
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+          address: address || prev.address,
+          city: city || prev.city,
+          district: district || prev.district,
+        }));
+        // Clear location-related errors
+        setErrors(prev => ({
+          ...prev,
+          address: '',
+          city: '',
+          district: '',
+        }));
+      }}
+    />
   );
 
   const DAYS: { key: keyof WorkingHours; label: string }[] = [
@@ -884,21 +654,50 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
       <Text style={[styles.stepSubtitle, dynamicStyles.textSecondary]}>
         How can customers reach you?
       </Text>
-      {renderInputField('Phone Number', 'phone', {
-        placeholder: '+250 XXX XXX XXX',
-        icon: 'phone',
-        keyboardType: 'phone-pad',
-        required: true,
-      })}
-      {renderInputField('Email', 'email', {
-        placeholder: 'salon@example.com',
-        icon: 'email',
-        keyboardType: 'email-address',
-      })}
-      {renderInputField('Website', 'website', {
-        placeholder: 'https://www.yoursalon.com',
-        icon: 'language',
-      })}
+      <View style={styles.inputGroup}>
+        <Text style={[styles.inputLabel, dynamicStyles.text]}>Phone Number *</Text>
+        <View style={[styles.inputContainer, dynamicStyles.input, errors.phone && styles.inputError]}>
+          <MaterialIcons name="phone" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
+          <TextInput
+            style={[styles.input, { color: dynamicStyles.input.color }]}
+            placeholder="+250 XXX XXX XXX"
+            placeholderTextColor={dynamicStyles.textSecondary.color}
+            value={formData.phone}
+            onChangeText={(value) => updateFormData('phone', value)}
+            keyboardType="phone-pad"
+          />
+        </View>
+        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+      </View>
+      
+      <View style={styles.inputGroup}>
+        <Text style={[styles.inputLabel, dynamicStyles.text]}>Email</Text>
+        <View style={[styles.inputContainer, dynamicStyles.input]}>
+          <MaterialIcons name="email" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
+          <TextInput
+            style={[styles.input, { color: dynamicStyles.input.color }]}
+            placeholder="salon@example.com"
+            placeholderTextColor={dynamicStyles.textSecondary.color}
+            value={formData.email}
+            onChangeText={(value) => updateFormData('email', value)}
+            keyboardType="email-address"
+          />
+        </View>
+      </View>
+      
+      <View style={styles.inputGroup}>
+        <Text style={[styles.inputLabel, dynamicStyles.text]}>Website</Text>
+        <View style={[styles.inputContainer, dynamicStyles.input]}>
+          <MaterialIcons name="language" size={20} color={dynamicStyles.textSecondary.color} style={styles.inputIcon} />
+          <TextInput
+            style={[styles.input, { color: dynamicStyles.input.color }]}
+            placeholder="https://www.yoursalon.com"
+            placeholderTextColor={dynamicStyles.textSecondary.color}
+            value={formData.website}
+            onChangeText={(value) => updateFormData('website', value)}
+          />
+        </View>
+      </View>
 
       {/* Salon Photos Section */}
       <View style={{ marginBottom: 20, marginTop: 10 }}>
@@ -1167,38 +966,6 @@ const styles = StyleSheet.create({
   halfWidth: {
     flex: 1,
   },
-  mapContainer: {
-    marginTop: 8,
-  },
-  mapWrapper: {
-    height: 200,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(150, 150, 150, 0.2)',
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  locationButton: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-  },
-  coordinatesText: {
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: 'right',
-  },
   dayRow: {
     padding: 16,
     borderRadius: 12,
@@ -1295,61 +1062,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-  // New styles for Business Type Picker
-  pickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  pickerScroll: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  pickerOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-    marginRight: 8,
-  },
-  pickerOptionSelected: {
-    backgroundColor: theme.colors.primary,
-  },
-  pickerOptionText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  pickerOptionTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  // New styles for Target Clientele Checkboxes
-  checkboxRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  checkboxOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
-  },
-  checkboxOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: 'rgba(128, 74, 216, 0.1)',
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   // Photos styles
   photosContainer: {

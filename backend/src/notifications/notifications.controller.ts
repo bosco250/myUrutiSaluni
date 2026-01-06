@@ -283,10 +283,12 @@ export class NotificationsController {
         {
           type: 'test',
           timestamp: new Date().toISOString(),
+          testData: 'Push notifications are working!',
         },
         {
           priority: 'high',
           channelId: 'default',
+          badge: 1,
         },
       );
 
@@ -295,12 +297,42 @@ export class NotificationsController {
         success: true,
         message:
           'Test push notification sent successfully! Check your mobile device.',
+        timestamp: new Date().toISOString(),
       };
     } else {
       return {
         success: false,
         message:
           'Failed to send test push notification. Make sure you have a push token registered.',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  @Post('test-all-channels')
+  @ApiOperation({
+    summary: 'Test all notification channels (in-app, email, push)',
+  })
+  async testAllChannels(@CurrentUser() user: any) {
+    try {
+      // Send test notification via all channels
+      await this.notificationsService.sendTestNotification(
+        user.id,
+        'Test Notification',
+        'This is a test of all notification channels.',
+      );
+
+      return {
+        success: true,
+        message:
+          'Test notifications sent via all channels (in-app, email, push)',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to send test notifications: ${error.message}`,
+        timestamp: new Date().toISOString(),
       };
     }
   }
