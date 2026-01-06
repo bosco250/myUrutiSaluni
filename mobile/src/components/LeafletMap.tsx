@@ -49,21 +49,26 @@ const LeafletMap: React.FC<Props> = ({ region, markers = [], onMarkerPress, styl
               attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OSM</a>'
           }).addTo(map);
 
-          // Custom icon to look a bit nicer/native
-          var DefaultIcon = L.icon({
-              iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+          // Custom salon icon with primary color
+          var SalonIcon = L.icon({
+              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
               shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
               iconSize: [25, 41],
               iconAnchor: [12, 41],
               popupAnchor: [1, -34],
           });
-          L.Marker.prototype.options.icon = DefaultIcon;
+          L.Marker.prototype.options.icon = SalonIcon;
 
           var markersData = ${JSON.stringify(markers)};
           
           markersData.forEach(function(m) {
              var marker = L.marker([m.latitude, m.longitude]).addTo(map);
-             marker.bindPopup("<b>" + m.title + "</b><br>" + (m.description || "")).on('popupopen', function() {
+             var popupContent = '<div style="min-width: 150px; font-family: system-ui, -apple-system, sans-serif;">' +
+               '<b style="font-size: 14px; color: #333;">' + m.title + '</b><br/>' +
+               '<span style="font-size: 12px; color: #666;">' + (m.description || 'No address') + '</span><br/>' +
+               '<span style="font-size: 11px; color: #E4A853; margin-top: 4px; display: block;">Tap marker to view salon →</span>' +
+             '</div>';
+             marker.bindPopup(popupContent).on('popupopen', function() {
                  // Send message back to RN when popup opens (simulating a "press" or selection)
                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerPress', id: m.id }));
              });
@@ -72,6 +77,12 @@ const LeafletMap: React.FC<Props> = ({ region, markers = [], onMarkerPress, styl
                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerPress', id: m.id }));
              });
           });
+
+          // Fit bounds if we have markers
+          if (markersData.length > 0) {
+            var group = new L.featureGroup(markersData.map(m => L.marker([m.latitude, m.longitude])));
+            map.fitBounds(group.getBounds().pad(0.1));
+          }
         </script>
       </body>
     </html>

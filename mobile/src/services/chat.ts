@@ -41,6 +41,12 @@ export interface Conversation {
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
+  customer?: {
+    id: string;
+    fullName?: string;
+    name?: string;
+    email?: string;
+  };
   employee?: {
     id: string;
     fullName: string;
