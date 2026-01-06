@@ -12,7 +12,7 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
 import {
@@ -26,6 +26,13 @@ import { api } from "../../services/api";
 import { EmployeePermissionGate } from "../../components/permissions/EmployeePermissionGate";
 import { EmployeePermission } from "../../constants/employeePermissions";
 import { useEmployeePermissionCheck } from "../../hooks/useEmployeePermissionCheck";
+
+// Senior Dev: Extracted components for better performance
+import { SalesHeader } from "./components/SalesHeader";
+import { SalesSearchBar } from "./components/SalesSearchBar";
+import { SalesTabs } from "./components/SalesTabs";
+import { SalesServicesList } from "./components/SalesServicesList";
+import { SalesProductsList } from "./components/SalesProductsList";
 
 interface SalesScreenProps {
   navigation: {
@@ -265,20 +272,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
     [cart]
   );
 
-  // Filter items based on search
-  const filteredServices = useMemo(() => {
-    return services.filter((s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [services, searchQuery]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        p.stockLevel > 0
-    );
-  }, [products, searchQuery]);
+  // Senior Dev: Filtering logic moved to SalesServicesList and SalesProductsList components
 
   const addToCart = (
     item: ServiceItem | SalonProduct,
@@ -412,261 +406,52 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
         <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
-          />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, dynamicStyles.text]}>
-            Quick Sale
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.cartButton, { backgroundColor: theme.colors.primary }]}
-          onPress={() => setShowCart(true)}
-        >
-          <MaterialIcons
-            name="shopping-cart"
-            size={20}
-            color={theme.colors.white}
-          />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>
-                {cartCount > 9 ? "9+" : cartCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Senior Dev: Extracted Header Component */}
+      <SalesHeader
+        cartCount={cartCount}
+        onBack={() => navigation.goBack()}
+        onCartPress={() => setShowCart(true)}
+        isDark={isDark}
+        dynamicStyles={dynamicStyles}
+      />
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchInput, dynamicStyles.input]}>
-          <MaterialIcons
-            name="search"
-            size={20}
-            color={dynamicStyles.textSecondary.color}
-          />
-          <TextInput
-            style={[styles.searchText, { color: dynamicStyles.text.color }]}
-            placeholder="Search services or products..."
-            placeholderTextColor={dynamicStyles.textSecondary.color}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <MaterialIcons
-                name="close"
-                size={18}
-                color={dynamicStyles.textSecondary.color}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      {/* Senior Dev: Extracted Search Component */}
+      <SalesSearchBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder="Search services or products..."
+        isDark={isDark}
+        dynamicStyles={dynamicStyles}
+      />
 
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "services"
-              ? { backgroundColor: theme.colors.primary }
-              : dynamicStyles.input,
-          ]}
-          onPress={() => setActiveTab("services")}
-        >
-          <MaterialIcons
-            name="content-cut"
-            size={18}
-            color={
-              activeTab === "services"
-                ? theme.colors.white
-                : dynamicStyles.text.color
-            }
-          />
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color:
-                  activeTab === "services"
-                    ? theme.colors.white
-                    : dynamicStyles.text.color,
-              },
-            ]}
-          >
-            Services ({services.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "products"
-              ? { backgroundColor: theme.colors.primary }
-              : dynamicStyles.input,
-          ]}
-          onPress={() => setActiveTab("products")}
-        >
-          <MaterialIcons
-            name="shopping-bag"
-            size={18}
-            color={
-              activeTab === "products"
-                ? theme.colors.white
-                : dynamicStyles.text.color
-            }
-          />
-          <Text
-            style={[
-              styles.tabText,
-              {
-                color:
-                  activeTab === "products"
-                    ? theme.colors.white
-                    : dynamicStyles.text.color,
-              },
-            ]}
-          >
-            Products ({products.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Senior Dev: Extracted Tabs Component */}
+      <SalesTabs
+        activeTab={activeTab}
+        serviceCount={services.length}
+        productCount={products.length}
+        onTabChange={setActiveTab}
+        isDark={isDark}
+        dynamicStyles={dynamicStyles}
+      />
 
-      {/* Items List */}
-      <ScrollView
-        style={styles.itemsList}
-        contentContainerStyle={styles.itemsContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {activeTab === "services"
-          ? filteredServices.map((service) => (
-              <TouchableOpacity
-                key={service.id}
-                style={[styles.itemCard, dynamicStyles.card]}
-                onPress={() => addToCart(service, "service")}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.itemIcon,
-                    { backgroundColor: theme.colors.secondary + "15" },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="content-cut"
-                    size={22}
-                    color={theme.colors.secondary}
-                  />
-                </View>
-                <View style={styles.itemInfo}>
-                  <Text
-                    style={[styles.itemName, dynamicStyles.text]}
-                    numberOfLines={1}
-                  >
-                    {service.name}
-                  </Text>
-                  {service.duration && (
-                    <Text
-                      style={[styles.itemMeta, dynamicStyles.textSecondary]}
-                    >
-                      {service.duration} min
-                    </Text>
-                  )}
-                </View>
-                <Text
-                  style={[styles.itemPrice, { color: theme.colors.primary }]}
-                >
-                  RWF {service.price.toLocaleString()}
-                </Text>
-                <View style={styles.addIcon}>
-                  <MaterialIcons
-                    name="add-circle"
-                    size={28}
-                    color={theme.colors.success}
-                  />
-                </View>
-              </TouchableOpacity>
-            ))
-          : filteredProducts.map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                style={[styles.itemCard, dynamicStyles.card]}
-                onPress={() => addToCart(product, "product")}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.itemIcon,
-                    { backgroundColor: theme.colors.info + "15" },
-                  ]}
-                >
-                  <MaterialIcons
-                    name="shopping-bag"
-                    size={22}
-                    color={theme.colors.info}
-                  />
-                </View>
-                <View style={styles.itemInfo}>
-                  <Text
-                    style={[styles.itemName, dynamicStyles.text]}
-                    numberOfLines={1}
-                  >
-                    {product.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.itemMeta,
-                      {
-                        color:
-                          product.stockLevel <= 5
-                            ? theme.colors.error
-                            : theme.colors.success,
-                      },
-                    ]}
-                  >
-                    {product.stockLevel} in stock
-                  </Text>
-                </View>
-                <Text
-                  style={[styles.itemPrice, { color: theme.colors.primary }]}
-                >
-                  RWF {(product.unitPrice || 0).toLocaleString()}
-                </Text>
-                <View style={styles.addIcon}>
-                  <MaterialIcons
-                    name="add-circle"
-                    size={28}
-                    color={theme.colors.success}
-                  />
-                </View>
-              </TouchableOpacity>
-            ))}
-
-        {((activeTab === "services" && filteredServices.length === 0) ||
-          (activeTab === "products" && filteredProducts.length === 0)) && (
-          <View style={styles.emptyState}>
-            <MaterialIcons
-              name={activeTab === "services" ? "content-cut" : "shopping-bag"}
-              size={48}
-              color={dynamicStyles.textSecondary.color}
-            />
-            <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-              No {activeTab} found
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+      {/* Senior Dev: Replaced ScrollView with FlatList Components for Performance */}
+      {activeTab === "services" ? (
+        <SalesServicesList
+          services={services}
+          searchQuery={searchQuery}
+          onAddToCart={(service) => addToCart(service, "service")}
+          isDark={isDark}
+          dynamicStyles={dynamicStyles}
+        />
+      ) : (
+        <SalesProductsList
+          products={products}
+          searchQuery={searchQuery}
+          onAddToCart={(product) => addToCart(product, "product")}
+          isDark={isDark}
+          dynamicStyles={dynamicStyles}
+        />
+      )}
 
       {/* Cart Modal */}
       <Modal visible={showCart} animationType="slide" transparent>
