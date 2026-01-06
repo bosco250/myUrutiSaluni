@@ -121,6 +121,25 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
   }, []);
 
   const handleNewMessage = useCallback((message: Message) => {
+    // Determine if this message was sent by the current user
+    const isCurrentUserCustomer = user?.role === "customer" || user?.role === "CUSTOMER";
+    const isMessageFromCurrentUser = isCurrentUserCustomer
+      ? message.isFromCustomer === true
+      : message.isFromCustomer === false;
+
+    // Skip messages sent by current user - they're already added via API response in handleSend
+    // This prevents duplication when socket broadcasts our own message back to us
+    if (isMessageFromCurrentUser) {
+      // Just update the status if needed (message already exists from optimistic add)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id ? { ...m, status: message.status || "sent" } : m
+        )
+      );
+      return;
+    }
+
+    // For messages from other party, add to the list (avoiding duplicates)
     setMessages((prev) => {
       // Avoid duplicates
       if (prev.some((m) => m.id === message.id)) {
@@ -129,12 +148,8 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
       return [...prev, message];
     });
 
-    // Mark as read if it's not from current user
-    const isCurrentUser = user?.role === "customer" || user?.role === "CUSTOMER"
-      ? message.isFromCustomer
-      : !message.isFromCustomer;
-
-    if (!isCurrentUser && conversationId) {
+    // Mark as read for messages from other party
+    if (conversationId) {
       chatService.markAsRead(conversationId);
     }
   }, [conversationId, user?.role]);
@@ -297,23 +312,42 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
   };
 
   const getOtherPartyName = (): string => {
-    // Try employee first
-    if (conversation?.employee) {
-      return (
-        conversation.employee.fullName ||
-        conversation.employee.email?.split("@")[0] ||
-        "Employee"
-      );
+    // Determine if current user is customer or employee
+    const isCurrentUserCustomer = user?.role === "customer" || user?.role === "CUSTOMER";
+
+    if (isCurrentUserCustomer) {
+      // Customer sees employee/salon name
+      if (conversation?.employee) {
+        return (
+          conversation.employee.fullName ||
+          conversation.employee.email?.split("@")[0] ||
+          "Employee"
+        );
+      }
+      if (conversation?.salon) {
+        return conversation.salon.name || "Salon";
+      }
+    } else {
+      // Employee sees customer name
+      // Try to get customer info from the conversation
+      if (conversation?.customer) {
+        return (
+          conversation.customer.fullName ||
+          conversation.customer.name ||
+          conversation.customer.email?.split("@")[0] ||
+          "Customer"
+        );
+      }
+      // Fallback: Show salon name if no customer info
+      if (conversation?.salon) {
+        return `Customer - ${conversation.salon.name}`;
+      }
+      // Last fallback for employee
+      return "Customer";
     }
-    // Try salon
-    if (conversation?.salon) {
-      return conversation.salon.name || "Salon";
-    }
+
     // Fallback: Check if IDs exist but relations weren't loaded
-    if (conversation?.employeeId) {
-      return "Loading...";
-    }
-    if (conversation?.salonId) {
+    if (conversation?.employeeId || conversation?.salonId) {
       return "Loading...";
     }
     return "Chat";

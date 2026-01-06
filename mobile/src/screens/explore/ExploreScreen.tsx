@@ -259,10 +259,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
             opacity: searchAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0] }),
             position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1
           }}>
-             <View>
-                 <Text style={[styles.greetingText, dynamicStyles.textSecondary]}>Good evening,</Text>
-                 <Text style={[styles.discoverTitle, dynamicStyles.text]}>Discover</Text>
-             </View>
+             <Text style={[styles.discoverTitle, dynamicStyles.text]}>Discover</Text>
           </Animated.View>
 
           {/* Search Button (Target for opening) - Fades Out */}

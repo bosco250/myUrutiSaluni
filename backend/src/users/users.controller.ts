@@ -21,13 +21,17 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RequirePermission } from '../auth/decorators/require-employee-permission.decorator';
 import { EmployeePermission } from '../common/enums/employee-permission.enum';
+import { SalonsService } from '../salons/salons.service';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly salonsService: SalonsService,
+  ) {}
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
@@ -97,15 +101,70 @@ export class UsersController {
       return this.usersService.findOne(id);
     }
 
-    // Salon owners and employees can only see their own profile
+    // Admins and district leaders can see all profiles
     if (
-      user.role === UserRole.SALON_OWNER ||
-      user.role === UserRole.SALON_EMPLOYEE
+      user.role === UserRole.SUPER_ADMIN ||
+      user.role === UserRole.ASSOCIATION_ADMIN ||
+      user.role === UserRole.DISTRICT_LEADER
     ) {
-      throw new ForbiddenException('You can only view your own profile');
+      return this.usersService.findOne(id);
     }
 
-    return this.usersService.findOne(id);
+    // Salon owners can view profiles of their employees
+    if (user.role === UserRole.SALON_OWNER) {
+      // Get all salons owned by this user
+      const ownedSalons = await this.salonsService.findByOwnerId(user.id);
+
+      // Check if the requested user is an employee of any owned salon
+      for (const salon of ownedSalons) {
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          id,
+          salon.id,
+        );
+        if (isEmployee) {
+          return this.usersService.findOne(id);
+        }
+      }
+
+      // Salon owner can also view their own profile (already handled above)
+      throw new ForbiddenException(
+        'You can only view profiles of your employees',
+      );
+    }
+
+    // Employees can view profiles of colleagues in the same salon
+    if (user.role === UserRole.SALON_EMPLOYEE) {
+      // Get salons where this employee works
+      const employeeRecords = await this.salonsService.findAllEmployeesByUserId(
+        user.id,
+      );
+
+      // Check if the requested user is in any of the same salons
+      for (const record of employeeRecords) {
+        const isColleague = await this.salonsService.isUserEmployeeOfSalon(
+          id,
+          record.salonId,
+        );
+        if (isColleague) {
+          return this.usersService.findOne(id);
+        }
+
+        // Also check if the requested user is the salon owner
+        const salon = await this.salonsService.findOne(record.salonId);
+        if (salon.ownerId === id) {
+          return this.usersService.findOne(id);
+        }
+      }
+
+      throw new ForbiddenException(
+        'You can only view profiles of colleagues in your salon',
+      );
+    }
+
+    // Default: deny access
+    throw new ForbiddenException(
+      'You do not have permission to view this profile',
+    );
   }
 
   @Patch(':id')
