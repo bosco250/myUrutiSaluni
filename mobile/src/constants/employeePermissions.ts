@@ -11,6 +11,9 @@ export enum EmployeePermission {
   ASSIGN_APPOINTMENTS = 'ASSIGN_APPOINTMENTS',
   VIEW_ALL_APPOINTMENTS = 'VIEW_ALL_APPOINTMENTS',
   MODIFY_APPOINTMENT_STATUS = 'MODIFY_APPOINTMENT_STATUS',
+  
+  // DEFAULT: View/manage OWN appointments (assigned to this employee)
+  VIEW_OWN_APPOINTMENTS = 'VIEW_OWN_APPOINTMENTS',
 
   // Service & Product Management
   MANAGE_SERVICES = 'MANAGE_SERVICES',
@@ -30,11 +33,17 @@ export enum EmployeePermission {
   VIEW_SALES_REPORTS = 'VIEW_SALES_REPORTS',
   EXPORT_SALES_DATA = 'EXPORT_SALES_DATA',
   VOID_TRANSACTIONS = 'VOID_TRANSACTIONS',
+  
+  // DEFAULT: View OWN sales (made by this employee)
+  VIEW_OWN_SALES = 'VIEW_OWN_SALES',
 
   // Staff Management (Limited)
   MANAGE_EMPLOYEE_SCHEDULES = 'MANAGE_EMPLOYEE_SCHEDULES',
   VIEW_EMPLOYEE_PERFORMANCE = 'VIEW_EMPLOYEE_PERFORMANCE',
   VIEW_EMPLOYEE_COMMISSIONS = 'VIEW_EMPLOYEE_COMMISSIONS',
+  
+  // DEFAULT: View OWN commissions
+  VIEW_OWN_COMMISSIONS = 'VIEW_OWN_COMMISSIONS',
 
   // Inventory Management
   MANAGE_INVENTORY = 'MANAGE_INVENTORY',
@@ -48,6 +57,19 @@ export enum EmployeePermission {
   MANAGE_BUSINESS_HOURS = 'MANAGE_BUSINESS_HOURS',
   MANAGE_SALON_PROFILE = 'MANAGE_SALON_PROFILE',
 }
+
+/**
+ * DEFAULT EMPLOYEE PERMISSIONS
+ * These permissions are automatically granted to ALL active employees.
+ * They allow employees to view/manage their OWN data without explicit grants.
+ * Additional permissions (like VIEW_ALL_APPOINTMENTS) require explicit grants.
+ */
+export const DEFAULT_EMPLOYEE_PERMISSIONS: EmployeePermission[] = [
+  EmployeePermission.VIEW_OWN_APPOINTMENTS,    // View appointments assigned to them
+  EmployeePermission.MODIFY_APPOINTMENT_STATUS, // Update status of their appointments
+  EmployeePermission.VIEW_OWN_SALES,           // View sales they made
+  EmployeePermission.VIEW_OWN_COMMISSIONS,     // View their commission earnings
+];
 
 export enum PermissionCategory {
   APPOINTMENTS = 'APPOINTMENTS',
@@ -70,6 +92,8 @@ export const PERMISSION_DESCRIPTIONS: Record<EmployeePermission, string> = {
     'View all salon appointments (not just assigned ones)',
   [EmployeePermission.MODIFY_APPOINTMENT_STATUS]:
     'Change appointment status (pending, confirmed, completed, cancelled)',
+  [EmployeePermission.VIEW_OWN_APPOINTMENTS]:
+    'View appointments assigned to you (default for all employees)',
   [EmployeePermission.MANAGE_SERVICES]: 'Create, update, delete salon services',
   [EmployeePermission.MANAGE_PRODUCTS]:
     'Create, update, delete products/inventory items',
@@ -87,12 +111,16 @@ export const PERMISSION_DESCRIPTIONS: Record<EmployeePermission, string> = {
   [EmployeePermission.VIEW_SALES_REPORTS]: 'View sales analytics and reports',
   [EmployeePermission.EXPORT_SALES_DATA]: 'Export sales data for reporting',
   [EmployeePermission.VOID_TRANSACTIONS]: 'Void/cancel completed transactions',
+  [EmployeePermission.VIEW_OWN_SALES]:
+    'View sales you made (default for all employees)',
   [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES]:
     'Create/edit employee schedules',
   [EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE]:
     'View employee metrics and performance',
   [EmployeePermission.VIEW_EMPLOYEE_COMMISSIONS]:
     'View all employee commissions (not just own)',
+  [EmployeePermission.VIEW_OWN_COMMISSIONS]:
+    'View your commission earnings (default for all employees)',
   [EmployeePermission.MANAGE_INVENTORY]:
     'Add/remove stock, adjust quantities',
   [EmployeePermission.VIEW_INVENTORY_REPORTS]: 'View inventory analytics',

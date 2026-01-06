@@ -177,16 +177,22 @@ class ChatService {
           }
         }
 
-        // Determine other party info
+        // Determine other party info with better fallbacks
         let otherParty: ConversationWithLastMessage['otherParty'] | undefined;
         if (conv.employee) {
           otherParty = {
-            name: conv.employee.fullName || 'Employee',
+            name: conv.employee.fullName || conv.employee.email?.split('@')[0] || 'Employee',
             isOnline: false, // Will be updated via WebSocket
           };
         } else if (conv.salon) {
           otherParty = {
             name: conv.salon.name || 'Salon',
+            isOnline: false,
+          };
+        } else if (conv.employeeId || conv.salonId) {
+          // Relations not loaded, provide placeholder
+          otherParty = {
+            name: 'Loading...',
             isOnline: false,
           };
         }

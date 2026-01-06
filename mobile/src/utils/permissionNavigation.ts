@@ -34,8 +34,12 @@ export const PERMISSION_TO_SCREEN_MAP: Record<EmployeePermission, string[]> = {
     'SalonAppointments',
     'Appointments',
   ],
-
-  // Service & Product Management
+  // DEFAULT: View own appointments (auto-granted to all employees)
+  [EmployeePermission.VIEW_OWN_APPOINTMENTS]: [
+    'MySchedule',         // Employee's own schedule
+    'AppointmentDetail',  // Can view details of assigned appointments
+    'StaffDashboard',     // Dashboard shows assigned appointments
+  ],
   [EmployeePermission.MANAGE_SERVICES]: [
     'AllServices',
     'ServiceDetail',
@@ -115,6 +119,12 @@ export const PERMISSION_TO_SCREEN_MAP: Record<EmployeePermission, string[]> = {
     'Sales',
     'VoidTransaction',
   ],
+  // DEFAULT: View own sales (auto-granted to all employees)
+  [EmployeePermission.VIEW_OWN_SALES]: [
+    'SaleDetail',     // Can view details of own sales
+    'StaffDashboard', // Shows own earnings
+    'Commissions',    // Shows own commissions from sales
+  ],
 
   // Staff Management
   [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES]: [
@@ -133,6 +143,13 @@ export const PERMISSION_TO_SCREEN_MAP: Record<EmployeePermission, string[]> = {
     'Commissions',
     'CommissionDetail',
     'CommissionHistory',
+  ],
+  // DEFAULT: View own commissions (auto-granted to all employees)
+  [EmployeePermission.VIEW_OWN_COMMISSIONS]: [
+    'Commissions',       // View own commission list
+    'CommissionDetail',  // View own commission details
+    'StaffDashboard',    // Shows commission summary on dashboard
+    'Wallet',           // Shows earnings in wallet
   ],
 
   // Inventory Management
@@ -352,6 +369,7 @@ export const PUBLIC_EMPLOYEE_SCREENS: string[] = [
   'Explore',
   'Bookings', // Employees can view their own bookings
   'BookingFlow', // Public booking screen for customers and employees
+  'AppointmentDetail', // Employees can view details of their assigned appointments
   'Attendance', // Clock in/out is a basic employee right
   'Commissions', // View own commissions
   'Chat',

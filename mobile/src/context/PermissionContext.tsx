@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, AppStateStatus } from 'react-native';
 import { useAuth } from './AuthContext';
 import { UserRole } from '../constants/roles';
-import { EmployeePermission } from '../constants/employeePermissions';
+import { EmployeePermission, DEFAULT_EMPLOYEE_PERMISSIONS } from '../constants/employeePermissions';
 import { salonService } from '../services/salon';
 import {
   employeePermissionsService,
@@ -468,12 +468,24 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
   }, [state.activeSalon]);
 
   // Permission check functions
+  // CRITICAL: Employees automatically get DEFAULT_EMPLOYEE_PERMISSIONS
+  // to view their own data (appointments, sales, commissions) even without explicit grants
   const hasPermission = useCallback(
     (permission: EmployeePermission): boolean => {
+      // Owners and admins have all permissions
       if (isOwner || isAdmin) return true;
+      
+      // All employees automatically get default permissions for their OWN data
+      // This ensures employees can always see appointments assigned to them,
+      // their own sales, and their own commissions - without needing explicit grants
+      if (isEmployee && DEFAULT_EMPLOYEE_PERMISSIONS.includes(permission)) {
+        return true;
+      }
+      
+      // Check explicitly granted permissions
       return state.permissions.includes(permission);
     },
-    [isOwner, isAdmin, state.permissions],
+    [isOwner, isAdmin, isEmployee, state.permissions],
   );
 
   const hasAnyPermission = useCallback(
