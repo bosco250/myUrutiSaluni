@@ -10,7 +10,7 @@ export default ({ config }) => {
     slug: 'uruti-saluni',
     version: process.env.APP_VERSION || '1.0.0',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: './assets/logo_square.png',
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     splash: {
@@ -20,16 +20,17 @@ export default ({ config }) => {
     },
     ios: {
       supportsTablet: true,
-      icon: './assets/icon.png',
+      icon: './assets/logo_square.png',
+      bundleIdentifier: 'com.boscotech.urutisaluni',
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/adaptive-icon.png',
+        foregroundImage: './assets/logo_square.png',
         backgroundColor: '#ffffff',
       },
       edgeToEdgeEnabled: false,
       predictiveBackGestureEnabled: false,
-      package: 'com.douce11.urutisaluni',
+      package: 'com.boscotech.urutisaluni',
       permissions: [
         'RECEIVE_BOOT_COMPLETED',
         'VIBRATE',
@@ -43,7 +44,7 @@ export default ({ config }) => {
       ],
     },
     web: {
-      favicon: './assets/favicon.png',
+      favicon: './assets/logo_square.png',
     },
     plugins: [
       'expo-font',
@@ -58,7 +59,7 @@ export default ({ config }) => {
       [
         'expo-notifications',
         {
-          icon: './assets/icon.png',
+          icon: './assets/logo_square.png',
           color: '#C89B68',
         },
       ],
@@ -82,9 +83,9 @@ export default ({ config }) => {
       // Google Maps
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       
-      // EAS configuration
+      // EAS configuration - Set via: npx eas project:init
       eas: {
-        projectId: process.env.EXPO_PROJECT_ID || '010bf482-772d-4810-b30c-39fa0fc7fcab',
+        projectId: process.env.EXPO_PROJECT_ID,
       },
     },
   };

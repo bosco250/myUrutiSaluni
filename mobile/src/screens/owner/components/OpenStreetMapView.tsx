@@ -12,12 +12,28 @@ import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { theme } from '../../../theme';
 
-// Nominatim API for reliable geocoding
+// Nominatim API for reliable geocoding with error handling
 const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`,
+      {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'UrutiSaluni/1.0.0'
+        }
+      }
     );
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
     const data = await response.json();
     
     if (data && data.address) {
@@ -37,9 +53,9 @@ const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
       return { address, city, district };
     }
     
-    throw new Error('No address found');
+    throw new Error('No address data');
   } catch (error) {
-    console.error('Nominatim geocoding error:', error);
+    console.log('Nominatim geocoding failed, using fallback');
     throw error;
   }
 };
@@ -184,9 +200,11 @@ export const OpenStreetMapView: React.FC<SafeMapViewProps> = ({
                 
                 onLocationSelected(data.latitude, data.longitude, address, city, district);
               } else {
+                // If both fail, still provide coordinates
                 onLocationSelected(data.latitude, data.longitude, '', '', '');
               }
             }).catch(() => {
+              // If both fail, still provide coordinates
               onLocationSelected(data.latitude, data.longitude, '', '', '');
             });
           });
@@ -235,9 +253,11 @@ export const OpenStreetMapView: React.FC<SafeMapViewProps> = ({
             
             onLocationSelected(lat, lng, address, city, district);
           } else {
+            // If both fail, still provide coordinates
             onLocationSelected(lat, lng, '', '', '');
           }
         } catch {
+          // If both fail, still provide coordinates
           onLocationSelected(lat, lng, '', '', '');
         }
       }

@@ -4,7 +4,7 @@
     "slug": "uruti-saluni",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo_square.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -17,8 +17,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/icon.png",
-      "bundleIdentifier": "com.douce11.urutisaluni",
+      "icon": "./assets/logo_square.png",
+      "bundleIdentifier": "com.boscotech.urutisaluni",
       "infoPlist": {
         "UIBackgroundModes": [
           "background-processing",
@@ -28,12 +28,13 @@
         "NSLocationWhenInUseUsageDescription": "This app needs location access to help you find nearby salons and set your salon location.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs location access to help you find nearby salons and set your salon location.",
         "NSCameraUsageDescription": "This app needs camera access to take photos for your salon and services.",
-        "NSPhotoLibraryUsageDescription": "This app needs photo library access to select images for your salon and services."
+        "NSPhotoLibraryUsageDescription": "This app needs photo library access to select images for your salon and services.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/logo_square.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,
@@ -65,7 +66,7 @@
         "translucent": false
       },
       "notification": {
-        "icon": "./assets/icon.png",
+        "icon": "./assets/logo_square.png",
         "color": "#C89B68",
         "defaultChannel": "default",
         "sounds": [
@@ -77,7 +78,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/logo_square.png"
     },
     "plugins": [
       "expo-font",
@@ -96,10 +97,12 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/logo_square.png",
           "color": "#C89B68",
           "defaultChannel": "default",
-          "sounds": ["default"],
+          "sounds": [
+            "default"
+          ],
           "androidMode": "default",
           "androidCollapsedTitle": "#{unread_notifications} new interactions"
         }

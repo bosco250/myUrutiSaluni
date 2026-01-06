@@ -14,11 +14,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
 import { api } from "../../services/api";
+import { OpenStreetMapView } from "../owner/components/OpenStreetMapView";
 
 interface MembershipApplicationScreenProps {
   navigation: {
@@ -53,7 +53,6 @@ export default function MembershipApplicationScreen({
   
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [loadingLocation, setLoadingLocation] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showMap, setShowMap] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
@@ -112,7 +111,6 @@ export default function MembershipApplicationScreen({
     cardBg: isDark ? theme.colors.gray800 : "#FFFFFF",
     border: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     inputBg: isDark ? theme.colors.gray800 : "#FAFAFA",
-    primaryLight: isDark ? 'rgba(255,255,255,0.1)' : theme.colors.primary + '10',
   };
 
   const updateFormData = (field: keyof FormData, value: string) => {
@@ -212,7 +210,6 @@ export default function MembershipApplicationScreen({
       }
       
       const response = await api.post("/memberships/apply", applicationData);
-      console.log(response);  
       navigation.navigate("ApplicationSuccess", { status: "pending" });
     } catch (error: any) {
       Alert.alert(
@@ -225,7 +222,6 @@ export default function MembershipApplicationScreen({
   };
 
   const getCurrentLocation = async () => {
-    setLoadingLocation(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -238,7 +234,7 @@ export default function MembershipApplicationScreen({
 
       try {
         const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
-        if (addresses && addresses.length > 0) {
+        if (addresses?.[0]) {
           const address = addresses[0];
           setFormData(prev => ({
             ...prev,
@@ -259,39 +255,20 @@ export default function MembershipApplicationScreen({
       }
     } catch {
       Alert.alert("Error", "Failed to get current location. Please try again.");
-    } finally {
-      setLoadingLocation(false);
     }
   };
 
-  const handleMapSelect = async (latitude: number, longitude: number) => {
-    setLoadingLocation(true);
-    try {
-      const addresses = await Location.reverseGeocodeAsync({ latitude, longitude });
-      if (addresses && addresses.length > 0) {
-        const address = addresses[0];
-        setFormData(prev => ({
-          ...prev,
-          latitude,
-          longitude,
-          businessAddress: `${address.street || ""} ${address.streetNumber || ""}`.trim() || prev.businessAddress,
-          city: address.city || prev.city,
-          district: address.subregion || address.district || prev.district,
-        }));
-        setShowMap(false);
-        Alert.alert("Location Selected", "Address fields have been auto-filled. Please verify and update if needed.");
-      } else {
-        setFormData(prev => ({ ...prev, latitude, longitude }));
-        setShowMap(false);
-        Alert.alert("Location Selected", "Please fill in address details manually.");
-      }
-    } catch {
-      setFormData(prev => ({ ...prev, latitude, longitude }));
-      setShowMap(false);
-      Alert.alert("Location Selected", "Please fill in address details manually.");
-    } finally {
-      setLoadingLocation(false);
-    }
+  const handleMapLocationSelected = (lat: number, lng: number, address?: string, city?: string, district?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      businessAddress: address || prev.businessAddress,
+      city: city || prev.city,
+      district: district || prev.district,
+    }));
+    setShowMap(false);
+    Alert.alert("Location Selected", "Address fields have been auto-filled. Please verify and update if needed.");
   };
 
   const renderProgressBar = () => (
@@ -376,11 +353,19 @@ export default function MembershipApplicationScreen({
     <View style={styles.stepContent}>
       {renderStepHeader("location-on", "Location Details", "Where is your salon located?", theme.colors.primary)}
       <View style={styles.locationButtonsContainer}>
-        <TouchableOpacity style={[styles.locationButton, { backgroundColor: dynamic.cardBg, borderColor: theme.colors.primary }]} onPress={getCurrentLocation} disabled={loadingLocation} activeOpacity={0.7}>
-          {loadingLocation ? <ActivityIndicator size="small" color={theme.colors.primary} /> : <MaterialIcons name="my-location" size={24} color={theme.colors.primary} />}
+        <TouchableOpacity 
+          style={[styles.locationButton, { backgroundColor: dynamic.cardBg, borderColor: theme.colors.primary }]} 
+          onPress={getCurrentLocation} 
+          activeOpacity={0.7}
+        >
+          <MaterialIcons name="my-location" size={24} color={theme.colors.primary} />
           <Text style={[styles.locationButtonText, { color: theme.colors.primary }]}>Current Location</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.locationButton, { backgroundColor: dynamic.cardBg, borderColor: dynamic.border }]} onPress={() => setShowMap(true)} activeOpacity={0.7}>
+        <TouchableOpacity 
+          style={[styles.locationButton, { backgroundColor: dynamic.cardBg, borderColor: dynamic.border }]} 
+          onPress={() => setShowMap(true)} 
+          activeOpacity={0.7}
+        >
           <MaterialIcons name="map" size={24} color={theme.colors.secondary} />
           <Text style={[styles.locationButtonText, { color: dynamic.text }]}>Select on Map</Text>
         </TouchableOpacity>
@@ -408,17 +393,17 @@ export default function MembershipApplicationScreen({
                 <MaterialIcons name="close" size={24} color={dynamic.text} />
               </TouchableOpacity>
             </View>
-            <MapView
-              style={styles.map}
-              provider={PROVIDER_DEFAULT}
-              initialRegion={{ latitude: formData.latitude || -1.9441, longitude: formData.longitude || 30.0619, latitudeDelta: 0.0922, longitudeDelta: 0.0421 }}
-              onPress={(e) => handleMapSelect(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)}
-            >
-              {formData.latitude && formData.longitude && <Marker coordinate={{ latitude: formData.latitude, longitude: formData.longitude }} title="Salon Location" />}
-            </MapView>
+            <View style={styles.mapContainer}>
+              <OpenStreetMapView
+                latitude={formData.latitude || -1.9441}
+                longitude={formData.longitude || 30.0619}
+                onLocationSelected={handleMapLocationSelected}
+                isDark={isDark}
+              />
+            </View>
             <View style={[styles.mapInstructions, { borderTopColor: dynamic.border }]}>
               <MaterialIcons name="info" size={16} color={theme.colors.primary} />
-              <Text style={[styles.mapInstructionsText, { color: dynamic.subtext }]}>Tap to set location</Text>
+              <Text style={[styles.mapInstructionsText, { color: dynamic.subtext }]}>Tap on the map to set location</Text>
             </View>
           </View>
         </View>
@@ -482,7 +467,6 @@ export default function MembershipApplicationScreen({
   );
 }
 
-// Compacted Styles
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1 },
@@ -526,10 +510,10 @@ const styles = StyleSheet.create({
   coordinatesLabel: { fontSize: 14, fontWeight: "700" },
   coordinatesText: { fontSize: 13, marginTop: 2 },
   mapModal: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.6)", justifyContent: "center", alignItems: "center", padding: 24 },
-  mapModalContent: { width: "100%", maxHeight: 500, borderRadius: 24, overflow: "hidden", elevation: 10 },
+  mapModalContent: { width: "100%", maxHeight: 600, borderRadius: 24, overflow: "hidden", elevation: 10 },
   mapModalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1 },
   mapModalTitle: { fontSize: 18, fontWeight: "700" },
-  map: { width: "100%", height: 350 },
+  mapContainer: { height: 400, padding: 16 },
   mapInstructions: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12, borderTopWidth: 1 },
   mapInstructionsText: { fontSize: 13, flex: 1 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
