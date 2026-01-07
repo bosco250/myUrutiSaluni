@@ -85,7 +85,7 @@ export default ({ config }) => {
       
       // EAS configuration - Set via: npx eas project:init
       eas: {
-        projectId: process.env.EXPO_PROJECT_ID,
+        projectId: process.env.EXPO_PROJECT_ID || 'bba1bdca-d156-4d7d-90b9-4d58f56ff6ca',
       },
     },
   };

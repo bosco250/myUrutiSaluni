@@ -4,6 +4,7 @@ import { ThemeProvider } from './ThemeContext';
 import { NetworkProvider } from './NetworkContext';
 import { PushNotificationProvider } from './PushNotificationContext';
 import { PermissionProvider } from './PermissionContext';
+import { RefreshProvider } from './RefreshContext';
 
 interface AppContextType {
   // Add your app-wide state here
@@ -18,6 +19,7 @@ interface AppContextType {
  * 3. Auth - needs network
  * 4. Permissions - needs auth
  * 5. PushNotifications - needs auth
+ * 6. Refresh - needs auth (for data refetching)
  */
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
@@ -26,7 +28,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         <AuthProvider>
           <PermissionProvider>
             <PushNotificationProvider>
-              {children}
+              <RefreshProvider>
+                {children}
+              </RefreshProvider>
             </PushNotificationProvider>
           </PermissionProvider>
         </AuthProvider>

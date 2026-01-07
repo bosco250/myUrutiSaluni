@@ -205,31 +205,18 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       });
     } catch (error) {
       console.error("Error fetching wallet:", error);
-      // Mock data for development
-      setWallet({
-        balance: 5240500,
-        currency: "RWF",
-        pendingBalance: 350000,
-      });
+      setWallet(null);
     }
   }, []);
 
-  // Fetch active loan data - using static demo data for now
+  // Fetch active loan data
+  // Currently backend does not support loans, so this will return null
   const fetchLoan = useCallback(async () => {
-    // Static demo data - backend integration will be done later
-    setLoan({
-      id: "loan-demo",
-      totalAmount: 1500000,
-      remainingAmount: 450000,
-      nextPaymentAmount: 450000,
-      nextPaymentDate: "2024-12-25",
-      daysUntilDue: 5,
-      progress: 70,
-    });
+    setLoan(null);
   }, []);
 
-  // Fetch financial summary
-  const fetchSummary = useCallback(
+  // Fetch financial data (Summary, Top Items, Employees, Payment Methods)
+  const fetchFinanceData = useCallback(
     async (currentSalonId: string | null) => {
       try {
         const { startDate, endDate } = getDateRange(timePeriod);
@@ -242,7 +229,8 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         );
 
         // Fetch pending commissions for payouts
-        const commissions = await salesService.getCommissions({ paid: false });
+        // Note: This gets ALL pending commissions regardless of period, which is correct for "Pending Payouts"
+        const commissions = await salesService.getCommissions({ paid: false, salonEmployeeId: undefined }); 
         const pendingPayouts = commissions.reduce(
           (sum, c) => sum + Number(c.amount),
           0
@@ -251,113 +239,91 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         setSummary({
           totalRevenue: analytics?.summary?.totalRevenue || 0,
           pendingPayouts,
-          outstandingPayments: 0, // From unpaid invoices if available
-          revenueChange: 12.5, // Would need previous period data for real calculation
+          outstandingPayments: 0, // Need invoice service for this
+          revenueChange: 0, // Requires fetching previous period data to calculate
         });
 
-        // Set top services and products
+        // Set top services
         if (analytics?.topServices) {
           setTopServices(
             analytics.topServices.slice(0, 3).map((s: any) => ({
-              id: s.serviceId,
-              name: s.serviceName,
+              id: s.name, // API returns name as ID or key in some structures, ensuring robust mapping
+              name: s.name,
               count: s.count,
               revenue: s.revenue,
             }))
           );
         }
 
-        /*
-      if (analytics?.topProducts) {
-        setTopProducts(analytics.topProducts.slice(0, 3).map((p: any) => ({
-          id: p.productId,
-          name: p.productName,
-          count: p.count,
-          revenue: p.revenue,
-        })));
-      }
-      */
+        // Set top employees
+        if (analytics?.topEmployees) {
+           setTopEmployees(
+            analytics.topEmployees.slice(0, 3).map((e: any) => ({
+              id: e.name, // Using name as ID fallback
+              name: e.name,
+              sales: e.sales || e.count || 0,
+              revenue: e.revenue,
+            }))
+          );
+        }
+
+        // Process Payment Methods
+        if (analytics?.paymentMethods) {
+          const totalRev = analytics.summary?.totalRevenue || 1; // Avoid division by zero
+          const methods = Object.entries(analytics.paymentMethods).map(([method, amount]) => {
+             const numAmount = Number(amount);
+             const percentage = Math.round((numAmount / totalRev) * 100);
+             
+             let label = method;
+             let icon = "payments";
+             let color = theme.colors.text;
+
+             switch(method.toLowerCase()) {
+                case 'cash': 
+                  label = 'Cash'; 
+                  icon = 'payments'; 
+                  color = '#4CAF50'; 
+                  break;
+                case 'card': 
+                  label = 'Card'; 
+                  icon = 'credit-card'; 
+                  color = '#2196F3'; 
+                  break;
+                case 'mobile_money': 
+                  label = 'Mobile Money'; 
+                  icon = 'phone-android'; 
+                  color = '#FFD700'; 
+                  break;
+                case 'bank_transfer': 
+                  label = 'Bank Transfer'; 
+                  icon = 'account-balance'; 
+                  color = '#9C27B0'; 
+                  break;
+                default:
+                  label = method.replace('_', ' ').toUpperCase();
+             }
+
+             return {
+                method,
+                label,
+                amount: numAmount,
+                percentage,
+                color,
+                icon
+             };
+          });
+          
+          // Sort by amount desc
+          setPaymentMethods(methods.sort((a, b) => b.amount - a.amount));
+        }
+
       } catch (error: any) {
-        console.error("Error fetching summary:", error);
-        Alert.alert(
-          "Connection Error",
-          `Failed to fetch dashboard data: ${error.message || "Unknown error"}`,
-          [{ text: "OK" }]
-        );
-        // Mock data
-        setSummary({
-          totalRevenue: 2450000,
-          pendingPayouts: 320000,
-          outstandingPayments: 150000,
-          revenueChange: 12.5,
-        });
-        setTopServices([
-          { id: "1", name: "Hair Styling", count: 45, revenue: 675000 },
-          { id: "2", name: "Manicure", count: 38, revenue: 380000 },
-          { id: "3", name: "Facial Treatment", count: 22, revenue: 440000 },
-        ]);
-        /*
-      setTopProducts([
-        { id: '1', name: 'Hair Oil', count: 28, revenue: 140000 },
-        { id: '2', name: 'Shampoo', count: 22, revenue: 88000 },
-        { id: '3', name: 'Conditioner', count: 18, revenue: 72000 },
-      ]);
-      */
+        console.error("Error fetching finance data:", error);
+         // No mock fallback needed - UI handles empty states or show 0
       }
     },
     [timePeriod, getDateRange]
   );
-
-  // Fetch payment method stats
-  const fetchPaymentMethods = useCallback(async () => {
-    try {
-      // Would fetch from analytics endpoint
-      // Using mock data for now
-      // const total = 2450000;
-      setPaymentMethods([
-        {
-          method: "mobile_money",
-          label: "Mobile Money",
-          amount: 1470000,
-          percentage: 60,
-          color: "#FFD700",
-          icon: "phone-android",
-        },
-        {
-          method: "cash",
-          label: "Cash",
-          amount: 612500,
-          percentage: 25,
-          color: "#4CAF50",
-          icon: "payments",
-        },
-        {
-          method: "card",
-          label: "Card",
-          amount: 367500,
-          percentage: 15,
-          color: "#2196F3",
-          icon: "credit-card",
-        },
-      ]);
-    } catch (error) {
-      console.error("Error fetching payment methods:", error);
-    }
-  }, []);
-
-  // Fetch employee performance
-  const fetchEmployeePerformance = useCallback(async () => {
-    try {
-      // Would fetch from analytics endpoint
-      setTopEmployees([
-        { id: "1", name: "Marie Claire", sales: 45, revenue: 675000 },
-        { id: "2", name: "Jean Baptiste", sales: 38, revenue: 570000 },
-        { id: "3", name: "Alice Uwimana", sales: 32, revenue: 480000 },
-      ]);
-    } catch (error) {
-      console.error("Error fetching employee performance:", error);
-    }
-  }, []);
 
   // Load all data with progressive loading
   const loadData = useCallback(async () => {
@@ -366,19 +332,17 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       // PERFORMANCE: Load critical data first, then secondary data
       const currentSalonId = await fetchSalonId();
       
-      // Step 1: Load critical data (wallet, summary) - show UI faster
+      // Step 1: Load critical data (wallet, consolidated analytics)
       await Promise.all([
         fetchWallet(),
-        fetchSummary(currentSalonId),
+        fetchFinanceData(currentSalonId),
       ]);
       
       setLoading(false); // Show UI with critical data
       
-      // Step 2: Load secondary data in background (non-blocking)
+      // Step 2: Load secondary data (Loan)
       Promise.all([
         fetchLoan(),
-        fetchPaymentMethods(),
-        fetchEmployeePerformance(),
       ]).catch((error) => {
         console.error("Error loading secondary finance data:", error);
       });
@@ -390,9 +354,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
     fetchSalonId,
     fetchWallet,
     fetchLoan,
-    fetchSummary,
-    fetchPaymentMethods,
-    fetchEmployeePerformance,
+    fetchFinanceData
   ]);
 
   useEffect(() => {
@@ -403,7 +365,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
   // Refresh when period changes
   useEffect(() => {
     if (!loading) {
-      fetchSummary(salonId);
+      fetchFinanceData(salonId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timePeriod]);
@@ -566,9 +528,52 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
     </View>
   );
 
+  // Render apply for loan card (when no active loan)
+  const renderApplyLoanCard = () => (
+    <View style={[styles.loanCard, dynamicStyles.card]}>
+      <View style={styles.loanHeader}>
+        <View style={[styles.loanIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+           <MaterialIcons
+             name="monetization-on"
+             size={24}
+             color={theme.colors.primary}
+           />
+        </View>
+        <Text style={[styles.loanTitle, dynamicStyles.text]}>
+          Apply for a Loan
+        </Text>
+      </View>
+
+      <Text style={[styles.applyLoanDescription, dynamicStyles.textSecondary]}>
+        Need funds to grow your salon? Get instant access to capital based on your sales history.
+      </Text>
+      
+      <View style={styles.applyLoanBenefits}>
+         <View style={styles.benefitItem}>
+            <MaterialIcons name="check-circle" size={16} color={theme.colors.success} />
+            <Text style={[styles.benefitText, dynamicStyles.textSecondary]}>Flexible repayment</Text>
+         </View>
+         <View style={styles.benefitItem}>
+            <MaterialIcons name="check-circle" size={16} color={theme.colors.success} />
+            <Text style={[styles.benefitText, dynamicStyles.textSecondary]}>Low interest rates</Text>
+         </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.applyButton}
+        onPress={() => Alert.alert("Coming Soon", "Loan applications will be available soon!")}
+      >
+        <Text style={styles.applyButtonText}>Apply Now</Text>
+        <MaterialIcons name="arrow-forward" size={18} color="#FFF" />
+      </TouchableOpacity>
+    </View>
+  );
+
   // Render active loan card
   const renderLoanCard = () => {
-    if (!loan) return null;
+    if (!loan) {
+       return renderApplyLoanCard();
+    }
 
     return (
       <View style={[styles.loanCard, dynamicStyles.card]}>
@@ -1362,5 +1367,37 @@ const styles = StyleSheet.create({
 
   bottomSpacing: {
     height: 100,
+  },
+  applyLoanDescription: {
+    fontSize: 14,
+    marginBottom: theme.spacing.md,
+    lineHeight: 20,
+  },
+  applyLoanBenefits: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  benefitText: {
+    fontSize: 12,
+  },
+  applyButton: {
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  applyButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

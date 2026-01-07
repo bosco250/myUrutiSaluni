@@ -18,9 +18,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../theme';
-import { useTheme } from '../../context';
+import { useTheme, useAuth, useRefresh } from '../../context';
 import { usePermissions } from '../../context/PermissionContext';
 import { accountingService, Expense, CreateExpenseDto, ExpenseCategory } from '../../services/accounting';
+import { salonService } from '../../services/salon';
 import { Loader } from '../../components/common';
 
 // Dimensions used for layout calculations
@@ -60,8 +61,12 @@ const DEFAULT_CATEGORY_ICONS: Record<string, { icon: string; color: string }> = 
 
 export default function ExpensesScreen({ navigation, route }: ExpensesScreenProps) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   const { activeSalon } = usePermissions();
-  const salonId = route?.params?.salonId || activeSalon?.salonId || '';
+  const { triggerRefresh } = useRefresh(); // Global refresh trigger
+  
+  // State for salonId with fallback loading
+  const [salonId, setSalonId] = useState(route?.params?.salonId || activeSalon?.salonId || '');
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,6 +180,32 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
     }
   }, [salonId, fadeAnim]);
 
+  // Fallback: Load salon if salonId is not available from context
+  useEffect(() => {
+    const loadSalonFallback = async () => {
+      if (salonId || !user?.id) return; // Already have salonId or no user
+      
+      try {
+        // Try to get salon from owner's salons
+        const salon = await salonService.getSalonByOwnerId(String(user.id));
+        if (salon?.id) {
+          setSalonId(salon.id);
+        }
+      } catch (error) {
+        console.log('Could not load salon fallback:', error);
+      }
+    };
+    
+    loadSalonFallback();
+  }, [salonId, user?.id]);
+
+  // Also update salonId when activeSalon changes
+  useEffect(() => {
+    if (!salonId && activeSalon?.salonId) {
+      setSalonId(activeSalon.salonId);
+    }
+  }, [salonId, activeSalon?.salonId]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -245,6 +276,7 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
       setShowModal(false);
       resetForm();
       loadData();
+      triggerRefresh(); // Notify other screens to refresh
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to save expense');
     } finally {
@@ -263,6 +295,7 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
             await accountingService.deleteExpense(expense.id);
             Alert.alert('Deleted', 'Expense removed');
             loadData();
+            triggerRefresh(); // Notify other screens to refresh
           } catch (err: any) {
             Alert.alert('Error', err.message || 'Failed to delete');
           }

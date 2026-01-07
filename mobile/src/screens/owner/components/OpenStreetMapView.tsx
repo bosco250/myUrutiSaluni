@@ -100,16 +100,51 @@ export const OpenStreetMapView: React.FC<SafeMapViewProps> = ({
                 border: none;
                 padding: 10px;
                 border-radius: 50%;
-                width: 40px;
-                height: 40px;
+                width: 44px;
+                height: 44px;
                 cursor: pointer;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+            }
+            .zoom-controls {
+                position: absolute;
+                bottom: 30px;
+                right: 10px;
+                z-index: 1000;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .zoom-btn {
+                width: 44px;
+                height: 44px;
+                background: white;
+                color: #333;
+                font-size: 24px;
+                font-weight: bold;
+                border: none;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .zoom-btn:active {
+                background: #f0f0f0;
             }
         </style>
     </head>
     <body>
         <div class="controls">
             <button class="gps-btn" onclick="getCurrentLocation()" title="My Location">📍</button>
+        </div>
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="map.zoomIn()">+</button>
+            <button class="zoom-btn" onclick="map.zoomOut()">−</button>
         </div>
         <div id="map"></div>
         

@@ -352,11 +352,32 @@ export default function NotificationsScreen({
     // 6️⃣ Payment notifications → PaymentHistory / Finance
     if (notificationType.includes("payment")) {
       const paymentType = metadata.paymentType;
-      if (paymentType === "wallet_topup" || paymentType === "WALLET_TOPUP") {
-        navigation?.navigate("Finance");
+      const isWallet = 
+        paymentType === "wallet_topup" || 
+        paymentType === "WALLET_TOPUP" ||
+        notification.title?.toLowerCase().includes("wallet") ||
+        notification.body?.toLowerCase().includes("wallet");
+
+      console.log("💰 Wallet check:", { 
+        isWallet, 
+        paymentType, 
+        title: notification.title,
+        body: notification.body
+      });
+
+      if (isWallet) {
+        console.log("➡️ Navigating to Finance");
+        navigation?.navigate("Wallet");
       } else {
+        console.log("➡️ Navigating to PaymentHistory");
         navigation?.navigate("PaymentHistory");
       }
+      return;
+    }
+
+    // 7️⃣ Wallet notifications → Finance
+    if (notificationType.includes("wallet") || notificationType.includes("topup")) {
+      navigation?.navigate("Wallet");
       return;
     }
 

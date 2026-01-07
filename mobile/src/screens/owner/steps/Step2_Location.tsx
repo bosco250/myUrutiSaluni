@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapContainer: {
-    height: 200,
+    height: 350,
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,

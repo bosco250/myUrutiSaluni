@@ -12,9 +12,10 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme, useAuth } from "../../context";
+import { useTheme, useAuth, useRefresh } from "../../context";
 import {
   salonService,
   SalonProduct,
@@ -121,6 +122,9 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
 
+  // Global refresh trigger - refetches data when triggerRefresh() is called anywhere
+  const { refreshKey, triggerRefresh } = useRefresh();
+
   // Dynamic styles for dark/light mode
   const dynamicStyles = {
     container: {
@@ -199,6 +203,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
               name: s.name,
               price: s.price || s.basePrice || 0,
               duration: s.duration || s.durationMinutes,
+              imageUrl: s.imageUrl,
             }));
             setServices(mappedServices);
           })
@@ -258,7 +263,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
     } else if (user?.id) {
       loadData();
     }
-  }, [loadData, user?.id, user?.role, currentSalonId]);
+  }, [loadData, user?.id, user?.role, currentSalonId, refreshKey]); // refreshKey triggers refetch
 
   // Cart calculations
   const subtotal = useMemo(() => {
@@ -366,6 +371,9 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
 
       await salesService.createSale(saleData);
 
+      // Trigger global refresh so AccountingScreen updates
+      triggerRefresh();
+
       setShowCart(false);
       setShowSuccessModal(true);
       setCart([]);
@@ -398,12 +406,12 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
       showUnauthorizedMessage={true}
     >
       {loading ? (
-        <View style={[styles.loadingContainer, dynamicStyles.container]}>
+        <SafeAreaView style={[styles.loadingContainer, dynamicStyles.container]} edges={['top', 'bottom']}>
           <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
           <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
+        </SafeAreaView>
       ) : (
-        <View style={[styles.container, dynamicStyles.container]}>
+        <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Senior Dev: Extracted Header Component */}
@@ -1008,7 +1016,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
           </View>
         </View>
       </Modal>
-        </View>
+        </SafeAreaView>
       )}
     </EmployeePermissionGate>
   );

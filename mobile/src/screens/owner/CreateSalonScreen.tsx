@@ -11,7 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useAuth, useTheme } from '../../context';
@@ -97,6 +97,7 @@ const STEPS = ['Basic Info', 'Location', 'Business', 'Contact'];
 export default function CreateSalonScreen({ navigation, route }: CreateSalonScreenProps) {
   const { user } = useAuth();
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   
   const mode = route?.params?.mode || 'create';
   const editingSalon = route?.params?.salon;
@@ -561,7 +562,7 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
   };
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Admin Style Standard Header */}
@@ -596,7 +597,14 @@ export default function CreateSalonScreen({ navigation, route }: CreateSalonScre
           {renderCurrentStep()}
         </ScrollView>
 
-        <View style={[styles.bottomBar, dynamicStyles.card, { borderTopColor: dynamicStyles.border.borderColor }]}>
+        <View style={[
+          styles.bottomBar, 
+          dynamicStyles.card, 
+          { 
+            borderTopColor: dynamicStyles.border.borderColor,
+            paddingBottom: 16 + insets.bottom 
+          }
+        ]}>
           {currentStep > 0 && (
             <TouchableOpacity
               style={[styles.secondaryButton, dynamicStyles.card, { borderColor: dynamicStyles.border.borderColor }]}

@@ -54,23 +54,26 @@ export const SalesSearchBar: React.FC<SalesSearchBarProps> = React.memo(({
 SalesSearchBar.displayName = 'SalesSearchBar';
 
 // Senior Dev: Styles copied EXACTLY from SalesScreen.tsx (no changes)
+// Senior Dev: Compact Search Bar Styling
 const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 8, // Reduced padding
   },
   searchInput: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    borderRadius: 20, // More rounded for pill shape
+    paddingHorizontal: 12,
+    paddingVertical: 6, // Reduced height (approx 36-40px total)
     borderWidth: 1,
+    height: 40,
   },
   searchText: {
     flex: 1,
-    marginLeft: theme.spacing.sm,
-    fontSize: 15,
+    marginLeft: 8,
+    fontSize: 14, // Smaller font
     fontFamily: theme.fonts.regular,
+    paddingVertical: 0, // Fix alignment on Android
   },
 });
