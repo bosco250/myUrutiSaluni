@@ -52,10 +52,10 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-gray-900 text-white min-h-screen flex flex-col">
-      <div className="p-6 border-b border-gray-800">
+    <div className="w-64 bg-surface-dark text-text-inverse min-h-screen flex flex-col">
+      <div className="p-6 border-b border-border-dark">
         <h1 className="text-xl font-bold">Salon Association</h1>
-        <p className="text-sm text-gray-400 mt-1">Platform</p>
+        <p className="text-sm text-text-secondary mt-1">Platform</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
@@ -69,8 +69,8 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
                 isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-primary text-text-inverse'
+                  : 'text-text-secondary hover:bg-surface-dark hover:text-text-inverse'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -80,15 +80,15 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-800">
-        <div className="mb-4 px-4 py-2 bg-gray-800 rounded-lg">
+      <div className="p-4 border-t border-border-dark">
+        <div className="mb-4 px-4 py-2 bg-surface-dark rounded-lg">
           <p className="text-sm font-medium">{user?.fullName}</p>
-          <p className="text-xs text-gray-400">{user?.email}</p>
-          <p className="text-xs text-gray-500 mt-1 capitalize">{user?.role?.replace('_', ' ')}</p>
+          <p className="text-xs text-text-secondary">{user?.email}</p>
+          <p className="text-xs text-text-tertiary mt-1 capitalize">{user?.role?.replace('_', ' ')}</p>
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition"
+          className="w-full flex items-center space-x-3 px-4 py-3 text-text-secondary hover:bg-surface-dark hover:text-text-inverse rounded-lg transition"
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>

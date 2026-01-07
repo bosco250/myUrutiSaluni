@@ -84,23 +84,23 @@ export default function RegisterPage() {
         </div>
 
         {isFromMembership && hasFormData && (
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="mb-6 p-4 bg-info-light dark:bg-info/20 border border-info dark:border-info rounded-lg">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">2</span>
+                <div className="w-8 h-8 rounded-full bg-info/20 dark:bg-info/40 flex items-center justify-center">
+                  <span className="text-info dark:text-info-light font-bold text-sm">2</span>
                 </div>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">
+                <p className="text-sm font-semibold text-info-dark dark:text-info-light mb-1">
                   Membership Application in Progress
                 </p>
-                <div className="space-y-1 text-xs text-blue-800 dark:text-blue-400">
+                <div className="space-y-1 text-xs text-info-dark dark:text-info-light">
                   <p>✓ Step 1: Form completed and saved</p>
                   <p>⏳ Step 2: Creating account (current step)</p>
                   <p>⏸️ Step 3: Auto-submit application (next)</p>
                 </div>
-                <p className="text-xs text-blue-700 dark:text-blue-400 mt-2 font-medium">
+                <p className="text-xs text-info-dark dark:text-info-light mt-2 font-medium">
                   Your form data is safely stored and will be automatically submitted after
                   registration.
                 </p>
@@ -110,7 +110,7 @@ export default function RegisterPage() {
         )}
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+          <div className="mb-4 p-3 bg-error-light dark:bg-error/20 border border-error dark:border-error text-error-dark dark:text-error-light rounded">
             {error}
           </div>
         )}

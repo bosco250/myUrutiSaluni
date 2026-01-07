@@ -16,6 +16,8 @@ import { theme } from "../../theme";
 import { useAuth, useTheme } from "../../context";
 import { useEmployeeId } from "../../hooks/useEmployeeId";
 import { useAppointmentsForDate } from "../../hooks/useAppointmentsForDate";
+import { useEmployeePermissionCheck } from '../../hooks/useEmployeePermissionCheck';
+import { EmployeePermission } from '../../constants/employeePermissions';
 import { workLogService, WorkLogDay } from "../../services/workLog";
 import { staffService } from "../../services/staff";
 import { salesService, Sale } from "../../services/sales";
@@ -52,10 +54,14 @@ interface ServiceTask {
   appointment?: Appointment;
 }
 
-export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
+export const UnifiedWorkLogScreen = ({ navigation, route }: { navigation: any; route?: any }) => {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const defaultEmployeeId = useEmployeeId();
+  const { checkPermission } = useEmployeePermissionCheck();
+  
+  // Route params for auto-starting tasks
+  const { autoStartTaskId, targetDate } = route?.params || {};
 
   // Dynamic Theme Colors
   const bgColor = isDark ? theme.colors.gray900 : theme.colors.background;
@@ -64,7 +70,9 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   const subTextColor = isDark ? theme.colors.gray400 : theme.colors.textSecondary;
 
   const [viewMode, setViewMode] = useState<ViewMode>("tasks");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    targetDate ? new Date(targetDate) : new Date()
+  );
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
 
@@ -88,6 +96,9 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
   
   // Track if we're currently loading to prevent infinite loops
   const loadingRef = useRef(false);
+  
+  // Track auto-start attempt to prevent loop
+  const hasAutoStartedRef = useRef(false);
 
   // Use shared hook for appointments
   const { appointments, refetch: refetchAppointments } =
@@ -318,6 +329,8 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId, selectedDate, viewMode, salons.length]);
 
+
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refetchAppointments();
@@ -456,7 +469,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     );
   });
 
-  const handleStartService = async (taskId: string) => {
+  const handleStartService = useCallback(async (taskId: string) => {
     try {
       setActionLoading(taskId);
       await staffService.startAppointment(taskId);
@@ -478,7 +491,7 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [fetchData, refetchAppointments]);
 
   const handleCompleteService = async (taskId: string) => {
     try {
@@ -503,6 +516,18 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
       setActionLoading(null);
     }
   };
+
+  // Handle auto-start task if present in params
+  useEffect(() => {
+    if (autoStartTaskId && tasks.length > 0 && !hasAutoStartedRef.current) {
+        const task = tasks.find(t => t.id === autoStartTaskId);
+        if (task && (task.status === AppointmentStatus.PENDING || task.status === AppointmentStatus.BOOKED || task.status === AppointmentStatus.CONFIRMED)) {
+             handleStartService(task.id);
+             hasAutoStartedRef.current = true;
+             // Clear param logic is tricky without reset, but ref prevents loop
+        }
+    }
+  }, [tasks, autoStartTaskId, handleStartService]);
 
   if (loading && !refreshing) {
     return <Loader fullscreen message="Loading work log..." />;
@@ -672,17 +697,17 @@ export const UnifiedWorkLogScreen = ({ navigation }: { navigation: any }) => {
           </View>
         </View>
 
-        {task.commissionAmount && task.commissionAmount > 0 && (
+        {(task.commissionAmount || 0) > 0 && (
           <View style={[styles.commissionBadge, { backgroundColor: theme.colors.success + '10' }]}>
             <MaterialIcons name="payments" size={12} color={theme.colors.success} />
             <Text style={styles.commissionBadgeText}>
-              Earned {formatCurrency(task.commissionAmount)}
+              Earned {formatCurrency(task.commissionAmount || 0)}
             </Text>
           </View>
         )}
 
-        {/* Start Service button - Only visible for salon owners, not employees */}
-        {task.type === "appointment" && isPending && user?.role?.toLowerCase() === 'salon_owner' && (
+        {/* Start Service button - Visible for salon owners OR employees with permission */}
+        {task.type === "appointment" && isPending && (user?.role?.toLowerCase() === 'salon_owner' || checkPermission(EmployeePermission.MODIFY_APPOINTMENT_STATUS)) && (
           <TouchableOpacity
             style={[
               styles.actionButton,

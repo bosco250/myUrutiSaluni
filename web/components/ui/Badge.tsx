@@ -21,13 +21,13 @@ export function Badge({
   dot = false,
 }: BadgeProps) {
   const variants = {
-    default: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
+    default: 'bg-background-secondary dark:bg-surface-dark text-text-light dark:text-text-dark',
     primary: 'bg-primary/10 text-primary',
-    success: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-    warning: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
-    danger: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300',
-    destructive: 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300',
-    info: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
+    success: 'bg-success-light dark:bg-success/20 text-success-dark dark:text-success-light',
+    warning: 'bg-warning-light dark:bg-warning/20 text-warning-dark dark:text-warning-light',
+    danger: 'bg-error-light dark:bg-error/20 text-error-dark dark:text-error-light',
+    destructive: 'bg-error-light dark:bg-error/20 text-error-dark dark:text-error-light',
+    info: 'bg-info-light dark:bg-info/20 text-info-dark dark:text-info-light',
   };
 
   const sizes = {
@@ -37,13 +37,13 @@ export function Badge({
   };
 
   const dotColors = {
-    default: 'bg-gray-500',
+    default: 'bg-text-secondary',
     primary: 'bg-primary',
-    success: 'bg-green-500',
-    warning: 'bg-yellow-500',
-    danger: 'bg-red-500',
-    destructive: 'bg-red-500',
-    info: 'bg-blue-500',
+    success: 'bg-success',
+    warning: 'bg-warning',
+    danger: 'bg-error',
+    destructive: 'bg-error',
+    info: 'bg-info',
   };
 
   return (

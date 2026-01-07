@@ -621,9 +621,15 @@ export const renderScreen = (
         </View>
       );
 
+    case "UnifiedWorkLog":
     case "WorkLog":
     case "Tasks":
-      return <UnifiedWorkLogScreen navigation={navigation} />;
+      return (
+        <UnifiedWorkLogScreen
+          navigation={navigation}
+          route={{ params: screenParams }}
+        />
+      );
 
     case "ComingSoon":
       return (

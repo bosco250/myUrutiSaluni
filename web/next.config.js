@@ -6,9 +6,36 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  
+  // Environment variables
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
   },
+  
+  // Experimental features for performance
+  experimental: {
+    // Optimize package imports to reduce bundle size
+    optimizePackageImports: ['lucide-react', 'date-fns', 'recharts'],
+  },
+  
+  // Image optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
+  },
+  
+  // Compiler optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  
+  // Powered by header - remove for smaller response
+  poweredByHeader: false,
+  
+  // Generate ETags for caching
+  generateEtags: true,
+  
   async headers() {
     return [
       {
@@ -42,6 +69,16 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Cache API responses
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=60, stale-while-revalidate=600',
           },
         ],
       },

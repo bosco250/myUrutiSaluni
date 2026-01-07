@@ -71,9 +71,12 @@ export default function CustomerDashboard() {
       try {
         const response = await api.get(`/customers/by-user/${authUser?.id}`);
         return response.data || null;
-      } catch (error: any) {
-        if (error.response?.status === 404 || error.response?.status === 200 || !error.response) {
-          return null;
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as { response?: { status?: number } };
+          if (axiosError.response?.status === 404 || axiosError.response?.status === 200 || !axiosError.response) {
+            return null;
+          }
         }
         return null;
       }
@@ -96,11 +99,7 @@ export default function CustomerDashboard() {
   const customerId = customer?.id;
 
   // Fetch customer statistics
-  const {
-    data: statistics,
-    isLoading: isLoadingStats,
-    error: statisticsError,
-  } = useQuery<CustomerStatistics>({
+  const { data: statistics } = useQuery<CustomerStatistics>({
     queryKey: ['customer-statistics', customerId],
     queryFn: async () => {
       const response = await api.get(`/sales/customer/${customerId}/statistics`);
@@ -110,11 +109,7 @@ export default function CustomerDashboard() {
   });
 
   // Fetch recent sales
-  const {
-    data: salesData,
-    isLoading: isLoadingSales,
-    error: salesError,
-  } = useQuery<{ data: Sale[]; total: number }>({
+  const { data: salesData } = useQuery<{ data: Sale[]; total: number }>({
     queryKey: ['customer-sales', customerId],
     queryFn: async () => {
       const response = await api.get(`/sales/customer/${customerId}?page=1&limit=5`);
@@ -124,11 +119,7 @@ export default function CustomerDashboard() {
   });
 
   // Fetch appointments
-  const {
-    data: appointments,
-    isLoading: isLoadingAppointments,
-    error: appointmentsError,
-  } = useQuery<Appointment[]>({
+  const { data: appointments } = useQuery<Appointment[]>({
     queryKey: ['customer-appointments', customerId],
     queryFn: async () => {
       const response = await api.get(`/appointments/customer/${customerId}`);
@@ -160,7 +151,7 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark pb-12">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark pb-6">
       {/* Hero Section */}
       <div className="relative bg-gradient-to-r from-primary via-primary/90 to-primary/80 dark:from-primary/90 dark:via-primary dark:to-primary/90 overflow-hidden z-0">
         {/* Abstract Background */}
@@ -172,35 +163,35 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-12 relative z-10 text-white">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 md:pt-6 md:pb-16 relative z-10 text-white">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-2 opacity-90">
-                <div className="px-2 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold border border-white/10">
+              <div className="flex items-center gap-2 mb-1 opacity-90">
+                <div className="px-2 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-semibold border border-white/10 uppercase tracking-wide">
                   Member Dashboard
                 </div>
                 {customer && (
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-warning/20 backdrop-blur-md rounded-full text-xs font-semibold border border-warning/30 text-yellow-100">
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-warning/20 backdrop-blur-md rounded-full text-[10px] font-semibold border border-warning/30 text-yellow-100 uppercase tracking-wide">
                     <Star className="w-3 h-3 fill-yellow-200" />
                     {customer.loyaltyPoints || 0} Points
                   </div>
                 )}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">
+              <h1 className="text-xl md:text-2xl font-bold mb-1 tracking-tight">
                 Hello, {user?.fullName?.split(' ')[0] || 'Beautiful'}! 👋
               </h1>
-              <p className="text-sm md:text-base text-white/90 max-w-xl leading-relaxed">
+              <p className="text-sm text-white/90 max-w-xl leading-relaxed">
                 Ready for your next glow up? Check your upcoming schedule or find a new salon.
               </p>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2 md:gap-3 w-full md:w-auto">
+            <div className="flex gap-2 w-full md:w-auto">
               <Button
                 onClick={() => router.push('/salons/browse')}
                 variant="secondary"
-                size="md"
-                className="flex-1 md:flex-none bg-white text-primary hover:bg-gray-50"
+                size="sm"
+                className="flex-1 md:flex-none bg-white text-primary hover:bg-gray-50 h-9"
               >
                 <Search className="w-4 h-4" />
                 Browse Salons
@@ -208,8 +199,8 @@ export default function CustomerDashboard() {
               <Button
                 onClick={() => router.push('/appointments')}
                 variant="outline"
-                size="md"
-                className="flex-1 md:flex-none bg-primary/30 backdrop-blur-md text-white border-white/30 hover:bg-primary/40"
+                size="sm"
+                className="flex-1 md:flex-none bg-primary/30 backdrop-blur-md text-white border-white/30 hover:bg-primary/40 h-9"
               >
                 <Calendar className="w-4 h-4" />
                 My Schedule
@@ -222,10 +213,10 @@ export default function CustomerDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-6 md:-mt-8 relative z-30">
         {/* Statistics Grid */}
         {customer && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             <StatCard
               title="Total Visits"
-              value={isLoadingStats ? '...' : (statistics?.totalVisits || 0).toString()}
+              value={statistics ? (statistics.totalVisits || 0).toString() : '...'}
               icon={ShoppingBag}
               color="text-blue-600"
               bgColor="bg-blue-100 dark:bg-blue-900/20"
@@ -233,9 +224,7 @@ export default function CustomerDashboard() {
             />
             <StatCard
               title="Amount Spent"
-              value={
-                isLoadingStats ? '...' : `${(statistics?.totalSpent || 0).toLocaleString()} RWF`
-              }
+              value={statistics ? `${(statistics.totalSpent || 0).toLocaleString()} RWF` : '...'}
               icon={DollarSign}
               color="text-success"
               bgColor="bg-success/10 dark:bg-success/20"
@@ -243,7 +232,7 @@ export default function CustomerDashboard() {
             />
             <StatCard
               title="Favorite Salon"
-              value={isLoadingStats ? '...' : statistics?.favoriteSalon?.name || 'By visits'}
+              value={statistics ? (statistics.favoriteSalon?.name || 'By visits') : '...'}
               subValue={
                 statistics?.favoriteSalon ? `${statistics.favoriteSalon.visits} visits` : 'None yet'
               }
@@ -258,11 +247,7 @@ export default function CustomerDashboard() {
             />
             <StatCard
               title="Avg. Order"
-              value={
-                isLoadingStats
-                  ? '...'
-                  : `${(statistics?.averageOrderValue || 0).toLocaleString()} RWF`
-              }
+              value={statistics ? `${(statistics.averageOrderValue || 0).toLocaleString()} RWF` : '...'}
               icon={TrendingUp}
               color="text-primary"
               bgColor="bg-primary/10 dark:bg-primary/20"
@@ -270,144 +255,120 @@ export default function CustomerDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Left Column - Appointments & Sales */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+          <div className="lg:col-span-2 space-y-4">
             {/* Upcoming Appointments */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 md:p-6 shadow-sm border border-border-light dark:border-border-dark">
-              <div className="flex items-center justify-between mb-4 md:mb-6">
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
                   Upcoming Appointments
                 </h2>
                 {upcomingAppointments.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => router.push('/appointments')}>
+                  <Button variant="outline" size="sm" onClick={() => router.push('/appointments')} className="h-7 text-xs px-2">
                     See all
                   </Button>
                 )}
               </div>
 
-              {isLoadingAppointments ? (
-                <div className="py-8 text-center">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading...</p>
-                </div>
-              ) : appointmentsError ? (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-danger mb-2">Failed to load appointments</p>
-                  <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                    Retry
-                  </Button>
-                </div>
-              ) : upcomingAppointments.length > 0 ? (
+              {appointments ? (
+                upcomingAppointments.length > 0 ? (
                 <div className="space-y-3">
                   {upcomingAppointments.map((apt) => (
                     <div
                       key={apt.id}
-                      className="group bg-gray-50 dark:bg-gray-900/50 p-3 md:p-4 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/30 transition-all flex flex-col sm:flex-row gap-3 md:gap-4 items-start sm:items-center"
+                      className="group bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/30 transition-all flex items-center gap-3"
                     >
                       {/* Date Box */}
-                      <div className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 bg-surface-light dark:bg-surface-dark rounded-xl flex flex-col items-center justify-center shadow-sm border border-border-light dark:border-border-dark">
-                        <span className="text-xs font-bold text-primary uppercase">
+                      <div className="flex-shrink-0 w-12 h-12 bg-surface-light dark:bg-surface-dark rounded-lg flex flex-col items-center justify-center shadow-sm border border-border-light dark:border-border-dark">
+                        <span className="text-[10px] font-bold text-primary uppercase leading-tight">
                           {format(new Date(apt.scheduledStart), 'MMM')}
                         </span>
-                        <span className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark">
+                        <span className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">
                           {format(new Date(apt.scheduledStart), 'dd')}
                         </span>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-text-light dark:text-text-dark text-base md:text-lg truncate">
+                        <h4 className="font-bold text-text-light dark:text-text-dark text-sm truncate">
                           {apt.service?.name || 'Service'}
                         </h4>
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                          <Building2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                        <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                          <Building2 className="w-3 h-3" />
                           <span className="truncate">{apt.salon?.name}</span>
                           <span>•</span>
-                          <Clock className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                          <Clock className="w-3 h-3" />
                           <span>{format(new Date(apt.scheduledStart), 'HH:mm')}</span>
                         </div>
                       </div>
 
                       <div className="flex-shrink-0 flex items-center gap-2">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            apt.status === 'confirmed'
-                              ? 'bg-success/10 text-success'
-                              : apt.status === 'pending'
-                                ? 'bg-warning/10 text-warning'
-                                : 'bg-primary/10 text-primary'
-                          }`}
-                        >
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${apt.status === 'confirmed' ? 'bg-success/10 text-success' : apt.status === 'pending' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'}`}>
                           {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                         </span>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => router.push(`/appointments/${apt.id}`)}
+                          className="h-7 w-7 p-0 flex items-center justify-center"
                         >
-                          <ArrowRight className="w-4 h-4" />
+                          <ArrowRight className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 md:py-10 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-dashed border-border-light dark:border-border-dark">
-                  <Calendar className="w-10 h-10 md:w-12 md:h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                  <h3 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark mb-2">
+                <div className="text-center py-6 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-dashed border-border-light dark:border-border-dark">
+                  <Calendar className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">
                     No upcoming appointments
                   </h3>
-                  <p className="text-xs md:text-sm text-text-light/60 dark:text-text-dark/60 mb-4 max-w-xs mx-auto">
-                    You don't have any bookings scheduled. Time to treat yourself?
+                  <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-3 max-w-xs mx-auto">
+                    You do not have any bookings scheduled. Time to treat yourself?
                   </p>
-                  <Button onClick={() => router.push('/salons/browse')} variant="primary" size="md">
+                  <Button onClick={() => router.push('/salons/browse')} variant="primary" size="sm" className="h-8">
                     Book Now
                   </Button>
+                </div>
+              )) : (
+                <div className="py-8 text-center">
+                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                   <p className="text-xs text-text-light/60 dark:text-text-dark/60">Loading...</p>
                 </div>
               )}
             </div>
 
             {/* Recent History */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 md:p-6 shadow-sm border border-border-light dark:border-border-dark">
-              <div className="flex items-center justify-between mb-4 md:mb-6">
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-                  <Receipt className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-primary" />
                   Recent Activity
                 </h2>
                 {recentSales.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => router.push('/sales/history')}>
+                  <Button variant="outline" size="sm" onClick={() => router.push('/sales/history')} className="h-7 text-xs px-2">
                     View All
                   </Button>
                 )}
               </div>
 
-              {isLoadingSales ? (
-                <div className="py-8 text-center">
-                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading...</p>
-                </div>
-              ) : salesError ? (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-danger mb-2">Failed to load recent activity</p>
-                  <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                    Retry
-                  </Button>
-                </div>
-              ) : recentSales.length > 0 ? (
+              {salesData ? (
+                recentSales.length > 0 ? (
                 <div className="divide-y divide-border-light dark:divide-border-dark">
                   {recentSales.map((sale) => (
                     <button
                       key={sale.id}
                       onClick={() => router.push(`/sales/${sale.id}`)}
-                      className="w-full py-3 md:py-4 first:pt-0 last:pb-0 flex items-center justify-between group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors rounded-lg px-2 -mx-2 text-left"
+                      className="w-full py-2 first:pt-0 last:pb-0 flex items-center justify-between group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors rounded-lg px-2 -mx-2 text-left"
                     >
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                          <Scissors className="w-4 h-4 md:w-5 md:h-5" />
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                          <Scissors className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="font-semibold text-sm md:text-base text-text-light dark:text-text-dark">
+                          <p className="font-semibold text-sm text-text-light dark:text-text-dark">
                             {sale.salon?.name}
                           </p>
                           <p className="text-xs text-text-light/60 dark:text-text-dark/60">
@@ -417,42 +378,47 @@ export default function CustomerDashboard() {
                       </div>
                       <div className="text-right flex items-center gap-2">
                         <div>
-                          <div className="font-bold text-sm md:text-base text-text-light dark:text-text-dark">
+                          <div className="font-bold text-sm text-text-light dark:text-text-dark">
                             -{Number(sale.totalAmount).toLocaleString()} RWF
                           </div>
-                          <span className="text-xs text-success bg-success/10 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] text-success bg-success/10 px-1.5 py-0.5 rounded-full">
                             Completed
                           </span>
                         </div>
-                        <ArrowRight className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition-colors" />
+                        <ArrowRight className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 group-hover:text-primary transition-colors" />
                       </div>
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Receipt className="w-10 h-10 md:w-12 md:h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                <div className="text-center py-6">
+                  <Receipt className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                     No recent activity found.
                   </p>
+                </div>
+              )) : (
+                 <div className="py-8 text-center">
+                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                   <p className="text-xs text-text-light/60 dark:text-text-dark/60">Loading...</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Right Column - Status & Promo */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-4">
             {/* Membership Card */}
             {!membershipStatus?.isMember && (
-              <div className="bg-gradient-to-br from-primary/90 to-primary/80 dark:from-primary dark:to-primary/90 text-white rounded-xl p-4 md:p-6 shadow-lg relative overflow-hidden z-10">
+              <div className="bg-gradient-to-br from-primary/90 to-primary/80 dark:from-primary dark:to-primary/90 text-white rounded-xl p-4 shadow-lg relative overflow-hidden z-10">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 z-0"></div>
 
                 <div className="relative z-10">
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-3 md:mb-4">
-                    <Building2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-3">
+                    <Building2 className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-base md:text-lg font-bold mb-2">Own a Salon?</h3>
-                  <p className="text-white/90 text-xs md:text-sm mb-4 md:mb-6 leading-relaxed">
+                  <h3 className="text-base font-bold mb-1">Own a Salon?</h3>
+                  <p className="text-white/90 text-xs mb-3 leading-relaxed">
                     Join our network of professional salon owners. Manage bookings, staff, and grow
                     your business today.
                   </p>
@@ -461,8 +427,8 @@ export default function CustomerDashboard() {
                     <Button
                       onClick={() => router.push('/membership/status')}
                       variant="outline"
-                      size="md"
-                      className="w-full bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                      size="sm"
+                      className="w-full bg-white/10 hover:bg-white/20 border-white/20 text-white h-8"
                     >
                       Check Status
                     </Button>
@@ -470,8 +436,8 @@ export default function CustomerDashboard() {
                     <Button
                       onClick={() => router.push('/membership/apply')}
                       variant="secondary"
-                      size="md"
-                      className="w-full bg-white text-primary hover:bg-gray-50"
+                      size="sm"
+                      className="w-full bg-white text-primary hover:bg-gray-50 h-8"
                     >
                       Partner with Us
                     </Button>
@@ -481,17 +447,17 @@ export default function CustomerDashboard() {
             )}
 
             {/* Features List */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 md:p-6 shadow-sm border border-border-light dark:border-border-dark">
-              <h3 className="text-base md:text-lg font-semibold text-text-light dark:text-text-dark mb-3 md:mb-4">
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
+              <h3 className="text-base font-semibold text-text-light dark:text-text-dark mb-3">
                 Quick Tips
               </h3>
-              <ul className="space-y-3 md:space-y-4">
-                <li className="flex gap-2 md:gap-3 text-xs md:text-sm text-text-light/80 dark:text-text-dark/80">
-                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0 mt-0.5" />
+              <ul className="space-y-3">
+                <li className="flex gap-2 text-xs text-text-light/80 dark:text-text-dark/80">
+                  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                   <span>Book in advance to secure your favorite stylist slots.</span>
                 </li>
-                <li className="flex gap-2 md:gap-3 text-xs md:text-sm text-text-light/80 dark:text-text-dark/80">
-                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0 mt-0.5" />
+                <li className="flex gap-2 text-xs text-text-light/80 dark:text-text-dark/80">
+                  <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                   <span>Earn loyalty points with every visit to participating salons.</span>
                 </li>
               </ul>
@@ -516,7 +482,7 @@ function StatCard({
   title: string;
   value: string;
   subValue?: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   bgColor: string;
   onClick?: () => void;
@@ -525,23 +491,21 @@ function StatCard({
   return (
     <Component
       onClick={onClick}
-      className={`bg-surface-light dark:bg-surface-dark rounded-xl p-4 md:p-5 shadow-sm border border-border-light dark:border-border-dark hover:shadow-md transition-all relative ${
-        onClick ? 'cursor-pointer hover:border-primary/30 z-10' : ''
-      }`}
+      className={`bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark hover:shadow-md transition-all relative ${onClick ? 'cursor-pointer hover:border-primary/30 z-10' : ''}`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className={`w-10 h-10 ${bgColor} rounded-xl flex items-center justify-center`}>
-          <Icon className={`w-4 h-4 md:w-5 md:h-5 ${color}`} />
+      <div className="flex items-center justify-between mb-2">
+        <div className={`w-8 h-8 ${bgColor} rounded-lg flex items-center justify-center`}>
+          <Icon className={`w-4 h-4 ${color}`} />
         </div>
       </div>
-      <p className="text-xs md:text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
+      <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-medium truncate">
         {title}
       </p>
-      <h3 className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark mt-1">
+      <h3 className="text-lg font-bold text-text-light dark:text-text-dark mt-0.5 truncate">
         {value}
       </h3>
       {subValue && (
-        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{subValue}</p>
+        <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">{subValue}</p>
       )}
     </Component>
   );

@@ -1,4 +1,6 @@
-//
+// Web Color Constants - Synchronized with Mobile App
+// This file mirrors mobile/src/theme/colors.ts to ensure consistency
+
 export const colors = {
   // ============================================
   // PRIMARY BRAND COLORS
@@ -44,9 +46,9 @@ export const colors = {
   // ============================================
   // BACKGROUND COLORS
   // ============================================
-  background: "#FFFFFF", // Main screen background
-  backgroundSecondary: "#F5F5F5", // Input fields, cards background
-  backgroundTertiary: "#FAFAFA", // Subtle backgrounds, dividers
+  background: "#FAFAFA", // Main screen background (slightly off-white)
+  backgroundSecondary: "#F0F0F0", // Input fields, cards background (more contrast)
+  backgroundTertiary: "#E8E8E8", // Subtle backgrounds, dividers
   backgroundDark: "#111827", // Dark mode background
 
   // ============================================
@@ -61,8 +63,8 @@ export const colors = {
   // ============================================
   // BORDER COLORS
   // ============================================
-  border: "#C6C6C8", // Default border color
-  borderLight: "#E5E5EA", // Light borders, dividers
+  border: "#D1D1D6", // Default border color (more visible)
+  borderLight: "#D1D1D6", // Light borders, dividers (better contrast)
   borderDark: "#374151", // Dark borders, emphasis
   borderFocus: "#C89B68", // Focused input border (matches primary)
 
@@ -93,7 +95,21 @@ export const colors = {
   overlay: "rgba(0, 0, 0, 0.5)", // Standard overlay for modals
   overlayLight: "rgba(0, 0, 0, 0.3)", // Light overlay
   overlayDark: "rgba(0, 0, 0, 0.7)", // Dark overlay for emphasis
-};
+} as const;
 
 // Type for colors
 export type Colors = typeof colors;
+
+// CSS Custom Properties for runtime theme switching
+export const cssVariables = {
+  '--color-primary': colors.primary,
+  '--color-primary-dark': colors.primaryDark,
+  '--color-primary-light': colors.primaryLight,
+  '--color-secondary': colors.secondary,
+  '--color-success': colors.success,
+  '--color-warning': colors.warning,
+  '--color-error': colors.error,
+  '--color-background': colors.background,
+  '--color-text': colors.text,
+  '--color-border': colors.border,
+} as const;

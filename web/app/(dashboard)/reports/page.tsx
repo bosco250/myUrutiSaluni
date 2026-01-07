@@ -22,7 +22,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from '@/components/charts/LazyCharts';
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
 import { exportToCSV, formatDateForExport, formatCurrencyForExport } from '@/lib/export-utils';
 

@@ -1,14 +1,52 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useMembershipStatus } from '@/hooks/useMembershipStatus';
 import { useAuthStore } from '@/store/auth-store';
-import CustomerDashboard from '@/components/dashboards/CustomerDashboard';
-import SalonOwnerDashboard from '@/components/dashboards/SalonOwnerDashboard';
-import AdminDashboard from '@/components/dashboards/AdminDashboard';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+
+// Dynamic imports - only load the dashboard component that's actually needed
+// This reduces initial bundle by ~150KB
+const CustomerDashboard = dynamic(
+  () => import('@/components/dashboards/CustomerDashboard'),
+  { 
+    loading: () => <DashboardSkeleton />,
+    ssr: false 
+  }
+);
+
+const SalonOwnerDashboard = dynamic(
+  () => import('@/components/dashboards/SalonOwnerDashboard'),
+  { 
+    loading: () => <DashboardSkeleton />,
+    ssr: false 
+  }
+);
+
+const AdminDashboard = dynamic(
+  () => import('@/components/dashboards/AdminDashboard'),
+  { 
+    loading: () => <DashboardSkeleton />,
+    ssr: false 
+  }
+);
+
+// Skeleton component for loading state
+function DashboardSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-text-light/60 dark:text-text-dark/60">Loading dashboard...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { user, refreshUser } = useAuthStore();

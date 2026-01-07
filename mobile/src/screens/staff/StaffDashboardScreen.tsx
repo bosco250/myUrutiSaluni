@@ -742,91 +742,7 @@ export default function StaffDashboardScreen({
               </Text>
             </Pressable>
 
-            {/* Create Appointment Card - Permission Based */}
-            <EmployeePermissionGate
-              requiredPermission={EmployeePermission.MANAGE_APPOINTMENTS}
-              salonId={salonId}
-              employeeId={employeeId}
-              fallback={
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.quickActionCard,
-                    dynamicStyles.card,
-                    { opacity: 0.5 },
-                    pressed && { opacity: 0.3 },
-                  ]}
-                  disabled={true}
-                >
-                  <View style={styles.quickActionHeader}>
-                    <View
-                      style={[
-                        styles.quickActionIcon,
-                        {
-                          backgroundColor: isDark
-                            ? `${theme.colors.gray700}20`
-                            : theme.colors.gray200,
-                        },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name="event"
-                        size={theme.sizes.icon.md}
-                        color={isDark ? theme.colors.gray500 : theme.colors.gray400}
-                      />
-                    </View>
-                    <MaterialIcons
-                      name="lock"
-                      size={16}
-                      color={isDark ? theme.colors.gray500 : theme.colors.gray400}
-                    />
-                  </View>
-                  <Text
-                    style={[styles.quickActionLabel, dynamicStyles.textSecondary, { opacity: 0.6 }]}
-                  >
-                    Create Appointment
-                  </Text>
-                  <Text style={[styles.quickActionValue, dynamicStyles.text, { fontSize: 11, opacity: 0.6 }]}>
-                    Permission Required
-                  </Text>
-                </Pressable>
-              }
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.quickActionCard,
-                  dynamicStyles.card,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => navigation.navigate("CreateAppointment")}
-              >
-                <View style={styles.quickActionHeader}>
-                  <View
-                    style={[
-                      styles.quickActionIcon,
-                      {
-                        backgroundColor: isDark
-                          ? `${theme.colors.secondary}20`
-                          : `${theme.colors.secondary}15`,
-                      },
-                    ]}
-                  >
-                    <MaterialIcons
-                      name="event"
-                      size={theme.sizes.icon.md}
-                      color={theme.colors.secondary}
-                    />
-                  </View>
-                </View>
-                <Text
-                  style={[styles.quickActionLabel, dynamicStyles.textSecondary]}
-                >
-                  Create Appointment
-                </Text>
-                <Text style={[styles.quickActionValue, dynamicStyles.text]}>
-                  New Booking
-                </Text>
-              </Pressable>
-            </EmployeePermissionGate>
+
 
             {/* View All Appointments Card - Permission Based */}
             <EmployeePermissionGate
@@ -1014,14 +930,31 @@ export default function StaffDashboardScreen({
           </View>
 
           {schedule.length === 0 ? (
-            <View style={[styles.emptyCard, dynamicStyles.card]}>
-              <MaterialIcons
-                name="event-available"
-                size={56}
-                color={dynamicStyles.textSecondary.color}
-              />
-              <Text style={[styles.emptyText, { color: dynamicStyles.textSecondary.color }]}>
-                No appointments scheduled for today
+            <View style={[styles.emptyStateContainer, dynamicStyles.card]}>
+              <View
+                style={[
+                  styles.emptyStateIcon,
+                  {
+                    backgroundColor: isDark
+                      ? `${theme.colors.primary}15`
+                      : `${theme.colors.primary}10`,
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="event-available"
+                  size={32}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={[styles.emptyStateTitle, dynamicStyles.text]}>
+                No Appointments
+              </Text>
+              <Text
+                style={[styles.emptyStateSubtext, dynamicStyles.textSecondary]}
+              >
+                You're all caught up! Enjoy your free time or check back later for new
+                bookings.
               </Text>
             </View>
           ) : (
@@ -1031,7 +964,7 @@ export default function StaffDashboardScreen({
                 style={({ pressed }) => [
                   styles.scheduleCard,
                   dynamicStyles.card,
-                  pressed && { opacity: 0.7 },
+                  pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] },
                 ]}
                 onPress={() =>
                   navigation.navigate("AppointmentDetail", {
@@ -1039,28 +972,52 @@ export default function StaffDashboardScreen({
                   })
                 }
               >
-                <View style={styles.scheduleCardLeft}>
+                <View style={styles.scheduleCardInner}>
+                  {/* Time Badge */}
                   <View
                     style={[
-                      styles.customerAvatar,
+                      styles.timeBadge,
                       {
                         backgroundColor: isDark
-                          ? `${theme.colors.primary}20`
-                          : `${theme.colors.primary}15`,
+                          ? theme.colors.gray800
+                          : theme.colors.gray100,
                       },
                     ]}
                   >
-                    <MaterialIcons
-                      name="person"
-                      size={theme.sizes.icon.md}
-                      color={theme.colors.primary}
-                    />
+                    <Text style={[styles.timeTextBold, dynamicStyles.text]}>
+                      {item.startTime}
+                    </Text>
                   </View>
+
+                  {/* Info */}
                   <View style={styles.scheduleInfo}>
                     <View style={styles.scheduleMainRow}>
-                      <Text style={[styles.serviceName, dynamicStyles.text]}>
+                      <Text
+                        style={[styles.serviceName, dynamicStyles.text]}
+                        numberOfLines={1}
+                      >
                         {item.serviceName}
                       </Text>
+                      <Text style={[styles.priceText, { color: theme.colors.primary }]}>
+                        ${item.price}
+                      </Text>
+                    </View>
+
+                    <View style={styles.scheduleSubRow}>
+                      <View style={styles.customerRow}>
+                        <MaterialIcons
+                          name="person-outline"
+                          size={14}
+                          color={dynamicStyles.textSecondary.color}
+                          style={{ marginRight: 4 }}
+                        />
+                        <Text
+                          style={[styles.customerName, dynamicStyles.textSecondary]}
+                          numberOfLines={1}
+                        >
+                          {item.customerName}
+                        </Text>
+                      </View>
                       <View
                         style={[
                           styles.statusBadge,
@@ -1073,32 +1030,9 @@ export default function StaffDashboardScreen({
                             { color: getStatusColor(item.status) },
                           ]}
                         >
-                          {item.status.charAt(0).toUpperCase() +
-                            item.status.slice(1)}
+                          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                         </Text>
                       </View>
-                    </View>
-                    <Text
-                      style={[styles.customerName, dynamicStyles.textSecondary]}
-                    >
-                      {item.customerName}
-                    </Text>
-                    <View style={styles.scheduleDetails}>
-                      <View style={styles.scheduleTime}>
-                        <MaterialIcons
-                          name="schedule"
-                          size={14}
-                          color={dynamicStyles.textSecondary.color}
-                        />
-                        <Text
-                          style={[styles.timeText, { color: dynamicStyles.textSecondary.color }]}
-                        >
-                          {item.startTime} - {item.endTime}
-                        </Text>
-                      </View>
-                      <Text style={[styles.priceText, dynamicStyles.text]}>
-                        ${item.price}
-                      </Text>
                     </View>
                   </View>
                 </View>
@@ -1347,22 +1281,27 @@ const styles = StyleSheet.create({
   // Schedule Card
   scheduleCard: {
     borderRadius: 20,
-    padding: 14,
-    marginBottom: 10,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    minHeight: 90,
   },
-  scheduleCardLeft: {
+  scheduleCardInner: {
     flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  customerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    gap: 16,
+  },
+  timeBadge: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 70,
+  },
+  timeTextBold: {
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: theme.fontFamilies.bold,
   },
   scheduleInfo: {
     flex: 1,
@@ -1371,72 +1310,79 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: theme.spacing.xs / 2,
+    marginBottom: 6,
   },
   serviceName: {
     fontSize: 16,
     fontWeight: "700",
     fontFamily: theme.fontFamilies.bold,
     flex: 1,
-    letterSpacing: -0.3,
+    marginRight: 8,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 11,
-    fontFamily: theme.fontFamilies.semibold,
+  priceText: {
+    fontSize: 15,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    fontFamily: theme.fontFamilies.bold,
+  },
+  scheduleSubRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  customerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
   customerName: {
     fontSize: 14,
     fontFamily: theme.fontFamilies.medium,
     fontWeight: "500",
-    marginBottom: 8,
   },
-  scheduleDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: theme.spacing.xs,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  scheduleTime: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-  },
-  timeText: {
-    fontSize: 13,
-    fontFamily: theme.fontFamilies.medium,
-    fontWeight: "500",
-  },
-  priceText: {
-    fontSize: 16,
-    fontWeight: "700",
+  statusText: {
+    fontSize: 10,
     fontFamily: theme.fontFamilies.bold,
-    letterSpacing: -0.3,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
 
-  // Empty State
-  emptyCard: {
-    borderRadius: 20,
-    padding: 32,
+  // Empty State - Improved
+  emptyStateContainer: {
+    borderRadius: 24,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
     alignItems: "center",
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    minHeight: 160,
     justifyContent: "center",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    marginTop: 8,
   },
-  emptyText: {
-    fontSize: 15,
+  emptyStateIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    fontFamily: theme.fontFamilies.bold,
+    marginBottom: 8,
     textAlign: "center",
-    marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    textAlign: "center",
     fontFamily: theme.fontFamilies.medium,
-    fontWeight: "500",
-    lineHeight: 22,
+    lineHeight: 20,
+    maxWidth: 240,
   },
   bottomSpacing: {
     height: theme.componentSpacing.screenPaddingLarge * 2,

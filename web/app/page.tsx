@@ -64,37 +64,43 @@ export default function Home() {
       icon: Building2,
       title: 'Membership Management',
       description: 'Register and manage salon owners, employees, and members with ease',
-      gradient: 'from-blue-500 to-cyan-500',
+      gradient: 'from-primary/90 to-primary',
+      iconBg: 'bg-primary',
     },
     {
       icon: Calendar,
       title: 'Appointment Scheduling',
       description: 'Streamline bookings with an intuitive calendar and scheduling system',
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'from-secondary/90 to-secondary',
+      iconBg: 'bg-secondary',
     },
     {
       icon: ShoppingCart,
       title: 'Point of Sale (POS)',
       description: 'Complete sales management with inventory tracking and reporting',
-      gradient: 'from-green-500 to-emerald-500',
+      gradient: 'from-success/90 to-success',
+      iconBg: 'bg-success',
     },
     {
       icon: Package,
       title: 'Inventory Management',
       description: 'Track products, stock levels, and manage your salon supplies',
-      gradient: 'from-orange-500 to-red-500',
+      gradient: 'from-warning/90 to-warning',
+      iconBg: 'bg-warning',
     },
     {
       icon: DollarSign,
       title: 'Accounting & Finance',
       description: 'Comprehensive financial management with real-time reporting',
-      gradient: 'from-indigo-500 to-violet-500',
+      gradient: 'from-primary-dark/90 to-primary-dark',
+      iconBg: 'bg-primary-dark',
     },
     {
       icon: CreditCard,
       title: 'Micro-Lending',
       description: 'Access financial services and manage loans for your business',
-      gradient: 'from-yellow-500 to-amber-500',
+      gradient: 'from-error/90 to-error',
+      iconBg: 'bg-error',
     },
   ];
 
@@ -110,9 +116,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-blue-600 to-cyan-600 text-white">
-        <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,white,transparent)]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark text-text-inverse">
+        <div className="absolute inset-0 bg-overlay-light" />
+        <div className="absolute inset-0 bg-gradient-to-t from-overlay-light via-transparent to-transparent" />
         
         <div className="relative max-w-7xl mx-auto px-6 py-20 md:py-32">
           <div className="text-center max-w-4xl mx-auto">
@@ -123,10 +129,10 @@ export default function Home() {
             
             <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
               Transform Your Salon Business
-              <span className="block text-cyan-200">With Digital Excellence</span>
+              <span className="block text-text-inverse/90">With Digital Excellence</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed">
+            <p className="text-xl md:text-2xl text-text-inverse/80 mb-8 leading-relaxed">
               Integrated digital platform for salon operations, membership management, 
               accounting, and micro-lending. Everything you need in one place.
             </p>
@@ -137,7 +143,7 @@ export default function Home() {
                   document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' });
                 }}
                 variant="primary"
-                className="bg-white text-primary hover:bg-blue-50 px-8 py-4 text-lg font-semibold shadow-xl"
+                className="bg-background-light text-primary hover:bg-gray-50 px-8 py-4 text-lg font-semibold shadow-xl"
               >
                 Apply for Membership
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -145,7 +151,7 @@ export default function Home() {
               <Link href="/login">
                 <Button
                   variant="secondary"
-                  className="bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20 px-8 py-4 text-lg font-semibold"
+                  className="bg-white/10 backdrop-blur-sm text-text-inverse border-white/20 hover:bg-white/20 px-8 py-4 text-lg font-semibold"
                 >
                   Sign In
                 </Button>
@@ -162,7 +168,7 @@ export default function Home() {
             <h2 className="text-3xl md:text-5xl font-bold text-text-light dark:text-text-dark mb-4">
               Everything You Need to Succeed
             </h2>
-            <p className="text-lg text-text-light/60 dark:text-text-dark/60 max-w-2xl mx-auto">
+            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
               Comprehensive tools designed specifically for salon businesses and associations
             </p>
           </div>
@@ -175,13 +181,13 @@ export default function Home() {
                   key={index}
                   className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${feature.gradient} mb-4`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`inline-flex p-3 rounded-xl ${feature.iconBg} mb-4`}>
+                    <Icon className="w-6 h-6 text-text-inverse" />
                   </div>
                   <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-text-light/60 dark:text-text-dark/60">
+                  <p className="text-text-secondary dark:text-gray-300">
                     {feature.description}
                   </p>
                 </div>
@@ -192,13 +198,13 @@ export default function Home() {
       </section>
 
       {/* Membership Application Section */}
-      <section id="membership-form" className="py-20 md:py-32 bg-gradient-to-br from-surface-light to-background-light dark:from-surface-dark dark:to-background-dark">
+      <section id="membership-form" className="py-20 md:py-32 bg-background-secondary dark:bg-surface-dark">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-bold text-text-light dark:text-text-dark mb-4">
               Join Our Association
             </h2>
-            <p className="text-lg text-text-light/60 dark:text-text-dark/60 max-w-2xl mx-auto">
+            <p className="text-lg text-text-secondary dark:text-gray-300 max-w-2xl mx-auto">
               Apply for membership to access all platform features and start managing your salon business digitally
             </p>
           </div>
@@ -215,7 +221,7 @@ export default function Home() {
               <h2 className="text-3xl md:text-5xl font-bold text-text-light dark:text-text-dark mb-6">
                 Why Choose Our Platform?
               </h2>
-              <p className="text-lg text-text-light/60 dark:text-text-dark/60 mb-8">
+              <p className="text-lg text-text-secondary dark:text-gray-300 mb-8">
                 We provide everything you need to run a successful salon business, 
                 from appointment scheduling to financial management.
               </p>
@@ -235,35 +241,35 @@ export default function Home() {
             </div>
 
             <div className="relative">
-              <div className="bg-gradient-to-br from-primary/10 to-cyan-500/10 rounded-3xl p-8 border border-primary/20">
+              <div className="bg-primary/5 rounded-3xl p-8 border border-primary/10">
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-text-inverse" />
                     </div>
                     <div>
                       <h3 className="font-bold text-text-light dark:text-text-dark">Secure & Reliable</h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">Your data is protected with enterprise-grade security</p>
+                      <p className="text-sm text-text-secondary dark:text-gray-300">Your data is protected with enterprise-grade security</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <BarChart3 className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                      <BarChart3 className="w-6 h-6 text-text-inverse" />
                     </div>
                     <div>
                       <h3 className="font-bold text-text-light dark:text-text-dark">Real-Time Analytics</h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">Make data-driven decisions with comprehensive insights</p>
+                      <p className="text-sm text-text-secondary dark:text-gray-300">Make data-driven decisions with comprehensive insights</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                      <Wallet className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-xl bg-success flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-text-inverse" />
                     </div>
                     <div>
                       <h3 className="font-bold text-text-light dark:text-text-dark">Financial Tools</h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">Manage payments, loans, and accounting seamlessly</p>
+                      <p className="text-sm text-text-secondary dark:text-gray-300">Manage payments, loans, and accounting seamlessly</p>
                     </div>
                   </div>
                 </div>
@@ -274,12 +280,12 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-br from-primary via-blue-600 to-cyan-600 text-white">
+      <section className="py-20 md:py-32 bg-gradient-to-r from-primary to-primary-dark text-text-inverse">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-5xl font-bold mb-6">
             Ready to Get Started?
           </h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-text-inverse/90 mb-8">
             Join hundreds of salon owners who are already using our platform to grow their business
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -288,7 +294,7 @@ export default function Home() {
                 document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' });
               }}
               variant="primary"
-              className="bg-white text-primary hover:bg-blue-50 px-8 py-4 text-lg font-semibold shadow-xl"
+              className="bg-background-light text-primary hover:bg-primary-light/10 px-8 py-4 text-lg font-semibold shadow-xl"
             >
               Apply Now
               <ArrowRight className="w-5 h-5 ml-2" />
@@ -296,7 +302,7 @@ export default function Home() {
             <Link href="/login">
               <Button
                 variant="secondary"
-                className="bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20 px-8 py-4 text-lg font-semibold"
+                className="bg-white/10 backdrop-blur-sm text-text-inverse border-white/20 hover:bg-white/20 px-8 py-4 text-lg font-semibold"
               >
                 Sign In to Your Account
               </Button>
@@ -306,12 +312,12 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark py-12">
+      <footer className="bg-background-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
               <h3 className="font-bold text-text-light dark:text-text-dark mb-4">Platform</h3>
-              <ul className="space-y-2 text-text-light/60 dark:text-text-dark/60">
+              <ul className="space-y-2 text-text-secondary dark:text-gray-300">
                 <li><Link href="#membership-form" className="hover:text-primary transition">Membership</Link></li>
                 <li><Link href="/login" className="hover:text-primary transition">Sign In</Link></li>
                 <li><Link href="/register" className="hover:text-primary transition">Sign Up</Link></li>
@@ -319,7 +325,7 @@ export default function Home() {
             </div>
             <div>
               <h3 className="font-bold text-text-light dark:text-text-dark mb-4">Features</h3>
-              <ul className="space-y-2 text-text-light/60 dark:text-text-dark/60">
+              <ul className="space-y-2 text-text-secondary dark:text-gray-300">
                 <li>Salon Management</li>
                 <li>Appointment Scheduling</li>
                 <li>Financial Tools</li>
@@ -328,7 +334,7 @@ export default function Home() {
             </div>
             <div>
               <h3 className="font-bold text-text-light dark:text-text-dark mb-4">Contact</h3>
-              <ul className="space-y-2 text-text-light/60 dark:text-text-dark/60">
+              <ul className="space-y-2 text-text-secondary dark:text-gray-300">
                 <li className="flex items-center gap-2">
                   <Mail className="w-4 h-4" />
                   support@salonassociation.com
@@ -344,7 +350,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-border-light dark:border-border-dark text-center text-text-light/60 dark:text-text-dark/60">
+          <div className="pt-8 border-t border-border-light dark:border-border-dark text-center text-text-secondary dark:text-gray-300">
             <p>&copy; {new Date().getFullYear()} Salon Association Platform. All rights reserved.</p>
           </div>
         </div>

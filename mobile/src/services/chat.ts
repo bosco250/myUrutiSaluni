@@ -120,6 +120,11 @@ class ChatService {
           this.disconnect();
         }
       });
+
+      this.socket.on('error', (error) => {
+        console.error('Socket error:', error);
+        // Prevent crash from unhandled error event
+      });
     } catch (error) {
       this.isConnecting = false;
       throw error;

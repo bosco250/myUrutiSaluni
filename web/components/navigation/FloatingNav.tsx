@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -38,20 +38,20 @@ const allNavItems: NavItem[] = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    color: 'from-blue-500 to-cyan-500',
+    color: 'from-primary to-primary-light',
   },
   {
     name: 'Users',
     href: '/users',
     icon: Users,
-    color: 'from-indigo-500 to-purple-500',
+    color: 'from-secondary to-secondary-light',
     requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN],
   },
   {
     name: 'Memberships',
     href: '/memberships',
     icon: Building2,
-    color: 'from-amber-500 to-orange-500',
+    color: 'from-warning to-warning-light',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -64,7 +64,7 @@ const allNavItems: NavItem[] = [
     name: 'Salons',
     href: '/salons',
     icon: Scissors,
-    color: 'from-purple-500 to-pink-500',
+    color: 'from-secondary-dark to-secondary',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -77,14 +77,14 @@ const allNavItems: NavItem[] = [
     name: 'Browse Salons',
     href: '/salons/browse',
     icon: Scissors,
-    color: 'from-purple-500 to-pink-500',
+    color: 'from-secondary-dark to-secondary',
     requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE],
   },
   {
     name: 'Customers',
     href: '/customers',
     icon: Users,
-    color: 'from-green-500 to-emerald-500',
+    color: 'from-success to-success-light',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -97,7 +97,7 @@ const allNavItems: NavItem[] = [
     name: 'Appointments',
     href: '/appointments',
     icon: Calendar,
-    color: 'from-orange-500 to-red-500',
+    color: 'from-warning to-error',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -110,14 +110,14 @@ const allNavItems: NavItem[] = [
     name: 'My Appointments',
     href: '/appointments/my',
     icon: Calendar,
-    color: 'from-orange-500 to-red-500',
+    color: 'from-warning to-error',
     requiredRoles: [UserRole.CUSTOMER],
   },
   {
     name: 'Services',
     href: '/services',
     icon: Sparkles,
-    color: 'from-pink-500 to-rose-500',
+    color: 'from-primary-dark to-primary',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -130,14 +130,14 @@ const allNavItems: NavItem[] = [
     name: 'Purchase History',
     href: '/sales/history',
     icon: ShoppingCart,
-    color: 'from-indigo-500 to-blue-500',
+    color: 'from-info to-info-light',
     requiredRoles: [UserRole.CUSTOMER],
   },
   {
     name: 'Sales',
     href: '/sales',
     icon: ShoppingCart,
-    color: 'from-indigo-500 to-blue-500',
+    color: 'from-info to-info-light',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -150,7 +150,7 @@ const allNavItems: NavItem[] = [
     name: 'Commissions',
     href: '/commissions',
     icon: TrendingUp,
-    color: 'from-emerald-500 to-green-500',
+    color: 'from-success-dark to-success',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -163,14 +163,14 @@ const allNavItems: NavItem[] = [
     name: 'Payroll',
     href: '/payroll',
     icon: DollarSign,
-    color: 'from-teal-500 to-cyan-500',
+    color: 'from-success to-info',
     requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER],
   },
   {
     name: 'Inventory',
     href: '/inventory',
     icon: Package,
-    color: 'from-yellow-500 to-orange-500',
+    color: 'from-warning-dark to-warning',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -183,7 +183,7 @@ const allNavItems: NavItem[] = [
     name: 'Accounting',
     href: '/accounting',
     icon: DollarSign,
-    color: 'from-green-500 to-teal-500',
+    color: 'from-success to-success-dark',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -195,7 +195,7 @@ const allNavItems: NavItem[] = [
     name: 'Loans',
     href: '/loans',
     icon: CreditCard,
-    color: 'from-pink-500 to-rose-500',
+    color: 'from-error to-error-light',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -207,7 +207,7 @@ const allNavItems: NavItem[] = [
     name: 'Wallets',
     href: '/wallets',
     icon: Wallet,
-    color: 'from-cyan-500 to-blue-500',
+    color: 'from-info-dark to-info',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -219,7 +219,7 @@ const allNavItems: NavItem[] = [
     name: 'Airtel',
     href: '/airtel',
     icon: Phone,
-    color: 'from-red-500 to-orange-500',
+    color: 'from-error-dark to-warning',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -231,7 +231,7 @@ const allNavItems: NavItem[] = [
     name: 'Reports',
     href: '/reports',
     icon: BarChart3,
-    color: 'from-violet-500 to-purple-500',
+    color: 'from-secondary to-secondary-dark',
     requiredRoles: [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -239,10 +239,10 @@ const allNavItems: NavItem[] = [
       UserRole.SALON_OWNER,
     ],
   },
-  { name: 'Settings', href: '/settings', icon: Settings, color: 'from-gray-500 to-slate-500' },
+  { name: 'Settings', href: '/settings', icon: Settings, color: 'from-gray-500 to-gray-600' },
 ];
 
-export default function FloatingNav() {
+function FloatingNavComponent() {
   const { hasAnyRole } = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -268,6 +268,9 @@ export default function FloatingNav() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const toggleMenu = useCallback(() => setIsOpen(prev => !prev), []);
+  const closeMenu = useCallback(() => setIsOpen(false), []);
+
   const activeItem = navItems.find(
     (item) => pathname === item.href || pathname?.startsWith(item.href + '/')
   );
@@ -280,7 +283,7 @@ export default function FloatingNav() {
           isScrolled ? 'scale-[0.98] opacity-95' : 'scale-100 opacity-100'
         }`}
       >
-        <div className="bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-2xl border border-border-light/50 dark:border-border-dark/50 rounded-3xl shadow-lg shadow-black/10 dark:shadow-black/30 px-1.5 py-1.5 md:px-2 md:py-2">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-2xl border border-gray-200/50 dark:border-gray-700/50 rounded-3xl shadow-lg shadow-black/10 dark:shadow-black/30 px-1.5 py-1.5 md:px-2 md:py-2">
           <div className="flex items-center gap-0.5 md:gap-1 relative">
             {/* Navigation Items */}
             {navItems.slice(0, 6).map((item, index) => {
@@ -314,7 +317,7 @@ export default function FloatingNav() {
 
                   {/* Hover Background */}
                   {!isActive && (
-                    <div className="absolute inset-0 bg-surface-light/80 dark:bg-surface-dark/80 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
+                    <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
                   )}
 
                   {/* Content Container */}
@@ -323,7 +326,7 @@ export default function FloatingNav() {
                       className={`flex items-center justify-center transition-all duration-300 ${
                         isActive
                           ? 'text-white'
-                          : 'text-text-light dark:text-text-dark opacity-70 group-hover:opacity-100 group-hover:text-text-light dark:group-hover:text-text-dark'
+                          : 'text-black dark:text-white opacity-70 group-hover:opacity-100 group-hover:text-black dark:group-hover:text-white'
                       }`}
                     >
                       <Icon className="w-5 h-5 md:w-5 md:h-5 flex-shrink-0" />
@@ -332,7 +335,7 @@ export default function FloatingNav() {
                       className={`text-[9px] md:text-[10px] font-semibold mt-0.5 transition-all duration-300 text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-0.5 ${
                         isActive
                           ? 'text-white opacity-100'
-                          : 'text-text-light dark:text-text-dark opacity-70 group-hover:opacity-100'
+                          : 'text-black dark:text-white opacity-70 group-hover:opacity-100'
                       }`}
                     >
                       {item.name}
@@ -344,17 +347,17 @@ export default function FloatingNav() {
 
             {/* More Menu */}
             <button
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={toggleMenu}
               className={`relative z-10 flex flex-col items-center justify-center w-[60px] h-[68px] md:w-14 md:h-16 rounded-2xl transition-all duration-300 group overflow-hidden ${
                 isOpen
-                  ? 'text-white bg-gradient-to-br from-gray-600 to-slate-600 scale-105 shadow-lg shadow-black/20'
-                  : 'text-text-light/70 dark:text-text-dark/70 hover:text-text-light dark:hover:text-text-dark hover:scale-105 active:scale-95'
+                  ? 'text-white bg-gradient-to-br from-gray-600 to-gray-700 scale-105 shadow-lg shadow-black/20'
+                  : 'text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:scale-105 active:scale-95'
               }`}
               title="More"
             >
               {/* Hover Background */}
               {!isOpen && (
-                <div className="absolute inset-0 bg-surface-light/80 dark:bg-surface-dark/80 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
+                <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
               )}
 
               <div className="relative z-10 flex flex-col items-center justify-center w-full h-full px-1 py-1.5">
@@ -362,7 +365,7 @@ export default function FloatingNav() {
                   className={`flex items-center justify-center transition-all duration-300 ${
                     isOpen
                       ? 'text-white'
-                      : 'text-text-light dark:text-text-dark opacity-70 group-hover:opacity-100 group-hover:text-text-light dark:group-hover:text-text-dark'
+                      : 'text-black dark:text-white opacity-70 group-hover:opacity-100 group-hover:text-black dark:group-hover:text-white'
                   }`}
                 >
                   {isOpen ? (
@@ -375,7 +378,7 @@ export default function FloatingNav() {
                   className={`text-[9px] md:text-[10px] font-semibold mt-0.5 transition-all duration-300 text-center leading-tight whitespace-nowrap ${
                     isOpen 
                       ? 'text-white opacity-100' 
-                      : 'text-text-light dark:text-text-dark opacity-70 group-hover:opacity-100'
+                      : 'text-black dark:text-white opacity-70 group-hover:opacity-100'
                   }`}
                 >
                   More
@@ -391,12 +394,12 @@ export default function FloatingNav() {
         <>
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 animate-in fade-in duration-200"
-            onClick={() => setIsOpen(false)}
+            onClick={closeMenu}
           />
           <div className="fixed bottom-20 md:bottom-24 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-[90vw] md:max-w-none">
-            <div className="bg-surface-light/98 dark:bg-surface-dark/98 backdrop-blur-2xl border border-border-light/50 dark:border-border-dark/50 rounded-3xl shadow-2xl shadow-black/20 dark:shadow-black/40 p-4 md:p-5 min-w-[320px] md:min-w-[400px]">
-              <div className="mb-3 pb-3 border-b border-border-light/50 dark:border-border-dark/50">
-                <h3 className="text-sm md:text-base font-bold text-text-light dark:text-text-dark">
+            <div className="bg-white/98 dark:bg-gray-800/98 backdrop-blur-2xl border border-gray-200/50 dark:border-gray-700/50 rounded-3xl shadow-2xl shadow-black/20 dark:shadow-black/40 p-4 md:p-5 min-w-[320px] md:min-w-[400px]">
+              <div className="mb-3 pb-3 border-b border-gray-200/50 dark:border-gray-700/50">
+                <h3 className="text-sm md:text-base font-bold text-black dark:text-white">
                   More Options
                 </h3>
               </div>
@@ -409,18 +412,18 @@ export default function FloatingNav() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setIsOpen(false)}
+                      onClick={closeMenu}
                       className={`group flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all duration-300 ${
                         isActive
                           ? `bg-gradient-to-br ${item.color} text-white scale-105 shadow-lg shadow-black/20`
-                          : 'bg-background-light dark:bg-background-dark text-text-light/80 dark:text-text-dark/80 hover:bg-surface-light dark:hover:bg-surface-dark hover:text-text-light dark:hover:text-text-dark hover:scale-105 active:scale-95 border border-transparent hover:border-border-light/30 dark:hover:border-border-dark/30'
+                          : 'bg-white dark:bg-gray-900 text-black/80 dark:text-white/80 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white hover:scale-105 active:scale-95 border border-transparent hover:border-gray-200/30 dark:hover:border-gray-700/30'
                       }`}
                     >
                       <div
                         className={`p-2 rounded-lg transition-all duration-300 ${
                           isActive
                             ? ''
-                            : 'group-hover:bg-surface-light/50 dark:group-hover:bg-surface-dark/50'
+                            : 'group-hover:bg-gray-50/50 dark:group-hover:bg-gray-800/50'
                         }`}
                       >
                         <Icon className="w-5 h-5 md:w-6 md:h-6" />
@@ -439,3 +442,5 @@ export default function FloatingNav() {
     </>
   );
 }
+
+export default memo(FloatingNavComponent);

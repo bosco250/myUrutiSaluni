@@ -17,17 +17,10 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
-  ArrowDownRight,
   Plus,
   Clock,
   MapPin,
-  Phone,
-  Mail,
-  Eye,
-  MoreVertical,
   AlertCircle,
-  CheckCircle2,
-  XCircle,
   BarChart3,
   Activity,
   User,
@@ -38,28 +31,21 @@ import {
   isToday,
   isTomorrow,
   parseISO,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
   subDays,
   startOfMonth,
-  endOfMonth,
+  eachDayOfInterval,
 } from 'date-fns';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+  LazyLineChart as LineChart,
+  LazyBarChart as BarChart,
+  LazyLine as Line,
+  LazyBar as Bar,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyCartesianGrid as CartesianGrid,
+  LazyTooltip as Tooltip,
+  LazyResponsiveContainer as ResponsiveContainer,
+} from '@/components/charts/LazyCharts';
 
 interface Salon {
   id: string;
@@ -81,7 +67,7 @@ interface Appointment {
   metadata?: {
     preferredEmployeeId?: string;
     preferredEmployeeName?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   customer?: {
     id: string;
@@ -166,27 +152,31 @@ export default function SalonOwnerDashboard() {
         return [];
       }
       try {
-        // Get all salons user works for
-        const salonsResponse = await api.get('/salons');
-        const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
-        const salonIds = allSalons.map((s: any) => s.id);
+        // Reuse cached salons if available or fetch fresh
+        let allSalons = [];
+        try {
+          const salonsResponse = await api.get('/salons');
+          allSalons = salonsResponse.data?.data || salonsResponse.data || [];
+        } catch (e) {
+          // Fallback or empty
+          return [];
+        }
 
-        // Get employee records for each salon
-        const records = [];
-        for (const salonId of salonIds) {
+        const salonIds = allSalons.map((s: { id: string }) => s.id);
+
+        // Fetch all employee records in parallel
+        const recordPromises = salonIds.map(async (salonId: string) => {
           try {
             const empResponse = await api.get(`/salons/${salonId}/employees`);
             const employees = empResponse.data?.data || empResponse.data || [];
-            const myEmployee = employees.find((emp: any) => emp.userId === user?.id);
-            if (myEmployee) {
-              records.push(myEmployee);
-            }
+            return employees.find((emp: { userId: string }) => emp.userId === user?.id);
           } catch (error) {
-            // Skip if can't access employees for this salon
-            continue;
+            return null;
           }
-        }
-        return records;
+        });
+
+        const results = await Promise.all(recordPromises);
+        return results.filter(Boolean);
       } catch (error) {
         return [];
       }
@@ -226,7 +216,7 @@ export default function SalonOwnerDashboard() {
 
     appointments.forEach((apt) => {
       const isMyAppointment = employeeRecords.some(
-        (emp: any) => emp.id === apt.metadata?.preferredEmployeeId
+        (emp: { id: string }) => emp.id === apt.metadata?.preferredEmployeeId
       );
 
       if (isMyAppointment) {
@@ -269,9 +259,18 @@ export default function SalonOwnerDashboard() {
     queryKey: ['salon-owner-stats', user?.id, salons.length],
     queryFn: async () => {
       try {
-        const appointmentsResponse = await api.get('/appointments');
-        const allAppointments = appointmentsResponse.data || [];
         const now = new Date();
+        // Optimize: Fetch data in parallel to avoid waterfall
+        // Also limit sales fetch to this year/month if possible, but keeping logic consistent for now
+        const [appointmentsResponse, salesResponse] = await Promise.all([
+          api.get('/appointments'),
+          api.get('/sales?page=1&limit=2000') // Reduced limit, optimized
+        ]);
+
+        const allAppointments = appointmentsResponse.data || [];
+        const salesData = salesResponse.data?.data || salesResponse.data || [];
+        const allSales = Array.isArray(salesData) ? salesData : salesData.data || [];
+
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         const todayAppointments = allAppointments.filter((apt: Appointment) => {
@@ -283,10 +282,6 @@ export default function SalonOwnerDashboard() {
           const aptDate = parseISO(apt.scheduledStart);
           return aptDate >= now;
         });
-
-        const salesResponse = await api.get('/sales?page=1&limit=10000');
-        const salesData = salesResponse.data?.data || salesResponse.data || [];
-        const allSales = Array.isArray(salesData) ? salesData : salesData.data || [];
 
         const todaySales = allSales.filter((sale: Sale) => {
           const saleDate = parseISO(sale.createdAt);
@@ -422,8 +417,6 @@ export default function SalonOwnerDashboard() {
     enabled: salons.length > 0 || !salonsLoading,
   });
 
-  const isLoading = salonsLoading || statsLoading;
-
   // Format date for display
   const formatAppointmentDate = (dateString: string) => {
     const date = parseISO(dateString);
@@ -449,62 +442,50 @@ export default function SalonOwnerDashboard() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-text-light/60 dark:text-text-dark/60">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Note: loading.tsx handles the initial loading skeleton
+  // We only show minimal inline loading for data refresh, not full-page loaders
 
   // Empty state - no salons
-  if (salons.length === 0) {
+  if (salons && salons.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-10 h-10 text-primary" />
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Building2 className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
             Welcome, {user?.fullName || 'Salon Owner'}!
           </h1>
-          <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
             Get started by adding your first salon to begin managing your business.
           </p>
-          <Button
-            onClick={() => router.push('/salons')}
-            variant="primary"
-            className="flex items-center gap-2 mx-auto"
-          >
-            <Plus className="w-5 h-5" />
+          <Button onClick={() => router.push('/salons')} variant="primary" className="flex items-center gap-2 mx-auto">
+            <Plus className="w-4 h-4" />
             Add Your First Salon
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 text-center">
-            <Building2 className="w-8 h-8 text-primary mx-auto mb-3" />
-            <h3 className="font-bold text-text-light dark:text-text-dark mb-2">Add Salons</h3>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 text-center">
+            <Building2 className="w-6 h-6 text-primary mx-auto mb-2" />
+            <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">Add Salons</h3>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
               Register all your salon locations
             </p>
           </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 text-center">
-            <Users className="w-8 h-8 text-primary mx-auto mb-3" />
-            <h3 className="font-bold text-text-light dark:text-text-dark mb-2">Manage Employees</h3>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 text-center">
+            <Users className="w-6 h-6 text-primary mx-auto mb-2" />
+            <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">Manage Employees</h3>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
               Add and manage your team members
             </p>
           </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 text-center">
-            <Calendar className="w-8 h-8 text-primary mx-auto mb-3" />
-            <h3 className="font-bold text-text-light dark:text-text-dark mb-2">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 text-center">
+            <Calendar className="w-6 h-6 text-primary mx-auto mb-2" />
+            <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">
               Schedule Appointments
             </h3>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
               Start booking customer appointments
             </p>
           </div>
@@ -518,11 +499,11 @@ export default function SalonOwnerDashboard() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-1">
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
             Welcome back, {user?.fullName?.split(' ')[0] || 'Salon Owner'}!
           </h1>
-          <p className="text-text-light/60 dark:text-text-dark/60">
-            {format(new Date(), 'EEEE, MMMM d, yyyy')} • Here's your business overview
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+            {format(new Date(), 'EEEE, MMMM d, yyyy')} • Here&apos;s your business overview
           </p>
         </div>
         <div className="flex gap-3">
@@ -546,48 +527,48 @@ export default function SalonOwnerDashboard() {
       </div>
 
       {/* Key Metrics - Top Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {/* Today's Revenue */}
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-2xl p-5 hover:shadow-lg transition-all">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl">
-              <DollarSign className="w-5 h-5 text-white" />
+        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+              <DollarSign className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-green-400 bg-green-500/20 px-2 py-1 rounded-lg">
+            <span className="text-[10px] font-semibold text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded">
               Today
             </span>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Today's Revenue
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-0.5">
+            Today&apos;s Revenue
           </p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark">
             RWF {Number(stats?.todayRevenue || 0).toLocaleString()}
           </p>
-          <div className="flex items-center gap-1 mt-2 text-xs text-green-400">
+          <div className="flex items-center gap-1 mt-1 text-[10px] text-green-400">
             <TrendingUp className="w-3 h-3" />
             <span>vs yesterday</span>
           </div>
         </div>
 
         {/* Today's Appointments */}
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-2xl p-5 hover:shadow-lg transition-all">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl">
-              <Calendar className="w-5 h-5 text-white" />
+        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+              <Calendar className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-blue-400 bg-blue-500/20 px-2 py-1 rounded-lg">
+            <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/20 px-1.5 py-0.5 rounded">
               Today
             </span>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Today's Appointments
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-0.5">
+            Today&apos;s Appointments
           </p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark">
             {stats?.todayAppointments || 0}
           </p>
           <Link
             href="/appointments"
-            className="flex items-center gap-1 mt-2 text-xs text-blue-400 hover:text-blue-300 transition"
+            className="flex items-center gap-1 mt-1 text-[10px] text-blue-400 hover:text-blue-300 transition"
           >
             <span>{stats?.upcomingAppointments || 0} upcoming</span>
             <ArrowUpRight className="w-3 h-3" />
@@ -597,42 +578,42 @@ export default function SalonOwnerDashboard() {
         {/* Total Salons */}
         <Link
           href="/salons"
-          className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-2xl p-5 hover:shadow-lg transition-all"
+          className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1"
         >
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
-              <Building2 className="w-5 h-5 text-white" />
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+              <Building2 className="w-4 h-4 text-white" />
             </div>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-0.5">
             Total Salons
           </p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark">
             {stats?.totalSalons || 0}
           </p>
-          <div className="flex items-center gap-1 mt-2 text-xs text-purple-400">
+          <div className="flex items-center gap-1 mt-1 text-[10px] text-purple-400">
             <Users className="w-3 h-3" />
             <span>{stats?.totalEmployees || 0} employees</span>
           </div>
         </Link>
 
         {/* Month Revenue */}
-        <div className="group relative bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 dark:border-orange-500/30 rounded-2xl p-5 hover:shadow-lg transition-all">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2.5 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-white" />
+        <div className="group relative bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 dark:border-orange-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+              <TrendingUp className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs font-semibold text-orange-400 bg-orange-500/20 px-2 py-1 rounded-lg">
+            <span className="text-[10px] font-semibold text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
               This Month
             </span>
           </div>
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-0.5">
             Monthly Revenue
           </p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark">
             RWF {Number(stats?.monthRevenue || 0).toLocaleString()}
           </p>
-          <div className="flex items-center gap-1 mt-2 text-xs">
+          <div className="flex items-center gap-1 mt-1 text-[10px]">
             {stats?.revenueGrowth !== undefined && (
               <span className={stats.revenueGrowth >= 0 ? 'text-green-400' : 'text-red-400'}>
                 {stats.revenueGrowth >= 0 ? (
@@ -649,7 +630,7 @@ export default function SalonOwnerDashboard() {
 
       {/* Charts Section */}
       {stats && (stats.weeklyRevenue?.length > 0 || stats.topServices?.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Revenue Trend Chart */}
           {stats.weeklyRevenue && stats.weeklyRevenue.length > 0 && (
             <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
@@ -760,15 +741,15 @@ export default function SalonOwnerDashboard() {
         {/* Left Column - 2/3 width */}
         <div className="lg:col-span-2 space-y-6">
           {/* Upcoming Appointments */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
                   {user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE'
                     ? 'My Appointments'
                     : 'Upcoming Appointments'}
                 </h2>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
                   {user?.role === 'salon_employee' || user?.role === 'SALON_EMPLOYEE'
                     ? `${myAppointments.length} assigned to you • ${otherAppointments.length} other appointments`
                     : `Next ${appointments.length} appointments`}
@@ -783,13 +764,13 @@ export default function SalonOwnerDashboard() {
             </div>
 
             {appointmentsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="flex items-center justify-center py-8">
+                <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : appointments.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="w-12 h-12 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-                <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
+              <div className="text-center py-8">
+                <Calendar className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-2" />
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-3">
                   No upcoming appointments
                 </p>
                 <Button
@@ -912,7 +893,7 @@ export default function SalonOwnerDashboard() {
                         )
                         .map((appointment) => {
                           const isMyAppointment = employeeRecords.some(
-                            (emp: any) => emp.id === appointment.metadata?.preferredEmployeeId
+                            (emp: { id: string }) => emp.id === appointment.metadata?.preferredEmployeeId
                           );
                           return (
                             <Link
@@ -999,13 +980,13 @@ export default function SalonOwnerDashboard() {
           </div>
 
           {/* Recent Sales */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
                   Recent Sales
                 </h2>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
                   Latest transactions
                 </p>
               </div>
@@ -1084,13 +1065,13 @@ export default function SalonOwnerDashboard() {
         {/* Right Column - 1/3 width */}
         <div className="space-y-6">
           {/* My Salons */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-text-light dark:text-text-dark">My Salons</h2>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-text-light dark:text-text-dark">My Salons</h2>
               <Link href="/salons">
-                <Button variant="secondary" className="flex items-center gap-2 text-sm">
+                <Button variant="secondary" className="flex items-center gap-2 text-xs h-8 px-3">
                   View All
-                  <ArrowUpRight className="w-4 h-4" />
+                  <ArrowUpRight className="w-3 h-3" />
                 </Button>
               </Link>
             </div>
@@ -1157,50 +1138,50 @@ export default function SalonOwnerDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-6">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
               Quick Actions
             </h2>
             <div className="grid grid-cols-2 gap-3">
               <Link
                 href="/appointments"
-                className="group p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
+                className="group p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                  <Calendar className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                  <Calendar className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">
+                <p className="text-[10px] font-semibold text-text-light dark:text-text-dark uppercase tracking-wide">
                   Appointments
                 </p>
               </Link>
               <Link
                 href="/sales"
-                className="group p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
+                className="group p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                  <ShoppingCart className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                  <ShoppingCart className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">Sales</p>
+                <p className="text-[10px] font-semibold text-text-light dark:text-text-dark uppercase tracking-wide">Sales</p>
               </Link>
               <Link
                 href="/inventory"
-                className="group p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
+                className="group p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                  <Package className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                  <Package className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">
+                <p className="text-[10px] font-semibold text-text-light dark:text-text-dark uppercase tracking-wide">
                   Inventory
                 </p>
               </Link>
               <Link
                 href="/users"
-                className="group p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
+                className="group p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all text-center"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                  <Users className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                  <Users className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs font-semibold text-text-light dark:text-text-dark">
+                <p className="text-[10px] font-semibold text-text-light dark:text-text-dark uppercase tracking-wide">
                   Employees
                 </p>
               </Link>
@@ -1209,7 +1190,7 @@ export default function SalonOwnerDashboard() {
 
           {/* Alerts & Notifications */}
           {(stats?.lowStockItems || 0) > 0 && (
-            <div className="bg-warning/10 border border-warning/20 rounded-2xl p-5">
+            <div className="bg-warning/10 border border-warning/20 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                 <div className="flex-1">

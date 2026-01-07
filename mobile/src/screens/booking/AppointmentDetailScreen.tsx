@@ -23,6 +23,7 @@ import {
   Appointment,
   AppointmentStatus,
 } from "../../services/appointments";
+import { staffService } from "../../services/staff";
 
 interface AppointmentDetailScreenProps {
   navigation?: {
@@ -165,6 +166,29 @@ export default function AppointmentDetailScreen({
         },
       ]
     );
+  };
+
+  const handleStartService = async () => {
+    if (!appointment) return;
+    
+    try {
+      setLoading(true);
+      await staffService.startAppointment(appointment.id);
+      
+      // Update local state immediately
+      setAppointment(prev => prev ? ({ ...prev, status: AppointmentStatus.IN_PROGRESS }) : null);
+      
+      Alert.alert(
+        "✅ Service Started", 
+        "The appointment is now in progress.",
+        [{ text: "OK" }]
+      );
+    } catch (error: any) {
+      console.error("Error starting service:", error);
+      Alert.alert("Error", error.message || "Failed to start service");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getFriendlyStatusMessage = (status: AppointmentStatus) => {
@@ -736,12 +760,11 @@ export default function AppointmentDetailScreen({
           ) : (
             <View style={styles.buttonStack}>
               {appointment.status !== AppointmentStatus.COMPLETED &&
-                appointment.status !== AppointmentStatus.CANCELLED && (
+                appointment.status !== AppointmentStatus.CANCELLED && 
+                appointment.status !== AppointmentStatus.IN_PROGRESS && (
                   <TouchableOpacity
                     style={[styles.actionButton, styles.primaryMainButton]}
-                    onPress={() => {
-                      navigation?.navigate("UnifiedWorkLog");
-                    }}
+                    onPress={handleStartService}
                     activeOpacity={0.7}
                   >
                     <MaterialIcons name="play-arrow" size={22} color="#FFF" />

@@ -1,9 +1,18 @@
 import type { Metadata } from 'next'
+import { Manrope } from 'next/font/google'
 import './globals.css'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { ThemeProvider } from '@/providers/ThemeProvider'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+// Optimized font loading with next/font
+const manrope = Manrope({
+  subsets: ['latin'],
+  display: 'swap', // Use swap to prevent FOIT (flash of invisible text)
+  variable: '--font-manrope',
+  preload: true,
+})
 
 export const metadata: Metadata = {
   title: 'Salon Association Platform',
@@ -24,11 +33,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={manrope.variable}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="shortcut icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/favicon.svg" />
+        {/* Preconnect to external domains for faster loading */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -48,7 +60,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      <body className={manrope.className}>
         <ErrorBoundary>
           <ThemeProvider>
             <ToastProvider>
@@ -60,4 +72,3 @@ export default function RootLayout({
     </html>
   )
 }
-
