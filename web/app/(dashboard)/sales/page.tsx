@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import { usePermissions } from '@/hooks/usePermissions';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
@@ -23,7 +22,6 @@ import {
   Users,
   Package,
   Scissors,
-  Trash2,
   Receipt,
   Check,
   AlertCircle,
@@ -31,6 +29,7 @@ import {
   ChevronDown,
   Download,
   TrendingUp,
+  Calendar,
 } from 'lucide-react';
 
 interface Service {
@@ -71,6 +70,23 @@ interface SalonEmployee {
   };
 }
 
+interface Appointment {
+  id: string;
+  customerId?: string;
+  serviceId?: string;
+  salonEmployeeId?: string;
+  scheduledStart: string;
+  customer?: {
+    fullName: string;
+    phone: string;
+  };
+  service?: {
+    name: string;
+    basePrice: number;
+    durationMinutes?: number;
+  };
+}
+
 interface CartItem {
   id: string;
   type: 'service' | 'product';
@@ -81,6 +97,7 @@ interface CartItem {
   employeeId?: string;
   employeeName?: string;
   subtotal: number;
+  appointmentId?: string;
 }
 
 export default function SalesPage() {
@@ -108,7 +125,7 @@ function POSInterface() {
   const router = useRouter();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'services' | 'products'>('services');
+  const [activeTab, setActiveTab] = useState<'services' | 'products' | 'appointments'>('services');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -117,7 +134,8 @@ function POSInterface() {
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [completedSale, setCompletedSale] = useState<any>(null);
+  const [completedSale, setCompletedSale] = useState<unknown>(null);
+  const [convertedAppointmentId, setConvertedAppointmentId] = useState<string | null>(null);
 
   // Fetch user's salons
   const { data: salons = [] } = useQuery<Salon[]>({
@@ -188,9 +206,11 @@ function POSInterface() {
           }
           // Try to extract any array from the response object
           else {
-            const possibleArray = Object.values(data).find((val: any) => Array.isArray(val));
+            const possibleArray = Object.values(data as Record<string, unknown>).find((val) =>
+              Array.isArray(val)
+            );
             if (possibleArray) {
-              data = possibleArray;
+              data = possibleArray as Product[];
             } else {
               return [];
             }
@@ -200,8 +220,8 @@ function POSInterface() {
         }
 
         // Ensure we always return an array
-        return Array.isArray(data) ? data : [];
-      } catch (error: any) {
+        return Array.isArray(data) ? (data as Product[]) : [];
+      } catch (error) {
         return [];
       }
     },
@@ -230,6 +250,18 @@ function POSInterface() {
       return response.data || [];
     },
     enabled: !!salonId,
+  });
+
+  // Fetch pending appointments
+  const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery<Appointment[]>({
+    queryKey: ['pos-appointments', salonId],
+    queryFn: async () => {
+      const response = await api.get('/appointments', {
+        params: { salonId, status: 'confirmed' },
+      });
+      return response.data.data || response.data || [];
+    },
+    enabled: !!salonId && activeTab === 'appointments',
   });
 
   // Filter services and products
@@ -296,7 +328,11 @@ function POSInterface() {
   }, [cart]);
 
   // Add to cart
-  const addToCart = (item: Service | Product, type: 'service' | 'product') => {
+  const addToCart = (
+    item: Service | Product,
+    type: 'service' | 'product',
+    appointmentId?: string
+  ) => {
     const cartItem: CartItem = {
       id: `${type}-${item.id}-${Date.now()}`,
       type,
@@ -307,9 +343,42 @@ function POSInterface() {
       employeeId: selectedEmployee?.id,
       employeeName: selectedEmployee?.user?.fullName || selectedEmployee?.roleTitle,
       subtotal: type === 'service' ? (item as Service).basePrice : (item as Product).unitPrice,
+      appointmentId,
     };
+
     setCart([...cart, cartItem]);
     setSearchQuery('');
+  };
+
+  const convertAppointment = (apt: Appointment) => {
+    if (!apt.service) return;
+
+    // Set customer
+    if (apt.customerId) {
+      const customer = customers.find((c) => c.id === apt.customerId);
+      if (customer) setSelectedCustomer(customer);
+    }
+
+    // Set employee
+    if (apt.salonEmployeeId) {
+      const emp = employees.find((e) => e.id === apt.salonEmployeeId);
+      if (emp) setSelectedEmployee(emp);
+    }
+
+    // Add service to cart
+    addToCart(
+      {
+        id: apt.serviceId!,
+        name: apt.service.name,
+        basePrice: apt.service.basePrice,
+        durationMinutes: apt.service.durationMinutes || 0,
+      } as Service,
+      'service',
+      apt.id
+    );
+
+    setConvertedAppointmentId(apt.id);
+    setActiveTab('services');
   };
 
   // Update cart item
@@ -328,19 +397,23 @@ function POSInterface() {
 
   // Remove from cart
   const removeFromCart = (itemId: string) => {
+    const item = cart.find((i) => i.id === itemId);
+    if (item?.appointmentId === convertedAppointmentId) {
+      setConvertedAppointmentId(null);
+    }
     setCart(cart.filter((item) => item.id !== itemId));
   };
-  
+
   // Auto-assign global employee to service items when employee is selected
   useEffect(() => {
     if (selectedEmployee) {
       const serviceItemsWithoutEmployee = cart.filter(
-        item => item.type === 'service' && !item.employeeId
+        (item) => item.type === 'service' && !item.employeeId
       );
-      
+
       if (serviceItemsWithoutEmployee.length > 0) {
-        setCart(prevCart =>
-          prevCart.map(item => {
+        setCart((prevCart) =>
+          prevCart.map((item) => {
             if (item.type === 'service' && !item.employeeId) {
               return {
                 ...item,
@@ -353,7 +426,7 @@ function POSInterface() {
         );
       }
     }
-  }, [selectedEmployee?.id, cart.length]);
+  }, [selectedEmployee, cart]);
 
   // Create sale mutation
   const createSaleMutation = useMutation({
@@ -370,7 +443,7 @@ function POSInterface() {
         throw new Error('Please select a payment method');
       }
 
-      const saleItems = cart.map((item, index) => {
+      const saleItems = cart.map((item) => {
         if (!item.item?.id) {
           throw new Error(`Invalid item in cart: ${item.item?.name || 'Unknown'}`);
         }
@@ -387,7 +460,7 @@ function POSInterface() {
           throw new Error(`Invalid quantity for item: ${item.item.name}`);
         }
 
-        const saleItem: any = {
+        const saleItem: Record<string, unknown> = {
           unitPrice: Math.max(0, unitPrice),
           quantity: Math.max(1, quantity),
         };
@@ -414,7 +487,9 @@ function POSInterface() {
 
       // Calculate total from items to ensure accuracy
       const calculatedTotal = saleItems.reduce((sum, item) => {
-        const lineTotal = item.unitPrice * item.quantity - (item.discountAmount || 0);
+        const lineTotal =
+          (item.unitPrice as number) * (item.quantity as number) -
+          ((item.discountAmount as number) || 0);
         return sum + Math.max(0, lineTotal);
       }, 0);
 
@@ -437,7 +512,7 @@ function POSInterface() {
         throw new Error('Invalid total amount calculated. Please check cart items.');
       }
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         salonId: salonId,
         totalAmount: Math.round(finalTotal * 100) / 100, // Round to 2 decimal places, ensure >= 0
         paymentMethod: paymentData.method,
@@ -454,9 +529,14 @@ function POSInterface() {
         payload.paymentReference = paymentData.reference.trim();
       }
 
+      // Add appointmentId if this sale was converted from an appointment
+      if (convertedAppointmentId) {
+        payload.appointmentId = convertedAppointmentId;
+      }
+
       // Validate payment method matches enum
       const validPaymentMethods = ['cash', 'mobile_money', 'card', 'bank_transfer'];
-      if (!validPaymentMethods.includes(payload.paymentMethod)) {
+      if (!validPaymentMethods.includes(payload.paymentMethod as string)) {
         throw new Error(`Invalid payment method: ${payload.paymentMethod}`);
       }
 
@@ -464,25 +544,25 @@ function POSInterface() {
       if (!payload.salonId) {
         throw new Error('Salon ID is required');
       }
-      if (!payload.items || payload.items.length === 0) {
+      if (!payload.items || (payload.items as unknown[]).length === 0) {
         throw new Error('At least one item is required');
       }
-      if (isNaN(payload.totalAmount) || payload.totalAmount < 0) {
+      if (isNaN(payload.totalAmount as number) || (payload.totalAmount as number) < 0) {
         throw new Error(`Invalid total amount: ${payload.totalAmount}`);
       }
 
       // Validate each item has required fields
-      payload.items.forEach((item: any, index: number) => {
+      (payload.items as Array<Record<string, unknown>>).forEach((item, index) => {
         if (!item.serviceId && !item.productId) {
           throw new Error(`Item ${index + 1}: Either serviceId or productId is required`);
         }
         if (item.serviceId && item.productId) {
           throw new Error(`Item ${index + 1}: Cannot have both serviceId and productId`);
         }
-        if (isNaN(item.unitPrice) || item.unitPrice <= 0) {
+        if (isNaN(item.unitPrice as number) || (item.unitPrice as number) <= 0) {
           throw new Error(`Item ${index + 1}: Invalid unit price`);
         }
-        if (isNaN(item.quantity) || item.quantity <= 0) {
+        if (isNaN(item.quantity as number) || (item.quantity as number) <= 0) {
           throw new Error(`Item ${index + 1}: Invalid quantity`);
         }
       });
@@ -491,26 +571,30 @@ function POSInterface() {
       // Handle response wrapped by TransformInterceptor: { data: {...}, statusCode: 200, timestamp: "..." }
       return response.data?.data || response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: unknown) => {
       setCompletedSale(data);
       setShowPaymentModal(false);
       setShowReceipt(true);
       setCart([]);
       setSelectedCustomer(null);
       setSelectedEmployee(null);
+      setConvertedAppointmentId(null);
       // Invalidate and refetch queries to update stock levels
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['products', salonId] });
       queryClient.invalidateQueries({ queryKey: ['stock-levels'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       // Refetch products to show updated stock
       queryClient.refetchQueries({ queryKey: ['products', salonId] });
     },
-    onError: (error: any) => {
-      const errorData = error?.response?.data || {};
+    onError: (error: unknown) => {
+      const errorData =
+        (error as { response?: { data?: { message?: string; error?: string } } })?.response?.data ||
+        {};
       const errorMessage =
         errorData?.message ||
         errorData?.error ||
-        error?.message ||
+        (error as Error)?.message ||
         'Failed to create sale. Please try again.';
 
       alert(`Failed to create sale: ${errorMessage}`);
@@ -544,17 +628,22 @@ function POSInterface() {
   return (
     <div className="h-screen flex flex-col bg-background-light dark:bg-background-dark">
       {/* Header */}
-      <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark px-6 py-4 shadow-sm">
+      <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              Point of Sale
-            </h1>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-              Process sales and transactions
-            </p>
-          </div>
           <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
+              <ShoppingCart className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-text-light dark:text-text-dark">
+                Point of Sale
+              </h1>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                Process sales and transactions
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {salons.length > 1 && (
               <select
                 value={selectedSalon?.id || ''}
@@ -562,7 +651,7 @@ function POSInterface() {
                   const salon = salons.find((s) => s.id === e.target.value);
                   setSelectedSalon(salon || null);
                 }}
-                className="px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
               >
                 {salons.map((salon) => (
                   <option key={salon.id} value={salon.id}>
@@ -571,16 +660,17 @@ function POSInterface() {
                 ))}
               </select>
             )}
-            <Button onClick={() => router.push('/sales/history')} variant="secondary">
-              Sales History
+            <Button onClick={() => router.push('/sales/history')} variant="secondary" size="sm">
+              <Receipt className="w-4 h-4 mr-1.5" />
+              History
             </Button>
-            <Button onClick={() => router.push('/sales/analytics')} variant="secondary">
-              <TrendingUp className="w-4 h-4 mr-2" />
+            <Button onClick={() => router.push('/sales/analytics')} variant="secondary" size="sm">
+              <TrendingUp className="w-4 h-4 mr-1.5" />
               Analytics
             </Button>
             {showReceipt && (
-              <Button onClick={handleNewSale} variant="primary">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button onClick={handleNewSale} variant="primary" size="sm">
+                <Plus className="w-4 h-4 mr-1.5" />
                 New Sale
               </Button>
             )}
@@ -596,47 +686,58 @@ function POSInterface() {
           {/* Left Panel - Products/Services */}
           <div className="w-2/3 border-r border-border-light dark:border-border-dark flex flex-col">
             {/* Search and Tabs */}
-            <div className="p-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="p-3 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
+              <div className="flex items-center gap-2 mb-3">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search services or products..."
-                    className="w-full pl-10 pr-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    className="w-full pl-9 pr-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition"
                   />
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveTab('services')}
-                  className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                     activeTab === 'services'
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-white shadow-md shadow-primary/20'
                       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-primary/10 border border-border-light dark:border-border-dark'
                   }`}
                 >
-                  <Scissors className="w-4 h-4 inline mr-2" />
+                  <Scissors className="w-3.5 h-3.5 inline mr-1.5" />
                   Services
                 </button>
                 <button
                   onClick={() => setActiveTab('products')}
-                  className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                     activeTab === 'products'
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-white shadow-md shadow-primary/20'
                       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-primary/10 border border-border-light dark:border-border-dark'
                   }`}
                 >
-                  <Package className="w-4 h-4 inline mr-2" />
+                  <Package className="w-3.5 h-3.5 inline mr-1.5" />
                   Products
+                </button>
+                <button
+                  onClick={() => setActiveTab('appointments')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    activeTab === 'appointments'
+                      ? 'bg-primary text-white shadow-md shadow-primary/20'
+                      : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-primary/10 border border-border-light dark:border-border-dark'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 inline mr-1.5" />
+                  Bookings
                 </button>
               </div>
             </div>
 
             {/* Items Grid */}
-            <div className="flex-1 overflow-y-auto p-4 bg-background-light dark:bg-background-dark">
+            <div className="flex-1 overflow-y-auto p-3 bg-background-light dark:bg-background-dark">
               {activeTab === 'services' ? (
                 isLoadingServices ? (
                   <div className="flex items-center justify-center h-full">
@@ -658,34 +759,34 @@ function POSInterface() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {filteredServices.map((service) => (
                       <button
                         key={service.id}
                         onClick={() => addToCart(service, 'service')}
-                        className="p-4 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all text-left group"
+                        className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:border-primary hover:shadow-md transition-all text-left group"
                       >
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2 group-hover:bg-primary/20 transition">
-                              <Scissors className="w-5 h-5 text-primary" />
+                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mb-1.5 group-hover:bg-primary/20 transition">
+                              <Scissors className="w-4 h-4 text-primary" />
                             </div>
-                            <h3 className="font-semibold text-text-light dark:text-text-dark group-hover:text-primary transition mb-1">
+                            <h3 className="font-semibold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition mb-0.5 line-clamp-1">
                               {service.name}
                             </h3>
                             {service.description && (
-                              <p className="text-xs text-text-light/60 dark:text-text-dark/60 line-clamp-2">
+                              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 line-clamp-1">
                                 {service.description}
                               </p>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-light dark:border-border-dark">
-                          <span className="text-lg font-bold text-primary">
+                        <div className="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark">
+                          <span className="text-sm font-bold text-primary">
                             RWF {service.basePrice.toLocaleString()}
                           </span>
                           {service.durationMinutes && (
-                            <span className="text-xs text-text-light/40 dark:text-text-dark/40 bg-background-light dark:bg-background-dark px-2 py-1 rounded">
+                            <span className="text-[10px] text-text-light/40 dark:text-text-dark/40 bg-background-light dark:bg-background-dark px-1.5 py-0.5 rounded">
                               {service.durationMinutes}min
                             </span>
                           )}
@@ -694,159 +795,210 @@ function POSInterface() {
                     ))}
                   </div>
                 )
-              ) : !salonId ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Package className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
-                  <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
-                    Please select a salon
-                  </p>
-                  <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
-                    Select a salon to view products
-                  </p>
-                </div>
-              ) : isLoadingProducts ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      Loading products...
+              ) : activeTab === 'products' ? (
+                !salonId ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <Package className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
+                    <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                      Please select a salon
+                    </p>
+                    <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
+                      Select a salon to view products
                     </p>
                   </div>
-                </div>
-              ) : productsError ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Package className="w-16 h-16 text-danger/20 mb-4" />
-                  <p className="text-danger font-medium">Error loading products</p>
-                  <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
-                    {productsError instanceof Error
-                      ? productsError.message
-                      : 'Failed to fetch products'}
-                  </p>
-                  <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
-                    Check console for details
-                  </p>
-                </div>
-              ) : products.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Package className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
-                  <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
-                    No products found
-                  </p>
-                  <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
-                    No products have been added to this salon yet
-                  </p>
-                  <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
-                    Products: {products.length} | Filtered: {filteredProducts.length}
-                  </p>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Package className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
-                  <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
-                    No products match your search
-                  </p>
-                  <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
-                    Try a different search term
-                  </p>
-                  <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
-                    Total products: {products.length}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredProducts.map((product) => {
-                    // Stock endpoint returns products with stockLevel property
-                    const stockQuantity =
-                      (product as any).stockLevel ?? (product as any).stockQuantity ?? 0;
-                    const isLowStock = stockQuantity > 0 && stockQuantity <= 10;
-                    const isOutOfStock = stockQuantity === 0;
+                ) : isLoadingProducts ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                        Loading products...
+                      </p>
+                    </div>
+                  </div>
+                ) : productsError ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <Package className="w-16 h-16 text-danger/20 mb-4" />
+                    <p className="text-danger font-medium">Error loading products</p>
+                    <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
+                      {productsError instanceof Error
+                        ? productsError.message
+                        : 'Failed to fetch products'}
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
+                      Check console for details
+                    </p>
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <Package className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
+                    <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                      No products found
+                    </p>
+                    <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
+                      No products have been added to this salon yet
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
+                      Products: {products.length} | Filtered: {filteredProducts.length}
+                    </p>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <Package className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mb-4" />
+                    <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                      No products match your search
+                    </p>
+                    <p className="text-sm text-text-light/40 dark:text-text-dark/40 mt-1">
+                      Try a different search term
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
+                      Total products: {products.length}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {filteredProducts.map((product) => {
+                      const stockQuantity =
+                        (product as unknown as { stockLevel?: number; stockQuantity?: number })
+                          .stockLevel ??
+                        (product as unknown as { stockLevel?: number; stockQuantity?: number })
+                          .stockQuantity ??
+                        0;
+                      const isLowStock = stockQuantity > 0 && stockQuantity <= 10;
+                      const isOutOfStock = stockQuantity === 0;
 
-                    return (
-                      <button
-                        key={product.id}
-                        onClick={() => !isOutOfStock && addToCart(product, 'product')}
-                        disabled={isOutOfStock}
-                        className={`p-4 bg-surface-light dark:bg-surface-dark border-2 rounded-xl transition-all text-left group ${
-                          isOutOfStock
-                            ? 'border-border-light/50 dark:border-border-dark/50 opacity-60 cursor-not-allowed'
-                            : 'border-border-light dark:border-border-dark hover:border-primary hover:shadow-lg hover:shadow-primary/10'
-                        } ${isLowStock ? 'border-warning/50' : ''}`}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div
-                              className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 transition ${
-                                isOutOfStock
-                                  ? 'bg-danger/10'
-                                  : isLowStock
-                                    ? 'bg-warning/10 group-hover:bg-warning/20'
-                                    : 'bg-primary/10 group-hover:bg-primary/20'
-                              }`}
-                            >
-                              <Package
-                                className={`w-5 h-5 ${
+                      return (
+                        <button
+                          key={product.id}
+                          onClick={() => !isOutOfStock && addToCart(product, 'product')}
+                          disabled={isOutOfStock}
+                          className={`p-3 bg-surface-light dark:bg-surface-dark border rounded-lg transition-all text-left group ${
+                            isOutOfStock
+                              ? 'border-border-light/50 dark:border-border-dark/50 opacity-60 cursor-not-allowed'
+                              : 'border-border-light dark:border-border-dark hover:border-primary hover:shadow-md'
+                          } ${isLowStock ? 'border-warning/50' : ''}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1.5 transition ${
+                                  isOutOfStock
+                                    ? 'bg-danger/10'
+                                    : isLowStock
+                                      ? 'bg-warning/10 group-hover:bg-warning/20'
+                                      : 'bg-primary/10 group-hover:bg-primary/20'
+                                }`}
+                              >
+                                <Package
+                                  className={`w-4 h-4 ${
+                                    isOutOfStock
+                                      ? 'text-danger'
+                                      : isLowStock
+                                        ? 'text-warning'
+                                        : 'text-primary'
+                                  }`}
+                                />
+                              </div>
+                              <h3
+                                className={`font-semibold text-sm mb-0.5 line-clamp-1 transition ${
+                                  isOutOfStock
+                                    ? 'text-text-light/40 dark:text-text-dark/40'
+                                    : 'text-text-light dark:text-text-dark group-hover:text-primary'
+                                }`}
+                              >
+                                {product.name}
+                              </h3>
+                              {product.description && (
+                                <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 line-clamp-1 mb-1">
+                                  {product.description}
+                                </p>
+                              )}
+                              {product.sku && (
+                                <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 font-mono">
+                                  SKU: {product.sku}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark">
+                            <div className="flex-1">
+                              <span
+                                className={`text-sm font-bold block ${
+                                  isOutOfStock
+                                    ? 'text-text-light/40 dark:text-text-dark/40'
+                                    : 'text-primary'
+                                }`}
+                              >
+                                {product.unitPrice && Number(product.unitPrice) > 0
+                                  ? `RWF ${Number(product.unitPrice).toLocaleString()}`
+                                  : 'Price: N/A'}
+                              </span>
+                              <span
+                                className={`text-[10px] font-medium block ${
                                   isOutOfStock
                                     ? 'text-danger'
                                     : isLowStock
                                       ? 'text-warning'
-                                      : 'text-primary'
+                                      : 'text-success'
                                 }`}
-                              />
+                              >
+                                {isOutOfStock
+                                  ? 'Out of Stock'
+                                  : stockQuantity > 0
+                                    ? `${stockQuantity} in stock`
+                                    : 'Stock: 0'}
+                              </span>
                             </div>
-                            <h3
-                              className={`font-semibold mb-1 transition ${
-                                isOutOfStock
-                                  ? 'text-text-light/40 dark:text-text-dark/40'
-                                  : 'text-text-light dark:text-text-dark group-hover:text-primary'
-                              }`}
-                            >
-                              {product.name}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {isLoadingAppointments ? (
+                    <div className="col-span-full flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  ) : appointments.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                      <Calendar className="w-12 h-12 text-text-light/20 mb-4" />
+                      <p className="text-text-light/60 font-medium">No confirmed bookings found</p>
+                    </div>
+                  ) : (
+                    appointments.map((apt) => (
+                      <button
+                        key={apt.id}
+                        onClick={() => convertAppointment(apt)}
+                        className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:border-primary hover:shadow-md transition-all text-left group"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mb-1.5 group-hover:bg-primary/20 transition">
+                              <Calendar className="w-4 h-4 text-primary" />
+                            </div>
+                            <h3 className="font-semibold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition mb-0.5 line-clamp-1">
+                              {apt.service?.name || 'Service'}
                             </h3>
-                            {product.description && (
-                              <p className="text-xs text-text-light/60 dark:text-text-dark/60 line-clamp-2 mb-2">
-                                {product.description}
-                              </p>
-                            )}
-                            {product.sku && (
-                              <p className="text-xs text-text-light/40 dark:text-text-dark/40 font-mono mb-2">
-                                SKU: {product.sku}
-                              </p>
-                            )}
+                            <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 truncate">
+                              {apt.customer?.fullName || 'Walk-in'}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-light dark:border-border-dark">
-                          <div className="flex-1">
-                            <span
-                              className={`text-lg font-bold block ${
-                                isOutOfStock
-                                  ? 'text-text-light/40 dark:text-text-dark/40'
-                                  : 'text-primary'
-                              }`}
-                            >
-                              {product.unitPrice && Number(product.unitPrice) > 0
-                                ? `RWF ${Number(product.unitPrice).toLocaleString()}`
-                                : 'Price: N/A'}
-                            </span>
-                            <span
-                              className={`text-xs font-medium mt-1 block ${
-                                isOutOfStock
-                                  ? 'text-danger'
-                                  : isLowStock
-                                    ? 'text-warning'
-                                    : 'text-success'
-                              }`}
-                            >
-                              {isOutOfStock
-                                ? 'Out of Stock'
-                                : stockQuantity > 0
-                                  ? `${stockQuantity} in stock`
-                                  : 'Stock: 0'}
-                            </span>
-                          </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark">
+                          <span className="text-sm font-bold text-primary">
+                            RWF {apt.service?.basePrice?.toLocaleString() || '0'}
+                          </span>
+                          <span className="text-[9px] text-text-light/40 uppercase font-bold">
+                            {new Date(apt.scheduledStart).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
                         </div>
                       </button>
-                    );
-                  })}
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -858,9 +1010,9 @@ function POSInterface() {
             <div className="p-3 border-b border-border-light dark:border-border-dark space-y-2 bg-background-light dark:bg-background-dark shrink-0">
               {/* Customer Selection */}
               <div className="relative">
-                <label className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                <span className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
                   Customer
-                </label>
+                </span>
                 <button
                   onClick={() => setShowCustomerSearch(true)}
                   className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-left flex items-center justify-between hover:border-primary hover:shadow-md transition-all group"
@@ -886,19 +1038,23 @@ function POSInterface() {
               {/* Employee Selection */}
               {employees.length > 0 && (
                 <div>
-                  <label className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                  <label
+                    htmlFor="employee-assign-select"
+                    className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5"
+                  >
                     Assign to Employee
                   </label>
                   <select
+                    id="employee-assign-select"
                     value={selectedEmployee?.id || ''}
                     onChange={(e) => {
                       const emp = employees.find((emp) => emp.id === e.target.value);
                       setSelectedEmployee(emp || null);
-                      
+
                       // Auto-assign this employee to all service items in cart that don't have an employee
                       if (emp) {
-                        setCart(prevCart => 
-                          prevCart.map(item => {
+                        setCart((prevCart) =>
+                          prevCart.map((item) => {
                             if (item.type === 'service' && !item.employeeId) {
                               return {
                                 ...item,
@@ -976,16 +1132,16 @@ function POSInterface() {
 
             {/* Cart Totals & Checkout - Sticky Footer */}
             {cart.length > 0 && (
-              <div className="p-4 border-t-2 border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-lg shrink-0">
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
+              <div className="p-3 border-t-2 border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-lg shrink-0">
+                <div className="space-y-1.5 mb-3">
+                  <div className="flex justify-between text-xs">
                     <span className="text-text-light/60 dark:text-text-dark/60">Subtotal</span>
                     <span className="text-text-light dark:text-text-dark font-medium">
                       RWF {cartTotals.subtotal.toLocaleString()}
                     </span>
                   </div>
                   {cartTotals.discount > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span className="text-text-light/60 dark:text-text-dark/60">Discount</span>
                       <span className="text-success font-medium">
                         -RWF {cartTotals.discount.toLocaleString()}
@@ -993,14 +1149,14 @@ function POSInterface() {
                     </div>
                   )}
                   {cartTotals.tax > 0 && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span className="text-text-light/60 dark:text-text-dark/60">Tax</span>
                       <span className="text-text-light dark:text-text-dark font-medium">
                         RWF {cartTotals.tax.toFixed(2)}
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xl font-bold pt-3 mt-3 border-t-2 border-border-light dark:border-border-dark">
+                  <div className="flex justify-between text-lg font-bold pt-2 mt-2 border-t-2 border-border-light dark:border-border-dark">
                     <span className="text-text-light dark:text-text-dark">Total</span>
                     <span className="text-primary">RWF {cartTotals.total.toLocaleString()}</span>
                   </div>
@@ -1008,17 +1164,17 @@ function POSInterface() {
                 <Button
                   onClick={handleCheckout}
                   variant="primary"
-                  className="w-full py-3.5 text-lg font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                  className="w-full py-3 text-base font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all"
                   disabled={createSaleMutation.isPending}
                 >
                   {createSaleMutation.isPending ? (
                     <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Processing...
                     </>
                   ) : (
                     <>
-                      <DollarSign className="w-5 h-5 mr-2" />
+                      <DollarSign className="w-4 h-4 mr-2" />
                       Checkout
                     </>
                   )}
@@ -1051,8 +1207,18 @@ function POSInterface() {
           isLoading={createSaleMutation.isPending}
           error={
             createSaleMutation.error
-              ? (createSaleMutation.error as any)?.response?.data?.message ||
-                (createSaleMutation.error as any)?.message ||
+              ? (
+                  createSaleMutation.error as {
+                    response?: { data?: { message?: string } };
+                    message?: string;
+                  }
+                )?.response?.data?.message ||
+                (
+                  createSaleMutation.error as {
+                    response?: { data?: { message?: string } };
+                    message?: string;
+                  }
+                )?.message ||
                 'Failed to process payment. Please try again.'
               : null
           }
@@ -1174,7 +1340,9 @@ function CartItemCard({
               className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 font-medium transition"
             >
               <Percent className="w-3 h-3" />
-              {item.discount > 0 ? `Discount: RWF ${item.discount.toLocaleString()}` : 'Add discount'}
+              {item.discount > 0
+                ? `Discount: RWF ${item.discount.toLocaleString()}`
+                : 'Add discount'}
             </button>
             {item.type === 'service' && employees.length > 0 && (
               <select
@@ -1195,7 +1363,9 @@ function CartItemCard({
                   .map((emp) => (
                     <option key={emp.id} value={emp.id}>
                       {emp.user?.fullName || emp.roleTitle || 'Employee'}
-                      {(emp.commissionRate ?? 0) > 0 ? ` (${emp.commissionRate ?? 0}% commission)` : ' (0% commission)'}
+                      {(emp.commissionRate ?? 0) > 0
+                        ? ` (${emp.commissionRate ?? 0}% commission)`
+                        : ' (0% commission)'}
                     </option>
                   ))}
               </select>
@@ -1212,10 +1382,14 @@ function CartItemCard({
         <div className="pt-2 border-t border-border-light dark:border-border-dark mt-2">
           <div className="flex items-center gap-2">
             <Users className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-            <label className="text-xs text-text-light/60 dark:text-text-dark/60">
+            <label
+              htmlFor={`employee-select-${item.id}`}
+              className="text-xs text-text-light/60 dark:text-text-dark/60"
+            >
               Assign Employee:
             </label>
             <select
+              id={`employee-select-${item.id}`}
               value={item.employeeId || ''}
               onChange={(e) => {
                 const emp = employees.find((emp) => emp.id === e.target.value);
@@ -1232,8 +1406,10 @@ function CartItemCard({
                 .filter((emp) => emp.isActive !== false)
                 .map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.user?.fullName || emp.roleTitle || 'Employee'} 
-                    {(emp.commissionRate ?? 0) > 0 ? ` (${emp.commissionRate ?? 0}% commission)` : ' (0% commission)'}
+                    {emp.user?.fullName || emp.roleTitle || 'Employee'}
+                    {(emp.commissionRate ?? 0) > 0
+                      ? ` (${emp.commissionRate ?? 0}% commission)`
+                      : ' (0% commission)'}
                   </option>
                 ))}
             </select>
@@ -1287,8 +1463,19 @@ function CustomerSearchModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div
-        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+        className="absolute inset-0"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
+      <div
+        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col relative z-10"
         onClick={(e) => e.stopPropagation()}
+        role="presentation"
       >
         <div className="p-6 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
           <div className="flex items-center justify-between">
@@ -1325,7 +1512,7 @@ function CustomerSearchModal({
 
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 <button
-                  onClick={() => onSelect(null as any)}
+                  onClick={() => onSelect(null as unknown as Customer)}
                   className={`w-full p-4 text-left border-2 rounded-xl transition-all ${
                     !selectedCustomer
                       ? 'border-primary bg-primary/10 shadow-md'
@@ -1502,17 +1689,23 @@ function PaymentModal({
   ] as const;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isLoading) {
-          onClose();
-        }
-      }}
-    >
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div
-        className="bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col my-auto"
+        className="absolute inset-0"
+        onClick={() => {
+          if (!isLoading) onClose();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && !isLoading) onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
+      <div
+        className="bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col my-auto relative z-10"
         onClick={(e) => e.stopPropagation()}
+        role="presentation"
       >
         {/* Header - Sticky */}
         <div className="p-6 border-b-2 border-border-light dark:border-border-dark bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 shrink-0">
@@ -1603,17 +1796,20 @@ function PaymentModal({
           {/* Transaction Reference Input */}
           {selectedMethod && selectedMethod !== 'cash' && (
             <div className="mb-5 animate-in fade-in slide-in-from-top-2">
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor="transaction-reference"
+                className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+              >
                 Transaction Reference <span className="text-danger">*</span>
               </label>
               <input
+                id="transaction-reference"
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="Enter transaction reference number"
                 disabled={isLoading}
                 className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition disabled:opacity-50"
-                autoFocus
               />
               <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1.5">
                 Enter the transaction ID or reference number from your payment
@@ -1670,13 +1866,45 @@ function PaymentModal({
   );
 }
 
-function ReceiptView({ sale, onNewSale }: { sale: any; onNewSale: () => void }) {
+function ReceiptView({ sale, onNewSale }: { sale: unknown; onNewSale: () => void }) {
   // Handle items - could be in sale.items or sale.data.items if wrapped
-  const items = Array.isArray(sale?.items)
-    ? sale.items
-    : Array.isArray(sale?.data?.items)
-      ? sale.data.items
-      : [];
+  const saleData = sale as {
+    id?: string;
+    items?: Array<{
+      id: string;
+      service?: { name: string };
+      product?: { name: string };
+      quantity: number;
+      unitPrice: number;
+      discountAmount: number;
+      lineTotal: number;
+      currency?: string;
+    }>;
+    data?: {
+      items?: Array<{
+        id: string;
+        service?: { name: string };
+        product?: { name: string };
+        quantity: number;
+        unitPrice: number;
+        discountAmount: number;
+        lineTotal: number;
+        currency?: string;
+      }>;
+    };
+    customer?: { fullName: string; name: string };
+    paymentMethod?: string;
+    paymentReference?: string;
+    totalAmount?: number;
+    currency?: string;
+  };
+
+  const items =
+    (Array.isArray(saleData?.items)
+      ? saleData.items
+      : Array.isArray(saleData?.data?.items)
+        ? saleData.data.items
+        : []) || [];
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -1706,7 +1934,7 @@ function ReceiptView({ sale, onNewSale }: { sale: any; onNewSale: () => void }) 
                 Items ({items.length})
               </h3>
               <div className="space-y-2.5 max-h-60 overflow-y-auto">
-                {items.map((item: any, index: number) => (
+                {items.map((item, index) => (
                   <div
                     key={item.id || index}
                     className="flex justify-between items-start pb-2.5 border-b border-border-light dark:border-border-dark last:border-0"
@@ -1723,18 +1951,19 @@ function ReceiptView({ sale, onNewSale }: { sale: any; onNewSale: () => void }) 
                         </p>
                       </div>
                       <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                        {item.quantity} × {item.currency || 'RWF'}{' '}
+                        {item.quantity} × {item.currency || saleData.currency || 'RWF'}{' '}
                         {Number(item.unitPrice || 0).toLocaleString()}
                         {item.discountAmount > 0 && (
                           <span className="text-success ml-2 font-medium">
-                            - {item.currency || 'RWF'}{' '}
+                            - {item.currency || saleData.currency || 'RWF'}{' '}
                             {Number(item.discountAmount || 0).toLocaleString()} discount
                           </span>
                         )}
                       </p>
                     </div>
                     <span className="text-sm font-bold text-primary ml-3 shrink-0">
-                      {item.currency || 'RWF'} {Number(item.lineTotal || 0).toLocaleString()}
+                      {item.currency || saleData.currency || 'RWF'}{' '}
+                      {Number(item.lineTotal || 0).toLocaleString()}
                     </span>
                   </div>
                 ))}
@@ -1749,36 +1978,36 @@ function ReceiptView({ sale, onNewSale }: { sale: any; onNewSale: () => void }) 
                 Sale ID
               </span>
               <span className="text-sm text-text-light dark:text-text-dark font-mono bg-background-light dark:bg-background-dark px-2.5 py-1 rounded-lg border border-border-light dark:border-border-dark">
-                {sale?.id?.slice(0, 8) || 'N/A'}
+                {saleData?.id?.slice(0, 8) || 'N/A'}
               </span>
             </div>
-            {sale?.customer && (
+            {saleData?.customer && (
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
                   Customer
                 </span>
                 <span className="text-sm text-text-light dark:text-text-dark font-semibold">
-                  {sale.customer.fullName || sale.customer.name}
+                  {saleData.customer.fullName || saleData.customer.name}
                 </span>
               </div>
             )}
-            {sale?.paymentMethod && (
+            {saleData?.paymentMethod && (
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
                   Payment Method
                 </span>
                 <span className="text-sm text-text-light dark:text-text-dark font-semibold capitalize">
-                  {sale.paymentMethod?.replace('_', ' ')}
+                  {saleData.paymentMethod?.replace('_', ' ')}
                 </span>
               </div>
             )}
-            {sale?.paymentReference && (
+            {saleData?.paymentReference && (
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
                   Reference
                 </span>
                 <span className="text-sm text-text-light dark:text-text-dark font-mono bg-background-light dark:bg-background-dark px-2.5 py-1 rounded-lg border border-border-light dark:border-border-dark">
-                  {sale.paymentReference}
+                  {saleData.paymentReference}
                 </span>
               </div>
             )}
@@ -1787,7 +2016,7 @@ function ReceiptView({ sale, onNewSale }: { sale: any; onNewSale: () => void }) 
                 Total
               </span>
               <span className="text-2xl font-bold text-primary">
-                {sale?.currency || 'RWF'} {Number(sale?.totalAmount || 0).toLocaleString()}
+                {saleData?.currency || 'RWF'} {Number(saleData?.totalAmount || 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -1807,14 +2036,14 @@ function ReceiptView({ sale, onNewSale }: { sale: any; onNewSale: () => void }) 
             <Button
               onClick={async () => {
                 try {
-                  const response = await api.get(`/reports/receipt/${sale.id}`, {
+                  const response = await api.get(`/reports/receipt/${saleData.id}`, {
                     responseType: 'blob',
                   });
                   const blob = new Blob([response.data], { type: 'application/pdf' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
-                  link.download = `receipt-${sale.id?.slice(0, 8)}.pdf`;
+                  link.download = `receipt-${saleData.id?.slice(0, 8)}.pdf`;
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);

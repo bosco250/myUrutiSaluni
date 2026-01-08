@@ -13,10 +13,7 @@ import {
   Printer,
   Download,
   User,
-  Building2,
-  Calendar,
   CreditCard,
-  DollarSign,
   Loader2,
   Package,
   Scissors,
@@ -135,7 +132,7 @@ function SaleDetailContent() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (err) {
       alert('Failed to download PDF receipt. Please try again.');
     }
   };
@@ -445,4 +442,3 @@ function SaleDetailContent() {
     </div>
   );
 }
-

@@ -3,10 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { Plus, Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock, Loader2 } from 'lucide-react';
-import React, { useState, Fragment } from 'react';
-import { useAuthStore } from '@/store/auth-store';
-import { usePermissions } from '@/hooks/usePermissions';
+import { Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -56,8 +54,6 @@ function SalonEmployeesContent() {
   const router = useRouter();
   const salonId = params.id as string;
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
-  const { isSalonOwner } = usePermissions();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<SalonEmployee | null>(null);
 
@@ -105,12 +101,13 @@ function SalonEmployeesContent() {
   }
 
   if (salonError) {
+    const errorMsg = (salonError as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (salonError as { message?: string })?.message || 'Unknown error';
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-danger/10 border border-danger rounded-2xl p-6">
           <p className="text-danger font-semibold">Error loading salon</p>
           <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-sm">
-            {(salonError as any)?.response?.data?.message || (salonError as any)?.message || 'Unknown error'}
+            {errorMsg}
           </p>
         </div>
       </div>
@@ -128,8 +125,9 @@ function SalonEmployeesContent() {
   }
 
   if (employeesError) {
-    const errorStatus = (employeesError as any)?.response?.status;
-    const errorMessage = (employeesError as any)?.response?.data?.message || (employeesError as any)?.message || 'Unknown error';
+    const errorData = employeesError as { response?: { status?: number; data?: { message?: string } }; message?: string };
+    const errorStatus = errorData.response?.status;
+    const errorMessage = errorData.response?.data?.message || errorData.message || 'Unknown error';
     
     // Handle 403 Forbidden (access denied)
     if (errorStatus === 403) {
@@ -151,7 +149,7 @@ function SalonEmployeesContent() {
         <div className="bg-danger/10 border border-danger rounded-2xl p-6">
           <p className="text-danger font-semibold">Error loading employees</p>
           <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-sm">
-            {(employeesError as any)?.response?.data?.message || (employeesError as any)?.message || 'Unknown error'}
+            {errorMessage}
           </p>
         </div>
       </div>
@@ -357,7 +355,7 @@ function SalonEmployeesContent() {
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
                 {isLoadingEmployees ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8">
+                    <td colSpan={6} className="px-6 py-8">
                       <div className="flex items-center justify-center gap-3">
                         <Loader2 className="w-5 h-5 animate-spin text-primary" />
                         <span className="text-text-light/60 dark:text-text-dark/60">
@@ -368,7 +366,7 @@ function SalonEmployeesContent() {
                   </tr>
                 ) : employees.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={6} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <Users className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
                         <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
@@ -615,176 +613,6 @@ function SalonEmployeesContent() {
   );
 }
 
-function EmployeeCard({
-  employee,
-  salonId,
-  onEdit,
-  onDelete,
-}: {
-  employee: SalonEmployee;
-  salonId: string;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const router = useRouter();
-  return (
-    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 hover:border-primary/50 transition-all duration-300">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate">
-                {employee.user?.fullName || 'Unknown User'}
-              </h3>
-              {employee.roleTitle && (
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                  {employee.roleTitle}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-              employee.isActive
-                ? 'bg-success/10 text-success border border-success/20'
-                : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark'
-            }`}
-          >
-            {employee.isActive ? (
-              <>
-                <Check className="w-3 h-3" />
-                Active
-              </>
-            ) : (
-              <>
-                <XCircle className="w-3 h-3" />
-                Inactive
-              </>
-            )}
-          </span>
-        </div>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {employee.user?.email && (
-          <div className="flex items-center gap-2 text-sm">
-            <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-            <span className="text-text-light/80 dark:text-text-dark/80 truncate">
-              {employee.user.email}
-            </span>
-          </div>
-        )}
-        {employee.user?.phone && (
-          <div className="flex items-center gap-2 text-sm">
-            <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-            <span className="text-text-light/80 dark:text-text-dark/80">
-              {employee.user.phone}
-            </span>
-          </div>
-        )}
-        {employee.hireDate && (
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-            <span className="text-text-light/80 dark:text-text-dark/80">
-              Hired: {new Date(employee.hireDate).toLocaleDateString()}
-            </span>
-          </div>
-        )}
-        {/* Payment Type Badge */}
-        {employee.salaryType && (
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold mb-2 ${
-            employee.salaryType === 'COMMISSION_ONLY' 
-              ? 'bg-primary/10 text-primary border border-primary/20'
-              : employee.salaryType === 'SALARY_ONLY'
-              ? 'bg-success/10 text-success border border-success/20'
-              : 'bg-warning/10 text-warning border border-warning/20'
-          }`}>
-            {employee.salaryType === 'COMMISSION_ONLY' && <TrendingUp className="w-3.5 h-3.5" />}
-            {employee.salaryType === 'SALARY_ONLY' && <DollarSign className="w-3.5 h-3.5" />}
-            {employee.salaryType === 'SALARY_PLUS_COMMISSION' && <Calculator className="w-3.5 h-3.5" />}
-            {employee.salaryType.replace(/_/g, ' ')}
-          </div>
-        )}
-        {employee.commissionRate > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-text-light/80 dark:text-text-dark/80">
-              Commission: <span className="font-semibold text-primary">{employee.commissionRate}%</span>
-            </span>
-          </div>
-        )}
-        {employee.baseSalary && employee.baseSalary > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <DollarSign className="w-4 h-4 text-success flex-shrink-0" />
-            <span className="text-text-light/80 dark:text-text-dark/80">
-              {employee.payFrequency === 'DAILY' ? 'Daily Rate' : 'Salary'}: <span className="font-semibold text-success">RWF {Number(employee.baseSalary).toLocaleString()}</span>
-              {employee.payFrequency && employee.payFrequency !== 'DAILY' && (
-                <span className="text-xs text-text-light/60 dark:text-text-dark/60 ml-1">
-                  ({employee.payFrequency.toLowerCase()})
-                </span>
-              )}
-            </span>
-          </div>
-        )}
-        {employee.hourlyRate && employee.hourlyRate > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-            <span className="text-text-light/80 dark:text-text-dark/80">
-              {employee.payFrequency === 'DAILY' ? 'Daily' : 'Hourly'} Rate: RWF {Number(employee.hourlyRate).toLocaleString()}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {employee.skills && employee.skills.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-2">Skills</p>
-          <div className="flex flex-wrap gap-2">
-            {employee.skills.map((skill, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-medium"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2 pt-4 border-t border-border-light dark:border-border-dark">
-        <div className="flex gap-2">
-          <button
-            onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
-          >
-            <Edit className="w-4 h-4" />
-            Edit
-          </button>
-          <button
-            onClick={onDelete}
-            className="px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-danger/10 text-danger rounded-lg transition"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-        <button
-          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-success/10 to-primary/10 hover:from-success/20 hover:to-primary/20 text-success rounded-lg text-sm font-medium transition border border-success/20"
-        >
-          <Calculator className="w-4 h-4" />
-          View Payroll
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function EmployeeFormModal({
   salonId,
   employee,
@@ -811,7 +639,7 @@ function EmployeeFormModal({
     employmentType: employee?.employmentType || 'FULL_TIME',
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<{ id: string; fullName: string; email: string; phone?: string }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -835,7 +663,7 @@ function EmployeeFormModal({
       const response = await api.get('/users');
       const allUsers = response.data || [];
       // Filter users client-side (since backend doesn't have search endpoint)
-      const filtered = allUsers.filter((user: any) => {
+      const filtered = allUsers.filter((user: { fullName?: string; email?: string; phone?: string }) => {
         const searchLower = query.toLowerCase();
         return (
           user.fullName?.toLowerCase().includes(searchLower) ||
@@ -881,30 +709,32 @@ function EmployeeFormModal({
       }
 
       onSuccess();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to save employee';
+    } catch (err: unknown) {
+      const errorData = err as { response?: { data?: { message?: string | string[] } } };
+      const errorMessage = errorData.response?.data?.message || 'Failed to save employee';
       setError(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50" onClick={handleBackdropClick}>
+    <div className="fixed inset-0 z-50">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm fade-in"
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close backdrop"
       />
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div
           className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto slide-in-from-top-4"
           onClick={(e) => e.stopPropagation()}
+          role="presentation"
         >
           <div className="p-6">
             {/* Header */}
@@ -956,11 +786,12 @@ function EmployeeFormModal({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                    <label htmlFor="user-search" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                       Search for User <span className="text-danger">*</span>
                     </label>
                     <div className="relative">
                       <input
+                        id="user-search"
                         type="text"
                         value={searchQuery}
                         onChange={(e) => {
@@ -1025,11 +856,12 @@ function EmployeeFormModal({
 
                 {/* Role Title */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  <label htmlFor="role-title-btn" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                     Professional Title <span className="text-danger">*</span>
                   </label>
                   <div className="relative">
                   <button
+                    id="role-title-btn"
                     type="button"
                     onClick={() => {
                       setShowTitleDropdown(!showTitleDropdown);
@@ -1047,6 +879,10 @@ function EmployeeFormModal({
                       <div
                         className="fixed inset-0 z-10"
                         onClick={() => setShowTitleDropdown(false)}
+                        onKeyDown={(e) => { if (e.key === 'Escape') setShowTitleDropdown(false); }}
+                        role="button"
+                        tabIndex={-1}
+                        aria-label="Close dropdown"
                       />
                       <div className="absolute z-20 w-full mt-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-h-64 overflow-y-auto">
                         {SALON_PROFESSIONAL_TITLES.map((title) => (
@@ -1074,7 +910,7 @@ function EmployeeFormModal({
 
                 {/* Skills */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  <label htmlFor="skills-search" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                     Skills & Specializations
                   </label>
                   <div className="flex flex-wrap gap-2 mb-2 min-h-[3rem] p-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl">
@@ -1107,6 +943,7 @@ function EmployeeFormModal({
                   </div>
                   <div className="relative">
                     <input
+                      id="skills-search"
                       type="text"
                       value={skillsSearchQuery}
                       onChange={(e) => {
@@ -1125,6 +962,10 @@ function EmployeeFormModal({
                             setShowSkillsDropdown(false);
                             setSkillsSearchQuery('');
                           }}
+                          onKeyDown={(e) => { if (e.key === 'Escape') setShowSkillsDropdown(false); }}
+                          role="button"
+                          tabIndex={-1}
+                          aria-label="Close dropdown"
                         />
                         <div className="absolute z-20 w-full mt-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-h-64 overflow-y-auto">
                           {filteredSkills.length > 0 ? (
@@ -1178,10 +1019,11 @@ function EmployeeFormModal({
 
                 {/* Hire Date */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  <label htmlFor="hire-date" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                     Hire Date
                   </label>
                   <input
+                    id="hire-date"
                     type="date"
                     value={formData.hireDate}
                     onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
@@ -1192,11 +1034,12 @@ function EmployeeFormModal({
                 {/* Commission Rate - Show if commission is allowed */}
                 {(formData.salaryType === 'COMMISSION_ONLY' || formData.salaryType === 'SALARY_PLUS_COMMISSION') && (
                   <div className="mb-6">
-                    <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                    <label htmlFor="commission-rate" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                       Commission Rate (%) <span className="text-danger">*</span>
                     </label>
                     <div className="relative">
                       <input
+                        id="commission-rate"
                         type="number"
                         min="0"
                         max="100"
@@ -1253,9 +1096,9 @@ function EmployeeFormModal({
 
                 {/* Salary Type - Enhanced with visual cards */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-3">
+                  <p className="block text-sm font-semibold text-text-light dark:text-text-dark mb-3">
                     Payment Type <span className="text-danger">*</span>
-                  </label>
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <button
                       type="button"
@@ -1343,11 +1186,12 @@ function EmployeeFormModal({
                 {formData.salaryType !== 'COMMISSION_ONLY' && (
                   <>
                     <div className="mb-6">
-                      <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                      <label htmlFor="base-salary" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                         Base Salary {formData.payFrequency === 'DAILY' ? '(Daily Rate)' : '(Annual Amount)'}
                       </label>
                       <div className="relative">
                         <input
+                          id="base-salary"
                           type="number"
                           min="0"
                           step={formData.payFrequency === 'DAILY' ? '100' : '1000'}
@@ -1369,18 +1213,15 @@ function EmployeeFormModal({
 
                     {/* Pay Frequency */}
                     <div className="mb-6">
-                      <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                      <label htmlFor="pay-frequency" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                         Pay Frequency <span className="text-danger">*</span>
                       </label>
                       <select
+                        id="pay-frequency"
                         value={formData.payFrequency}
                         onChange={(e) => {
-                          const newFrequency = e.target.value as any;
+                          const newFrequency = e.target.value as 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
                           setFormData({ ...formData, payFrequency: newFrequency });
-                          // If switching to DAILY, suggest using hourlyRate instead
-                          if (newFrequency === 'DAILY' && !formData.hourlyRate) {
-                            // Keep baseSalary as daily rate
-                          }
                         }}
                         className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                       >
@@ -1401,12 +1242,13 @@ function EmployeeFormModal({
 
                 {/* Employment Type */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  <label htmlFor="employment-type" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                     Employment Type
                   </label>
                   <select
+                    id="employment-type"
                     value={formData.employmentType}
-                    onChange={(e) => setFormData({ ...formData, employmentType: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, employmentType: e.target.value as 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' })}
                     className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                   >
                     <option value="FULL_TIME">Full Time</option>
@@ -1417,11 +1259,12 @@ function EmployeeFormModal({
 
                 {/* Hourly Rate - Optional */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  <label htmlFor="hourly-rate" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                     Hourly Rate (Optional)
                   </label>
                   <div className="relative">
                     <input
+                      id="hourly-rate"
                       type="number"
                       min="0"
                       step="100"
@@ -1441,11 +1284,12 @@ function EmployeeFormModal({
 
                 {/* Overtime Rate */}
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  <label htmlFor="overtime-rate" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                     Overtime Rate Multiplier
                   </label>
                   <div className="relative">
                     <input
+                      id="overtime-rate"
                       type="number"
                       min="1"
                       max="3"
@@ -1506,4 +1350,3 @@ function EmployeeFormModal({
     </div>
   );
 }
-

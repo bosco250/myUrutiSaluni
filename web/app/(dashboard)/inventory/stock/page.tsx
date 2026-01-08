@@ -6,15 +6,12 @@ import {
   Package,
   Plus,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
   History,
   Edit,
-  CheckCircle2,
   XCircle,
   ArrowUp,
   ArrowDown,
-  Minus,
   RefreshCw,
   Loader2,
 } from 'lucide-react';
@@ -24,7 +21,6 @@ import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
-import { useTheme } from '@/contexts/ThemeContext';
 import { canViewAllSalons } from '@/lib/permissions';
 import { format } from 'date-fns';
 
@@ -78,7 +74,7 @@ type TabType = 'levels' | 'add-stock' | 'movements' | 'adjust';
 
 export default function StockManagementPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       <StockManagementContent />
     </div>
   );
@@ -86,7 +82,6 @@ export default function StockManagementPage() {
 
 function StockManagementContent() {
   const { user } = useAuthStore();
-  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('levels');
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
@@ -209,22 +204,20 @@ function StockManagementContent() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
-          Stock Management
-        </h1>
-        <p className="text-text-light/60 dark:text-text-dark/60">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Stock</h1>
+        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
           Track inventory levels, add stock, and view movement history
         </p>
       </div>
 
       {/* Salon Filter */}
       {(salons.length > 1 || canViewAll) && (
-        <div className="mb-6">
+        <div className="mb-4">
           <select
             value={selectedSalonId}
             onChange={(e) => setSelectedSalonId(e.target.value)}
-            className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <option value="">{canViewAll ? 'All Salons' : 'Select Salon'}</option>
             {salons.map((salon) => (
@@ -237,60 +230,90 @@ function StockManagementContent() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Products</span>
-            <Package className="w-5 h-5 text-primary" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Total Products
+              </p>
+              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                {stats.totalProducts}
+              </p>
+            </div>
+            <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+              <Package className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">{stats.totalProducts}</p>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Low Stock</span>
-            <AlertTriangle className="w-5 h-5 text-yellow-500" />
+        <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Low Stock
+              </p>
+              <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                {stats.lowStock}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-white" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-yellow-500">{stats.lowStock}</p>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Out of Stock</span>
-            <XCircle className="w-5 h-5 text-red-500" />
+        <div className="group relative bg-gradient-to-br from-rose-500/10 to-red-500/10 border border-rose-500/20 dark:border-rose-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Out of Stock
+              </p>
+              <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
+                {stats.outOfStock}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-rose-500 to-red-600 rounded-lg">
+              <XCircle className="w-4 h-4 text-white" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-red-500">{stats.outOfStock}</p>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Value</span>
-            <TrendingUp className="w-5 h-5 text-green-500" />
+        <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Total Value
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-1">
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalValue)}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
+              <TrendingUp className="w-4 h-4 text-white" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-green-500">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.totalValue)}
-          </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-border-light dark:border-border-dark">
-        <div className="flex space-x-1">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2 mb-6">
+        <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
-              <button
+              <Button
                 key={tab.id}
+                type="button"
+                size="sm"
+                variant={isActive ? 'primary' : 'secondary'}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'text-primary border-b-2 border-primary'
-                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
-                }`}
+                className="flex items-center gap-2"
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -401,30 +424,32 @@ function StockLevelsTab({
   return (
     <div>
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
+          <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
           <input
             type="text"
             placeholder="Search products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 pl-10 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
-          <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
         </div>
         <select
           value={stockFilter}
-          onChange={(e) => setStockFilter(e.target.value as any)}
-          className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+          onChange={(e) => setStockFilter(e.target.value as 'all' | 'low' | 'out')}
+          className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
         >
           <option value="all">All Stock</option>
           <option value="low">Low Stock (&lt;10)</option>
           <option value="out">Out of Stock</option>
         </select>
-        <Button onClick={onRefresh} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
+        <Button onClick={onRefresh} variant="secondary" size="sm" className="flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" />
           Refresh
         </Button>
+        </div>
       </div>
 
       {/* Products Table */}
@@ -565,7 +590,6 @@ function AddStockTab({
   canViewAll: boolean;
   onSuccess: () => void;
 }) {
-  const { user } = useAuthStore();
   const [formData, setFormData] = useState({
     salonId: selectedSalonId || salons[0]?.id || '',
     productId: '',
@@ -576,7 +600,14 @@ function AddStockTab({
   const [loading, setLoading] = useState(false);
 
   // Fetch products for selected salon
-  const { data: products = [] } = useQuery({
+  interface InventoryProductOption {
+    id: string;
+    name: string;
+    sku?: string;
+    isInventoryItem: boolean;
+  }
+
+  const { data: products = [] } = useQuery<InventoryProductOption[]>({
     queryKey: ['products', formData.salonId],
     queryFn: async () => {
       if (!formData.salonId) return [];
@@ -586,7 +617,7 @@ function AddStockTab({
     enabled: !!formData.salonId,
   });
 
-  const inventoryProducts = products.filter((p: any) => p.isInventoryItem);
+  const inventoryProducts = products.filter((p) => p.isInventoryItem);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -608,8 +639,9 @@ function AddStockTab({
       });
       setError('');
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to add stock');
+    onError: (err: unknown) => {
+      const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to add stock');
       setLoading(false);
     },
   });
@@ -641,10 +673,11 @@ function AddStockTab({
       <form onSubmit={handleSubmit} className="space-y-4">
         {(salons.length > 1 || canViewAll) ? (
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="add-stock-salon" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Salon
             </label>
             <select
+              id="add-stock-salon"
               value={formData.salonId}
               onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
               className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -660,10 +693,11 @@ function AddStockTab({
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="add-stock-salon-disabled" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Salon
             </label>
             <input
+              id="add-stock-salon-disabled"
               type="text"
               value={salons[0]?.name || ''}
               disabled
@@ -673,10 +707,11 @@ function AddStockTab({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+          <label htmlFor="add-stock-product" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
             Product
           </label>
           <select
+            id="add-stock-product"
             value={formData.productId}
             onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
             className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -684,7 +719,7 @@ function AddStockTab({
             disabled={!formData.salonId || inventoryProducts.length === 0}
           >
             <option value="">Select Product</option>
-            {inventoryProducts.map((product: any) => (
+            {inventoryProducts.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name} {product.sku ? `(${product.sku})` : ''}
               </option>
@@ -703,10 +738,11 @@ function AddStockTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+          <label htmlFor="add-stock-quantity" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
             Quantity
           </label>
           <input
+            id="add-stock-quantity"
             type="number"
             min="0.001"
             step="0.001"
@@ -718,10 +754,11 @@ function AddStockTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+          <label htmlFor="add-stock-notes" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
             Notes (Optional)
           </label>
           <textarea
+            id="add-stock-notes"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             rows={3}
@@ -781,7 +818,10 @@ function MovementsTab({
   };
 
   const getMovementBadge = (type: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<
+      string,
+      { label: string; variant: 'success' | 'destructive' | 'warning' | 'default' }
+    > = {
       purchase: { label: 'Purchase', variant: 'success' },
       consumption: { label: 'Consumption', variant: 'destructive' },
       adjustment: { label: 'Adjustment', variant: 'warning' },
@@ -819,7 +859,7 @@ function MovementsTab({
       <div className="mb-6">
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as any)}
+          onChange={(e) => setFilter(e.target.value as 'all' | 'purchase' | 'consumption' | 'adjustment')}
           className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
         >
           <option value="all">All Movements</option>
@@ -887,7 +927,6 @@ function AdjustStockTab({
   canViewAll: boolean;
   onSuccess: () => void;
 }) {
-  const { user } = useAuthStore();
   const [formData, setFormData] = useState({
     salonId: selectedSalonId || salons[0]?.id || '',
     productId: '',
@@ -898,7 +937,14 @@ function AdjustStockTab({
   const [loading, setLoading] = useState(false);
 
   // Fetch products for selected salon
-  const { data: products = [] } = useQuery({
+  interface InventoryProductOption {
+    id: string;
+    name: string;
+    sku?: string;
+    isInventoryItem: boolean;
+  }
+
+  const { data: products = [] } = useQuery<InventoryProductOption[]>({
     queryKey: ['products', formData.salonId],
     queryFn: async () => {
       if (!formData.salonId) return [];
@@ -908,7 +954,7 @@ function AdjustStockTab({
     enabled: !!formData.salonId,
   });
 
-  const inventoryProducts = products.filter((p: any) => p.isInventoryItem);
+  const inventoryProducts = products.filter((p) => p.isInventoryItem);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -930,8 +976,9 @@ function AdjustStockTab({
       });
       setError('');
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to adjust stock');
+    onError: (err: unknown) => {
+      const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to adjust stock');
       setLoading(false);
     },
   });
@@ -972,10 +1019,11 @@ function AdjustStockTab({
       <form onSubmit={handleSubmit} className="space-y-4">
         {(salons.length > 1 || canViewAll) ? (
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="adjust-stock-salon" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Salon
             </label>
             <select
+              id="adjust-stock-salon"
               value={formData.salonId}
               onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
               className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -991,10 +1039,11 @@ function AdjustStockTab({
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="adjust-stock-salon-disabled" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Salon
             </label>
             <input
+              id="adjust-stock-salon-disabled"
               type="text"
               value={salons[0]?.name || ''}
               disabled
@@ -1004,10 +1053,11 @@ function AdjustStockTab({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+          <label htmlFor="adjust-stock-product" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
             Product
           </label>
           <select
+            id="adjust-stock-product"
             value={formData.productId}
             onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
             className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -1015,7 +1065,7 @@ function AdjustStockTab({
             disabled={!formData.salonId || inventoryProducts.length === 0}
           >
             <option value="">Select Product</option>
-            {inventoryProducts.map((product: any) => (
+            {inventoryProducts.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name} {product.sku ? `(${product.sku})` : ''}
               </option>
@@ -1024,10 +1074,11 @@ function AdjustStockTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+          <label htmlFor="adjust-stock-quantity" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
             Adjustment Quantity
           </label>
           <input
+            id="adjust-stock-quantity"
             type="number"
             step="0.001"
             value={formData.quantity}
@@ -1042,10 +1093,11 @@ function AdjustStockTab({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+          <label htmlFor="adjust-stock-notes" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
             Notes (Required)
           </label>
           <textarea
+            id="adjust-stock-notes"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             rows={3}

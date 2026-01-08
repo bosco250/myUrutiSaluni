@@ -19,28 +19,21 @@ import {
   Package,
   Activity,
   X,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   Image as ImageIcon,
   Plus,
   ShieldOff,
   ShieldCheck,
   Trash2,
-  MessageSquare,
   FileText,
   Tag,
-  Award,
-  TrendingDown,
   Bell,
-  Download,
-  Printer,
-  MapPin,
   Heart,
-  Sparkles,
+  LucideIcon,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, isPast, isToday, isFuture } from 'date-fns';
+import Image from 'next/image';
+import Button from '@/components/ui/Button';
 
 interface Customer {
   id: string;
@@ -50,7 +43,7 @@ interface Customer {
   loyaltyPoints: number;
   createdAt: string;
   updatedAt?: string;
-  preferences?: Record<string, any>;
+  preferences?: Record<string, unknown>;
   user?: {
     id: string;
     email: string;
@@ -149,7 +142,7 @@ export default function CustomerDetailPage() {
     enabled: !!customerId,
   });
 
-  const { data: statistics, isLoading: statsLoading } = useQuery<CustomerStatistics>({
+  const { data: statistics } = useQuery<CustomerStatistics>({
     queryKey: ['customer-statistics', customerId],
     queryFn: async () => {
       const response = await api.get(`/sales/customer/${customerId}/statistics`);
@@ -232,12 +225,16 @@ export default function CustomerDetailPage() {
       setShowReferenceModal(false);
       setEditingReference(null);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       // Upload error occurred
+      const maybeAxios = error as {
+        response?: { data?: { message?: string; error?: string } };
+        message?: string;
+      };
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
+        maybeAxios?.response?.data?.message ||
+        maybeAxios?.response?.data?.error ||
+        maybeAxios?.message ||
         'Failed to upload style reference';
       alert(`Error: ${errorMessage}`);
     },
@@ -274,13 +271,13 @@ export default function CustomerDetailPage() {
   });
 
   const styleReferences = styleReferencesData || [];
-  const sales = salesData?.data || [];
+  const sales = useMemo(() => salesData?.data || [], [salesData]);
 
   // Load customer notes and tags from preferences
   useEffect(() => {
     if (customer?.preferences) {
-      setCustomerNotes(customer.preferences.notes || '');
-      setCustomerTags(customer.preferences.tags || []);
+      setCustomerNotes((customer.preferences.notes as string) || '');
+      setCustomerTags((customer.preferences.tags as string[]) || []);
     }
   }, [customer]);
 
@@ -358,7 +355,7 @@ export default function CustomerDetailPage() {
     })
     .sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())[0];
 
-  const tabs: { id: TabType; label: string; icon: any; count?: number }[] = [
+  const tabs: { id: TabType; label: string; icon: LucideIcon; count?: number }[] = [
     { id: 'overview', label: 'Overview', icon: User },
     { id: 'purchases', label: 'Purchases', icon: ShoppingBag, count: sales.length },
     { id: 'appointments', label: 'Appointments', icon: Calendar, count: appointments?.length || 0 },
@@ -385,140 +382,181 @@ export default function CustomerDetailPage() {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/customers')}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {customer.fullName}
-              </h1>
-              <span
-                className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                  customerSegment.color === 'purple'
-                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                    : customerSegment.color === 'blue'
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                      : customerSegment.color === 'green'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : customerSegment.color === 'yellow'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                }`}
-              >
-                {customerSegment.label}
-              </span>
+        {/* Header (Compacted Hero) */}
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg">
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.18),transparent_60%)]" />
+          <div className="relative p-4 sm:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push('/customers')}
+                    className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                    aria-label="Back to customers"
+                    title="Back"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight truncate">
+                        {customer.fullName}
+                      </h1>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                          customerSegment.color === 'purple'
+                            ? 'bg-purple-500/15 text-white border-purple-300/20'
+                            : customerSegment.color === 'blue'
+                              ? 'bg-blue-500/15 text-white border-blue-300/20'
+                              : customerSegment.color === 'green'
+                                ? 'bg-emerald-500/15 text-white border-emerald-300/20'
+                                : customerSegment.color === 'yellow'
+                                  ? 'bg-amber-500/15 text-white border-amber-300/20'
+                                  : 'bg-white/10 text-white border-white/20'
+                        }`}
+                      >
+                        {customerSegment.label}
+                      </span>
+                    </div>
+                    <p className="text-white/80 text-xs sm:text-sm mt-1">
+                      Customer profile • {customer.phone}
+                      {customer.email ? ` • ${customer.email}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => window.open(`tel:${customer.phone}`)}
+                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                    title="Call customer"
+                  >
+                    <Phone className="w-4 h-4" />
+                    <span className="hidden sm:inline">Call</span>
+                  </Button>
+                  {customer.email && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => window.open(`mailto:${customer.email}`)}
+                      className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                      title="Email customer"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span className="hidden sm:inline">Email</span>
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/sales?customerId=${customerId}`)}
+                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                    title="Create new sale"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span className="hidden sm:inline">New Sale</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/appointments?customerId=${customerId}`)}
+                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                    title="Create new appointment"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span className="hidden sm:inline">Book</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                    title="Edit customer"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </Button>
+                </div>
+              </div>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Customer Profile</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.open(`tel:${customer.phone}`)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-              title="Call customer"
-            >
-              <Phone className="w-4 h-4" />
-              <span className="hidden sm:inline">Call</span>
-            </button>
-            {customer.email && (
-              <button
-                onClick={() => window.open(`mailto:${customer.email}`)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                title="Email customer"
-              >
-                <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Email</span>
-              </button>
-            )}
-            <button
-              onClick={() => router.push(`/sales?customerId=${customerId}`)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-              title="Create new sale"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">New Sale</span>
-            </button>
-            <button
-              onClick={() => router.push(`/appointments?customerId=${customerId}`)}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
-              title="Create new appointment"
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">Book</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
-              <Edit className="w-4 h-4" />
-              <span className="hidden sm:inline">Edit</span>
-            </button>
           </div>
         </div>
 
-        {/* Customer Info Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-start gap-6">
-            <div className="flex-shrink-0 h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl">
+        {/* Customer Info Card (Compacted) */}
+        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm border border-border-light dark:border-border-dark p-4">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20">
               {customer.fullName.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
+                <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
                   <Phone className="w-4 h-4" />
-                  <span className="text-sm">Phone</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">Phone</span>
                 </div>
-                <p className="text-gray-900 dark:text-white font-medium">{customer.phone}</p>
+                <p className="text-text-light dark:text-text-dark font-semibold">
+                  {customer.phone}
+                </p>
               </div>
               {customer.email && (
                 <div>
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
                     <Mail className="w-4 h-4" />
-                    <span className="text-sm">Email</span>
+                    <span className="text-xs font-bold uppercase tracking-wide">Email</span>
                   </div>
-                  <p className="text-gray-900 dark:text-white font-medium">{customer.email}</p>
+                  <p className="text-text-light dark:text-text-dark font-semibold truncate">
+                    {customer.email}
+                  </p>
                 </div>
               )}
               <div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
+                <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
                   <Star className="w-4 h-4" />
-                  <span className="text-sm">Loyalty Points</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">Points</span>
                 </div>
-                <p className="text-gray-900 dark:text-white font-medium">
+                <p className="text-text-light dark:text-text-dark font-semibold">
                   {customer.loyaltyPoints || 0} pts
                 </p>
               </div>
               <div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
+                <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
                   <Calendar className="w-4 h-4" />
-                  <span className="text-sm">Member Since</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">Member Since</span>
                 </div>
-                <p className="text-gray-900 dark:text-white font-medium">
+                <p className="text-text-light dark:text-text-dark font-semibold">
                   {format(parseISO(customer.createdAt), 'MMM d, yyyy')}
                 </p>
               </div>
               {statistics?.lastVisitDate && (
                 <div>
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
                     <Clock className="w-4 h-4" />
-                    <span className="text-sm">Last Visit</span>
+                    <span className="text-xs font-bold uppercase tracking-wide">Last Visit</span>
                   </div>
-                  <p className="text-gray-900 dark:text-white font-medium">
+                  <p className="text-text-light dark:text-text-dark font-semibold">
                     {format(parseISO(statistics.lastVisitDate), 'MMM d, yyyy')}
                   </p>
                 </div>
               )}
               {nextAppointment && (
                 <div>
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
                     <Bell className="w-4 h-4" />
-                    <span className="text-sm">Next Appointment</span>
+                    <span className="text-xs font-bold uppercase tracking-wide">Next Appt</span>
                   </div>
-                  <p className="text-gray-900 dark:text-white font-medium">
+                  <p className="text-text-light dark:text-text-dark font-semibold">
                     {format(parseISO(nextAppointment.scheduledStart), 'MMM d, h:mm a')}
                   </p>
                 </div>
@@ -528,13 +566,13 @@ export default function CustomerDetailPage() {
 
           {/* Tags */}
           {customerTags.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
               <div className="flex items-center gap-2 flex-wrap">
-                <Tag className="w-4 h-4 text-gray-400" />
+                <Tag className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
                 {customerTags.map((tag, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded text-xs font-medium"
+                    className="px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[11px] font-bold"
                   >
                     {tag}
                   </span>
@@ -546,97 +584,101 @@ export default function CustomerDetailPage() {
 
         {/* Next Appointment Reminder */}
         {nextAppointment && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="bg-surface-light dark:bg-surface-dark border border-primary/20 dark:border-primary/30 rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                <Bell className="w-4 h-4" />
+              </div>
               <div className="flex-1">
-                <p className="font-semibold text-blue-900 dark:text-blue-200">
+                <p className="font-black text-text-light dark:text-text-dark text-sm">
                   Upcoming Appointment
                 </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                   {nextAppointment.service?.name || 'Service'} at{' '}
                   {nextAppointment.salon?.name || 'Salon'} on{' '}
                   {format(parseISO(nextAppointment.scheduledStart), 'EEEE, MMM d, yyyy at h:mm a')}
                 </p>
               </div>
-              <button
+              <Button
+                type="button"
                 onClick={() => router.push(`/appointments/${nextAppointment.id}`)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                variant="secondary"
+                size="sm"
               >
                 View Details
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {/* Statistics Cards */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
                     Total Spent
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
                     RWF {statistics.totalSpent.toLocaleString()}
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
+                  <DollarSign className="w-4 h-4 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
                     Total Visits
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
                     {statistics.totalVisits}
                   </p>
                 </div>
-                <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <ShoppingBag className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
+                  <ShoppingBag className="w-4 h-4 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="group relative bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Avg Order Value
+                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                    Avg Order
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
                     RWF {Math.round(statistics.averageOrderValue).toLocaleString()}
                   </p>
                 </div>
-                <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg">
+                  <TrendingUp className="w-4 h-4 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
                     Favorite Salon
                   </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-sm font-black text-text-light dark:text-text-dark mt-1 truncate">
                     {statistics.favoriteSalon?.name || 'N/A'}
                   </p>
                   {statistics.favoriteSalon && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
                       {statistics.favoriteSalon.visits} visits
                     </p>
                   )}
                 </div>
-                <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                  <Building2 className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
+                  <Building2 className="w-4 h-4 text-white" />
                 </div>
               </div>
             </div>
@@ -644,41 +686,41 @@ export default function CustomerDetailPage() {
         )}
 
         {/* Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex -mb-px">
+        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+          <div className="p-2 border-b border-border-light dark:border-border-dark">
+            <div className="flex flex-wrap gap-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
                 return (
-                  <button
+                  <Button
                     key={tab.id}
+                    type="button"
+                    size="sm"
+                    variant={isActive ? 'primary' : 'secondary'}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition ${
-                      activeTab === tab.id
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
+                    className="gap-2"
                   >
                     <Icon className="w-4 h-4" />
-                    <span>{tab.label}</span>
+                    <span className="font-black tracking-tight">{tab.label}</span>
                     {tab.count !== undefined && (
                       <span
-                        className={`px-2 py-0.5 text-xs rounded-full ${
-                          activeTab === tab.id
-                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                        className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-background-secondary dark:bg-background-dark text-text-light/60'
                         }`}
                       >
                         {tab.count}
                       </span>
                     )}
-                  </button>
+                  </Button>
                 );
               })}
-            </nav>
+            </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-4">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
@@ -689,12 +731,14 @@ export default function CustomerDetailPage() {
                       <FileText className="w-5 h-5" />
                       Internal Notes
                     </h3>
-                    <button
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
                       onClick={() => setShowNotesModal(true)}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       {customerNotes ? 'Edit Notes' : 'Add Notes'}
-                    </button>
+                    </Button>
                   </div>
                   {customerNotes ? (
                     <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -1006,10 +1050,13 @@ export default function CustomerDetailPage() {
                         className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition"
                       >
                         <div className="relative h-56 bg-gray-100 dark:bg-gray-800">
-                          <img
+                          <Image
                             src={reference.imageUrl}
                             alt={reference.title}
-                            className="object-cover w-full h-full"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover"
+                            unoptimized
                           />
                           <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold bg-black/70 text-white">
                             {reference.sharedWithEmployees ? 'Shared with team' : 'Private'}
@@ -1229,16 +1276,26 @@ function NotesModal({
               Internal notes visible only to salon staff
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="customer-notes"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Notes
             </label>
             <textarea
+              id="customer-notes"
               rows={6}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -1247,10 +1304,14 @@ function NotesModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="customer-tags"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Tags (separate with commas)
             </label>
             <input
+              id="customer-tags"
               type="text"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
@@ -1259,20 +1320,12 @@ function NotesModal({
             />
           </div>
           <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : 'Save Notes'}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" loading={loading} loadingText="Saving...">
+              Save Notes
+            </Button>
           </div>
         </form>
       </div>
@@ -1341,17 +1394,27 @@ function StyleReferenceModal({
               Upload inspiration photos or finished looks for future visits.
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="style-ref-title"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Title *
               </label>
               <input
+                id="style-ref-title"
                 type="text"
                 required
                 value={formData.title}
@@ -1360,36 +1423,31 @@ function StyleReferenceModal({
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <p className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Image *
-              </label>
+              </p>
               <div className="flex gap-2 mb-2">
-                <button
+                <Button
                   type="button"
+                  size="sm"
+                  variant={uploadMethod === 'file' ? 'primary' : 'secondary'}
                   onClick={() => setUploadMethod('file')}
-                  className={`px-3 py-1.5 text-sm rounded-lg border transition ${
-                    uploadMethod === 'file'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'
-                  }`}
                 >
                   Upload File
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant={uploadMethod === 'url' ? 'primary' : 'secondary'}
                   onClick={() => setUploadMethod('url')}
-                  className={`px-3 py-1.5 text-sm rounded-lg border transition ${
-                    uploadMethod === 'url'
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'
-                  }`}
                 >
                   Use URL
-                </button>
+                </Button>
               </div>
               {uploadMethod === 'file' ? (
                 <div>
                   <input
+                    id="style-ref-file"
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
@@ -1397,16 +1455,20 @@ function StyleReferenceModal({
                   />
                   {previewUrl && (
                     <div className="mt-3">
-                      <img
+                      <Image
                         src={previewUrl}
                         alt="Preview"
+                        width={900}
+                        height={360}
                         className="max-w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-700"
+                        unoptimized
                       />
                     </div>
                   )}
                 </div>
               ) : (
                 <input
+                  id="style-ref-url"
                   type="url"
                   required={uploadMethod === 'url'}
                   value={formData.imageUrl}
@@ -1421,10 +1483,14 @@ function StyleReferenceModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="style-ref-description"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Description
             </label>
             <textarea
+              id="style-ref-description"
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -1432,10 +1498,14 @@ function StyleReferenceModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label
+              htmlFor="style-ref-tags"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
               Tags (separate with commas)
             </label>
             <input
+              id="style-ref-tags"
               type="text"
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
@@ -1443,37 +1513,33 @@ function StyleReferenceModal({
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
-          <label className="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-start gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
             <input
+              id="style-ref-shared"
               type="checkbox"
               checked={formData.sharedWithEmployees}
               onChange={(e) => setFormData({ ...formData, sharedWithEmployees: e.target.checked })}
-              className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              className="mt-0.5 h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary/50"
             />
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+            <div className="min-w-0">
+              <label
+                htmlFor="style-ref-shared"
+                className="text-sm font-medium text-gray-900 dark:text-white"
+              >
                 Share with salon team
-              </p>
+              </label>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Allow stylists to view this reference before and during services.
               </p>
             </div>
-          </label>
+          </div>
           <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : reference ? 'Update Reference' : 'Save Reference'}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" loading={loading} loadingText="Saving...">
+              {reference ? 'Update Reference' : 'Save Reference'}
+            </Button>
           </div>
         </form>
       </div>

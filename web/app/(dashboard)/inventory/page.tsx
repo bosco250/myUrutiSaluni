@@ -12,7 +12,6 @@ import {
   DollarSign,
   Percent,
   XCircle,
-  Loader2,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -20,7 +19,6 @@ import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
-import { useTheme } from '@/contexts/ThemeContext';
 import { canViewAllSalons } from '@/lib/permissions';
 
 interface Product {
@@ -47,7 +45,7 @@ interface Salon {
 
 export default function InventoryPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       <InventoryContent />
     </div>
   );
@@ -60,14 +58,14 @@ function InventoryContent() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'inventory' | 'non-inventory'>('all');
-  
+
   const [selectedSalonId, setSelectedSalonId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('inventory-selected-salon-id') || '';
     }
     return '';
   });
-  
+
   useEffect(() => {
     if (selectedSalonId) {
       localStorage.setItem('inventory-selected-salon-id', selectedSalonId);
@@ -92,8 +90,8 @@ function InventoryContent() {
   useEffect(() => {
     if (!salonsLoading && salons.length > 0 && !canViewAll) {
       const storedSalonId = localStorage.getItem('inventory-selected-salon-id');
-      const isValidStoredSalon = storedSalonId && salons.some(s => s.id === storedSalonId);
-      
+      const isValidStoredSalon = storedSalonId && salons.some((s) => s.id === storedSalonId);
+
       if (salons.length === 1) {
         if (selectedSalonId !== salons[0].id) {
           setSelectedSalonId(salons[0].id);
@@ -113,10 +111,7 @@ function InventoryContent() {
     return selectedSalonId || (salons.length === 1 ? salons[0].id : 'all-owned');
   }, [selectedSalonId, salons, salonsLoading, canViewAll]);
 
-  const productsQueryKey = [
-    'inventory-products',
-    effectiveSalonId || 'pending',
-  ];
+  const productsQueryKey = ['inventory-products', effectiveSalonId || 'pending'];
 
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: productsQueryKey,
@@ -126,10 +121,11 @@ function InventoryContent() {
       }
 
       try {
-        const params = effectiveSalonId && effectiveSalonId !== 'all' && effectiveSalonId !== 'all-owned' 
-          ? { salonId: effectiveSalonId } 
-          : {};
-        
+        const params =
+          effectiveSalonId && effectiveSalonId !== 'all' && effectiveSalonId !== 'all-owned'
+            ? { salonId: effectiveSalonId }
+            : {};
+
         const response = await api.get('/inventory/products', { params });
 
         let data: Product[] = [];
@@ -145,7 +141,7 @@ function InventoryContent() {
         }
 
         return Array.isArray(data) ? data : [];
-      } catch (error: any) {
+      } catch (error: unknown) {
         return [];
       }
     },
@@ -226,14 +222,20 @@ function InventoryContent() {
 
   if (!salonsLoading && salons.length === 0 && !canViewAll) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
           <EmptyState
             icon={<Package className="w-16 h-16" />}
             title="No Salons Found"
             description="You need to create a salon before you can add products. Please create a salon first."
             action={
-              <Button onClick={() => (window.location.href = '/salons')}>Go to Salons</Button>
+              <Button
+                onClick={() => (window.location.href = '/salons')}
+                variant="primary"
+                className="flex items-center gap-2"
+              >
+                Go to Salons
+              </Button>
             }
           />
         </div>
@@ -242,78 +244,115 @@ function InventoryContent() {
   }
 
   return (
-    <>
-      <div className="mb-8">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2">
-              Inventory & Products
-            </h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">
-              Manage products, inventory items, and stock
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => {
-                window.location.href = '/inventory/stock';
-              }}
-              variant="outline"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              Stock Management
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingProduct(null);
-                setShowModal(true);
-              }}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add Product</span>
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Inventory</h1>
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+            Manage products, inventory items, and stock
+          </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => {
+              window.location.href = '/inventory/stock';
+            }}
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Package className="w-4 h-4" />
+            Stock Management
+          </Button>
+          <Button
+            onClick={() => {
+              setEditingProduct(null);
+              setShowModal(true);
+            }}
+            variant="primary"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Product
+          </Button>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Total Products
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Total Products
+              </p>
+              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                {stats.total}
+              </p>
             </div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {stats.total}
-            </div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Inventory Items
-            </div>
-            <div className="text-2xl font-bold text-primary">{stats.inventoryItems}</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Non-Inventory
-            </div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {stats.nonInventoryItems}
-            </div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Avg. Price</div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              RWF {Math.round(stats.avgPrice).toLocaleString()}
+            <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+              <Package className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Inventory Items
+              </p>
+              <p className="text-2xl font-black text-primary mt-1">{stats.inventoryItems}</p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
+              <Package className="w-4 h-4 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 dark:border-gray-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Non-Inventory
+              </p>
+              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                {stats.nonInventoryItems}
+              </p>
+            </div>
+            <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+              <Filter className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+            </div>
+          </div>
+        </div>
+
+        <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                Avg. Price
+              </p>
+              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                RWF {Math.round(stats.avgPrice).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
+              <DollarSign className="w-4 h-4 text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           {(salons.length > 1 || canViewAll) && (
             <div className="relative min-w-[200px]">
               <select
                 value={selectedSalonId}
                 onChange={(e) => setSelectedSalonId(e.target.value)}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+                className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
               >
                 <option value="">{canViewAll ? 'All Salons' : 'Select Salon'}</option>
                 {salons.map((salon) => (
@@ -325,23 +364,23 @@ function InventoryContent() {
             </div>
           )}
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <input
               type="text"
               placeholder="Search products by name, SKU, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             />
           </div>
           <div className="relative min-w-[140px]">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <select
               value={typeFilter}
               onChange={(e) =>
                 setTypeFilter(e.target.value as 'all' | 'inventory' | 'non-inventory')
               }
-              className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
             >
               <option value="all">All Types</option>
               <option value="inventory">Inventory Items</option>
@@ -368,8 +407,10 @@ function InventoryContent() {
                     setEditingProduct(null);
                     setShowModal(true);
                   }}
+                  variant="primary"
+                  className="flex items-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   Add First Product
                 </Button>
               ) : null
@@ -453,18 +494,21 @@ function InventoryContent() {
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-3">
-                        <button
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
                           onClick={() => {
                             setEditingProduct(product);
                             setShowModal(true);
                           }}
-                          className="text-primary hover:text-primary/80 transition"
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-8 p-0"
                           title="Edit product"
                         >
                           <Edit className="w-4 h-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => {
                             if (
                               confirm(
@@ -474,11 +518,14 @@ function InventoryContent() {
                               deleteMutation.mutate(product.id);
                             }
                           }}
-                          className="text-danger hover:text-danger/80 transition"
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-danger hover:bg-danger/10"
                           title="Delete product"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -506,7 +553,7 @@ function InventoryContent() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -544,8 +591,11 @@ function ProductModal({
     onSuccess: () => {
       onSuccess();
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to save product');
+    onError: (err: unknown) => {
+      const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(
+        maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to save product'
+      );
       setLoading(false);
     },
   });
@@ -582,163 +632,269 @@ function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {product ? 'Edit Product' : 'Add New Product'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition"
-            >
-              <XCircle className="w-6 h-6" />
-            </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/55 dark:bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
+
+      <div
+        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        {/* Hero Header */}
+        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative p-5 text-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-black tracking-tight">
+                    {product ? 'Edit Product' : 'Create Product'}
+                  </h2>
+                  <p className="text-xs text-white/80 mt-1">
+                    Products can be sold; inventory items can also be stock-managed.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClose}
+                className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                aria-label="Close"
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Quick Specs */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Unit Price
+                </p>
+                <p className="text-lg font-black mt-1">
+                  RWF {Number(formData.unitPrice || 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Tax Rate
+                </p>
+                <p className="text-lg font-black mt-1">{Number(formData.taxRate || 0)}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-5 space-y-5">
+            {error && (
+              <div className="p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl">
+                {error}
+              </div>
+            )}
+
+            {/* Basics */}
+            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold text-text-light dark:text-text-dark">Basics</p>
+                <span className="text-[10px] uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Required
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {salons.length > 1 ? (
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="inventory-product-salon"
+                      className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
+                    >
+                      Salon *
+                    </label>
+                    <select
+                      id="inventory-product-salon"
+                      required
+                      value={formData.salonId}
+                      onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                      className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    >
+                      <option value="">Select salon</option>
+                      {salons.map((salon) => (
+                        <option key={salon.id} value={salon.id}>
+                          {salon.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : salons.length === 1 ? (
+                  <div className="md:col-span-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                    Salon:{' '}
+                    <span className="font-semibold text-text-light dark:text-text-dark">
+                      {salons[0].name}
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="inventory-product-name"
+                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    Product Name *
+                  </label>
+                  <input
+                    id="inventory-product-name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Professional Shampoo"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="inventory-product-sku"
+                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    SKU
+                  </label>
+                  <input
+                    id="inventory-product-sku"
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    placeholder="e.g., SHP-001"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="inventory-product-description"
+                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    id="inventory-product-description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    placeholder="Product description (optional)"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing & Tax */}
+            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+              <p className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Pricing</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="inventory-product-unitPrice"
+                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    Unit Price (RWF)
+                  </label>
+                  <input
+                    id="inventory-product-unitPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.unitPrice}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        unitPrice: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="inventory-product-taxRate"
+                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    Tax Rate (%)
+                  </label>
+                  <input
+                    id="inventory-product-taxRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.taxRate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        taxRate: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div className="md:col-span-2 flex items-start gap-3 p-3 rounded-xl border border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40">
+                  <input
+                    id="inventory-product-track"
+                    type="checkbox"
+                    checked={formData.isInventoryItem}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isInventoryItem: e.target.checked })
+                    }
+                    className="mt-0.5 w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
+                  />
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="inventory-product-track"
+                      className="text-sm font-semibold text-text-light dark:text-text-dark"
+                    >
+                      Track inventory
+                    </label>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                      Enables stock level management for this item.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {error && (
-            <div className="mb-4 p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {salons.length > 1 ? (
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Salon *
-                </label>
-                <select
-                  required
-                  value={formData.salonId}
-                  onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                >
-                  <option value="">Select salon</option>
-                  {salons.map((salon) => (
-                    <option key={salon.id} value={salon.id}>
-                      {salon.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : salons.length === 1 ? (
-              <div className="text-sm text-text-light/60 dark:text-text-dark/60">
-                Salon:{' '}
-                <span className="font-medium text-text-light dark:text-text-dark">
-                  {salons[0].name}
-                </span>
-              </div>
-            ) : null}
-
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Professional Shampoo"
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                SKU (Stock Keeping Unit)
-              </label>
-              <input
-                type="text"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                placeholder="e.g., SHP-001 (optional)"
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                placeholder="Product description (optional)"
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Unit Price (RWF)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.unitPrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      unitPrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Tax Rate (%)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={formData.taxRate}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      taxRate: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  placeholder="0.00"
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isInventoryItem}
-                  onChange={(e) => setFormData({ ...formData, isInventoryItem: e.target.checked })}
-                  className="w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
-                />
-                <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                  Track inventory for this item (stock levels will be managed)
-                </span>
-              </label>
-            </div>
-
-            <div className="flex gap-4 pt-4">
+          {/* Sticky actions */}
+          <div className="sticky bottom-0 p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+            <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Saving...' : product ? 'Update Product' : 'Create Product'}
+              <Button type="submit" loading={loading} loadingText="Saving..." className="flex-1">
+                {product ? 'Update Product' : 'Create Product'}
               </Button>
             </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   );

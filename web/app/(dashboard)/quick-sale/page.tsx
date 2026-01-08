@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import Button from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { 
   ShoppingCart, 
   Plus, 
@@ -19,7 +18,9 @@ import {
   Package,
   Scissors,
   User,
-  Tag
+  AlertCircle,
+  Zap,
+  Receipt
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -92,10 +93,8 @@ function QuickSaleContent() {
       try {
         const response = await api.get('/products');
         const data = response.data?.data || response.data;
-        // Ensure we always return an array
         return Array.isArray(data) ? data : [];
-      } catch (error) {
-        // Always return an array, never undefined
+      } catch {
         return [];
       }
     },
@@ -116,12 +115,11 @@ function QuickSaleContent() {
 
   // Create sale mutation
   const createSaleMutation = useMutation({
-    mutationFn: async (saleData: any) => {
+    mutationFn: async (saleData: Record<string, unknown>) => {
       const response = await api.post('/sales', saleData);
       return response.data;
     },
     onSuccess: () => {
-      // Clear cart and customer
       setCart([]);
       setSelectedCustomer(null);
       queryClient.invalidateQueries({ queryKey: ['sales'] });
@@ -145,7 +143,7 @@ function QuickSaleContent() {
 
   // Cart calculations
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const tax = subtotal * 0.18; // 18% tax
+  const tax = subtotal * 0.18;
   const total = subtotal + tax;
 
   const addToCart = (item: Service | Product, type: 'service' | 'product') => {
@@ -202,20 +200,30 @@ function QuickSaleContent() {
   return (
     <div className="h-screen flex flex-col bg-background-light dark:bg-background-dark">
       {/* Header */}
-      <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark px-6 py-4">
+      <div className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-3">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Quick Sale</h1>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">Fast checkout for services and products</p>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-text-light dark:text-text-dark">Quick Sale</h1>
+              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">Fast checkout</p>
+            </div>
           </div>
           {selectedCustomer && (
-            <div className="flex items-center gap-3 bg-primary/10 px-4 py-2 rounded-xl">
-              <User className="w-5 h-5 text-primary" />
-              <div>
-                <p className="font-medium text-text-light dark:text-text-dark">{selectedCustomer.fullName}</p>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60">{selectedCustomer.phone}</p>
+            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-2 rounded-xl">
+              <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <User className="w-4 h-4 text-primary" />
               </div>
-              <button onClick={() => setSelectedCustomer(null)} className="text-text-light/40 hover:text-text-light">
+              <div className="hidden sm:block">
+                <p className="text-sm font-semibold text-text-light dark:text-text-dark">{selectedCustomer.fullName}</p>
+                <p className="text-[10px] text-text-light/60 dark:text-text-dark/60">{selectedCustomer.phone}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedCustomer(null)} 
+                className="p-1 text-text-light/40 hover:text-text-light hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -227,62 +235,69 @@ function QuickSaleContent() {
         {/* Left: Items */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Search and Tabs */}
-          <div className="p-6 space-y-4 border-b border-border-light dark:border-border-dark">
+          <div className="p-4 sm:p-6 space-y-3 border-b border-border-light dark:border-border-dark bg-surface-light/50 dark:bg-surface-dark/50">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
               <input
                 type="text"
                 placeholder="Search services or products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-9 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
               />
             </div>
 
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('services')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition ${
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
                   activeTab === 'services'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-primary/10'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/70 dark:text-text-dark/70 hover:bg-primary/10'
                 }`}
               >
                 <Scissors className="w-4 h-4" />
-                Services ({services.length})
+                <span className="hidden sm:inline">Services</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-white/20">{services.length}</span>
               </button>
               <button
                 onClick={() => setActiveTab('products')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition ${
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
                   activeTab === 'products'
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:bg-primary/10'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/70 dark:text-text-dark/70 hover:bg-primary/10'
                 }`}
               >
                 <Package className="w-4 h-4" />
-                Products ({products.length})
+                <span className="hidden sm:inline">Products</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-white/20">{products.length}</span>
               </button>
             </div>
           </div>
 
           {/* Items Grid */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {activeTab === 'services' ? (
                 filteredServices.map((service) => (
                   <button
                     key={service.id}
                     onClick={() => addToCart(service, 'service')}
-                    className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary transition text-left group"
+                    className="relative overflow-hidden bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4 hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all text-left group"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <Scissors className="w-8 h-8 text-primary/60 group-hover:text-primary transition" />
-                      <Plus className="w-5 h-5 text-text-light/40 group-hover:text-primary transition" />
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-3xl" />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition">
+                        <Scissors className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="h-7 w-7 rounded-lg bg-background-light dark:bg-background-dark flex items-center justify-center group-hover:bg-primary group-hover:text-white transition">
+                        <Plus className="w-4 h-4" />
+                      </div>
                     </div>
-                    <h3 className="font-medium text-text-light dark:text-text-dark mb-1 truncate">{service.name}</h3>
-                    <p className="text-lg font-bold text-primary">RWF {service.price.toLocaleString()}</p>
+                    <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1 truncate">{service.name}</h3>
+                    <p className="text-lg font-black text-primary">RWF {(service.price || 0).toLocaleString()}</p>
                     {service.duration && (
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{service.duration} min</p>
+                      <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-1">{service.duration} min</p>
                     )}
                   </button>
                 ))
@@ -291,17 +306,26 @@ function QuickSaleContent() {
                   <button
                     key={product.id}
                     onClick={() => addToCart(product, 'product')}
-                    className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary transition text-left group"
+                    className="relative overflow-hidden bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4 hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all text-left group"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <Package className="w-8 h-8 text-primary/60 group-hover:text-primary transition" />
-                      <Plus className="w-5 h-5 text-text-light/40 group-hover:text-primary transition" />
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-green-500/10 to-transparent rounded-bl-3xl" />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 transition">
+                        <Package className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="h-7 w-7 rounded-lg bg-background-light dark:bg-background-dark flex items-center justify-center group-hover:bg-primary group-hover:text-white transition">
+                        <Plus className="w-4 h-4" />
+                      </div>
                     </div>
-                    <h3 className="font-medium text-text-light dark:text-text-dark mb-1 truncate">{product.name}</h3>
-                    <p className="text-lg font-bold text-primary">RWF {product.price.toLocaleString()}</p>
-                    <Badge variant={product.stockQuantity > 10 ? 'success' : 'warning'} size="sm" className="mt-1">
+                    <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1 truncate">{product.name}</h3>
+                    <p className="text-lg font-black text-primary">RWF {(product.price || 0).toLocaleString()}</p>
+                    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                      product.stockQuantity > 10 
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                        : 'bg-warning/10 text-warning'
+                    }`}>
                       {product.stockQuantity} in stock
-                    </Badge>
+                    </span>
                   </button>
                 ))
               )}
@@ -310,26 +334,31 @@ function QuickSaleContent() {
             {((activeTab === 'services' && filteredServices.length === 0) ||
               (activeTab === 'products' && filteredProducts.length === 0)) && (
               <div className="text-center py-12">
-                <p className="text-text-light/60 dark:text-text-dark/60">
-                  No {activeTab} found
-                </p>
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-sm font-semibold text-text-light dark:text-text-dark">No {activeTab} found</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Try adjusting your search</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Right: Cart */}
-        <div className="w-96 bg-surface-light dark:bg-surface-dark border-l border-border-light dark:border-border-dark flex flex-col">
-          <div className="p-6 border-b border-border-light dark:border-border-dark">
-            <div className="flex items-center gap-2 mb-4">
-              <ShoppingCart className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Cart ({cart.length})</h2>
+        <div className="w-80 lg:w-96 bg-surface-light dark:bg-surface-dark border-l border-border-light dark:border-border-dark flex flex-col">
+          <div className="p-4 border-b border-border-light dark:border-border-dark">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ShoppingCart className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="text-sm font-black text-text-light dark:text-text-dark uppercase tracking-wider">Cart</h2>
+              <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-white">{cart.length}</span>
             </div>
 
             {!selectedCustomer && (
               <button
                 onClick={() => setShowCustomerSearch(true)}
-                className="w-full flex items-center gap-2 px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition"
+                className="w-full flex items-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark border border-dashed border-border-light dark:border-border-dark hover:border-primary text-text-light/60 dark:text-text-dark/60 hover:text-primary rounded-xl transition text-sm"
               >
                 <User className="w-4 h-4" />
                 Add Customer (Optional)
@@ -338,56 +367,63 @@ function QuickSaleContent() {
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4">
             {cart.length === 0 ? (
               <div className="text-center py-12">
-                <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-                <p className="text-text-light/60 dark:text-text-dark/60">Cart is empty</p>
+                <div className="h-14 w-14 rounded-2xl bg-background-light dark:bg-background-dark flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart className="w-7 h-7 text-text-light/20 dark:text-text-dark/20" />
+                </div>
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60">Cart is empty</p>
+                <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 mt-1">Add items to get started</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {cart.map((item) => (
-                  <div key={`${item.id}-${item.type}`} className="bg-background-light dark:bg-background-dark rounded-xl p-4">
+                  <div key={`${item.id}-${item.type}`} className="bg-background-light dark:bg-background-dark rounded-xl p-3">
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          item.type === 'service' ? 'bg-primary/10' : 'bg-green-500/10'
+                        }`}>
                           {item.type === 'service' ? (
-                            <Scissors className="w-4 h-4 text-primary" />
+                            <Scissors className="w-3.5 h-3.5 text-primary" />
                           ) : (
-                            <Package className="w-4 h-4 text-primary" />
+                            <Package className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                           )}
-                          <p className="font-medium text-text-light dark:text-text-dark text-sm">{item.name}</p>
                         </div>
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                          RWF {item.price.toLocaleString()} each
-                        </p>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-text-light dark:text-text-dark truncate">{item.name}</p>
+                          <p className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                            RWF {(item.price || 0).toLocaleString()} each
+                          </p>
+                        </div>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id, item.type)}
-                        className="text-danger hover:text-danger/80 transition"
+                        className="p-1 text-text-light/30 hover:text-danger hover:bg-danger/10 rounded-lg transition"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => updateQuantity(item.id, item.type, -1)}
-                          className="w-8 h-8 flex items-center justify-center bg-surface-light dark:bg-surface-dark rounded-lg hover:bg-primary/10 transition"
+                          className="w-7 h-7 flex items-center justify-center bg-surface-light dark:bg-surface-dark rounded-lg hover:bg-primary/10 transition"
                         >
-                          <Minus className="w-4 h-4" />
+                          <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        <span className="w-7 text-center text-sm font-semibold">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.type, 1)}
-                          className="w-8 h-8 flex items-center justify-center bg-surface-light dark:bg-surface-dark rounded-lg hover:bg-primary/10 transition"
+                          className="w-7 h-7 flex items-center justify-center bg-surface-light dark:bg-surface-dark rounded-lg hover:bg-primary/10 transition"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-3 h-3" />
                         </button>
                       </div>
-                      <p className="font-bold text-primary">
-                        RWF {(item.price * item.quantity).toLocaleString()}
+                      <p className="text-sm font-black text-primary">
+                        RWF {((item.price || 0) * item.quantity).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -398,70 +434,55 @@ function QuickSaleContent() {
 
           {/* Checkout */}
           {cart.length > 0 && (
-            <div className="p-6 border-t border-border-light dark:border-border-dark space-y-4">
+            <div className="p-4 border-t border-border-light dark:border-border-dark space-y-3">
               {/* Payment Method */}
               <div>
-                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-2">Payment Method</p>
+                <p className="text-[10px] font-black text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider mb-2">Payment Method</p>
                 <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition ${
-                      paymentMethod === 'cash'
-                        ? 'bg-primary text-white'
-                        : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-primary/10'
-                    }`}
-                  >
-                    <Banknote className="w-5 h-5" />
-                    <span className="text-xs">Cash</span>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('card')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition ${
-                      paymentMethod === 'card'
-                        ? 'bg-primary text-white'
-                        : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-primary/10'
-                    }`}
-                  >
-                    <CreditCard className="w-5 h-5" />
-                    <span className="text-xs">Card</span>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('mobile')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl transition ${
-                      paymentMethod === 'mobile'
-                        ? 'bg-primary text-white'
-                        : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-primary/10'
-                    }`}
-                  >
-                    <Smartphone className="w-5 h-5" />
-                    <span className="text-xs">Mobile</span>
-                  </button>
+                  {[
+                    { id: 'cash', icon: Banknote, label: 'Cash' },
+                    { id: 'card', icon: CreditCard, label: 'Card' },
+                    { id: 'mobile', icon: Smartphone, label: 'Mobile' },
+                  ].map(({ id, icon: Icon, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => setPaymentMethod(id as 'cash' | 'card' | 'mobile')}
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-xl text-xs font-semibold transition ${
+                        paymentMethod === id
+                          ? 'bg-primary text-white'
+                          : 'bg-background-light dark:bg-background-dark text-text-light/60 dark:text-text-dark/60 hover:bg-primary/10'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Summary */}
-              <div className="space-y-2 text-sm">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-text-light/60 dark:text-text-dark/60">Subtotal</span>
-                  <span className="font-medium">RWF {subtotal.toLocaleString()}</span>
+                  <span className="font-semibold">RWF {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-text-light/60 dark:text-text-dark/60">Tax (18%)</span>
-                  <span className="font-medium">RWF {tax.toLocaleString()}</span>
+                  <span className="font-semibold">RWF {Math.round(tax).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold pt-2 border-t border-border-light dark:border-border-dark">
+                <div className="flex justify-between text-base font-black pt-2 border-t border-border-light dark:border-border-dark">
                   <span>Total</span>
-                  <span className="text-primary">RWF {total.toLocaleString()}</span>
+                  <span className="text-primary">RWF {Math.round(total).toLocaleString()}</span>
                 </div>
               </div>
 
               <Button
                 onClick={handleCheckout}
                 variant="primary"
-                className="w-full flex items-center justify-center gap-2 py-4 text-lg"
+                className="w-full h-12 text-sm font-semibold"
                 disabled={createSaleMutation.isPending}
               >
-                <Check className="w-5 h-5" />
+                <Receipt className="w-4 h-4 mr-2" />
                 {createSaleMutation.isPending ? 'Processing...' : 'Complete Sale'}
               </Button>
             </div>
@@ -472,24 +493,29 @@ function QuickSaleContent() {
       {/* Customer Search Modal */}
       {showCustomerSearch && (
         <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={() => setShowCustomerSearch(false)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" onClick={() => setShowCustomerSearch(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-border-light dark:border-border-dark">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-text-light dark:text-text-dark">Select Customer</h3>
-                  <button onClick={() => setShowCustomerSearch(false)} className="text-text-light/60 hover:text-text-light">
-                    <X className="w-5 h-5" />
+            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 slide-in-from-bottom-4">
+              <div className="p-4 border-b border-border-light dark:border-border-dark">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary" />
+                    </div>
+                    <h3 className="text-sm font-black text-text-light dark:text-text-dark">Select Customer</h3>
+                  </div>
+                  <button onClick={() => setShowCustomerSearch(false)} className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition">
+                    <X className="w-4 h-4 text-text-light/60" />
                   </button>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
                   <input
                     type="text"
                     placeholder="Search by name or phone..."
                     value={customerSearchQuery}
                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                     autoFocus
                   />
                 </div>
@@ -505,20 +531,26 @@ function QuickSaleContent() {
                           setShowCustomerSearch(false);
                           setCustomerSearchQuery('');
                         }}
-                        className="w-full flex items-center gap-3 p-3 bg-background-light dark:bg-background-dark rounded-xl hover:bg-primary/10 transition text-left"
+                        className="w-full flex items-center gap-3 p-3 bg-background-light dark:bg-background-dark rounded-xl hover:bg-primary/10 hover:border-primary border border-transparent transition text-left"
                       >
-                        <User className="w-10 h-10 p-2 bg-primary/10 text-primary rounded-full" />
-                        <div className="flex-1">
-                          <p className="font-medium text-text-light dark:text-text-dark">{customer.fullName}</p>
-                          <p className="text-sm text-text-light/60 dark:text-text-dark/60">{customer.phone}</p>
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">{customer.fullName}</p>
+                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">{customer.phone}</p>
                         </div>
                       </button>
                     ))}
                   </div>
                 ) : customerSearchQuery.length > 1 ? (
-                  <p className="text-center py-8 text-text-light/60 dark:text-text-dark/60">No customers found</p>
+                  <div className="text-center py-8">
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">No customers found</p>
+                  </div>
                 ) : (
-                  <p className="text-center py-8 text-text-light/60 dark:text-text-dark/60">Start typing to search...</p>
+                  <div className="text-center py-8">
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">Start typing to search...</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -528,9 +560,9 @@ function QuickSaleContent() {
 
       {/* Success Toast */}
       {createSaleMutation.isSuccess && (
-        <div className="fixed bottom-6 right-6 bg-success text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-6 right-6 bg-success text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
           <Check className="w-5 h-5" />
-          <p className="font-medium">Sale completed successfully!</p>
+          <p className="text-sm font-semibold">Sale completed successfully!</p>
         </div>
       )}
     </div>

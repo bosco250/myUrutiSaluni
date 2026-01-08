@@ -2,9 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
-import { useAuthStore } from '@/store/auth-store';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
@@ -15,11 +14,8 @@ import {
   Users,
   CheckCircle,
   Clock,
-  Download,
   Eye,
   Loader2,
-  AlertCircle,
-  TrendingUp,
   FileText,
   CreditCard,
   X,
@@ -75,16 +71,16 @@ interface Salon {
 
 export default function PayrollPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER]}>
+    <ProtectedRoute
+      requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER]}
+    >
       <PayrollContent />
     </ProtectedRoute>
   );
 }
 
 function PayrollContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
   const [periodStart, setPeriodStart] = useState<string>('');
@@ -104,7 +100,7 @@ function PayrollContent() {
   }, [searchParams]);
 
   // Fetch user's salons
-  const { data: salons = [], isLoading: isLoadingSalons } = useQuery<Salon[]>({
+  const { data: salons = [] } = useQuery<Salon[]>({
     queryKey: ['salons'],
     queryFn: async () => {
       const response = await api.get('/salons');
@@ -158,9 +154,14 @@ function PayrollContent() {
       setShowPaymentModal(false);
       setSelectedPayroll(null);
     },
-    onError: (error: any) => {
-      console.error('Failed to mark payroll as paid:', error);
-      alert(error?.response?.data?.message || 'Failed to mark payroll as paid. Please try again.');
+    onError: (error: unknown) => {
+      const maybeAxios = error as { response?: { data?: { message?: string } }; message?: string };
+      // Keep behavior: show the best available message and fallback.
+      alert(
+        maybeAxios?.response?.data?.message ||
+          maybeAxios?.message ||
+          'Failed to mark payroll as paid. Please try again.'
+      );
     },
   });
 
@@ -229,94 +230,134 @@ function PayrollContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
-              Payroll Management
-            </h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">
-              Calculate and manage employee payroll with salary and commissions
-            </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Header / Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+        <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
+              <Calculator className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
+                Payroll
+              </h1>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                Calculate and manage payroll including salary and commissions.
+              </p>
+            </div>
           </div>
-          <Button
-            onClick={() => setShowCalculateModal(true)}
-            icon="add"
-            className="flex items-center gap-2"
-          >
-            <Calculator className="w-5 h-5" />
-            Calculate Payroll
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setShowCalculateModal(true)} size="sm" className="gap-2">
+              <Calculator className="w-4 h-4" />
+              Calculate Payroll
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Total Payroll
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+                {formatCurrency(stats.totalGross)}
+              </p>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                {stats.totalRuns} run{stats.totalRuns !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Payroll</span>
-              <DollarSign className="w-5 h-5 text-primary" />
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Paid
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+                {formatCurrency(stats.totalPaid)}
+              </p>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                {stats.paidCount} paid
+              </p>
             </div>
-            <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {formatCurrency(stats.totalGross)}
-            </p>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              {stats.totalRuns} payroll run{stats.totalRuns !== 1 ? 's' : ''}
-            </p>
+            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
+              <CheckCircle className="w-4 h-4" />
+            </div>
           </div>
+        </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-text-light/60 dark:text-text-dark/60">Paid</span>
-              <CheckCircle className="w-5 h-5 text-green-500" />
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/10 via-transparent to-warning/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Pending
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+                {formatCurrency(stats.totalPending)}
+              </p>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                {stats.pendingCount} pending
+              </p>
             </div>
-            <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {formatCurrency(stats.totalPaid)}
-            </p>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              {stats.paidCount} paid
-            </p>
+            <div className="h-9 w-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
+        </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-text-light/60 dark:text-text-dark/60">Pending</span>
-              <Clock className="w-5 h-5 text-yellow-500" />
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Employees
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+                {payrollHistory.length > 0
+                  ? new Set(
+                      payrollHistory.flatMap((run) => run.items.map((item) => item.salonEmployeeId))
+                    ).size
+                  : 0}
+              </p>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                Active employees
+              </p>
             </div>
-            <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {formatCurrency(stats.totalPending)}
-            </p>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              {stats.pendingCount} pending
-            </p>
-          </div>
-
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-text-light/60 dark:text-text-dark/60">Employees</span>
-              <Users className="w-5 h-5 text-primary" />
+            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Users className="w-4 h-4" />
             </div>
-            <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {payrollHistory.length > 0
-                ? new Set(payrollHistory.flatMap((run) => run.items.map((item) => item.salonEmployeeId))).size
-                : 0}
-            </p>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Active employees</p>
           </div>
         </div>
       </div>
 
       {/* Salon Filter */}
       {salons.length > 1 && (
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+        <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <label
+            htmlFor="payroll-salon-filter"
+            className="block text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2"
+          >
             Select Salon
           </label>
           <select
+            id="payroll-salon-filter"
             value={selectedSalonId}
             onChange={(e) => setSelectedSalonId(e.target.value)}
-            className="w-full md:w-64 px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full md:w-80 px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <option value="">Select a salon...</option>
             {salons.map((salon) => (
@@ -337,18 +378,21 @@ function PayrollContent() {
           </div>
         </div>
       ) : payrollHistory.length === 0 ? (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-12 text-center">
-          <FileText className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
-            No Payroll Records
-          </h3>
-          <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
+        <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-10 text-center">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-black text-text-light dark:text-text-dark">No payroll yet</h3>
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2 mb-5">
             {selectedSalonId
               ? 'Calculate your first payroll run to get started'
               : 'Select a salon to view payroll history'}
           </p>
           {selectedSalonId && (
-            <Button onClick={() => setShowCalculateModal(true)}>Calculate Payroll</Button>
+            <Button onClick={() => setShowCalculateModal(true)} size="sm" className="gap-2">
+              <Calculator className="w-4 h-4" />
+              Calculate Payroll
+            </Button>
           )}
         </div>
       ) : (
@@ -368,10 +412,14 @@ function PayrollContent() {
           {payrollHistory.length > 0 && (
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-text-light/60 dark:text-text-dark/60">
+                <label
+                  htmlFor="payroll-items-per-page"
+                  className="text-sm text-text-light/60 dark:text-text-dark/60"
+                >
                   Items per page:
                 </label>
                 <select
+                  id="payroll-items-per-page"
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
@@ -534,15 +582,17 @@ function PayrollCard({
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              <span>{payroll.items.length} employee{payroll.items.length !== 1 ? 's' : ''}</span>
+              <span>
+                {payroll.items.length} employee{payroll.items.length !== 1 ? 's' : ''}
+              </span>
             </div>
           </div>
         </div>
         <div className="text-right">
-            <p className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
-              {formatCurrency(Number(payroll.totalAmount))}
-            </p>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60">Total Payroll</p>
+          <p className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+            {formatCurrency(Number(payroll.totalAmount))}
+          </p>
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60">Total Payroll</p>
         </div>
       </div>
 
@@ -590,112 +640,135 @@ function CalculatePayrollModal({
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
       />
-      <div
-        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl shadow-2xl max-w-2xl w-full p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Calculator className="w-6 h-6 text-primary" />
+      <div className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative p-5 text-white flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+                <Calculator className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-black tracking-tight">Calculate Payroll</h2>
+                <p className="text-xs text-white/80 mt-1">
+                  Compute a payroll run for a date range.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-                Calculate Payroll
-              </h2>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                Calculate payroll for a specific period
-              </p>
-            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </Button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
-          </button>
         </div>
 
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-              Salon <span className="text-danger">*</span>
-            </label>
-            <select
-              value={selectedSalonId}
-              onChange={(e) => onSalonChange(e.target.value)}
-              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              required
-            >
-              <option value="">Select a salon...</option>
-              {salons.map((salon) => (
-                <option key={salon.id} value={salon.id}>
-                  {salon.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-5" role="presentation">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <p className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Period</p>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                Period Start <span className="text-danger">*</span>
-              </label>
-              <input
-                type="date"
-                value={periodStart}
-                onChange={(e) => onPeriodStartChange(e.target.value)}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                Period End <span className="text-danger">*</span>
-              </label>
-              <input
-                type="date"
-                value={periodEnd}
-                onChange={(e) => onPeriodEndChange(e.target.value)}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-                required
-              />
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="payroll-calc-salon"
+                  className="block text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2"
+                >
+                  Salon <span className="text-danger">*</span>
+                </label>
+                <select
+                  id="payroll-calc-salon"
+                  value={selectedSalonId}
+                  onChange={(e) => onSalonChange(e.target.value)}
+                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  required
+                >
+                  <option value="">Select a salon...</option>
+                  {salons.map((salon) => (
+                    <option key={salon.id} value={salon.id}>
+                      {salon.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="payroll-calc-start"
+                    className="block text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    Period Start <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    id="payroll-calc-start"
+                    type="date"
+                    value={periodStart}
+                    onChange={(e) => onPeriodStartChange(e.target.value)}
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="payroll-calc-end"
+                    className="block text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2"
+                  >
+                    Period End <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    id="payroll-calc-end"
+                    type="date"
+                    value={periodEnd}
+                    onChange={(e) => onPeriodEndChange(e.target.value)}
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+            <p className="text-xs text-text-light/70 dark:text-text-dark/70">
               This will calculate payroll for all active employees in the selected salon, including:
             </p>
-            <ul className="mt-2 space-y-1 text-sm text-text-light/60 dark:text-text-dark/60 list-disc list-inside">
+            <ul className="mt-2 space-y-1 text-xs text-text-light/60 dark:text-text-dark/60 list-disc list-inside">
               <li>Base salary (if configured)</li>
               <li>Unpaid commissions for the period</li>
               <li>Overtime (if applicable)</li>
             </ul>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3 pt-4 border-t border-border-light dark:border-border-dark">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+        <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button
-              variant="primary"
+              type="button"
               onClick={onCalculate}
               disabled={!selectedSalonId || !periodStart || !periodEnd || isLoading}
+              loading={isLoading}
+              loadingText="Calculating..."
               className="flex-1"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Calculating...
-                </>
-              ) : (
-                <>
-                  <Calculator className="w-4 h-4" />
-                  Calculate Payroll
-                </>
-              )}
+              <Calculator className="w-4 h-4" />
+              Calculate
             </Button>
           </div>
         </div>
@@ -715,36 +788,48 @@ function PayrollDetailsModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6 border-b border-border-light dark:border-border-dark">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-                Payroll Details
-              </h2>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
+      <div className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col">
+        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative p-5 text-white flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-black tracking-tight">Payroll Details</h2>
+              <p className="text-xs text-white/80 mt-1">
                 {new Date(payroll.periodStart).toLocaleDateString()} -{' '}
                 {new Date(payroll.periodEnd).toLocaleDateString()}
               </p>
             </div>
-            <button
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition-colors"
+              className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+              aria-label="Close"
             >
-              <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
-            </button>
+              <X className="w-5 h-5" />
+            </Button>
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-5" role="presentation">
           <div className="mb-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Total Amount</p>
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                  Total Amount
+                </p>
                 <p className="text-2xl font-bold text-text-light dark:text-text-dark">
                   {formatCurrency(Number(payroll.totalAmount))}
                 </p>
@@ -777,7 +862,9 @@ function PayrollDetailsModal({
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="font-semibold text-text-light dark:text-text-dark">
-                        {item.salonEmployee?.user?.fullName || item.salonEmployee?.roleTitle || 'Employee'}
+                        {item.salonEmployee?.user?.fullName ||
+                          item.salonEmployee?.roleTitle ||
+                          'Employee'}
                       </p>
                       <p className="text-sm text-text-light/60 dark:text-text-dark/60">
                         {item.salonEmployee?.roleTitle}
@@ -822,14 +909,18 @@ function PayrollDetailsModal({
           </div>
 
           {payroll.status === 'processed' && (
-            <div className="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
-              <Button variant="primary" onClick={onMarkAsPaid} className="w-full">
-                <CreditCard className="w-5 h-5" />
-                Mark as Paid
-              </Button>
-            </div>
+            <div className="mt-6 pt-6 border-t border-border-light dark:border-border-dark" />
           )}
         </div>
+
+        {payroll.status === 'processed' && (
+          <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+            <Button variant="primary" onClick={onMarkAsPaid} className="w-full gap-2">
+              <CreditCard className="w-4 h-4" />
+              Mark as Paid
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -856,86 +947,117 @@ function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl shadow-2xl max-w-md w-full p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <CreditCard className="w-6 h-6 text-primary" />
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
+      <div className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] overflow-hidden flex flex-col">
+        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative p-5 text-white flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+                <CreditCard className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-black tracking-tight">Mark as Paid</h2>
+                <p className="text-xs text-white/80 mt-1">
+                  Record payment details for this payroll run.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-                Mark as Paid
-              </h2>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                Record payment for this payroll
-              </p>
-            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </Button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
-          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-              Payment Method <span className="text-danger">*</span>
-            </label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              required
-            >
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="mobile_money">Mobile Money</option>
-            </select>
-          </div>
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-5 space-y-5"
+          role="presentation"
+        >
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+            <p className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Payment</p>
 
-          <div>
-            <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-              Payment Reference / Transaction ID
-            </label>
-            <input
-              type="text"
-              value={paymentReference}
-              onChange={(e) => setPaymentReference(e.target.value)}
-              placeholder="Enter transaction ID or reference"
-              className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="payroll-payment-method"
+                  className="block text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2"
+                >
+                  Payment Method <span className="text-danger">*</span>
+                </label>
+                <select
+                  id="payroll-payment-method"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  required
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="mobile_money">Mobile Money</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="payroll-payment-reference"
+                  className="block text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2"
+                >
+                  Reference / Transaction ID
+                </label>
+                <input
+                  id="payroll-payment-reference"
+                  type="text"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="Enter transaction ID or reference"
+                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-2">Total Amount:</p>
-            <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              Total Amount
+            </p>
+            <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
               {formatCurrency(Number(payroll.totalAmount))}
             </p>
           </div>
 
-          <div className="flex items-center gap-3 pt-4 border-t border-border-light dark:border-border-dark">
-            <Button variant="outline" onClick={onClose} className="flex-1" type="button">
+          <div className="h-px bg-border-light dark:bg-border-dark" />
+
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose} className="flex-1" type="button">
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Mark as Paid
-                </>
-              )}
+            <Button
+              variant="primary"
+              type="submit"
+              loading={isLoading}
+              loadingText="Processing..."
+              className="flex-1"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Mark as Paid
             </Button>
           </div>
         </form>
@@ -943,4 +1065,3 @@ function PaymentModal({
     </div>
   );
 }
-

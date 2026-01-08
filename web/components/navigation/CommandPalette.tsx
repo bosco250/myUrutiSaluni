@@ -393,7 +393,7 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 fade-in"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 fade-in"
         onClick={() => {
           if (onClose) {
             onClose();
@@ -406,12 +406,12 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
       {/* Command Palette */}
       <div
         ref={containerRef}
-        className="fixed inset-x-0 top-[20%] mx-auto max-w-2xl z-50 animate-in fade-in slide-in-from-top-4 duration-200"
+        className="fixed inset-x-0 top-[15%] mx-auto max-w-xl z-50 animate-in fade-in slide-in-from-top-4 duration-200 px-4"
       >
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5">
           {/* Search Input */}
-          <div className="flex items-center gap-3 px-4 py-4 border-b border-border-light dark:border-border-dark">
-            <Search className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+          <div className="flex items-center gap-3 px-3 py-3 border-b border-border-light dark:border-border-dark">
+            <Search className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <input
               ref={inputRef}
               type="text"
@@ -420,36 +420,24 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
                 setSearch(e.target.value);
                 setSelectedIndex(0);
               }}
-              placeholder="Search commands, pages, or actions..."
-              className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 outline-none text-base"
+              placeholder="Type a command or search..."
+              className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 outline-none text-sm h-6"
             />
-            <kbd className="px-2 py-1 text-xs font-semibold text-text-light/60 dark:text-text-dark/60 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
-              ESC
+            <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-1.5 font-mono text-[10px] font-medium text-text-light/40 dark:text-text-dark/40">
+              <span className="text-xs">⎋</span> ESC
             </kbd>
-            <button
-              onClick={() => {
-                if (onClose) {
-                  onClose();
-                } else {
-                  setIsOpen(false);
-                }
-              }}
-              className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded transition"
-            >
-              <X className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
-            </button>
           </div>
 
           {/* Results */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-border-light dark:scrollbar-thumb-border-dark scrollbar-track-transparent">
             {filteredCommands.length === 0 ? (
-              <div className="px-4 py-12 text-center text-text-light/60 dark:text-text-dark/60">
+              <div className="px-4 py-8 text-center text-text-light/40 dark:text-text-dark/40 text-sm">
                 <p>No results found</p>
               </div>
             ) : (
               Object.entries(groupedCommands).map(([category, items]) => (
-                <div key={category} className="py-2">
-                  <div className="px-4 py-2 text-xs font-semibold text-text-light/40 dark:text-text-dark/40 uppercase tracking-wider">
+                <div key={category} className="py-1">
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-text-light/40 dark:text-text-dark/40 uppercase tracking-wider">
                     {category}
                   </div>
                   {items.map((cmd, idx) => {
@@ -462,21 +450,21 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
                       <button
                         key={cmd.id}
                         onClick={() => handleSelect(cmd)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${
+                        className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors mx-1 rounded-lg max-w-[calc(100%-8px)] ${
                           isSelected
-                            ? 'bg-primary/20 text-primary'
+                            ? 'bg-primary/10 text-primary'
                             : isActive
                               ? 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark'
-                              : 'text-text-light/80 dark:text-text-dark/80 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light dark:hover:text-text-dark'
+                              : 'text-text-light/70 dark:text-text-dark/70 hover:bg-background-light dark:hover:bg-background-dark'
                         }`}
                       >
                         <Icon
-                          className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
+                          className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`}
                         />
-                        <span className="flex-1 font-medium">{cmd.name}</span>
+                        <span className="flex-1 text-sm font-medium truncate">{cmd.name}</span>
                         {isActive && (
-                          <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded">
-                            Current
+                          <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
+                            Active
                           </span>
                         )}
                       </button>
@@ -488,32 +476,29 @@ export default function CommandPalette({ isOpen: controlledOpen, onClose }: Comm
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 flex items-center justify-between text-xs text-text-light/40 dark:text-text-dark/40">
-            <div className="flex items-center gap-4">
+          <div className="hidden sm:flex px-3 py-2 border-t border-border-light dark:border-border-dark bg-background-light/30 dark:bg-background-dark/30 items-center justify-between text-[10px] text-text-light/40 dark:text-text-dark/40">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                <kbd className="flex h-4 w-4 items-center justify-center rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark font-sans">
                   ↑
                 </kbd>
-                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                <kbd className="flex h-4 w-4 items-center justify-center rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark font-sans">
                   ↓
                 </kbd>
                 <span>Navigate</span>
               </div>
               <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
+                <kbd className="flex h-4 items-center justify-center rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-1.5 font-sans">
                   ↵
                 </kbd>
                 <span>Select</span>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
-                ⌘
+              <span>Open with</span>
+              <kbd className="flex h-4 items-center justify-center rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-1.5 font-sans">
+                ⌘ K
               </kbd>
-              <kbd className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark rounded border border-border-light dark:border-border-dark">
-                K
-              </kbd>
-              <span>to open</span>
             </div>
           </div>
         </div>

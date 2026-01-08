@@ -7,7 +7,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://161.97.148.53:4000/api
 
 // Log API URL in development (only in browser)
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  console.log('🔗 API Base URL:', apiUrl);
+  logger.debug('API Base URL', { apiUrl });
 }
 
 const api = axios.create({
@@ -45,6 +45,18 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // Do NOT redirect on invalid login/register credentials (these legitimately return 401/403).
+      // Redirecting here causes a full page reload and wipes the inline error UX on the auth pages.
+      const url = String(error.config?.url || '');
+      const isAuthAttempt =
+        url.includes('/auth/login') ||
+        url.includes('/auth/register') ||
+        url.includes('/auth/signin') ||
+        url.includes('/auth/signup');
+      if (isAuthAttempt) {
+        return Promise.reject(error);
+      }
+
       // Session expired - clear ALL localStorage data for security
       clearAllSessionData();
 

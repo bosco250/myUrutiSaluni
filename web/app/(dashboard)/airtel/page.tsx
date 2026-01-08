@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Plus, Phone, TrendingUp, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
+import Button from '@/components/ui/Button';
 
 interface AirtelAgent {
   id: string;
@@ -17,15 +17,6 @@ interface AirtelAgent {
   };
 }
 
-interface AirtelTransaction {
-  id: string;
-  transactionType: string;
-  amount: number;
-  status: string;
-  commissionAmount: number;
-  createdAt: string;
-}
-
 export default function AirtelPage() {
   const { data: agents, isLoading: agentsLoading } = useQuery<AirtelAgent[]>({
     queryKey: ['airtel-agents'],
@@ -36,125 +27,175 @@ export default function AirtelPage() {
   });
 
   if (agentsLoading) {
-    return <div className="text-center py-12">Loading Airtel agents...</div>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-10 text-center">
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading Airtel agents...</p>
+        </div>
+      </div>
+    );
   }
 
   const totalCommissions = agents?.reduce((sum, agent) => sum + agent.totalCommissions, 0) || 0;
   const totalFloat = agents?.reduce((sum, agent) => sum + agent.floatBalance, 0) || 0;
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Airtel Integration</h1>
-          <p className="text-gray-600 mt-2">Manage Airtel agents and transactions</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Header / Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+        <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
+              <Phone className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
+                Airtel
+              </h1>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                Manage Airtel agents and their float/commissions.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Register Agent
+            </Button>
+          </div>
         </div>
-        <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-          <Plus className="w-5 h-5" />
-          <span>Register Agent</span>
-        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
+          <div className="relative flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Agents</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{agents?.length || 0}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Agents
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+                {agents?.length || 0}
+              </p>
             </div>
-            <Phone className="w-8 h-8 text-blue-500" />
+            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Phone className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
+          <div className="relative flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Commissions</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Commissions
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
                 RWF {totalCommissions.toLocaleString()}
               </p>
             </div>
-            <TrendingUp className="w-8 h-8 text-green-500" />
+            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+          <div className="relative flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Float</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Float
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
                 RWF {totalFloat.toLocaleString()}
               </p>
             </div>
-            <DollarSign className="w-8 h-8 text-purple-500" />
+            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <DollarSign className="w-4 h-4" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Registered Agents</h2>
+      {/* Table */}
+      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
+        <div className="p-4 border-b border-border-light dark:border-border-dark">
+          <h2 className="text-sm font-black tracking-tight text-text-light dark:text-text-dark">
+            Registered Agents
+          </h2>
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+            View agent status, float balance, and commissions.
+          </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full">
+            <thead className="bg-background-light/60 dark:bg-background-dark/40">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Agent Name
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                  Agent
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Phone
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Float Balance
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                  Float
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Commissions
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {agents?.map((agent) => (
-                <tr key={agent.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr
+                  key={agent.id}
+                  className="hover:bg-background-light/50 dark:hover:bg-background-dark/30 transition-colors"
+                >
+                  <td className="px-4 py-3 text-sm font-semibold text-text-light dark:text-text-dark">
                     {agent.user?.fullName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-text-light dark:text-text-dark">
                     {agent.phoneNumber}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary capitalize">
                       {agent.agentType.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-text-light dark:text-text-dark">
                     RWF {agent.floatBalance.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-text-light dark:text-text-dark">
                     RWF {agent.totalCommissions.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
                         agent.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-success/10 text-success'
+                          : 'bg-warning/10 text-warning'
                       }`}
                     >
                       {agent.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900">View</button>
+                  <td className="px-4 py-3 text-right">
+                    <Button type="button" variant="secondary" size="sm">
+                      View
+                    </Button>
                   </td>
                 </tr>
               ))}

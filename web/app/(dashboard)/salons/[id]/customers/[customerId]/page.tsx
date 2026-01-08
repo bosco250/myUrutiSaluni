@@ -39,7 +39,7 @@ interface SalonCustomer {
   totalSpent: number;
   tags: string[];
   notes: string | null;
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   birthday: string | null;
   anniversaryDate: string | null;
   followUpDate: string | null;
@@ -58,7 +58,7 @@ interface TimelineItem {
   date: string;
   title: string;
   description: string;
-  data: any;
+  data: unknown;
 }
 
 export default function SalonCustomerDetailPage() {
@@ -89,21 +89,6 @@ function SalonCustomerDetailContent() {
   const reservedWords = ['analytics', 'export', 'sync', 'recalculate'];
   const isReservedWord = reservedWords.includes(customerId?.toLowerCase() || '');
 
-  if (!isValidUUID || isReservedWord) {
-    return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="text-center py-12">
-          <User className="w-16 h-16 mx-auto mb-4 text-text-light/40 dark:text-text-dark/40" />
-          <p className="text-text-light/60 dark:text-text-dark/60 mb-4">Invalid customer ID</p>
-          <Button onClick={() => router.push(`/salons/${salonId}/customers`)} variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Customers
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // Fetch salon customer data - use direct endpoint
   const { data: salonCustomer, isLoading: isLoadingCustomer } = useQuery<SalonCustomer>({
     queryKey: ['salon-customer', salonId, customerId],
@@ -111,7 +96,7 @@ function SalonCustomerDetailContent() {
       const response = await api.get(`/salons/${salonId}/customers/${customerId}`);
       return response.data;
     },
-    enabled: !!salonId && !!customerId && isValidUUID,
+    enabled: !!salonId && !!customerId && isValidUUID && !isReservedWord,
     retry: 2,
   });
 
@@ -122,7 +107,7 @@ function SalonCustomerDetailContent() {
       const response = await api.get(`/salons/${salonId}/customers/${customerId}/timeline`);
       return response.data || [];
     },
-    enabled: !!salonId && !!customerId && isValidUUID,
+    enabled: !!salonId && !!customerId && isValidUUID && !isReservedWord,
   });
 
   // Fetch communications
@@ -132,7 +117,7 @@ function SalonCustomerDetailContent() {
       const response = await api.get(`/salons/${salonId}/customers/${customerId}/communications`);
       return response.data || [];
     },
-    enabled: !!salonId && !!customerId && isValidUUID,
+    enabled: !!salonId && !!customerId && isValidUUID && !isReservedWord,
   });
 
   // Update salon customer
@@ -220,7 +205,7 @@ function SalonCustomerDetailContent() {
       queryClient.invalidateQueries({ queryKey: ['points-history', salonCustomer?.customer?.id] });
       queryClient.invalidateQueries({ queryKey: ['points-balance', salonCustomer?.customer?.id] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Failed to add points:', error);
       // Error will be handled by the modal's try-catch
       throw error; // Re-throw to let modal handle it
@@ -244,7 +229,7 @@ function SalonCustomerDetailContent() {
       queryClient.invalidateQueries({ queryKey: ['points-history', salonCustomer?.customer?.id] });
       queryClient.invalidateQueries({ queryKey: ['points-balance', salonCustomer?.customer?.id] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Failed to deduct points:', error);
       // Error will be handled by the modal's try-catch
       throw error; // Re-throw to let modal handle it
@@ -268,16 +253,31 @@ function SalonCustomerDetailContent() {
       queryClient.invalidateQueries({ queryKey: ['points-history', salonCustomer?.customer?.id] });
       queryClient.invalidateQueries({ queryKey: ['points-balance', salonCustomer?.customer?.id] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error('Failed to adjust points:', error);
       // Error will be handled by the modal's try-catch
       throw error; // Re-throw to let modal handle it
     },
   });
 
+  if (!isValidUUID || isReservedWord) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div className="text-center py-12">
+          <User className="w-16 h-16 mx-auto mb-4 text-text-light/40 dark:text-text-dark/40" />
+          <p className="text-text-light/60 dark:text-text-dark/60 mb-4">Invalid customer ID</p>
+          <Button onClick={() => router.push(`/salons/${salonId}/customers`)} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Customers
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoadingCustomer) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="text-center py-12">
           <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-text-light/60 dark:text-text-dark/60">Loading customer data...</p>
@@ -288,7 +288,7 @@ function SalonCustomerDetailContent() {
 
   if (!salonCustomer || !salonCustomer.customer) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="text-center py-12">
           <User className="w-16 h-16 mx-auto mb-4 text-text-light/40 dark:text-text-dark/40" />
           <p className="text-text-light/60 dark:text-text-dark/60">
@@ -308,59 +308,80 @@ function SalonCustomerDetailContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Back Button */}
-      <Button
-        onClick={() => router.push(`/salons/${salonId}/customers`)}
-        variant="outline"
-        className="mb-6 flex items-center gap-2"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Customers
-      </Button>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Top actions */}
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          onClick={() => router.push(`/salons/${salonId}/customers`)}
+          variant="secondary"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setShowPointsModal(true)}
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Coins className="w-4 h-4" />
+            Points
+          </Button>
+          <Button
+            onClick={() => setShowEditModal(true)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Edit className="w-4 h-4" />
+            Edit
+          </Button>
+        </div>
+      </div>
 
       {/* Header */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-semibold text-2xl">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-semibold text-xl shadow-sm">
               {salonCustomer.customer?.fullName
                 ? salonCustomer.customer.fullName.charAt(0).toUpperCase()
                 : '?'}
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold text-text-light dark:text-text-dark truncate">
                 {salonCustomer.customer?.fullName || 'Unknown Customer'}
               </h1>
-              <div className="flex items-center gap-4 mt-2">
+              <div className="flex flex-wrap items-center gap-3 mt-1.5">
                 {salonCustomer.customer?.phone && (
-                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60">
-                    <Phone className="w-4 h-4" />
-                    {salonCustomer.customer.phone}
+                  <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                    <div className="p-1 rounded bg-background-secondary dark:bg-background-dark text-text-light/40 border border-border-light/50">
+                      <Phone className="w-3 h-3" />
+                    </div>
+                    <span className="font-semibold">{salonCustomer.customer.phone}</span>
                   </div>
                 )}
                 {salonCustomer.customer?.email && (
-                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60">
-                    <Mail className="w-4 h-4" />
-                    {salonCustomer.customer.email}
+                  <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60 min-w-0">
+                    <div className="p-1 rounded bg-background-secondary dark:bg-background-dark text-text-light/40 border border-border-light/50">
+                      <Mail className="w-3 h-3" />
+                    </div>
+                    <span className="font-semibold truncate">{salonCustomer.customer.email}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowPointsModal(true)}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <Coins className="w-4 h-4" />
-              Adjust Points
-            </Button>
-            <Button onClick={() => setShowEditModal(true)} variant="outline">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
+            <div className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold uppercase tracking-wide">
+              Visits: {salonCustomer.visitCount || 0}
+            </div>
+            <div className="px-3 py-1 rounded-full bg-success/10 text-success border border-success/20 text-[10px] font-semibold uppercase tracking-wide">
+              RWF {Number(salonCustomer.totalSpent || 0).toLocaleString()}
+            </div>
           </div>
         </div>
 
@@ -369,100 +390,104 @@ function SalonCustomerDetailContent() {
           {(salonCustomer.tags || []).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20"
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20"
             >
               {tag}
               <button
                 onClick={() => removeTagMutation.mutate([tag])}
                 className="ml-2 hover:text-danger transition"
+                type="button"
+                aria-label={`Remove tag ${tag}`}
               >
                 <X className="w-3 h-3" />
               </button>
             </span>
           ))}
-          <button
+          <Button
             onClick={() => setShowTagModal(true)}
-            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 text-primary transition"
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
           >
-            <Plus className="w-3 h-3 mr-1" />
+            <Plus className="w-3 h-3" />
             Add Tag
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
                 Total Visits
               </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                 {salonCustomer.visitCount || 0}
               </p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-primary" />
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+              <TrendingUp className="w-4 h-4 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
                 Total Spent
               </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                 RWF {Number(salonCustomer.totalSpent || 0).toLocaleString()}
               </p>
             </div>
-            <div className="p-3 bg-success/10 rounded-lg">
-              <DollarSign className="w-6 h-6 text-success" />
+            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+              <DollarSign className="w-4 h-4 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
                 Last Visit
               </p>
-              <p className="text-lg font-bold text-text-light dark:text-text-dark mt-2">
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                 {salonCustomer.lastVisitDate
                   ? format(parseISO(salonCustomer.lastVisitDate), 'MMM d, yyyy')
                   : 'Never'}
               </p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <Calendar className="w-6 h-6 text-primary" />
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+              <Calendar className="w-4 h-4 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+        <div className="group relative bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 dark:border-orange-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
                 Loyalty Points
               </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                 {salonCustomer.customer?.loyaltyPoints || 0}
               </p>
             </div>
-            <div className="p-3 bg-warning/10 rounded-lg">
-              <Star className="w-6 h-6 text-warning" />
+            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+              <Star className="w-4 h-4 text-white" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl mb-6">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
         <div className="border-b border-border-light dark:border-border-dark">
-          <nav className="flex -mb-px">
+          <nav className="flex -mb-px overflow-x-auto">
             {[
               { id: 'overview', label: 'Overview', icon: User },
               { id: 'timeline', label: 'Activity Timeline', icon: Clock },
@@ -471,12 +496,13 @@ function SalonCustomerDetailContent() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium text-sm transition ${
+                onClick={() => setActiveTab(tab.id as 'overview' | 'timeline' | 'communications' | 'points')}
+                className={`flex items-center gap-2 px-5 py-3 border-b-2 font-semibold text-xs transition whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-primary text-primary'
                     : 'border-transparent text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:border-border-light dark:hover:border-border-dark'
                 }`}
+                type="button"
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -485,15 +511,15 @@ function SalonCustomerDetailContent() {
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-4">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {salonCustomer.notes && (
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
                     Notes
                   </h3>
-                  <p className="text-text-light/80 dark:text-text-dark/80 whitespace-pre-wrap">
+                  <p className="text-sm text-text-light/80 dark:text-text-dark/80 whitespace-pre-wrap">
                     {salonCustomer.notes}
                   </p>
                 </div>
@@ -501,11 +527,11 @@ function SalonCustomerDetailContent() {
 
               {salonCustomer.birthday && (
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2 flex items-center gap-2">
                     <Gift className="w-5 h-5" />
                     Birthday
                   </h3>
-                  <p className="text-text-light/80 dark:text-text-dark/80">
+                  <p className="text-sm text-text-light/80 dark:text-text-dark/80">
                     {format(parseISO(salonCustomer.birthday), 'MMMM d, yyyy')}
                   </p>
                 </div>
@@ -513,11 +539,11 @@ function SalonCustomerDetailContent() {
 
               {salonCustomer.followUpDate && (
                 <div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2 flex items-center gap-2">
                     <Bell className="w-5 h-5" />
                     Follow-up Date
                   </h3>
-                  <p className="text-text-light/80 dark:text-text-dark/80">
+                  <p className="text-sm text-text-light/80 dark:text-text-dark/80">
                     {format(parseISO(salonCustomer.followUpDate), 'MMMM d, yyyy')}
                   </p>
                 </div>
@@ -531,7 +557,7 @@ function SalonCustomerDetailContent() {
                 timeline.map((item) => (
                   <div
                     key={`${item.type}-${item.id}`}
-                    className="flex items-start gap-4 p-4 border border-border-light dark:border-border-dark rounded-xl"
+                    className="flex items-start gap-4 p-4 border border-border-light dark:border-border-dark rounded-xl bg-background-light/30 dark:bg-background-dark/30"
                   >
                     <div
                       className={`p-2 rounded-lg ${
@@ -569,11 +595,11 @@ function SalonCustomerDetailContent() {
 
           {activeTab === 'communications' && (
             <div className="space-y-4">
-              {communications && communications.length > 0 ? (
-                communications.map((comm: any) => (
+              {communications && (communications as { id: string; subject: string; createdAt: string; type: string; purpose: string; status: string; message?: string }[]).length > 0 ? (
+                (communications as { id: string; subject: string; createdAt: string; type: string; purpose: string; status: string; message?: string }[]).map((comm) => (
                   <div
                     key={comm.id}
-                    className="flex items-start gap-4 p-4 border border-border-light dark:border-border-dark rounded-xl"
+                    className="flex items-start gap-4 p-4 border border-border-light dark:border-border-dark rounded-xl bg-background-light/30 dark:bg-background-dark/30"
                   >
                     <MessageSquare className="w-5 h-5 text-text-light/40 dark:text-text-dark/40 mt-1" />
                     <div className="flex-1">
@@ -692,23 +718,21 @@ function EditModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Edit Customer</h2>
-          <button
-            onClick={onClose}
-            className="text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Edit Customer</h2>
+          <Button onClick={onClose} variant="secondary" size="sm" className="h-8 w-8 p-0" type="button" aria-label="Close">
+            <X className="w-4 h-4" />
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="notes-textarea" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Notes
             </label>
             <textarea
+              id="notes-textarea"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
@@ -717,10 +741,11 @@ function EditModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="birthday-input" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Birthday
             </label>
             <input
+              id="birthday-input"
               type="date"
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
@@ -729,10 +754,11 @@ function EditModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="followup-input" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Follow-up Date
             </label>
             <input
+              id="followup-input"
               type="date"
               value={followUpDate}
               onChange={(e) => setFollowUpDate(e.target.value)}
@@ -740,21 +766,13 @@ function EditModal({
             />
           </div>
 
-          <div className="flex space-x-4 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition text-text-light dark:text-text-dark"
-            >
+          <div className="flex gap-3 pt-4">
+            <Button type="button" onClick={onClose} variant="secondary" className="flex-1">
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Saving...' : 'Save'}
-            </button>
+            </Button>
+            <Button type="submit" disabled={isLoading} loading={isLoading} loadingText="Saving..." variant="primary" className="flex-1">
+              Save
+            </Button>
           </div>
         </form>
       </div>
@@ -783,23 +801,21 @@ function AddTagModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Add Tag</h2>
-          <button
-            onClick={onClose}
-            className="text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Add Tag</h2>
+          <Button onClick={onClose} variant="secondary" size="sm" className="h-8 w-8 p-0" type="button" aria-label="Close">
+            <X className="w-4 h-4" />
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="tag-input" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Tag Name
             </label>
             <input
+              id="tag-input"
               type="text"
               value={tag}
               onChange={(e) => setTag(e.target.value)}
@@ -809,21 +825,13 @@ function AddTagModal({
             />
           </div>
 
-          <div className="flex space-x-4 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition text-text-light dark:text-text-dark"
-            >
+          <div className="flex gap-3 pt-4">
+            <Button type="button" onClick={onClose} variant="secondary" className="flex-1">
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Adding...' : 'Add Tag'}
-            </button>
+            </Button>
+            <Button type="submit" disabled={isLoading} loading={isLoading} loadingText="Adding..." variant="primary" className="flex-1">
+              Add Tag
+            </Button>
           </div>
         </form>
       </div>

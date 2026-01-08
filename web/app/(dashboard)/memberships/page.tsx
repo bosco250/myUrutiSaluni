@@ -4,27 +4,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import {
   Search,
-  Filter,
   CheckCircle,
   XCircle,
   Clock,
   AlertCircle,
   Building2,
   Calendar,
-  CreditCard,
   MoreVertical,
   Eye,
   Edit,
-  Trash2,
   Users,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
   Ban,
-  Check,
   X,
   Download,
-  ChevronDown,
   Mail,
   Phone,
   MapPin,
@@ -185,6 +177,13 @@ function MembershipsPageContent() {
       return matchesSearch && matchesStatus && matchesCategory;
     }) || [];
 
+  const needsAttentionMemberships = filteredMemberships.filter(
+    (m) => m.status === 'pending_renewal' || m.status === 'expired' || m.status === 'new'
+  );
+  const otherMemberships = filteredMemberships.filter(
+    (m) => !(m.status === 'pending_renewal' || m.status === 'expired' || m.status === 'new')
+  );
+
   // Calculate statistics with trends
   const stats = useMemo(() => {
     if (!memberships) return null;
@@ -259,164 +258,258 @@ function MembershipsPageContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2">
-              Memberships
-            </h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">
-              Manage salon memberships in the association
-            </p>
-          </div>
-          <div className="flex gap-3">
-            {canManageUsers() && (
-              <>
-                <Button
-                  onClick={() => router.push('/memberships/manage')}
-                  variant="secondary"
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  <span className="hidden sm:inline">Advanced Management</span>
-                </Button>
-                <Button
-                  onClick={() => {
-                    /* Export functionality */
-                  }}
-                  variant="secondary"
-                  className="flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
-            <input
-              type="text"
-              placeholder="Search by salon name, membership number, or owner..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-            />
-          </div>
-          <div className="flex gap-3">
-            <div className="relative min-w-[140px]">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
-              >
-                <option value="all">All Status</option>
-                <option value="new">New</option>
-                <option value="active">Active</option>
-                <option value="pending_renewal">Pending Renewal</option>
-                <option value="expired">Expired</option>
-                <option value="suspended">Suspended</option>
-              </select>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+        <div className="relative p-5 sm:p-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
+              <Building2 className="w-5 h-5 text-white" />
             </div>
-            {categories.length > 0 && (
-              <div className="relative min-w-[140px]">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-text-light dark:text-text-dark">
+                  Memberships
+                </h1>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                  {filteredMemberships.length} shown
+                </span>
               </div>
-            )}
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                Track salon memberships, status health, and renewal needs.
+              </p>
+            </div>
           </div>
+
+          {canManageUsers() && (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => router.push('/memberships/manage')}
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Advanced
+              </Button>
+              <Button
+                onClick={() => {
+                  /* Export functionality */
+                }}
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Stats Cards - Enhanced */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
-        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Total
-          </p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            {stats?.total || 0}
-          </p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-            <TrendingUp className="w-3 h-3" />
-            <span>{stats?.activePercentage || 0}% active</span>
+      {/* Search + Status Pills */}
+      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+            <input
+              type="text"
+              placeholder="Search by salon, owner, or membership #..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === 'all' ? 'primary' : 'secondary'}
+              onClick={() => setStatusFilter('all')}
+              className="whitespace-nowrap"
+            >
+              All
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === 'pending_renewal' ? 'primary' : 'secondary'}
+              onClick={() => setStatusFilter('pending_renewal')}
+              className="whitespace-nowrap"
+            >
+              <AlertCircle className="w-4 h-4" />
+              Pending renewal
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === 'expired' ? 'primary' : 'secondary'}
+              onClick={() => setStatusFilter('expired')}
+              className="whitespace-nowrap"
+            >
+              <XCircle className="w-4 h-4" />
+              Expired
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === 'new' ? 'primary' : 'secondary'}
+              onClick={() => setStatusFilter('new')}
+              className="whitespace-nowrap"
+            >
+              <Clock className="w-4 h-4" />
+              New
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === 'active' ? 'primary' : 'secondary'}
+              onClick={() => setStatusFilter('active')}
+              className="whitespace-nowrap"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Active
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={statusFilter === 'suspended' ? 'primary' : 'secondary'}
+              onClick={() => setStatusFilter('suspended')}
+              className="whitespace-nowrap"
+            >
+              <Ban className="w-4 h-4" />
+              Suspended
+            </Button>
+          </div>
+
+          {categories.length > 0 && (
+            <div className="lg:w-56">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-3.5 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Total
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+                {stats?.total || 0}
+              </p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                {stats?.activePercentage || 0}% active
+              </p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Building2 className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-success/10 to-success/5 border border-success/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Active
-          </p>
-          <p className="text-2xl font-bold text-success">{stats?.active || 0}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-success/70">
-            <CheckCircle className="w-3 h-3" />
-            <span>In good standing</span>
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Active
+              </p>
+              <p className="text-xl font-black text-success mt-2">{stats?.active || 0}</p>
+              <p className="text-xs text-success/70 mt-1">In good standing</p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
+              <CheckCircle className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">New</p>
-          <p className="text-2xl font-bold text-blue-600">{stats?.new || 0}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-blue-600/70">
-            <Clock className="w-3 h-3" />
-            <span>Pending activation</span>
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-500/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                New
+              </p>
+              <p className="text-xl font-black text-blue-600 mt-2">{stats?.new || 0}</p>
+              <p className="text-xs text-blue-600/70 mt-1">Pending activation</p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-warning/10 to-warning/5 border border-warning/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Expiring Soon
-          </p>
-          <p className="text-2xl font-bold text-warning">{stats?.expiringSoon || 0}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-warning/70">
-            <AlertCircle className="w-3 h-3" />
-            <span>Next 30 days</span>
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/10 via-transparent to-warning/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Pending renewal
+              </p>
+              <p className="text-xl font-black text-warning mt-2">{stats?.pendingRenewal || 0}</p>
+              <p className="text-xs text-warning/70 mt-1">Follow-up required</p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+              <AlertCircle className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-danger/10 to-danger/5 border border-danger/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Expired
-          </p>
-          <p className="text-2xl font-bold text-danger">{stats?.expired || 0}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-danger/70">
-            <XCircle className="w-3 h-3" />
-            <span>Needs renewal</span>
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-danger/10 via-transparent to-danger/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Expired
+              </p>
+              <p className="text-xl font-black text-danger mt-2">{stats?.expired || 0}</p>
+              <p className="text-xs text-danger/70 mt-1">Needs renewal</p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-danger/10 text-danger flex items-center justify-center">
+              <XCircle className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-gray-500/10 to-gray-500/5 border border-gray-500/20 rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Suspended
-          </p>
-          <p className="text-2xl font-bold text-gray-600">{stats?.suspended || 0}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-gray-600/70">
-            <Ban className="w-3 h-3" />
-            <span>On hold</span>
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-500/10 via-transparent to-gray-500/5" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Suspended
+              </p>
+              <p className="text-xl font-black text-gray-600 mt-2">{stats?.suspended || 0}</p>
+              <p className="text-xs text-gray-600/70 mt-1">On hold</p>
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-gray-500/10 text-gray-600 flex items-center justify-center">
+              <Ban className="w-4 h-4" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Alert for expiring memberships */}
       {(stats?.expiringSoon || 0) > 0 && (
-        <div className="mb-6 bg-warning/10 border-2 border-warning/30 rounded-2xl p-4 sm:p-6">
+        <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 sm:p-5">
           <div className="flex items-start gap-3 sm:gap-4">
             <div className="p-2 sm:p-3 bg-warning/20 rounded-xl flex-shrink-0">
               <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
@@ -497,25 +590,112 @@ function MembershipsPageContent() {
           className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl"
         />
       ) : (
-        <div className="space-y-4">
-          {filteredMemberships.map((membership) => (
-            <MembershipCard
-              key={membership.id}
-              membership={membership}
-              onView={() => setSelectedMembership(membership)}
-              onActivate={() => activateMutation.mutate(membership.id)}
-              onSuspend={() => suspendMutation.mutate(membership.id)}
-              onExpire={() => expireMutation.mutate(membership.id)}
-              canManage={canManageUsers()}
-              isProcessing={
-                activateMutation.isPending || suspendMutation.isPending || expireMutation.isPending
-              }
-              showQuickActions={showQuickActions === membership.id}
-              onToggleQuickActions={() =>
-                setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
-              }
-            />
-          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Queue */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-black text-text-light dark:text-text-dark">
+                  Needs attention
+                </p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                  Prioritize renewals, expiries, and new memberships.
+                </p>
+              </div>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/20">
+                {needsAttentionMemberships.length} items
+              </span>
+            </div>
+
+            {needsAttentionMemberships.length === 0 ? (
+              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-8 text-center">
+                <div className="h-10 w-10 rounded-2xl bg-success/10 text-success flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                  Nothing needs attention right now
+                </p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                  Great — renewals and expiries are under control.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {needsAttentionMemberships.map((membership) => (
+                  <MembershipCard
+                    key={membership.id}
+                    membership={membership}
+                    onView={() => setSelectedMembership(membership)}
+                    onActivate={() => activateMutation.mutate(membership.id)}
+                    onSuspend={() => suspendMutation.mutate(membership.id)}
+                    onExpire={() => expireMutation.mutate(membership.id)}
+                    canManage={canManageUsers()}
+                    isProcessing={
+                      activateMutation.isPending ||
+                      suspendMutation.isPending ||
+                      expireMutation.isPending
+                    }
+                    showQuickActions={showQuickActions === membership.id}
+                    onToggleQuickActions={() =>
+                      setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Archive */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-black text-text-light dark:text-text-dark">All others</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                  Active and suspended memberships.
+                </p>
+              </div>
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                {otherMemberships.length} items
+              </span>
+            </div>
+
+            {otherMemberships.length === 0 ? (
+              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-8 text-center">
+                <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                  No memberships in this section
+                </p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                  Try adjusting your filters.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {otherMemberships.map((membership) => (
+                  <MembershipCard
+                    key={membership.id}
+                    membership={membership}
+                    onView={() => setSelectedMembership(membership)}
+                    onActivate={() => activateMutation.mutate(membership.id)}
+                    onSuspend={() => suspendMutation.mutate(membership.id)}
+                    onExpire={() => expireMutation.mutate(membership.id)}
+                    canManage={canManageUsers()}
+                    isProcessing={
+                      activateMutation.isPending ||
+                      suspendMutation.isPending ||
+                      expireMutation.isPending
+                    }
+                    showQuickActions={showQuickActions === membership.id}
+                    onToggleQuickActions={() =>
+                      setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -553,6 +733,27 @@ function MembershipCard({
 }) {
   const config = statusConfig[membership.status];
   const Icon = config.icon;
+  const railClass =
+    membership.status === 'active'
+      ? 'bg-success'
+      : membership.status === 'pending_renewal'
+        ? 'bg-warning'
+        : membership.status === 'expired'
+          ? 'bg-danger'
+          : membership.status === 'new'
+            ? 'bg-blue-600'
+            : 'bg-gray-500';
+
+  const softGlowClass =
+    membership.status === 'active'
+      ? 'from-success/10 via-transparent to-success/5'
+      : membership.status === 'pending_renewal'
+        ? 'from-warning/10 via-transparent to-warning/5'
+        : membership.status === 'expired'
+          ? 'from-danger/10 via-transparent to-danger/5'
+          : membership.status === 'new'
+            ? 'from-blue-500/10 via-transparent to-blue-500/5'
+            : 'from-gray-500/10 via-transparent to-gray-500/5';
 
   // Calculate days until expiry
   const daysUntilExpiry = membership.endDate
@@ -575,242 +776,222 @@ function MembershipCard({
   const progress = getProgressPercentage();
 
   return (
-    <div
-      className={`group bg-surface-light dark:bg-surface-dark border-2 ${config.border} rounded-2xl p-4 sm:p-6 hover:shadow-xl transition-all duration-300 relative overflow-hidden`}
-    >
-      {/* Gradient Background */}
-      <div
-        className={`absolute inset-0 ${config.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-      />
+    <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+      <div className={`absolute inset-y-0 left-0 w-1 ${railClass}`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${softGlowClass} opacity-60`} />
 
-      <div className="relative">
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start gap-3 mb-3">
-              <div className={`p-2.5 ${config.bg} rounded-xl flex-shrink-0`}>
-                <Icon className={`w-5 h-5 ${config.color}`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate">
-                    {membership.salon?.name || 'Unknown Salon'}
-                  </h3>
-                  <Badge
-                    variant={
-                      config.color === 'text-success'
-                        ? 'success'
-                        : config.color === 'text-warning'
-                          ? 'warning'
-                          : config.color === 'text-danger'
-                            ? 'danger'
-                            : 'default'
-                    }
-                    size="sm"
-                  >
-                    {config.label}
+      <div className="relative p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div
+              className={`h-10 w-10 rounded-2xl flex items-center justify-center ring-1 ring-border-light dark:ring-border-dark ${config.bg} flex-shrink-0`}
+            >
+              <Icon className={`w-5 h-5 ${config.color}`} />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base sm:text-lg font-black text-text-light dark:text-text-dark truncate">
+                  {membership.salon?.name || 'Unknown Salon'}
+                </h3>
+                <Badge
+                  variant={
+                    config.color === 'text-success'
+                      ? 'success'
+                      : config.color === 'text-warning'
+                        ? 'warning'
+                        : config.color === 'text-danger'
+                          ? 'danger'
+                          : 'default'
+                  }
+                  size="sm"
+                >
+                  {config.label}
+                </Badge>
+                {membership.paymentStatus === 'paid' && (
+                  <Badge variant="success" size="sm" dot>
+                    Paid
                   </Badge>
-                  {membership.paymentStatus === 'paid' && (
-                    <Badge variant="success" size="sm" dot>
-                      Paid
-                    </Badge>
-                  )}
-                  {membership.paymentStatus === 'overdue' && (
-                    <Badge variant="danger" size="sm" dot>
-                      Overdue
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                  #{membership.membershipNumber}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-              <div className="flex items-center gap-2 text-sm">
-                <Building2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-text-light/60 dark:text-text-dark/60 text-xs">Owner</p>
-                  <p className="text-text-light dark:text-text-dark font-medium truncate">
-                    {membership.salon?.owner?.fullName || 'N/A'}
-                  </p>
-                </div>
+                )}
+                {membership.paymentStatus === 'overdue' && (
+                  <Badge variant="danger" size="sm" dot>
+                    Overdue
+                  </Badge>
+                )}
               </div>
 
-              <div className="flex items-center gap-2 text-sm">
-                <CreditCard className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-text-light/60 dark:text-text-dark/60 text-xs">Category</p>
-                  <p className="text-text-light dark:text-text-dark font-medium truncate">
-                    {membership.category || 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              {membership.endDate && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-text-light/60 dark:text-text-dark/60 text-xs">
-                      {daysUntilExpiry !== null && daysUntilExpiry > 0 ? 'Expires in' : 'Expired'}
-                    </p>
-                    <p
-                      className={`font-medium truncate ${
-                        daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
-                          ? 'text-warning'
-                          : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                            ? 'text-danger'
-                            : 'text-text-light dark:text-text-dark'
-                      }`}
-                    >
-                      {daysUntilExpiry !== null && daysUntilExpiry > 0
-                        ? `${daysUntilExpiry} days`
-                        : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                          ? `${Math.abs(daysUntilExpiry)} days ago`
-                          : new Date(membership.endDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Progress Bar */}
-            {membership.status === 'active' && membership.startDate && membership.endDate && (
-              <div className="mb-3">
-                <div className="flex items-center justify-between text-xs text-text-light/60 dark:text-text-dark/60 mb-1.5">
-                  <span>Membership term</span>
-                  <span>{Math.round(progress)}% complete</span>
-                </div>
-                <div className="h-2 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      progress >= 80 ? 'bg-warning' : 'bg-gradient-to-r from-purple-500 to-pink-500'
-                    }`}
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Additional Info Pills */}
-            <div className="flex flex-wrap gap-2">
-              {membership.lastReminderSent && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-background-light dark:bg-background-dark rounded-full text-xs">
-                  <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                  <span className="text-text-light/60 dark:text-text-dark/60">
-                    Reminder sent {new Date(membership.lastReminderSent).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              {membership.salon?.phone && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-background-light dark:bg-background-dark rounded-full text-xs">
-                  <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                  <span className="text-text-light/60 dark:text-text-dark/60">
-                    {membership.salon.phone}
-                  </span>
-                </div>
-              )}
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                Membership #{membership.membershipNumber}
+              </p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex lg:flex-col gap-2 relative">
-            {canManage && (
-              <>
-                {membership.status === 'new' && (
-                  <Button
-                    onClick={onActivate}
-                    variant="primary"
-                    size="sm"
-                    disabled={isProcessing}
-                    className="flex items-center gap-2 flex-1 lg:flex-initial"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="hidden sm:inline">Activate</span>
-                  </Button>
-                )}
-                <div className="relative">
-                  <Button
-                    onClick={onToggleQuickActions}
-                    variant="secondary"
-                    size="sm"
-                    className="flex items-center gap-1"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-
-                  {showQuickActions && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl z-10 py-2 animate-in fade-in slide-in-from-top-2">
-                      {membership.status === 'active' && (
-                        <>
-                          <button
-                            onClick={() => {
-                              onSuspend();
-                              onToggleQuickActions();
-                            }}
-                            disabled={isProcessing}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
-                          >
-                            <Ban className="w-4 h-4" />
-                            Suspend
-                          </button>
-                          <button
-                            onClick={() => {
-                              onExpire();
-                              onToggleQuickActions();
-                            }}
-                            disabled={isProcessing}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Expire
-                          </button>
-                          <div className="my-1 border-t border-border-light dark:border-border-dark" />
-                        </>
-                      )}
-                      <button
-                        onClick={() => {
-                          onView();
-                          onToggleQuickActions();
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View Details
-                      </button>
-                      <button
-                        onClick={onToggleQuickActions}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={onToggleQuickActions}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
-                      >
-                        <Mail className="w-4 h-4" />
-                        Send Reminder
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {canManage && membership.status === 'new' && (
+              <Button onClick={onActivate} size="sm" disabled={isProcessing} className="gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Activate
+              </Button>
             )}
-            {!canManage && (
-              <Button
-                onClick={onView}
-                variant="secondary"
-                size="sm"
-                className="flex items-center gap-2 flex-1 lg:flex-initial"
-              >
+
+            {canManage ? (
+              <div className="relative">
+                <Button
+                  onClick={onToggleQuickActions}
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 w-9 p-0"
+                  aria-label="Open actions"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+
+                {showQuickActions && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl z-10 py-2 animate-in fade-in slide-in-from-top-2">
+                    {membership.status === 'active' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            onSuspend();
+                            onToggleQuickActions();
+                          }}
+                          disabled={isProcessing}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                        >
+                          <Ban className="w-4 h-4" />
+                          Suspend
+                        </button>
+                        <button
+                          onClick={() => {
+                            onExpire();
+                            onToggleQuickActions();
+                          }}
+                          disabled={isProcessing}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Expire
+                        </button>
+                        <div className="my-1 border-t border-border-light dark:border-border-dark" />
+                      </>
+                    )}
+                    <button
+                      onClick={() => {
+                        onView();
+                        onToggleQuickActions();
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </button>
+                    <button
+                      onClick={onToggleQuickActions}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={onToggleQuickActions}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Send Reminder
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Button onClick={onView} variant="secondary" size="sm" className="gap-2">
                 <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">View</span>
+                View
               </Button>
             )}
           </div>
         </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              Owner
+            </p>
+            <p className="text-sm font-semibold text-text-light dark:text-text-dark mt-1 truncate">
+              {membership.salon?.owner?.fullName || 'N/A'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              Category
+            </p>
+            <p className="text-sm font-semibold text-text-light dark:text-text-dark mt-1 truncate">
+              {membership.category || 'N/A'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              {daysUntilExpiry !== null && daysUntilExpiry > 0 ? 'Expires in' : 'Expired'}
+            </p>
+            <p
+              className={`text-sm font-semibold mt-1 truncate ${
+                daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
+                  ? 'text-warning'
+                  : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                    ? 'text-danger'
+                    : 'text-text-light dark:text-text-dark'
+              }`}
+            >
+              {membership.endDate
+                ? daysUntilExpiry !== null && daysUntilExpiry > 0
+                  ? `${daysUntilExpiry} days`
+                  : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                    ? `${Math.abs(daysUntilExpiry)} days ago`
+                    : new Date(membership.endDate).toLocaleDateString()
+                : 'N/A'}
+            </p>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        {membership.status === 'active' && membership.startDate && membership.endDate && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2">
+              <span>Membership term</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="h-2 bg-background-light dark:bg-background-dark rounded-full overflow-hidden border border-border-light dark:border-border-dark">
+              <div
+                className={`h-full transition-all duration-500 ${
+                  progress >= 80 ? 'bg-warning' : 'bg-gradient-to-r from-primary to-primary-dark'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Meta chips */}
+        {(membership.lastReminderSent || membership.salon?.phone) && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {membership.lastReminderSent && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-full text-xs">
+                <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                <span className="text-text-light/70 dark:text-text-dark/70">
+                  Reminder: {new Date(membership.lastReminderSent).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {membership.salon?.phone && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-full text-xs">
+                <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                <span className="text-text-light/70 dark:text-text-dark/70">{membership.salon.phone}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -838,11 +1019,17 @@ function MembershipDetailModal({
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-in fade-in"
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in fade-in slide-in-from-bottom-4 flex flex-col"
-          onClick={(e) => e.stopPropagation()}
+          role="presentation"
         >
           {/* Header */}
           <div className="p-6 border-b border-border-light dark:border-border-dark">
@@ -850,12 +1037,16 @@ function MembershipDetailModal({
               <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
                 Membership Details
               </h2>
-              <button
+              <Button
+                type="button"
                 onClick={onClose}
-                className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition"
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label="Close"
               >
-                <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
-              </button>
+                <X className="w-5 h-5" />
+              </Button>
             </div>
 
             {/* Tabs */}

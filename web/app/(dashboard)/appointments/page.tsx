@@ -11,20 +11,15 @@ import {
   Calendar,
   Clock,
   User,
-  Scissors,
   Plus,
   Edit,
   Eye,
   Search,
-  Filter,
   Building2,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Loader2,
-  ChevronDown,
-  Phone,
-  MapPin,
   X,
   Download,
 } from 'lucide-react';
@@ -47,7 +42,7 @@ interface Appointment {
   metadata?: {
     preferredEmployeeId?: string;
     preferredEmployeeName?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   customer?: {
     id?: string;
@@ -130,16 +125,19 @@ function AppointmentsContent() {
       try {
         // Get all salons user owns (which includes salons they work for as employee)
         const salonsResponse = await api.get('/salons');
-        const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
-        const salonIds = allSalons.map((s: any) => s.id);
+        const allSalons = (salonsResponse.data?.data || salonsResponse.data || []) as Array<{ id: string }>;
+        const salonIds = allSalons.map((s) => s.id);
 
         // Get employee records for each salon
         const records = [];
         for (const salonId of salonIds) {
           try {
             const empResponse = await api.get(`/salons/${salonId}/employees`);
-            const employees = empResponse.data?.data || empResponse.data || [];
-            const myEmployee = employees.find((emp: any) => emp.userId === user?.id);
+            const employeesList = (empResponse.data?.data || empResponse.data || []) as Array<{
+              id: string;
+              userId: string;
+            }>;
+            const myEmployee = employeesList.find((emp) => emp.userId === user?.id);
             if (myEmployee) {
               records.push(myEmployee);
             }
@@ -160,7 +158,7 @@ function AppointmentsContent() {
     queryKey: ['appointments'],
     queryFn: async () => {
       const response = await api.get('/appointments');
-      return response.data?.data || response.data || [];
+      return (response.data?.data || response.data || []) as Appointment[];
     },
   });
 
@@ -169,7 +167,7 @@ function AppointmentsContent() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        return response.data || [];
+        return (response.data || []) as Array<{ id: string; name: string }>;
       } catch (error) {
         return [];
       }
@@ -309,7 +307,7 @@ function AppointmentsContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
@@ -321,13 +319,13 @@ function AppointmentsContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">Appointments</h1>
-            <p className="text-text-light/60 dark:text-text-dark/60 mt-1">
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Appointments</h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
               Manage and track customer appointments
             </p>
           </div>
@@ -347,6 +345,7 @@ function AppointmentsContent() {
                 exportToCSV(exportData, { filename: 'appointments' });
               }}
               variant="secondary"
+              size="sm"
               className="flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
@@ -355,6 +354,7 @@ function AppointmentsContent() {
             <Button
               onClick={() => router.push('/appointments/calendar')}
               variant="secondary"
+              size="sm"
               className="flex items-center gap-2"
             >
               <Calendar className="w-5 h-5" />
@@ -363,6 +363,7 @@ function AppointmentsContent() {
             <Button
               onClick={() => setShowNewBookingModal(true)}
               variant="primary"
+              size="sm"
               className="flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
@@ -372,33 +373,82 @@ function AppointmentsContent() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Total</div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {stats.total}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Total
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  {stats.total}
+                </p>
+              </div>
+              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+                <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              </div>
             </div>
           </div>
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-            <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">Today</div>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.today}</div>
-          </div>
-          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-            <div className="text-sm text-green-600 dark:text-green-400 mb-1">Upcoming</div>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {stats.upcoming}
+
+          <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Today
+                </p>
+                <p className="text-2xl font-black text-primary mt-1">{stats.today}</p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
             </div>
           </div>
-          <div className="bg-gray-500/10 border border-gray-500/20 rounded-xl p-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Completed</div>
-            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-              {stats.completed}
+
+          <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Upcoming
+                </p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                  {stats.upcoming}
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-white" />
+              </div>
             </div>
           </div>
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-            <div className="text-sm text-yellow-600 dark:text-yellow-400 mb-1">Confirmed</div>
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-              {stats.confirmed}
+
+          <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 dark:border-gray-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Completed
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  {stats.completed}
+                </p>
+              </div>
+              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+                <CheckCircle2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Confirmed
+                </p>
+                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                  {stats.confirmed}
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-white" />
+              </div>
             </div>
           </div>
         </div>
@@ -453,7 +503,7 @@ function AppointmentsContent() {
               className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="all">All Salons</option>
-              {salons.map((salon: any) => (
+              {salons.map((salon) => (
                 <option key={salon.id} value={salon.id}>
                   {salon.name}
                 </option>
@@ -514,7 +564,7 @@ function AppointmentsContent() {
                     const statusColors = getStatusColor(appointment.status);
                     // Check if current user (employee) is the preferred employee for this appointment
                     const isMyAppointment = employeeRecords.some(
-                      (emp: any) => emp.id === appointment.metadata?.preferredEmployeeId
+                      (emp: { id: string }) => emp.id === appointment.metadata?.preferredEmployeeId
                     );
                     const preferredEmployeeName = appointment.metadata?.preferredEmployeeName;
 
@@ -732,7 +782,7 @@ function AppointmentModal({
     queryKey: ['customers'],
     queryFn: async () => {
       const response = await api.get('/customers');
-      return response.data?.data || response.data || [];
+      return (response.data?.data || response.data || []) as Array<{ id: string; fullName: string; phone: string }>;
     },
   });
 
@@ -740,7 +790,7 @@ function AppointmentModal({
     queryKey: ['services'],
     queryFn: async () => {
       const response = await api.get('/services');
-      return response.data?.data || response.data || [];
+      return (response.data?.data || response.data || []) as Array<{ id: string; name: string; basePrice: number }>;
     },
   });
 
@@ -748,7 +798,7 @@ function AppointmentModal({
     queryKey: ['salons'],
     queryFn: async () => {
       const response = await api.get('/salons');
-      return response.data || [];
+      return (response.data || []) as Array<{ id: string; name: string }>;
     },
   });
 
@@ -759,7 +809,7 @@ function AppointmentModal({
       if (!formData.salonId) return [];
       try {
         const response = await api.get(`/salons/${formData.salonId}/employees`);
-        return response.data || [];
+        return (response.data || []) as Array<{ id: string; user?: { fullName: string }; roleTitle?: string; isActive?: boolean; commissionRate: number }>;
       } catch (error) {
         return [];
       }
@@ -778,7 +828,7 @@ function AppointmentModal({
     onSuccess: () => {
       onSuccess();
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { message?: string } } }) => {
       setError(err.response?.data?.message || 'Failed to save appointment');
     },
   });
@@ -824,16 +874,17 @@ function AppointmentModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="customer-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                   Customer
                 </label>
                 <select
+                  id="customer-select"
                   value={formData.customerId}
                   onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
                   className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">Select customer (optional)</option>
-                  {customers?.map((customer: any) => (
+                  {customers?.map((customer) => (
                     <option key={customer.id} value={customer.id}>
                       {customer.fullName} - {customer.phone}
                     </option>
@@ -842,16 +893,17 @@ function AppointmentModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="service-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                   Service
                 </label>
                 <select
+                  id="service-select"
                   value={formData.serviceId}
                   onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
                   className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">Select service (optional)</option>
-                  {services?.map((service: any) => (
+                  {services?.map((service) => (
                     <option key={service.id} value={service.id}>
                       {service.name}{' '}
                       {service.basePrice ? `- RWF ${service.basePrice.toLocaleString()}` : ''}
@@ -862,10 +914,11 @@ function AppointmentModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label htmlFor="salon-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                 Salon <span className="text-danger">*</span>
               </label>
               <select
+                id="salon-select"
                 required
                 value={formData.salonId}
                 onChange={(e) =>
@@ -874,7 +927,7 @@ function AppointmentModal({
                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="">Select salon</option>
-                {salons?.map((salon: any) => (
+                {salons?.map((salon) => (
                   <option key={salon.id} value={salon.id}>
                     {salon.name}
                   </option>
@@ -884,18 +937,19 @@ function AppointmentModal({
 
             {formData.salonId && (
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="employee-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                   Assign Employee (for commission tracking)
                 </label>
                 <select
+                  id="employee-select"
                   value={formData.salonEmployeeId}
                   onChange={(e) => setFormData({ ...formData, salonEmployeeId: e.target.value })}
                   className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
                   <option value="">No employee assigned (optional)</option>
                   {employees
-                    ?.filter((emp: any) => emp.isActive !== false)
-                    ?.map((employee: any) => (
+                    ?.filter((emp) => emp.isActive !== false)
+                    ?.map((employee) => (
                       <option key={employee.id} value={employee.id}>
                         {employee.user?.fullName || employee.roleTitle || 'Unknown'}
                         {employee.roleTitle ? ` - ${employee.roleTitle}` : ''}
@@ -915,10 +969,11 @@ function AppointmentModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="start-time" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                   Start Time <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="start-time"
                   type="datetime-local"
                   required
                   value={formData.scheduledStart}
@@ -928,10 +983,11 @@ function AppointmentModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="end-time" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                   End Time <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="end-time"
                   type="datetime-local"
                   required
                   value={formData.scheduledEnd}
@@ -942,10 +998,11 @@ function AppointmentModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label htmlFor="status-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                 Status <span className="text-danger">*</span>
               </label>
               <select
+                id="status-select"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -960,10 +1017,11 @@ function AppointmentModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label htmlFor="notes-area" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                 Notes
               </label>
               <textarea
+                id="notes-area"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}

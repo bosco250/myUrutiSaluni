@@ -37,20 +37,48 @@ export default function AdminDashboard() {
     queryKey: ['admin-stats'],
     queryFn: async () => {
       try {
-        // Fetch pending applications
-        const applicationsResponse = await api.get('/memberships/applications?status=pending');
-        const pendingApplications = applicationsResponse.data?.length || 0;
+        // Fetch all data in parallel for efficiency
+        const [
+          usersResponse,
+          salonsResponse,
+          applicationsResponse,
+          appointmentsResponse,
+          salesResponse,
+        ] = await Promise.all([
+          api.get('/users').catch(() => ({ data: [] })),
+          api.get('/salons').catch(() => ({ data: [] })),
+          api.get('/memberships/applications?status=pending').catch(() => ({ data: [] })),
+          api.get('/appointments').catch(() => ({ data: [] })),
+          api.get('/sales?page=1&limit=10000').catch(() => ({ data: [] })),
+        ]);
 
-        // Fetch actual stats from API
+        // Extract arrays from responses
+        const users = Array.isArray(usersResponse.data) ? usersResponse.data : usersResponse.data?.data || [];
+        const salons = Array.isArray(salonsResponse.data) ? salonsResponse.data : salonsResponse.data?.data || [];
+        const pendingApplications = Array.isArray(applicationsResponse.data) ? applicationsResponse.data : applicationsResponse.data?.data || [];
+        const appointments = Array.isArray(appointmentsResponse.data) ? appointmentsResponse.data : appointmentsResponse.data?.data || [];
+        const sales = Array.isArray(salesResponse.data) ? salesResponse.data : salesResponse.data?.data || [];
+
+        // Calculate total revenue from sales
+        const totalRevenue = sales.reduce((sum: number, sale: any) => {
+          return sum + (parseFloat(sale.totalAmount) || 0);
+        }, 0);
+
+        // Count members (users who are salon owners or have membership)
+        const members = users.filter((u: any) => 
+          u.role === 'salon_owner' || u.membershipNumber
+        );
+
         return {
-          totalUsers: 0,
-          totalSalons: 0,
-          totalMembers: 0,
-          pendingApplications,
-          totalRevenue: 0,
-          totalAppointments: 0,
+          totalUsers: users.length,
+          totalSalons: salons.length,
+          totalMembers: members.length,
+          pendingApplications: pendingApplications.length,
+          totalRevenue: Math.round(totalRevenue),
+          totalAppointments: appointments.length,
         };
       } catch (error) {
+        console.error('Error fetching admin stats:', error);
         return {
           totalUsers: 0,
           totalSalons: 0,

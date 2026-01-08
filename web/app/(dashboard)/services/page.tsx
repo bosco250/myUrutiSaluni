@@ -12,7 +12,6 @@ import {
   Clock,
   DollarSign,
   XCircle,
-  Loader2,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -20,7 +19,6 @@ import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
-import { useTheme } from '@/contexts/ThemeContext';
 import { canViewAllSalons } from '@/lib/permissions';
 
 interface Service {
@@ -47,7 +45,7 @@ interface Salon {
 
 export default function ServicesPage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <ServicesContent />
     </div>
   );
@@ -55,7 +53,6 @@ export default function ServicesPage() {
 
 function ServicesContent() {
   const { user } = useAuthStore();
-  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -208,7 +205,7 @@ function ServicesContent() {
   // Show message if user has no salons (but not for admins who can view all)
   if (!salonsLoading && salons.length === 0 && !canViewAll) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8">
           <EmptyState
             icon={<Scissors className="w-16 h-16" />}
@@ -226,13 +223,11 @@ function ServicesContent() {
   return (
     <>
       {/* Header */}
-      <div className="mb-8">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="mb-6">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-2">
-              Services
-            </h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Services</h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
               Manage salon services and offerings
             </p>
           </div>
@@ -241,53 +236,89 @@ function ServicesContent() {
               setEditingService(null);
               setShowModal(true);
             }}
+            size="sm"
             className="flex items-center gap-2"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             <span>Add Service</span>
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Total Services
-            </div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {stats.total}
-            </div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Active Services
-            </div>
-            <div className="text-2xl font-bold text-success">{stats.active}</div>
-          </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Avg. Price</div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              RWF {Math.round(stats.avgPrice).toLocaleString()}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Total
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  {stats.total}
+                </p>
+              </div>
+              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+                <Scissors className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              </div>
             </div>
           </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <div className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
-              Avg. Duration
+
+          <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Active
+                </p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                  {stats.active}
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
+                <Scissors className="w-4 h-4 text-white" />
+              </div>
             </div>
-            <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {Math.round(stats.avgDuration)} min
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Avg Price
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  RWF {Math.round(stats.avgPrice).toLocaleString()}
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
+                <DollarSign className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Avg Duration
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  {Math.round(stats.avgDuration)} min
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           {(salons.length > 1 || canViewAll) && (
             <div className="relative min-w-[200px]">
               <select
                 value={selectedSalonId}
                 onChange={(e) => setSelectedSalonId(e.target.value)}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+                className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
               >
                 <option value="">{canViewAll ? 'All Salons' : 'Select Salon'}</option>
                 {salons.map((salon) => (
@@ -299,21 +330,21 @@ function ServicesContent() {
             </div>
           )}
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <input
               type="text"
               placeholder="Search services by name, code, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             />
           </div>
           <div className="relative min-w-[140px]">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-              className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -468,10 +499,6 @@ function ServicesContent() {
             setEditingService(null);
           }}
           onSuccess={() => {
-            console.log(
-              '[Service Modal] Service saved, invalidating queries for:',
-              servicesQueryKey
-            );
             // Invalidate all service queries to refresh the list
             queryClient.invalidateQueries({ queryKey: ['services'] });
             // Also invalidate the specific query for the selected salon
@@ -523,8 +550,9 @@ function ServiceModal({
     onSuccess: () => {
       onSuccess();
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to save service');
+    onError: (err: unknown) => {
+      const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to save service');
       setLoading(false);
     },
   });
@@ -562,160 +590,276 @@ function ServiceModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {service ? 'Edit Service' : 'Add New Service'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition"
-            >
-              <XCircle className="w-6 h-6" />
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/55 dark:bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
 
+      <div
+        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        {/* Hero Header */}
+        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative p-5 text-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+                  <Scissors className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-black tracking-tight">
+                    {service ? 'Edit Service' : 'Create Service'}
+                  </h2>
+                  <p className="text-xs text-white/80 mt-1">
+                    Keep it short, clear, and consistent for booking + sales.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClose}
+                className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                aria-label="Close"
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Quick Specs */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Duration
+                </p>
+                <p className="text-lg font-black mt-1">{Number(formData.durationMinutes) || 0} mins</p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Base Price
+                </p>
+                <p className="text-lg font-black mt-1">RWF {Number(formData.basePrice || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 overflow-y-auto">
           {error && (
             <div className="mb-4 p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {salons.length > 1 ? (
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Salon *
-                </label>
-                <select
-                  required
-                  value={formData.salonId}
-                  onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                >
-                  <option value="">Select salon</option>
-                  {salons.map((salon) => (
-                    <option key={salon.id} value={salon.id}>
-                      {salon.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : salons.length === 1 ? (
-              <div className="text-sm text-text-light/60 dark:text-text-dark/60">
-                Salon:{' '}
-                <span className="font-medium text-text-light dark:text-text-dark">
-                  {salons[0].name}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Basics */}
+            <div className="bg-background-secondary/40 dark:bg-background-dark/30 border border-border-light/60 dark:border-border-dark rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-black text-text-light dark:text-text-dark">Basics</p>
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-light/50 dark:text-text-dark/50">
+                  Required
                 </span>
               </div>
-            ) : null}
 
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                Service Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Haircut - Men"
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              />
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {salons.length > 1 ? (
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="service-salon"
+                      className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                    >
+                      Salon *
+                    </label>
+                    <select
+                      id="service-salon"
+                      required
+                      value={formData.salonId}
+                      onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                      className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    >
+                      <option value="">Select salon</option>
+                      {salons.map((salon) => (
+                        <option key={salon.id} value={salon.id}>
+                          {salon.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : salons.length === 1 ? (
+                  <div className="md:col-span-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                    Salon:{' '}
+                    <span className="font-semibold text-text-light dark:text-text-dark">
+                      {salons[0].name}
+                    </span>
+                  </div>
+                ) : null}
 
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                Service Code
-              </label>
-              <input
-                type="text"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                placeholder="e.g., SRV-HC-M (optional)"
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-              />
-            </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="service-name"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Service Name *
+                  </label>
+                  <input
+                    id="service-name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Haircut - Men"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                placeholder="Service description (optional)"
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
-              />
-            </div>
+                <div>
+                  <label
+                    htmlFor="service-code"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Service Code
+                  </label>
+                  <input
+                    id="service-code"
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    placeholder="e.g., SRV-HC-M"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Duration (minutes) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={formData.durationMinutes}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      durationMinutes: parseInt(e.target.value) || 30,
-                    })
-                  }
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                />
+                <div>
+                  <label
+                    htmlFor="service-duration"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Duration (mins) *
+                  </label>
+                  <input
+                    id="service-duration"
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.durationMinutes}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        durationMinutes: parseInt(e.target.value) || 30,
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="service-description"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    id="service-description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    placeholder="What’s included? Any notes for staff/customers."
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
+                  />
+                </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Base Price (RWF) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.basePrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      basePrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                />
+            {/* Pricing */}
+            <div className="bg-background-secondary/40 dark:bg-background-dark/30 border border-border-light/60 dark:border-border-dark rounded-2xl p-4">
+              <p className="text-sm font-black text-text-light dark:text-text-dark mb-3">Pricing</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="service-basePrice"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Base Price (RWF) *
+                  </label>
+                  <input
+                    id="service-basePrice"
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.basePrice}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        basePrice: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl border border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40">
+                  <input
+                    id="service-active"
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="mt-0.5 w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
+                  />
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="service-active"
+                      className="text-sm font-semibold text-text-light dark:text-text-dark"
+                    >
+                      Active service
+                    </label>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                      Available for booking and sales.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
-                />
-                <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                  Service is active (available for booking and sales)
-                </span>
-              </label>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Saving...' : service ? 'Update Service' : 'Create Service'}
-              </Button>
-            </div>
+            {/* Sticky actions spacer */}
+            <div className="h-2" />
           </form>
+        </div>
+
+        {/* Sticky Action Bar */}
+        <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              onClick={(e) => {
+                // Keep the same submit path; this just triggers the form submit in a sticky footer.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (e as any)?.currentTarget?.form?.requestSubmit?.();
+              }}
+              loading={loading}
+              loadingText="Saving..."
+              className="flex-1"
+            >
+              {service ? 'Update Service' : 'Create Service'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

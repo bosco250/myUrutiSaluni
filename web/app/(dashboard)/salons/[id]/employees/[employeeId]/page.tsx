@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import {
@@ -20,22 +20,16 @@ import {
   Clock,
   FileText,
   Activity,
-  Building2,
   CheckCircle2,
-  Tag,
   Award,
   Calculator,
   ShoppingBag,
-  Scissors,
 } from 'lucide-react';
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { useAuthStore } from '@/store/auth-store';
-import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { SALON_PROFESSIONAL_TITLES, SALON_SKILLS } from '@/lib/salon-constants';
 import {
   EMPLOYEE_ACTIVITY_TYPES,
   COMMISSION_STATUS,
@@ -52,7 +46,6 @@ import {
   STATUS_COLORS,
   STATUS_MAPPING,
 } from '@/lib/employee-constants';
-import { AppointmentStatus } from '@/types/models';
 
 // Activity icon mapping
 const ACTIVITY_ICON_MAP = {
@@ -192,7 +185,6 @@ function EmployeeDetailContent() {
   const router = useRouter();
   const salonId = params.id as string;
   const employeeId = params.employeeId as string;
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -210,7 +202,7 @@ function EmployeeDetailContent() {
   });
 
   // Fetch commission summary
-  const { data: commissionSummary, isLoading: summaryLoading } = useQuery<CommissionSummary>({
+  const { data: commissionSummary } = useQuery<CommissionSummary>({
     queryKey: QUERY_KEYS.EMPLOYEE_COMMISSION_SUMMARY(employeeId),
     queryFn: async () => {
       const response = await api.get(API_ENDPOINTS.COMMISSION_SUMMARY(employeeId));
@@ -241,10 +233,10 @@ function EmployeeDetailContent() {
         for (const run of payrollRuns) {
           if (run.items) {
             const employeeItems = run.items.filter(
-              (item: any) => item.salonEmployeeId === employeeId
+              (item: { salonEmployeeId: string }) => item.salonEmployeeId === employeeId
             );
             items.push(
-              ...employeeItems.map((item: any) => ({
+              ...employeeItems.map((item: PayrollItem) => ({
                 ...item,
                 payrollRun: {
                   id: run.id,
@@ -335,7 +327,7 @@ function EmployeeDetailContent() {
     );
   }
 
-  const tabs: { id: TabType; label: string; icon: any }[] = [
+  const tabs: { id: TabType; label: string; icon: typeof FileText }[] = [
     { id: 'overview', label: 'Overview', icon: FileText },
     { id: 'commissions', label: 'Commissions', icon: TrendingUp },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
@@ -834,11 +826,11 @@ function EmployeeDetailContent() {
 
                       let statusColor: string = STATUS_COLORS.DEFAULT;
                       const status = String(activity.status);
-                      if (STATUS_MAPPING.PAID.includes(status as any)) {
+                      if ((STATUS_MAPPING.PAID as readonly string[]).includes(status)) {
                         statusColor = STATUS_COLORS.SUCCESS;
-                      } else if (STATUS_MAPPING.PENDING.includes(status as any)) {
+                      } else if ((STATUS_MAPPING.PENDING as readonly string[]).includes(status)) {
                         statusColor = STATUS_COLORS.WARNING;
-                      } else if (STATUS_MAPPING.CANCELLED.includes(status as any)) {
+                      } else if ((STATUS_MAPPING.CANCELLED as readonly string[]).includes(status)) {
                         statusColor = STATUS_COLORS.DANGER;
                       }
 
@@ -886,6 +878,14 @@ function EmployeeDetailContent() {
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowEditModal(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setShowEditModal(false);
+              }
+            }}
+            role="button"
+            tabIndex={-1}
+            aria-label="Close modal"
           />
           <div className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
@@ -922,4 +922,3 @@ function EmployeeDetailContent() {
     </div>
   );
 }
-

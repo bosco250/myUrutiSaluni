@@ -18,13 +18,21 @@ import {
   Mail,
   Globe,
   Users,
-  Calendar,
   LayoutGrid,
   Table,
-  AlertCircle,
   UserPlus,
   Eye,
+  Scissors,
+  Sparkles,
+  Heart,
+  Star,
+  Car,
+  User,
+  Clock,
+  Check,
+  X,
 } from 'lucide-react';
+import { format, isWithinInterval, parse } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -34,26 +42,7 @@ import Button from '@/components/ui/Button';
 import SalonRegistrationForm from '@/components/forms/SalonRegistrationForm';
 import RoleGuard from '@/components/auth/RoleGuard';
 
-interface Salon {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  district: string;
-  phone: string;
-  email: string;
-  website?: string;
-  status: string;
-  owner: {
-    id?: string;
-    fullName: string;
-  };
-  settings?: {
-    numberOfEmployees?: number;
-    businessType?: string;
-  };
-  employeeCount?: number;
-}
+import { Salon } from '@/types/models';
 
 export default function SalonsPage() {
   const [showModal, setShowModal] = useState(false);
@@ -62,9 +51,28 @@ export default function SalonsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const queryClient = useQueryClient();
-  const { token, user } = useAuthStore();
-  const { canManageSalons, hasAnyRole, isSalonOwner } = usePermissions();
+  const { token } = useAuthStore();
+  const { isSalonOwner, canManageSalons, hasAnyRole, user } = usePermissions();
   const router = useRouter();
+
+  const statusColors: Record<string, string> = {
+    active: 'bg-success/20 text-success border-success/30',
+    inactive:
+      'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border-border-light dark:border-border-dark',
+    pending: 'bg-warning/20 text-warning border-warning/30',
+  };
+
+  const canEditSalon = (salon: Salon) => {
+    return (
+      canManageSalons() &&
+      (hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]) ||
+        user?.id === salon.ownerId || user?.id === salon.owner?.id)
+    );
+  };
+
+  const canDeleteSalon = () => {
+    return hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]);
+  };
 
   // Check membership status for salon owners
   // Using shared hook for better caching and reduced API calls
@@ -101,13 +109,8 @@ export default function SalonsPage() {
         });
         const salonsData = response.data?.data || response.data;
         return Array.isArray(salonsData) ? salonsData : [];
-      } catch (err: any) {
-        const errorData = err.response?.data;
-        const errorMsg = Array.isArray(errorData?.message)
-          ? errorData.message.join(', ')
-          : errorData?.message || errorData?.error || err.message;
-
-        if (err.response?.status === 401 || err.message?.includes('token')) {
+      } catch (err: unknown) {
+        if ((err as { response?: { status?: number } }).response?.status === 401 || (err as Error).message?.includes('token')) {
           if (typeof window !== 'undefined') {
             // Session expired - clear all localStorage data
             clearAllSessionData();
@@ -148,11 +151,11 @@ export default function SalonsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">Loading salons...</p>
+            <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">Loading salons...</p>
           </div>
         </div>
       </div>
@@ -160,8 +163,8 @@ export default function SalonsPage() {
   }
 
   if (error) {
-    const errorData = (error as any)?.response?.data;
-    const statusCode = (error as any)?.response?.status;
+    const errorData = (error as { response?: { data?: { message?: string | string[]; error?: string } } })?.response?.data;
+    const statusCode = (error as { response?: { status?: number } })?.response?.status;
     let errorMessage = 'Unknown error';
     if (Array.isArray(errorData?.message)) {
       errorMessage = errorData.message.join(', ');
@@ -169,15 +172,15 @@ export default function SalonsPage() {
       errorMessage = errorData.message;
     } else if (errorData?.error) {
       errorMessage = errorData.error;
-    } else if ((error as any)?.message) {
-      errorMessage = (error as any).message;
+    } else if ((error as Error)?.message) {
+      errorMessage = (error as Error).message;
     }
 
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-surface-light dark:bg-surface-dark border border-danger rounded-2xl p-6">
-          <p className="text-danger font-semibold mb-2">Error loading salons</p>
-          <p className="text-text-light/60 dark:text-text-dark/60 text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-surface-light dark:bg-surface-dark border border-danger rounded-xl p-4">
+          <p className="text-danger font-semibold text-sm mb-1">Error loading salons</p>
+          <p className="text-text-light/60 dark:text-text-dark/60 text-xs">
             {statusCode ? `Status ${statusCode}: ` : ''}
             {errorMessage}
           </p>
@@ -190,53 +193,15 @@ export default function SalonsPage() {
   const needsMembership = isSalonOwner() && membershipStatus && !membershipStatus.isMember;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Membership Warning Banner */}
-      {needsMembership && (
-        <div className="mb-6 bg-warning/10 border border-warning rounded-2xl p-6">
-          <div className="flex items-start gap-4">
-            <AlertCircle className="w-6 h-6 text-warning flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
-                Membership Required to Add Salons
-              </h3>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
-                You need to be an approved member of the association to add salons.{' '}
-                {membershipStatus?.application?.status === 'pending'
-                  ? 'Your application is currently under review.'
-                  : membershipStatus?.application?.status === 'rejected'
-                    ? 'Your previous application was rejected. Please apply again.'
-                    : 'Please apply for membership first.'}
-              </p>
-              <div className="flex gap-3">
-                {membershipStatus?.application?.status !== 'pending' && (
-                  <Button
-                    onClick={() => router.push('/membership/apply')}
-                    variant="primary"
-                    className="text-sm"
-                  >
-                    Apply for Membership
-                  </Button>
-                )}
-                <Button
-                  onClick={() => router.push('/membership/status')}
-                  variant="secondary"
-                  className="text-sm"
-                >
-                  Check Application Status
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
-      <div className="mb-8">
+      <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-2">Salons</h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Salons</h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
               Manage and monitor salon businesses
             </p>
           </div>
@@ -245,7 +210,6 @@ export default function SalonsPage() {
           >
             <Button
               onClick={() => {
-                // Check membership before opening modal for salon owners
                 if (isSalonOwner() && membershipStatus && !membershipStatus.isMember) {
                   alert(
                     'You need to be an approved member to add salons. Please apply for membership first.'
@@ -256,31 +220,32 @@ export default function SalonsPage() {
                 setShowModal(true);
               }}
               variant="primary"
+              size="sm"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Add Salon
             </Button>
           </RoleGuard>
         </div>
 
         {/* Search, Filter, and View Toggle */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <input
               type="text"
-              placeholder="Search salons by name, location, or owner..."
+              placeholder="Search salons..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             />
           </div>
           <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-12 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+              className="pl-9 pr-8 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -289,64 +254,64 @@ export default function SalonsPage() {
             </select>
           </div>
           {/* View Toggle */}
-          <div className="flex items-center gap-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-1">
+          <div className="flex items-center gap-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('cards')}
-              className={`p-2 rounded-lg transition ${
+              className={`p-1.5 rounded-md transition ${
                 viewMode === 'cards'
                   ? 'bg-primary text-white'
                   : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
               }`}
               title="Card View"
             >
-              <LayoutGrid className="w-5 h-5" />
+              <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-2 rounded-lg transition ${
+              className={`p-1.5 rounded-md transition ${
                 viewMode === 'table'
                   ? 'bg-primary text-white'
                   : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
               }`}
               title="Table View"
             >
-              <Table className="w-5 h-5" />
+              <Table className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
             Total Salons
           </p>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark">
             {salons?.length || 0}
           </p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
             Active
           </p>
-          <p className="text-2xl font-bold text-success">
+          <p className="text-xl font-bold text-success">
             {salons?.filter((s) => s.status === 'active').length || 0}
           </p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
             Pending
           </p>
-          <p className="text-2xl font-bold text-warning">
+          <p className="text-xl font-bold text-warning">
             {salons?.filter((s) => s.status === 'pending').length || 0}
           </p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
-          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
             Inactive
           </p>
-          <p className="text-2xl font-bold text-text-light/60 dark:text-text-dark/60">
+          <p className="text-xl font-bold text-text-light/60 dark:text-text-dark/60">
             {salons?.filter((s) => s.status === 'inactive').length || 0}
           </p>
         </div>
@@ -354,45 +319,50 @@ export default function SalonsPage() {
 
       {/* Salons View */}
       {filteredSalons.length === 0 ? (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-12 text-center">
-          <Building2 className="w-16 h-16 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-          <p className="text-text-light/60 dark:text-text-dark/60 text-lg font-medium mb-2">
-            {searchQuery || statusFilter !== 'all'
-              ? 'No salons match your filters'
-              : 'No salons found'}
-          </p>
-          <p className="text-text-light/40 dark:text-text-dark/40 text-sm mb-6">
-            {searchQuery || statusFilter !== 'all'
-              ? 'Try adjusting your search or filters'
-              : 'Create your first salon to get started'}
-          </p>
-          {!searchQuery && statusFilter === 'all' && (
-            <RoleGuard
-              requiredRoles={[
-                UserRole.SUPER_ADMIN,
-                UserRole.ASSOCIATION_ADMIN,
-                UserRole.SALON_OWNER,
-              ]}
-            >
-              <Button
-                onClick={() => {
-                  setEditingSalon(null);
-                  setShowModal(true);
-                }}
-                variant="primary"
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
+            <Building2 className="w-12 h-12 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
+            <p className="text-text-light/60 dark:text-text-dark/60 text-sm font-medium mb-1">
+              {searchQuery || statusFilter !== 'all'
+                ? 'No salons match your filters'
+                : 'No salons found'}
+            </p>
+            <p className="text-text-light/40 dark:text-text-dark/40 text-xs mb-4">
+              {searchQuery || statusFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Create your first salon to get started'}
+            </p>
+            {!searchQuery && statusFilter === 'all' && (
+              <RoleGuard
+                requiredRoles={[
+                  UserRole.SUPER_ADMIN,
+                  UserRole.ASSOCIATION_ADMIN,
+                  UserRole.SALON_OWNER,
+                ]}
               >
-                <Plus className="w-5 h-5" />
-                Add Your First Salon
-              </Button>
-            </RoleGuard>
-          )}
-        </div>
+                <Button
+                  onClick={() => {
+                    setEditingSalon(null);
+                    setShowModal(true);
+                  }}
+                  variant="primary"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Your First Salon
+                </Button>
+              </RoleGuard>
+            )}
+          </div>
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSalons.map((salon) => (
             <SalonCard
               key={salon.id}
               salon={salon}
+              statusColors={statusColors}
+              canEdit={canEditSalon(salon)}
+              canDelete={canDeleteSalon()}
+              canManageSalons={canManageSalons}
               onEdit={() => {
                 setEditingSalon(salon);
                 setShowModal(true);
@@ -408,6 +378,10 @@ export default function SalonsPage() {
       ) : (
         <SalonsTable
           salons={filteredSalons}
+          statusColors={statusColors}
+          canManageSalons={canManageSalons}
+          canEditSalon={canEditSalon}
+          canDeleteSalon={canDeleteSalon}
           onEdit={(salon) => {
             setEditingSalon(salon);
             setShowModal(true);
@@ -437,57 +411,96 @@ export default function SalonsPage() {
       )}
     </div>
   );
+
+}
+
+const BUSINESS_ICONS: Record<string, any> = {
+  hair_salon: Scissors,
+  beauty_spa: Sparkles,
+  nail_salon: Heart,
+  barbershop: Scissors,
+  full_service: Star,
+  mobile: Car,
+};
+
+const CLIENTELE_ICONS: Record<string, any> = {
+  men: User,
+  women: User,
+  both: Users,
+};
+
+function isSalonOpen(operatingHours?: string): boolean {
+  if (!operatingHours) return false;
+  try {
+    const hours = JSON.parse(operatingHours);
+    const now = new Date();
+    const day = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const todayHours = hours[day];
+
+    if (!todayHours || !todayHours.isOpen) return false;
+
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const [openH, openM] = todayHours.open.split(':').map(Number);
+    const [closeH, closeM] = todayHours.close.split(':').map(Number);
+    const openTime = openH * 60 + openM;
+    const closeTime = closeH * 60 + closeM;
+
+    return currentTime >= openTime && currentTime <= closeTime;
+  } catch {
+    return false;
+  }
 }
 
 function SalonCard({
   salon,
+  statusColors,
+  canManageSalons,
+  canEdit,
+  canDelete,
   onEdit,
   onDelete,
 }: {
   salon: Salon;
+  statusColors: Record<string, string>;
+  canManageSalons: () => boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
-  const { canManageSalons, user, hasAnyRole } = usePermissions();
-
-  // Check if user can edit/delete this salon
-  const canEdit =
-    canManageSalons() &&
-    (hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]) ||
-      user?.id === salon.owner?.id); // Salon owner can edit their own salon
-  const canDelete = hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]);
-
-  const statusColors = {
-    active: 'bg-success/20 text-success border-success/30',
-    inactive:
-      'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border-border-light dark:border-border-dark',
-    pending: 'bg-warning/20 text-warning border-warning/30',
-  };
 
   return (
-    <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 overflow-hidden">
+    <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 transition-all duration-300 hover:shadow-lg overflow-hidden">
       {/* Gradient Background on Hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300" />
 
       <div className="relative">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
+                {salon.images?.[0] || salon.image ? (
+                  <img 
+                    src={salon.images?.[0] || salon.image} 
+                    alt={salon.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <Building2 className="w-6 h-6 text-white" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <Link
                   href={`/salons/${salon.id}`}
                   className="block hover:text-primary transition group"
                 >
-                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark truncate group-hover:text-primary">
+                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark truncate group-hover:text-primary">
                     {salon.name}
                   </h3>
                 </Link>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 truncate">
                   {salon.owner?.fullName}
                 </p>
               </div>
@@ -499,21 +512,28 @@ function SalonCard({
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition"
+                className="p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-md transition"
               >
-                <MoreVertical className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+                <MoreVertical className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
               </button>
 
               {showMenu && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl z-20 overflow-hidden">
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowMenu(false)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setShowMenu(false); }}
+                    role="button"
+                    tabIndex={-1}
+                    aria-label="Close menu"
+                  />
+                  <div className="absolute right-0 mt-1 w-36 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl z-20 overflow-hidden">
                     <Link
                       href={`/salons/${salon.id}`}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
                       onClick={() => setShowMenu(false)}
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5" />
                       View Details
                     </Link>
                     {canEdit && (
@@ -522,9 +542,9 @@ function SalonCard({
                           onEdit();
                           setShowMenu(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3.5 h-3.5" />
                         Edit
                       </button>
                     )}
@@ -534,9 +554,9 @@ function SalonCard({
                           onDelete();
                           setShowMenu(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-danger hover:bg-background-light dark:hover:bg-background-dark transition"
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-danger hover:bg-background-light dark:hover:bg-background-dark transition"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                         Delete
                       </button>
                     )}
@@ -547,36 +567,74 @@ function SalonCard({
           )}
         </div>
 
-        {/* Status Badge */}
-        <div className="mb-4">
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold border ${
-              statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive
-            }`}
-          >
-            {salon.status}
-          </span>
-        </div>
+
+          
+          {/* Status & Open Indicator */}
+          <div className="flex items-center gap-2 mb-3">
+             <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive
+              }`}
+            >
+              {salon.status}
+            </span>
+            {isSalonOpen(salon.settings?.operatingHours) && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-success/10 text-success border-success/20">
+                <Clock className="w-3 h-3" />
+                Open Now
+              </span>
+            )}
+          </div>
+
+          {/* Business Types & Clientele */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {salon.settings?.businessTypes?.slice(0, 3).map((type) => {
+              const Icon = BUSINESS_ICONS[type] || Star;
+              return (
+                <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
+                  <Icon className="w-3 h-3 text-primary" />
+                  <span className="capitalize">{type.replace('_', ' ')}</span>
+                </span>
+              );
+            })}
+             {/* Fallback for single businessType */}
+             {!salon.settings?.businessTypes && salon.settings?.businessType && (
+               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
+                  <Star className="w-3 h-3 text-primary" />
+                  <span className="capitalize">{salon.settings.businessType.replace('_', ' ')}</span>
+                </span>
+             )}
+            
+            {salon.settings?.targetClientele && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
+                 {(() => {
+                    const Icon = CLIENTELE_ICONS[salon.settings.targetClientele] || Users;
+                    return <Icon className="w-3 h-3 text-secondary" />;
+                 })()}
+                 <span className="capitalize">{salon.settings.targetClientele}</span>
+              </span>
+            )}
+          </div>
 
         {/* Details */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 text-sm">
-            <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-xs">
+            <MapPin className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
             <span className="text-text-light/80 dark:text-text-dark/80 truncate">
               {salon.city}, {salon.district}
             </span>
           </div>
 
           {salon.phone && (
-            <div className="flex items-center gap-3 text-sm">
-              <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-xs">
+              <Phone className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
               <span className="text-text-light/80 dark:text-text-dark/80">{salon.phone}</span>
             </div>
           )}
 
           {salon.email && (
-            <div className="flex items-center gap-3 text-sm">
-              <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-xs">
+              <Mail className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
               <span className="text-text-light/80 dark:text-text-dark/80 truncate">
                 {salon.email}
               </span>
@@ -584,8 +642,8 @@ function SalonCard({
           )}
 
           {salon.website && (
-            <div className="flex items-center gap-3 text-sm">
-              <Globe className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-xs">
+              <Globe className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
               <a
                 href={salon.website}
                 target="_blank"
@@ -597,8 +655,8 @@ function SalonCard({
             </div>
           )}
 
-          <div className="flex items-center gap-3 text-sm">
-            <Users className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+          <div className="flex items-center gap-2 text-xs">
+            <Users className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
             <span className="text-text-light/80 dark:text-text-dark/80">
               {salon.employeeCount ?? 0}{' '}
               {(salon.employeeCount ?? 0) === 1 ? 'employee' : 'employees'}
@@ -607,47 +665,48 @@ function SalonCard({
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark flex gap-2">
+        <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark flex gap-1.5">
           <Link
             href={`/salons/${salon.id}`}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-xs font-medium transition"
           >
-            <Eye className="w-4 h-4" />
-            View Details
+            <Eye className="w-3.5 h-3.5" />
+            View
           </Link>
           {canManageSalons() && (
             <>
               <Link
                 href={`/salons/${salon.id}/customers`}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-xs font-medium transition"
               >
-                <Users className="w-4 h-4" />
-                Customers
+                <Users className="w-3.5 h-3.5" />
+                Cust.
               </Link>
               <Link
                 href={`/salons/${salon.id}/employees`}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-xs font-medium transition"
               >
-                <UserPlus className="w-4 h-4" />
-                Employees
+                <UserPlus className="w-3.5 h-3.5" />
+                Staff
               </Link>
             </>
           )}
           {canEdit && (
             <button
               onClick={onEdit}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg text-sm font-medium transition"
+              className="px-2 py-1.5 bg-background-light dark:bg-background-dark hover:bg-primary/10 text-primary rounded-lg transition"
+              title="Edit"
             >
-              <Edit className="w-4 h-4" />
-              Edit
+              <Edit className="w-3.5 h-3.5" />
             </button>
           )}
           {canDelete && (
             <button
               onClick={onDelete}
-              className="px-3 py-2 bg-background-light dark:bg-background-dark hover:bg-danger/10 text-danger rounded-lg transition"
+              className="px-2 py-1.5 bg-background-light dark:bg-background-dark hover:bg-danger/10 text-danger rounded-lg transition"
+              title="Delete"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -658,162 +717,180 @@ function SalonCard({
 
 function SalonsTable({
   salons,
+  statusColors,
+  canManageSalons,
+  canEditSalon,
+  canDeleteSalon,
   onEdit,
   onDelete,
 }: {
   salons: Salon[];
+  statusColors: Record<string, string>;
+  canManageSalons: () => boolean;
+  canEditSalon: (salon: Salon) => boolean;
+  canDeleteSalon: () => boolean;
   onEdit: (salon: Salon) => void;
   onDelete: (id: string) => void;
 }) {
-  const { canManageSalons, user, hasAnyRole } = usePermissions();
-
-  const statusColors = {
-    active: 'bg-success/20 text-success border-success/30',
-    inactive:
-      'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border-border-light dark:border-border-dark',
-    pending: 'bg-warning/20 text-warning border-warning/30',
-  };
-
-  const canEditSalon = (salon: Salon) => {
-    return (
-      canManageSalons() &&
-      (hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]) ||
-        user?.id === salon.owner?.id)
-    );
-  };
-
-  const canDeleteSalon = () => {
-    return hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]);
-  };
-
+  
   return (
-    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden">
+    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                Salon Name
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                Salon
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                Owner
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                Type & Clientele
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                 Location
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-light dark:divide-border-dark">
+          <tbody className="divide-y divide-border-light/50 dark:divide-border-dark/50">
             {salons.map((salon) => (
               <tr
                 key={salon.id}
-                className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                className="hover:bg-primary/5 transition-colors group"
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Building2 className="w-5 h-5 text-white" />
+                    <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      {salon.images?.[0] || salon.image ? (
+                        <img src={salon.images?.[0] || salon.image} alt={salon.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="w-5 h-5 text-white" />
+                      )}
                     </div>
                     <div>
                       <Link
                         href={`/salons/${salon.id}`}
-                        className="text-sm font-semibold text-text-light dark:text-text-dark hover:text-primary transition"
+                        className="text-xs font-semibold text-text-light dark:text-text-dark hover:text-primary transition"
                       >
                         {salon.name}
                       </Link>
-                      {salon.settings?.businessType && (
-                        <div className="text-xs text-text-light/60 dark:text-text-dark/60 capitalize">
-                          {salon.settings.businessType.replace('_', ' ')}
-                        </div>
-                      )}
+                      <div className="text-[10px] text-text-light/60 dark:text-text-dark/60">
+                        {salon.owner?.fullName}
+                      </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-text-light dark:text-text-dark">
-                    {salon.owner?.fullName}
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {salon.settings?.businessTypes?.slice(0, 2).map((type) => {
+                      const Icon = BUSINESS_ICONS[type] || Star;
+                      return (
+                        <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80">
+                          <Icon className="w-3 h-3 text-primary" />
+                          <span className="capitalize">{type.replace('_', ' ')}</span>
+                        </span>
+                      );
+                    })}
+                    {!salon.settings?.businessTypes && salon.settings?.businessType && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80 capitalize">
+                        <Star className="w-3 h-3 text-primary" />
+                        {salon.settings.businessType.replace('_', ' ')}
+                      </span>
+                    )}
+                    {salon.settings?.targetClientele && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80 capitalize">
+                        <User className="w-3 h-3" />
+                        {salon.settings.targetClientele}
+                      </span>
+                    )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2 text-sm text-text-light/80 dark:text-text-dark/80">
-                    <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
+                    <MapPin className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
                     <div>
                       <div className="text-text-light dark:text-text-dark">{salon.city}</div>
-                      <div className="text-xs text-text-light/60 dark:text-text-dark/60">
+                      <div className="text-[10px] text-text-light/60 dark:text-text-dark/60">
                         {salon.district}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="space-y-1">
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="space-y-0.5">
                     {salon.phone && (
-                      <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
+                      <div className="flex items-center gap-1.5 text-xs text-text-light dark:text-text-dark">
                         <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
                         {salon.phone}
                       </div>
                     )}
                     {salon.email && (
-                      <div className="flex items-center gap-2 text-sm text-text-light/80 dark:text-text-dark/80">
+                      <div className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
                         <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                        <span className="truncate max-w-[200px]">{salon.email}</span>
+                        <span className="truncate max-w-[120px]">{salon.email}</span>
                       </div>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold border ${
-                      statusColors[salon.status as keyof typeof statusColors] ||
-                      statusColors.inactive
-                    }`}
-                  >
-                    {salon.status}
-                  </span>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex flex-col gap-1">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                        statusColors[salon.status as keyof typeof statusColors] ||
+                        statusColors.inactive
+                      }`}
+                    >
+                      {salon.status}
+                    </span>
+                    {isSalonOpen(salon.settings?.operatingHours) && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-success/10 text-success border border-success/20">
+                        <Clock className="w-3 h-3" />
+                        Open
+                      </span>
+                    )}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="px-4 py-3 whitespace-nowrap text-right">
+                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link
                       href={`/salons/${salon.id}`}
-                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                      className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition"
                       title="View Details"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5" />
                     </Link>
-                    {canManageSalons() && (
-                      <Link
-                        href={`/salons/${salon.id}/customers`}
-                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
-                        title="View Customers"
-                      >
-                        <Users className="w-4 h-4" />
-                      </Link>
-                    )}
                     {canEditSalon(salon) && (
                       <button
                         onClick={() => onEdit(salon)}
-                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                        className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition"
                         title="Edit"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3.5 h-3.5" />
                       </button>
+                    )}
+                    {canManageSalons() && (
+                      <Link
+                        href={`/salons/${salon.id}/customers`}
+                        className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition"
+                        title="View Customers"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                      </Link>
                     )}
                     {canDeleteSalon() && (
                       <button
                         onClick={() => onDelete(salon.id)}
-                        className="p-2 text-danger hover:bg-danger/10 rounded-lg transition"
+                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition"
                         title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>

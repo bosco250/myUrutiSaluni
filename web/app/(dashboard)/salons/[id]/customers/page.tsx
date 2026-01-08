@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
 import {
   Search,
@@ -31,7 +31,7 @@ interface SalonCustomer {
   totalSpent: number;
   tags: string[];
   notes: string | null;
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   birthday: string | null;
   anniversaryDate: string | null;
   followUpDate: string | null;
@@ -102,18 +102,18 @@ function SalonCustomersContent() {
       daysSinceLastVisit,
     ],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchQuery) params.append('search', searchQuery);
-      if (selectedTags.length > 0) params.append('tags', selectedTags.join(','));
-      if (minVisits) params.append('minVisits', minVisits);
-      if (minSpent) params.append('minSpent', minSpent);
-      if (daysSinceLastVisit) params.append('daysSinceLastVisit', daysSinceLastVisit);
-      params.append('sortBy', sortBy);
-      params.append('sortOrder', sortOrder);
-      params.append('page', page.toString());
-      params.append('limit', '20');
+      const queryParams = new URLSearchParams();
+      if (searchQuery) queryParams.append('search', searchQuery);
+      if (selectedTags.length > 0) queryParams.append('tags', selectedTags.join(','));
+      if (minVisits) queryParams.append('minVisits', minVisits);
+      if (minSpent) queryParams.append('minSpent', minSpent);
+      if (daysSinceLastVisit) queryParams.append('daysSinceLastVisit', daysSinceLastVisit);
+      queryParams.append('sortBy', sortBy);
+      queryParams.append('sortOrder', sortOrder);
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', '20');
 
-      const response = await api.get(`/salons/${salonId}/customers?${params.toString()}`);
+      const response = await api.get(`/salons/${salonId}/customers?${queryParams.toString()}`);
       return response.data;
     },
     enabled: !!salonId,
@@ -128,8 +128,6 @@ function SalonCustomersContent() {
     },
     enabled: !!salonId,
   });
-
-  const queryClient = useQueryClient();
 
   // Export customers
   const exportMutation = useMutation({
@@ -149,7 +147,7 @@ function SalonCustomersContent() {
     },
   });
 
-  const customers = customersData?.data || [];
+  const customers = useMemo(() => customersData?.data || [], [customersData]);
   const totalPages = customersData?.totalPages || 0;
 
   const availableTags = useMemo(() => {
@@ -161,13 +159,15 @@ function SalonCustomersContent() {
   }, [customers]);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">Customer Management</h1>
-          <p className="text-text-light/60 dark:text-text-dark/60 mt-2">
-            Manage your salon's customers, track visits, and analyze customer behavior
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+            Customer Management
+          </h1>
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+            Manage your salon&apos;s customers, track visits, and analyze customer behavior
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -175,8 +175,9 @@ function SalonCustomersContent() {
             onClick={() => exportMutation.mutate()}
             variant="outline"
             disabled={exportMutation.isPending}
+            className="flex items-center gap-2"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4" />
             Export CSV
           </Button>
         </div>
@@ -184,63 +185,67 @@ function SalonCustomersContent() {
 
       {/* Analytics Cards */}
       {analytics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
                   Total Customers
                 </p>
-                <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+                <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                   {analytics.totalCustomers}
                 </p>
               </div>
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <User className="w-6 h-6 text-primary" />
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                <User className="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Active (30d)</p>
-                <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                  Active (30d)
+                </p>
+                <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                   {analytics.activeCustomers}
                 </p>
               </div>
-              <div className="p-3 bg-success/10 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-success" />
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+                <TrendingUp className="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Avg CLV</p>
-                <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                  Avg CLV
+                </p>
+                <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                   RWF {Math.round(analytics.averageCLV).toLocaleString()}
                 </p>
               </div>
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <DollarSign className="w-6 h-6 text-primary" />
+              <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+                <DollarSign className="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+          <div className="group relative bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 dark:border-orange-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
                   Churned (90d)
                 </p>
-                <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+                <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
                   {analytics.churnedCustomers}
                 </p>
               </div>
-              <div className="p-3 bg-danger/10 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-danger" />
+              <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+                <TrendingUp className="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
@@ -248,7 +253,7 @@ function SalonCustomersContent() {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4 mb-6">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
         <div className="flex flex-col gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 w-5 h-5" />
@@ -264,23 +269,22 @@ function SalonCustomersContent() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition text-text-light dark:text-text-dark"
+              variant="secondary"
+              className="flex items-center gap-2"
             >
               <Filter className="w-4 h-4" />
-              <span>Filters</span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`}
-              />
-            </button>
+              {showFilters ? 'Hide Filters' : 'Filters'}
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
 
             {/* Tags Filter */}
             {availableTags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {availableTags.map((tag) => (
-                  <button
+                  <Button
                     key={tag}
                     onClick={() => {
                       setSelectedTags((prev) =>
@@ -288,14 +292,16 @@ function SalonCustomersContent() {
                       );
                       setPage(1);
                     }}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${
+                    size="sm"
+                    variant={selectedTags.includes(tag) ? 'primary' : 'secondary'}
+                    className={`rounded-full ${
                       selectedTags.includes(tag)
-                        ? 'bg-primary text-white'
-                        : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-primary/10'
+                        ? ''
+                        : 'hover:bg-primary/10'
                     }`}
                   >
                     {tag}
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
@@ -305,8 +311,8 @@ function SalonCustomersContent() {
               value={`${sortBy}-${sortOrder}`}
               onChange={(e) => {
                 const [by, order] = e.target.value.split('-');
-                setSortBy(by as any);
-                setSortOrder(order as any);
+                setSortBy(by as 'lastVisit' | 'totalSpent' | 'visitCount' | 'name');
+                setSortOrder(order as 'ASC' | 'DESC');
                 setPage(1);
               }}
               className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
@@ -326,10 +332,14 @@ function SalonCustomersContent() {
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border-light dark:border-border-dark">
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label
+                  htmlFor="min-visits"
+                  className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+                >
                   Min Visits
                 </label>
                 <input
+                  id="min-visits"
                   type="number"
                   value={minVisits}
                   onChange={(e) => {
@@ -340,10 +350,14 @@ function SalonCustomersContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label
+                  htmlFor="min-spent"
+                  className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+                >
                   Min Spent (RWF)
                 </label>
                 <input
+                  id="min-spent"
                   type="number"
                   value={minSpent}
                   onChange={(e) => {
@@ -354,10 +368,14 @@ function SalonCustomersContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label
+                  htmlFor="days-since-last-visit"
+                  className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+                >
                   Days Since Last Visit
                 </label>
                 <input
+                  id="days-since-last-visit"
                   type="number"
                   value={daysSinceLastVisit}
                   onChange={(e) => {
@@ -380,40 +398,40 @@ function SalonCustomersContent() {
         </div>
       ) : customers.length > 0 ? (
         <>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-border-light dark:divide-border-dark">
-                <thead className="bg-background-light dark:bg-background-dark">
+                <thead className="bg-background-secondary/50 dark:bg-background-dark/50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Visits
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Total Spent
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Last Visit
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Tags
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
                   {customers.map((sc) => (
-                    <tr key={sc.id} className="hover:bg-background-light dark:hover:bg-background-dark transition">
+                    <tr key={sc.id} className="hover:bg-primary/5 transition-colors group">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-semibold">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-semibold shadow-sm">
                             {sc.customer.fullName.charAt(0).toUpperCase()}
                           </div>
                           <div className="ml-4">
@@ -474,7 +492,7 @@ function SalonCustomersContent() {
                           {(sc.tags || []).map((tag) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20"
                             >
                               {tag}
                             </span>
@@ -482,16 +500,17 @@ function SalonCustomersContent() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() =>
-                              router.push(`/salons/${salonId}/customers/${sc.customerId}`)
-                            }
-                            className="text-primary hover:text-primary/80 p-2 hover:bg-primary/10 rounded transition"
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            onClick={() => router.push(`/salons/${salonId}/customers/${sc.customerId}`)}
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 w-8 p-0"
                             title="View Details"
+                            aria-label="View customer details"
                           >
                             <Eye className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -503,8 +522,8 @@ function SalonCustomersContent() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-text-light/80 dark:text-text-dark/80">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="text-xs text-text-light/60 dark:text-text-dark/60">
                 Showing page {page} of {totalPages} ({customersData?.total || 0} total customers)
               </div>
               <div className="flex gap-2">
@@ -527,7 +546,7 @@ function SalonCustomersContent() {
           )}
         </>
       ) : (
-        <div className="text-center py-12 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl">
+        <div className="text-center py-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
           <User className="w-12 h-12 mx-auto mb-4 text-text-light/40 dark:text-text-dark/40" />
           <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
             {searchQuery || selectedTags.length > 0

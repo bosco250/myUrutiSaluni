@@ -14,16 +14,16 @@ import {
   Calendar,
   Loader2,
   AlertCircle,
-  X,
   Search,
   Trash2,
   ArrowUpRight,
   ArrowDownRight,
   ChevronDown,
   Briefcase,
-  PieChart
+  PieChart,
+  LucideIcon,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -99,7 +99,7 @@ function StatCard({
   title: string;
   amount: string;
   subtext?: string;
-  icon: any;
+  icon: LucideIcon;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
   color?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
@@ -140,7 +140,15 @@ function StatCard({
 }
 
 // 2. Tab Navigation (Pill Style)
-function TabNav({ tabs, activeString, onChange }: { tabs: any[], activeString: string, onChange: (id: string) => void }) {
+function TabNav({
+  tabs,
+  activeString,
+  onChange,
+}: {
+  tabs: Array<{ id: string; name: string; icon: LucideIcon }>;
+  activeString: string;
+  onChange: (id: string) => void;
+}) {
   return (
     <div className="flex p-1 space-x-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl w-fit mb-6">
       {tabs.map((tab) => {
@@ -271,14 +279,12 @@ export default function AccountingPage() {
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-20">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
-            Accounting
-          </h1>
-          <p className="text-text-light/60 dark:text-text-dark/60 mt-1">
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Accounting</h1>
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
             Track your financial health and manage expenses
           </p>
         </div>
@@ -299,22 +305,38 @@ export default function AccountingPage() {
           )}
 
           {/* Date Picker Actions */}
-           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-1 flex items-center space-x-1">
-              <button 
-                onClick={() => handlePresetDate('This Month', startOfMonth(new Date()), endOfMonth(new Date()))}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRangeLabel === 'This Month' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-              >
-                Month
-              </button>
-              <button 
-                onClick={() => handlePresetDate('Last Month', startOfMonth(subMonths(new Date(), 1)), endOfMonth(subMonths(new Date(), 1)))}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${dateRangeLabel === 'Last Month' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-              >
-                Last Month
-              </button>
-              <div className="h-4 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1"></div>
-              <Calendar className="w-4 h-4 text-gray-400 ml-1" />
-           </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-1 flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={dateRangeLabel === 'This Month' ? 'primary' : 'secondary'}
+              onClick={() =>
+                handlePresetDate('This Month', startOfMonth(new Date()), endOfMonth(new Date()))
+              }
+              className="h-7 px-2 text-xs"
+            >
+              Month
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={dateRangeLabel === 'Last Month' ? 'primary' : 'secondary'}
+              onClick={() =>
+                handlePresetDate(
+                  'Last Month',
+                  startOfMonth(subMonths(new Date(), 1)),
+                  endOfMonth(subMonths(new Date(), 1))
+                )
+              }
+              className="h-7 px-2 text-xs"
+            >
+              Last Month
+            </Button>
+            <div className="h-4 w-px bg-border-light dark:bg-border-dark mx-1" />
+            <div className="p-1 rounded bg-background-secondary dark:bg-background-dark text-text-light/40 border border-border-light/50">
+              <Calendar className="w-3 h-3" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -355,9 +377,14 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
 
   if (isLoadingSummary) {
     return (
-       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-           {[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
-       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="h-28 bg-background-secondary dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl animate-pulse"
+          />
+        ))}
+      </div>
     );
   }
 
@@ -368,7 +395,7 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard 
           title="Total Revenue" 
           amount={formatCurrency(summary?.totalRevenue || 0)} 
@@ -406,9 +433,9 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
       </div>
 
        {/* Breakdown Section */}
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Chart Placeholder */}
-          <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-sm">
+          <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
              <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-text-light dark:text-text-dark">Financial Performance</h3>
                 <Badge variant="default" size="sm">Coming Soon</Badge>
@@ -420,11 +447,11 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
           </div>
 
           {/* Expense Categories */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-sm">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
              <h3 className="font-bold text-text-light dark:text-text-dark mb-4">Top Expenses</h3>
              <div className="space-y-4">
                {expenseSummary?.byCategory?.length > 0 ? (
-                 expenseSummary.byCategory.slice(0, 5).map((cat: any) => (
+                 (expenseSummary.byCategory as Array<{ categoryName: string; total: number }>).slice(0, 5).map((cat) => (
                    <CategoryProgress 
                      key={cat.categoryName} 
                      name={cat.categoryName} 
@@ -438,7 +465,9 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                )}
              </div>
              {expenseSummary?.byCategory?.length > 5 && (
-                <button className="w-full mt-4 text-xs font-medium text-primary hover:underline">View All Categories</button>
+                <Button variant="secondary" size="sm" className="w-full mt-4">
+                  View All Categories
+                </Button>
              )}
           </div>
        </div>
@@ -592,12 +621,16 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                               {formatCurrency(expense.amount)}
                            </td>
                            <td className="px-6 py-4 text-right">
-                              <button 
-                                 onClick={() => confirm('Delete expense?') && deleteMutation.mutate(expense.id)}
-                                 className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                              <Button
+                                onClick={() => confirm('Delete expense?') && deleteMutation.mutate(expense.id)}
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500"
+                                title="Delete expense"
+                                aria-label="Delete expense"
                               >
                                  <Trash2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                            </td>
                         </tr>
                      ))}
@@ -612,11 +645,12 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
           <form onSubmit={handleSubmit} className="space-y-4">
              <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (RWF) *</label>
+                   <label htmlFor="expense-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (RWF) *</label>
                    <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">RWF</div>
                       <input 
-                         type="number" name="amount" required min="1" step="1" 
+                         id="expense-amount"
+                         type="number" name="amount" required min="1" step="1"
                          className="w-full pl-12 pr-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg"
                          placeholder="0"
                       />
@@ -624,30 +658,30 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                 </div>
 
                 <div className="col-span-2">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description *</label>
-                   <input type="text" name="description" required placeholder="e.g. Monthly Rent"
+                   <label htmlFor="expense-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description *</label>
+                   <input id="expense-description" type="text" name="description" required placeholder="e.g. Monthly Rent"
                       className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                    />
                 </div>
 
                 <div className="col-span-1">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date *</label>
-                   <input type="date" name="expenseDate" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                   <label htmlFor="expense-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date *</label>
+                   <input id="expense-date" type="date" name="expenseDate" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
                       className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                    />
                 </div>
 
                 <div className="col-span-1">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
-                   <select name="categoryId" required className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none">
+                   <label htmlFor="expense-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
+                   <select id="expense-category" name="categoryId" required className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none">
                       <option value="">Select...</option>
                       {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                    </select>
                 </div>
 
                 <div className="col-span-1">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
-                   <select name="paymentMethod" required className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none">
+                   <label htmlFor="expense-payment-method" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
+                   <select id="expense-payment-method" name="paymentMethod" required className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none">
                       <option value="cash">Cash</option>
                       <option value="mobile_money">Mobile Money</option>
                       <option value="bank_transfer">Bank Transfer</option>
@@ -656,15 +690,15 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                 </div>
 
                  <div className="col-span-1">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor (Optional)</label>
-                   <input type="text" name="vendorName" placeholder="e.g. Landlord"
+                   <label htmlFor="expense-vendor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor (Optional)</label>
+                   <input id="expense-vendor" type="text" name="vendorName" placeholder="e.g. Landlord"
                       className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                    />
                 </div>
              </div>
 
              <div className="pt-4 flex justify-end gap-3">
-                <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
                 <Button type="submit" variant="primary" disabled={createMutation.isPending}>
                    {createMutation.isPending ? 'Saving...' : 'Add Expense'}
                 </Button>
@@ -679,6 +713,24 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
 // --- TAB 3: ACCOUNTS ---
 
 function AccountsTab({ salonId }: { salonId: string }) {
+  const queryClient = useQueryClient();
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: { code: string; name: string }) => {
+      return api.post('/accounting/accounts', {
+        code: data.code,
+        name: data.name,
+        accountType: 'expense',
+        salonId,
+        isActive: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expense-categories', salonId] });
+      setShowCreateCategory(false);
+    },
+  });
+
   const { data: categories, isLoading } = useQuery<ExpenseCategory[]>({
       queryKey: ['expense-categories', salonId],
       queryFn: async () => {
@@ -692,7 +744,10 @@ function AccountsTab({ salonId }: { salonId: string }) {
     <div className="space-y-6">
        <div className="flex justify-between items-center">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Chart of Accounts</h2>
-          <Button variant="outline" size="sm">Manage Categories</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowCreateCategory(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Category
+          </Button>
        </div>
        
        {isLoading ? (
@@ -714,12 +769,77 @@ function AccountsTab({ salonId }: { salonId: string }) {
                 </div>
              ))}
              {/* Add New Card */}
-             <button className="flex flex-col items-center justify-center p-5 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-gray-400 hover:text-primary">
+             <button
+                type="button"
+                onClick={() => setShowCreateCategory(true)}
+                className="flex flex-col items-center justify-center p-5 rounded-xl border border-dashed border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-text-light/40 dark:text-text-dark/40 hover:text-primary"
+             >
                 <Plus className="w-8 h-8 mb-2 opacity-50" />
                 <span className="text-sm font-medium">Add Category</span>
              </button>
           </div>
        )}
+
+       <Modal
+         isOpen={showCreateCategory}
+         onClose={() => setShowCreateCategory(false)}
+         title="New Expense Category"
+       >
+         <form
+           onSubmit={(e) => {
+             e.preventDefault();
+             const fd = new FormData(e.currentTarget);
+             const code = String(fd.get('code') || '').trim();
+             const name = String(fd.get('name') || '').trim();
+             if (!code || !name) return;
+             createCategoryMutation.mutate({ code, name });
+           }}
+           className="space-y-4"
+         >
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+               <label
+                 htmlFor="account-code"
+                 className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+               >
+                 Code
+               </label>
+               <input
+                 id="account-code"
+                 name="code"
+                 type="text"
+                 placeholder="e.g. EXP-NEW"
+                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                 required
+               />
+             </div>
+             <div>
+               <label
+                 htmlFor="account-name"
+                 className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+               >
+                 Name
+               </label>
+               <input
+                 id="account-name"
+                 name="name"
+                 type="text"
+                 placeholder="e.g. Insurance"
+                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                 required
+               />
+             </div>
+           </div>
+           <div className="flex justify-end gap-2 pt-2">
+             <Button type="button" variant="secondary" onClick={() => setShowCreateCategory(false)}>
+               Cancel
+             </Button>
+             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending} loading={createCategoryMutation.isPending} loadingText="Saving...">
+               Create
+             </Button>
+           </div>
+         </form>
+       </Modal>
     </div>
   );
 }

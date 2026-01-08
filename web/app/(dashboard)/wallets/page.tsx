@@ -2,8 +2,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Wallet, ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
+import Button from '@/components/ui/Button';
 
 interface WalletData {
   id: string;
@@ -34,7 +35,7 @@ export default function WalletsPage() {
     },
   });
 
-  const { data: transactions, isLoading: transactionsLoading } = useQuery<WalletTransaction[]>({
+  const { data: transactions } = useQuery<WalletTransaction[]>({
     queryKey: ['wallet-transactions', wallet?.id],
     queryFn: async () => {
       if (!wallet?.id) return [];
@@ -45,32 +46,65 @@ export default function WalletsPage() {
   });
 
   if (walletLoading) {
-    return <div className="text-center py-12">Loading wallet...</div>;
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-10 text-center">
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading wallet...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Wallet</h1>
-        <p className="text-gray-600 mt-2">Manage your digital wallet</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Header / Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+        <div className="relative p-5 sm:p-6 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
+              <Wallet className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
+                Wallet
+              </h1>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                Manage your digital wallet and view transaction history.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <Wallet className="w-8 h-8" />
-            <span className="text-sm opacity-90">Current Balance</span>
+      {/* Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative text-white">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/75">
+                Current Balance
+              </p>
+              <div className="h-9 w-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center">
+                <Wallet className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-2xl font-black mt-3">
+              {wallet?.currency} {wallet?.balance.toLocaleString() || '0'}
+            </p>
           </div>
-          <p className="text-3xl font-bold">
-            {wallet?.currency} {wallet?.balance.toLocaleString() || '0'}
-          </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
+          <div className="relative flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Deposits</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Deposits
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
                 {wallet?.currency}{' '}
                 {transactions
                   ?.filter((t) => t.transactionType === 'deposit')
@@ -78,15 +112,20 @@ export default function WalletsPage() {
                   .toLocaleString() || '0'}
               </p>
             </div>
-            <ArrowUp className="w-8 h-8 text-green-500" />
+            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
+              <ArrowUp className="w-4 h-4" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-danger/10 via-transparent to-danger/5" />
+          <div className="relative flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Withdrawals</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                Withdrawals
+              </p>
+              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
                 {wallet?.currency}{' '}
                 {transactions
                   ?.filter((t) => t.transactionType === 'withdrawal')
@@ -94,57 +133,75 @@ export default function WalletsPage() {
                   .toLocaleString() || '0'}
               </p>
             </div>
-            <ArrowDown className="w-8 h-8 text-red-500" />
+            <div className="h-9 w-9 rounded-xl bg-danger/10 text-danger flex items-center justify-center">
+              <ArrowDown className="w-4 h-4" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Transaction History</h2>
+      {/* Table */}
+      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
+        <div className="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-black tracking-tight text-text-light dark:text-text-dark">
+              Transaction History
+            </h2>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+              Your latest wallet activity.
+            </p>
+          </div>
+          <Button type="button" variant="secondary" size="sm">
+            Export
+          </Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full">
+            <thead className="bg-background-light/60 dark:bg-background-dark/40">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Balance After
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                   Status
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {transactions?.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <tr
+                  key={transaction.id}
+                  className="hover:bg-background-light/50 dark:hover:bg-background-dark/30 transition-colors"
+                >
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                     {format(new Date(transaction.createdAt), 'MMM dd, yyyy HH:mm')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary capitalize">
                       {transaction.transactionType.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{transaction.description}</td>
+                  <td className="px-4 py-3 text-sm text-text-light dark:text-text-dark">
+                    {transaction.description}
+                  </td>
                   <td
-                    className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                    className={`px-4 py-3 whitespace-nowrap text-sm font-semibold ${
                       transaction.transactionType === 'deposit' ||
                       transaction.transactionType === 'commission'
-                        ? 'text-green-600'
-                        : 'text-red-600'
+                        ? 'text-success'
+                        : 'text-danger'
                     }`}
                   >
                     {transaction.transactionType === 'deposit' ||
@@ -153,15 +210,15 @@ export default function WalletsPage() {
                       : '-'}
                     {wallet?.currency} {transaction.amount.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                     {wallet?.currency} {transaction.balanceAfter.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
                         transaction.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-success/10 text-success'
+                          : 'bg-warning/10 text-warning'
                       }`}
                     >
                       {transaction.status}

@@ -22,6 +22,26 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '161.97.148.53',
+        port: '4000',
+        pathname: '/api/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '161.97.148.53',
+        port: '4000',
+        pathname: '/api/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '4000',
+        pathname: '/api/uploads/**',
+      },
+    ],
   },
   
   // Compiler optimizations

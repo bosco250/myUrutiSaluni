@@ -163,7 +163,7 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-12 md:pt-6 md:pb-16 relative z-10 text-white">
+        <div className="max-w-7xl mx-auto px-[var(--spacing-md)] md:px-[var(--spacing-lg)] pt-[var(--spacing-md)] pb-[var(--spacing-xl)] relative z-10 text-white">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1 opacity-90">
@@ -177,32 +177,32 @@ export default function CustomerDashboard() {
                   </div>
                 )}
               </div>
-              <h1 className="text-xl md:text-2xl font-bold mb-1 tracking-tight">
+              <h1 className="c-title mb-1 tracking-tight">
                 Hello, {user?.fullName?.split(' ')[0] || 'Beautiful'}! 👋
               </h1>
-              <p className="text-sm text-white/90 max-w-xl leading-relaxed">
+              <p className="c-body text-white/90 max-w-xl leading-relaxed">
                 Ready for your next glow up? Check your upcoming schedule or find a new salon.
               </p>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex c-gap-tight w-full md:w-auto">
               <Button
                 onClick={() => router.push('/salons/browse')}
                 variant="secondary"
                 size="sm"
-                className="flex-1 md:flex-none bg-white text-primary hover:bg-gray-50 h-9"
+                className="flex-1 md:flex-none bg-white text-primary hover:bg-gray-50 h-8 text-xs"
               >
-                <Search className="w-4 h-4" />
+                <Search className="w-3 h-3" />
                 Browse Salons
               </Button>
               <Button
                 onClick={() => router.push('/appointments')}
                 variant="outline"
                 size="sm"
-                className="flex-1 md:flex-none bg-primary/30 backdrop-blur-md text-white border-white/30 hover:bg-primary/40 h-9"
+                className="flex-1 md:flex-none bg-primary/30 backdrop-blur-md text-white border-white/30 hover:bg-primary/40 h-8 text-xs"
               >
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-3 h-3" />
                 My Schedule
               </Button>
             </div>
@@ -210,10 +210,10 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-6 md:-mt-8 relative z-30">
+      <div className="max-w-7xl mx-auto px-[var(--spacing-md)] md:px-[var(--spacing-lg)] -mt-6 md:-mt-8 relative z-30">
         {/* Statistics Grid */}
         {customer && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 c-gap-tight mb-6">
             <StatCard
               title="Total Visits"
               value={statistics ? (statistics.totalVisits || 0).toString() : '...'}
@@ -255,18 +255,18 @@ export default function CustomerDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--gap-normal)] md:gap-[var(--gap-section)]">
           {/* Left Column - Appointments & Sales */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-[var(--gap-normal)]">
             {/* Upcoming Appointments */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+            <div className="c-card bg-surface-light dark:bg-surface-dark shadow-sm border border-border-light dark:border-border-dark">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="c-section-title text-text-light dark:text-text-dark flex items-center gap-2">
                   <Clock className="w-4 h-4 text-primary" />
                   Upcoming Appointments
                 </h2>
                 {upcomingAppointments.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => router.push('/appointments')} className="h-7 text-xs px-2">
+                  <Button variant="outline" size="sm" onClick={() => router.push('/appointments')} className="c-btn-sm text-xs px-2">
                     See all
                   </Button>
                 )}
@@ -274,27 +274,27 @@ export default function CustomerDashboard() {
 
               {appointments ? (
                 upcomingAppointments.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-[var(--gap-tight)]">
                   {upcomingAppointments.map((apt) => (
                     <div
                       key={apt.id}
-                      className="group bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/30 transition-all flex items-center gap-3"
+                      className="group bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-border-light dark:border-border-dark hover:border-primary/30 transition-all flex items-center gap-3"
                     >
                       {/* Date Box */}
-                      <div className="flex-shrink-0 w-12 h-12 bg-surface-light dark:bg-surface-dark rounded-lg flex flex-col items-center justify-center shadow-sm border border-border-light dark:border-border-dark">
-                        <span className="text-[10px] font-bold text-primary uppercase leading-tight">
+                      <div className="flex-shrink-0 w-10 h-10 bg-surface-light dark:bg-surface-dark rounded-md flex flex-col items-center justify-center shadow-sm border border-border-light dark:border-border-dark">
+                        <span className="text-[8px] font-bold text-primary uppercase leading-tight">
                           {format(new Date(apt.scheduledStart), 'MMM')}
                         </span>
-                        <span className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">
+                        <span className="text-base font-bold text-text-light dark:text-text-dark leading-tight">
                           {format(new Date(apt.scheduledStart), 'dd')}
                         </span>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-text-light dark:text-text-dark text-sm truncate">
+                        <h4 className="font-bold text-text-light dark:text-text-dark text-xs truncate">
                           {apt.service?.name || 'Service'}
                         </h4>
-                        <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                        <div className="flex items-center gap-2 text-[10px] text-text-light/60 dark:text-text-dark/60 mt-0.5">
                           <Building2 className="w-3 h-3" />
                           <span className="truncate">{apt.salon?.name}</span>
                           <span>•</span>
@@ -304,14 +304,14 @@ export default function CustomerDashboard() {
                       </div>
 
                       <div className="flex-shrink-0 flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${apt.status === 'confirmed' ? 'bg-success/10 text-success' : apt.status === 'pending' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'}`}>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${apt.status === 'confirmed' ? 'bg-success/10 text-success' : apt.status === 'pending' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'}`}>
                           {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
                         </span>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => router.push(`/appointments/${apt.id}`)}
-                          className="h-7 w-7 p-0 flex items-center justify-center"
+                          className="w-6 h-6 p-0 flex items-center justify-center rounded-md"
                         >
                           <ArrowRight className="w-3 h-3" />
                         </Button>
@@ -341,14 +341,14 @@ export default function CustomerDashboard() {
             </div>
 
             {/* Recent History */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+            <div className="c-card bg-surface-light dark:bg-surface-dark shadow-sm border border-border-light dark:border-border-dark">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="c-section-title text-text-light dark:text-text-dark flex items-center gap-2">
                   <Receipt className="w-4 h-4 text-primary" />
                   Recent Activity
                 </h2>
                 {recentSales.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => router.push('/sales/history')} className="h-7 text-xs px-2">
+                  <Button variant="outline" size="sm" onClick={() => router.push('/sales/history')} className="c-btn-sm text-xs px-2">
                     View All
                   </Button>
                 )}
@@ -428,7 +428,7 @@ export default function CustomerDashboard() {
                       onClick={() => router.push('/membership/status')}
                       variant="outline"
                       size="sm"
-                      className="w-full bg-white/10 hover:bg-white/20 border-white/20 text-white h-8"
+                      className="w-full bg-white/10 hover:bg-white/20 border-white/20 text-white c-btn-sm text-xs"
                     >
                       Check Status
                     </Button>
@@ -437,7 +437,7 @@ export default function CustomerDashboard() {
                       onClick={() => router.push('/membership/apply')}
                       variant="secondary"
                       size="sm"
-                      className="w-full bg-white text-primary hover:bg-gray-50 h-8"
+                      className="w-full bg-white text-primary hover:bg-gray-50 c-btn-sm text-xs"
                     >
                       Partner with Us
                     </Button>
@@ -447,8 +447,8 @@ export default function CustomerDashboard() {
             )}
 
             {/* Features List */}
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
-              <h3 className="text-base font-semibold text-text-light dark:text-text-dark mb-3">
+            <div className="c-card bg-surface-light dark:bg-surface-dark shadow-sm border border-border-light dark:border-border-dark">
+              <h3 className="c-card-title font-semibold text-text-light dark:text-text-dark mb-2">
                 Quick Tips
               </h3>
               <ul className="space-y-3">
@@ -491,21 +491,21 @@ function StatCard({
   return (
     <Component
       onClick={onClick}
-      className={`bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark hover:shadow-md transition-all relative ${onClick ? 'cursor-pointer hover:border-primary/30 z-10' : ''}`}
+      className={`c-card bg-surface-light dark:bg-surface-dark shadow-sm border border-border-light dark:border-border-dark hover:shadow-md transition-all relative text-left w-full ${onClick ? 'cursor-pointer hover:border-primary/30' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className={`w-8 h-8 ${bgColor} rounded-lg flex items-center justify-center`}>
+        <div className={`c-icon-box ${bgColor} rounded-lg flex items-center justify-center`}>
           <Icon className={`w-4 h-4 ${color}`} />
         </div>
       </div>
-      <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-medium truncate">
+      <p className="c-secondary text-text-light/60 dark:text-text-dark/60 font-medium truncate">
         {title}
       </p>
-      <h3 className="text-lg font-bold text-text-light dark:text-text-dark mt-0.5 truncate">
+      <h3 className="c-stat-value text-text-light dark:text-text-dark mt-0.5 truncate">
         {value}
       </h3>
       {subValue && (
-        <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">{subValue}</p>
+        <p className="c-meta text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">{subValue}</p>
       )}
     </Component>
   );

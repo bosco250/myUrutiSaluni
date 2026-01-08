@@ -1,31 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authService, RegisterData } from '@/lib/auth';
 import { useAuthStore } from '@/store/auth-store';
-import { useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Phone, Lock, Briefcase, Sparkles, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { setUser, setToken, isAuthenticated } = useAuthStore();
+  
+  // Initialize role based on valid types
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
     password: '',
     fullName: '',
     phone: '',
-    role: 'customer', // Default to customer
+    role: 'customer',
   });
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Check if coming from membership form
+  const [isFromMembership, setIsFromMembership] = useState(false);
+  const [hasFormData, setHasFormData] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) {
       router.push('/dashboard');
     }
+    
+    // Client-side check for query params
+    const urlParams = new URLSearchParams(window.location.search);
+    setIsFromMembership(urlParams.get('redirect') === 'membership');
+    setHasFormData(!!sessionStorage.getItem('membershipFormData'));
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,19 +50,12 @@ export default function RegisterPage() {
       setUser(response.user);
       setToken(response.access_token);
 
-      // Check if user came from membership form
+      // Handle redirects
       const urlParams = new URLSearchParams(window.location.search);
-      const redirect = urlParams.get('redirect');
-
-      if (redirect === 'membership') {
-        // Check if membership form data exists
-        const hasFormData =
-          typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
-        if (hasFormData) {
-          // Redirect to complete membership page
+      if (urlParams.get('redirect') === 'membership') {
+        if (sessionStorage.getItem('membershipFormData')) {
           router.push('/membership/complete');
         } else {
-          // No form data, go to dashboard
           router.push('/dashboard');
         }
       } else {
@@ -63,195 +68,214 @@ export default function RegisterPage() {
     }
   };
 
-  // Check if coming from membership form
-  const urlParams =
-    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const isFromMembership = urlParams?.get('redirect') === 'membership';
-  const hasFormData = typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark px-4 py-12">
-      <div className="max-w-md w-full bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl p-8 border border-border-light dark:border-border-dark">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
-            {isFromMembership ? 'Step 2 of 3: Create Account' : 'Create Account'}
-          </h1>
-          <p className="text-text-light dark:text-text-dark opacity-70">
-            {isFromMembership
-              ? 'Complete your membership application by creating your account'
-              : 'Join the Salon Association Platform'}
-          </p>
+    <div className="max-w-[400px] w-full mx-auto">
+      <div className="text-center mb-8 lg:text-left">
+        <div className="inline-block p-3 rounded-2xl bg-primary/10 mb-4 lg:hidden">
+            <Sparkles className="w-8 h-8 text-primary" />
         </div>
+        <h2 className="c-title text-text-light dark:text-text-dark mb-2">
+          {isFromMembership ? 'Finish Application' : 'Create Account'}
+        </h2>
+        <p className="c-body text-text-light/60 dark:text-text-dark/60">
+          {isFromMembership 
+            ? 'Create an account to submit your membership.' 
+            : 'Join Uruti Saluni for the best experience.'}
+        </p>
+      </div>
 
-        {isFromMembership && hasFormData && (
-          <div className="mb-6 p-4 bg-info-light dark:bg-info/20 border border-info dark:border-info rounded-lg">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-info/20 dark:bg-info/40 flex items-center justify-center">
-                  <span className="text-info dark:text-info-light font-bold text-sm">2</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-info-dark dark:text-info-light mb-1">
-                  Membership Application in Progress
-                </p>
-                <div className="space-y-1 text-xs text-info-dark dark:text-info-light">
-                  <p>✓ Step 1: Form completed and saved</p>
-                  <p>⏳ Step 2: Creating account (current step)</p>
-                  <p>⏸️ Step 3: Auto-submit application (next)</p>
-                </div>
-                <p className="text-xs text-info-dark dark:text-info-light mt-2 font-medium">
-                  Your form data is safely stored and will be automatically submitted after
-                  registration.
-                </p>
-              </div>
+      {isFromMembership && hasFormData && (
+        <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-2 opacity-10">
+            <Sparkles className="w-12 h-12 text-primary" />
+          </div>
+          <div className="flex items-start gap-3 relative z-10">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-primary font-bold text-xs">2/3</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-primary mb-1">Membership in Progress</p>
+              <p className="text-xs text-text-light/70 dark:text-text-dark/70">
+                Your application data is saved. Create an account to proceed to the final step.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-[var(--gap-normal)]">
+        {error && (
+          <div className="p-3 rounded-lg bg-error/10 border border-error/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle className="w-4 h-4 text-error flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-error">Registration Error</h3>
+              <p className="text-xs text-error/80 mt-1">{error}</p>
             </div>
           </div>
         )}
 
-        {error && (
-          <div className="mb-4 p-3 bg-error-light dark:bg-error/20 border border-error dark:border-error text-error-dark dark:text-error-light rounded">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="fullName"
-              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-            >
+        <div className="flex flex-col gap-[var(--gap-tight)]">
+          {/* Full Name */}
+          <div className="group">
+            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'fullName' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Full Name
             </label>
-            <input
-              id="fullName"
-              type="text"
-              required
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full px-4 py-2 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="John Doe"
-            />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User className={`w-4 h-4 transition-colors ${focusedField === 'fullName' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+              </div>
+              <input
+                type="text"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onFocus={() => setFocusedField('fullName')}
+                onBlur={() => setFocusedField(null)}
+                className="block w-full pl-9 pr-3 py-2.5 c-body bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
+                placeholder="John Doe"
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-            >
-              Email
+          {/* Email */}
+          <div className="group">
+            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'email' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+              Email Address
             </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="your@email.com"
-            />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className={`w-4 h-4 transition-colors ${focusedField === 'email' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+              </div>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+                className="block w-full pl-9 pr-3 py-2.5 c-body bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
+                placeholder="name@example.com"
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-            >
+          {/* Phone (Optional) */}
+          <div className="group">
+            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'phone' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Phone (Optional)
             </label>
-            <input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-2 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="+250 788 123 456"
-            />
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Phone className={`w-4 h-4 transition-colors ${focusedField === 'phone' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+              </div>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onFocus={() => setFocusedField('phone')}
+                onBlur={() => setFocusedField(null)}
+                className="block w-full pl-9 pr-3 py-2.5 c-body bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
+                placeholder="+250 788 000 000"
+              />
+            </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="role"
-              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-            >
-              I want to register as
+          {/* Role Selection */}
+          <div className="group">
+            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'role' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+              I am a...
             </label>
-            <select
-              id="role"
-              value={formData.role || 'customer'}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  role: e.target.value as 'customer' | 'salon_owner' | 'salon_employee',
-                })
-              }
-              className="w-full px-4 py-2 text-text-light dark:text-text-dark bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="customer">Customer (I want to use salon services)</option>
-              <option value="salon_owner">Salon Owner (I want to manage my salon business)</option>
-              <option value="salon_employee">Salon Employee (I work at a salon)</option>
-            </select>
-            <p className="mt-1 text-xs text-text-light dark:text-text-dark opacity-60">
-              {formData.role === 'salon_owner'
-                ? "You'll need to apply for membership after registration to access salon management features."
-                : formData.role === 'salon_employee'
-                  ? 'After registration, your salon owner will link your account to the salon. You can then access employee features.'
-                  : 'You can view your purchase history, appointments, and loyalty points.'}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Briefcase className={`w-4 h-4 transition-colors ${focusedField === 'role' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+              </div>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onFocus={() => setFocusedField('role')}
+                onBlur={() => setFocusedField(null)}
+                className="block w-full pl-9 pr-3 py-2.5 c-body bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none appearance-none"
+              >
+                <option value="customer">Customer (Booking Services)</option>
+                <option value="salon_owner">Salon Owner (Managing Business)</option>
+                <option value="salon_employee">Salon Employee (Staff)</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                 <svg className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+            <p className="mt-1 text-[10px] text-text-light/50 dark:text-text-dark/50 italic">
+              {formData.role === 'customer' && "For booking appointments and finding salons."}
+              {formData.role === 'salon_owner' && "For registering and managing your salon."}
+              {formData.role === 'salon_employee' && "For joined staff members."}
             </p>
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-            >
+          {/* Password */}
+          <div className="group">
+             <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'password' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Password
             </label>
             <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className={`w-4 h-4 transition-colors ${focusedField === 'password' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
+              </div>
               <input
-                id="password"
                 type={showPassword ? 'text' : 'password'}
-                required
-                minLength={6}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 pr-12 text-text-light dark:text-text-dark placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                className="block w-full pl-9 pr-9 py-2.5 c-body bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none"
                 placeholder="••••••••"
+                required
+                minLength={6}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light dark:text-text-dark opacity-60 hover:opacity-100 focus:outline-none transition-opacity"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-light/40 dark:text-text-dark/40 hover:text-text-light/80 dark:hover:text-text-dark/80 transition-colors"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="mt-1 text-xs text-text-light dark:text-text-dark opacity-60">
-              Minimum 6 characters
-            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-text-light dark:text-text-dark opacity-70">
-            Already have an account?{' '}
-            <Link
-              href="/login"
-              className="text-primary hover:opacity-80 font-medium transition-opacity"
-            >
-              Sign in
-            </Link>
-          </p>
         </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/40 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-[0.98] transition-all duration-200"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Creating Account...</span>
+            </>
+          ) : (
+            <>
+              <span>Get Started</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </button>
+
+        <p className="text-center c-secondary text-text-light/60 dark:text-text-dark/60 mt-2">
+          Already have an account?{' '}
+          <Link 
+            href="/login" 
+            className="font-bold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 group"
+          >
+            Sign in
+            <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </p>
+      </form>
+
+      <div className="mt-8 pt-4 border-t border-border-light dark:border-border-dark text-center">
+        <p className="c-meta text-text-light/40 dark:text-text-dark/40">
+          By registering, you agree to our Terms & Privacy Policy.
+        </p>
       </div>
     </div>
   );

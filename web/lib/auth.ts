@@ -22,6 +22,7 @@ export interface AuthResponse {
     phone: string;
     fullName: string;
     role: string;
+    avatar?: string;
   };
 }
 

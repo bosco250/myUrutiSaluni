@@ -11,15 +11,11 @@ import {
   Search,
   Filter,
   DollarSign,
-  Calendar,
   CheckCircle,
   Clock,
   XCircle,
-  Plus,
   CreditCard,
   Loader2,
-  Download,
-  User,
   AlertCircle,
 } from 'lucide-react';
 
@@ -52,13 +48,13 @@ interface MembershipPayment {
   createdAt: string;
 }
 
-interface PaymentStatus {
-  totalRequired: number;
-  totalPaid: number;
-  remaining: number;
-  isComplete: boolean;
-  payments: MembershipPayment[];
-}
+type RecordPaymentForm = {
+  paymentMethod: 'cash' | 'mobile_money' | 'bank_transfer' | 'card';
+  paymentReference: string;
+  transactionReference: string;
+  paidAmount: string;
+  notes: string;
+};
 
 const statusConfig = {
   pending: { icon: Clock, color: 'text-warning', bg: 'bg-warning/20', border: 'border-warning', label: 'Pending' },
@@ -83,8 +79,8 @@ function MembershipPaymentsContent() {
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
   const [selectedPayment, setSelectedPayment] = useState<MembershipPayment | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
-  const [recordForm, setRecordForm] = useState({
-    paymentMethod: 'cash' as 'cash' | 'mobile_money' | 'bank_transfer' | 'card',
+  const [recordForm, setRecordForm] = useState<RecordPaymentForm>({
+    paymentMethod: 'cash',
     paymentReference: '',
     transactionReference: '',
     paidAmount: '',
@@ -120,15 +116,7 @@ function MembershipPaymentsContent() {
     },
   });
 
-  // Initialize payments mutation
-  const initializePaymentsMutation = useMutation({
-    mutationFn: async ({ memberId, year }: { memberId: string; year: number }) => {
-      await api.post(`/memberships/payments/initialize/${memberId}/${year}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['membership-payments'] });
-    },
-  });
+  // Initialize payments flow is handled elsewhere; this page focuses on recording and viewing payments.
 
   // Filter payments
   const filteredPayments = useMemo(() => {
@@ -277,10 +265,14 @@ function MembershipPaymentsContent() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label
+              htmlFor="membership-payments-year"
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
               Year
             </label>
             <input
+              id="membership-payments-year"
               type="number"
               value={yearFilter}
               onChange={(e) => setYearFilter(parseInt(e.target.value))}
@@ -355,7 +347,7 @@ function MembershipPaymentsContent() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {payment.status === 'pending' && (
-                          <button
+                          <Button
                             onClick={() => {
                               setSelectedPayment(payment);
                               setRecordForm({
@@ -367,11 +359,14 @@ function MembershipPaymentsContent() {
                               });
                               setShowRecordModal(true);
                             }}
-                            className="text-primary hover:text-primary/80 flex items-center gap-1"
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="gap-2"
                           >
                             <CreditCard className="w-4 h-4" />
                             Record Payment
-                          </button>
+                          </Button>
                         )}
                         {payment.status === 'paid' && (
                           <div className="text-xs text-text-light/60 dark:text-text-dark/60">
@@ -420,19 +415,28 @@ function RecordPaymentModal({
   isProcessing,
 }: {
   payment: MembershipPayment;
-  form: any;
-  onFormChange: (form: any) => void;
+  form: RecordPaymentForm;
+  onFormChange: (form: RecordPaymentForm) => void;
   onRecord: () => void;
   onClose: () => void;
   isProcessing: boolean;
 }) {
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
+      />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-w-md w-full p-6"
-          onClick={(e) => e.stopPropagation()}
+          role="presentation"
         >
           <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-4">Record Payment</h2>
           <div className="space-y-4">
@@ -445,12 +449,16 @@ function RecordPaymentModal({
               <p className="text-text-light dark:text-text-dark font-medium">RWF {Number(payment.installmentAmount).toLocaleString()}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor={`membership-record-method-${payment.id}`}
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+              >
                 Payment Method
               </label>
               <select
+                id={`membership-record-method-${payment.id}`}
                 value={form.paymentMethod}
-                onChange={(e) => onFormChange({ ...form, paymentMethod: e.target.value })}
+                onChange={(e) => onFormChange({ ...form, paymentMethod: e.target.value as 'cash' | 'mobile_money' | 'bank_transfer' | 'card' })}
                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="cash">Cash</option>
@@ -460,10 +468,14 @@ function RecordPaymentModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor={`membership-record-paymentRef-${payment.id}`}
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+              >
                 Payment Reference
               </label>
               <input
+                id={`membership-record-paymentRef-${payment.id}`}
                 type="text"
                 value={form.paymentReference}
                 onChange={(e) => onFormChange({ ...form, paymentReference: e.target.value })}
@@ -472,10 +484,14 @@ function RecordPaymentModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor={`membership-record-txRef-${payment.id}`}
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+              >
                 Transaction Reference
               </label>
               <input
+                id={`membership-record-txRef-${payment.id}`}
                 type="text"
                 value={form.transactionReference}
                 onChange={(e) => onFormChange({ ...form, transactionReference: e.target.value })}
@@ -484,10 +500,14 @@ function RecordPaymentModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor={`membership-record-paidAmount-${payment.id}`}
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+              >
                 Paid Amount (defaults to installment amount)
               </label>
               <input
+                id={`membership-record-paidAmount-${payment.id}`}
                 type="number"
                 value={form.paidAmount}
                 onChange={(e) => onFormChange({ ...form, paidAmount: e.target.value })}
@@ -496,10 +516,14 @@ function RecordPaymentModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor={`membership-record-notes-${payment.id}`}
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+              >
                 Notes
               </label>
               <textarea
+                id={`membership-record-notes-${payment.id}`}
                 value={form.notes}
                 onChange={(e) => onFormChange({ ...form, notes: e.target.value })}
                 placeholder="Optional notes"

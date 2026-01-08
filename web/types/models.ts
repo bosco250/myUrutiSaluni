@@ -4,6 +4,7 @@ export interface User {
   phone: string;
   fullName: string;
   role: string;
+  avatar?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -16,12 +17,32 @@ export interface Salon {
   district: string;
   phone: string;
   email?: string;
+  website?: string;
+  status: 'active' | 'inactive' | 'pending';
   registrationNumber?: string;
   tinNumber?: string;
   latitude?: number;
   longitude?: number;
   ownerId: string;
   owner?: User;
+  image?: string;
+  images?: string[];
+  settings?: {
+    businessType?: string;
+    businessTypes?: string[];
+    targetClientele?: string;
+    numberOfEmployees?: number;
+    openingDate?: string;
+    operatingHours?: string;
+    licenseNumber?: string;
+    taxId?: string;
+    initialInvestment?: number;
+    monthlyRevenueEstimate?: number;
+    facebookUrl?: string;
+    instagramUrl?: string;
+    twitterUrl?: string;
+  };
+  employeeCount?: number;
   createdAt: string;
   updatedAt: string;
 }

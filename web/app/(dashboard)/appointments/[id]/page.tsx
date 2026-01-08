@@ -24,6 +24,8 @@ import {
   Mail,
   MapPin,
   Bell,
+  CalendarCheck,
+  Hash,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -47,6 +49,7 @@ interface Appointment {
     description?: string;
     basePrice: number;
     durationMinutes: number;
+    imageUrl?: string;
   };
   salon?: {
     id: string;
@@ -74,7 +77,15 @@ interface Appointment {
 
 export default function AppointmentDetailPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE, UserRole.CUSTOMER]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+        UserRole.CUSTOMER,
+      ]}
+    >
       <AppointmentDetailContent />
     </ProtectedRoute>
   );
@@ -87,38 +98,28 @@ function AppointmentDetailContent() {
   const queryClient = useQueryClient();
   const appointmentId = params.id as string;
 
-  const { data: appointment, isLoading, error } = useQuery<Appointment>({
+  const {
+    data: appointment,
+    isLoading,
+    error,
+  } = useQuery<Appointment>({
     queryKey: ['appointment', appointmentId],
     queryFn: async () => {
       const response = await api.get(`/appointments/${appointmentId}`);
-      // Handle response wrapped by TransformInterceptor
-      return response.data?.data || response.data;
+      return (response.data?.data || response.data) as Appointment;
     },
     enabled: !!appointmentId,
   });
 
-  // Fetch commission for this appointment if completed
-  const { data: commission } = useQuery({
-    queryKey: ['appointment-commission', appointmentId, appointment?.salonEmployeeId],
-    queryFn: async () => {
-      if (!appointment?.salonEmployeeId || appointment.status !== 'completed') return null;
-      try {
-        const response = await api.get('/commissions', {
-          params: {
-            salonEmployeeId: appointment.salonEmployeeId,
-          },
-        });
-        const commissions = response.data || [];
-        // Find commission linked to this appointment
-        return commissions.find((c: any) => 
-          c.metadata?.appointmentId === appointmentId || 
-          (c.metadata?.source === 'appointment' && !c.saleItemId)
-        ) || null;
-      } catch (error) {
-        return null;
-      }
+  const sendReminderMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/notifications/appointments/${appointmentId}/reminder`, {
+        reminderHours: 24,
+        channels: ['email', 'sms'],
+      });
     },
-    enabled: !!appointment?.salonEmployeeId && appointment?.status === 'completed',
+    onSuccess: () => alert('Reminder sent successfully!'),
+    onError: () => alert('Failed to send reminder. Please try again.'),
   });
 
   const updateStatusMutation = useMutation({
@@ -142,360 +143,174 @@ function AppointmentDetailContent() {
     },
   });
 
-  const sendReminderMutation = useMutation({
-    mutationFn: async () => {
-      await api.post(`/notifications/appointments/${appointmentId}/reminder`, {
-        reminderHours: 24,
-        channels: ['email', 'sms'],
-      });
-    },
-    onSuccess: () => {
-      alert('Reminder sent successfully!');
-    },
-    onError: () => {
-      alert('Failed to send reminder. Please try again.');
-    },
-  });
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE, MMMM d, yyyy');
-  };
-
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'h:mm a');
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, { bg: string; text: string; border: string }> = {
-      pending: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20' },
-      booked: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
-      confirmed: { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20' },
-      in_progress: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
-      completed: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-text-light/60 dark:text-text-dark/60', border: 'border-border-light dark:border-border-dark' },
-      cancelled: { bg: 'bg-danger/10', text: 'text-danger', border: 'border-danger/20' },
-      no_show: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20' },
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, { bg: string; text: string; icon: typeof Clock; label: string }> = {
+      pending: { bg: 'bg-warning/10', text: 'text-warning', icon: Clock, label: 'Pending' },
+      booked: { bg: 'bg-primary/10', text: 'text-primary', icon: Calendar, label: 'Booked' },
+      confirmed: {
+        bg: 'bg-success/10',
+        text: 'text-success',
+        icon: CheckCircle2,
+        label: 'Confirmed',
+      },
+      in_progress: {
+        bg: 'bg-primary/10',
+        text: 'text-primary',
+        icon: CalendarCheck,
+        label: 'In Progress',
+      },
+      completed: {
+        bg: 'bg-background-secondary dark:bg-background-dark',
+        text: 'text-text-light/60 dark:text-text-dark/60',
+        icon: CheckCircle2,
+        label: 'Completed',
+      },
+      cancelled: { bg: 'bg-error/10', text: 'text-error', icon: XCircle, label: 'Cancelled' },
+      no_show: { bg: 'bg-warning/10', text: 'text-warning', icon: AlertCircle, label: 'No Show' },
     };
-    return colors[status] || colors.booked;
+    return configs[status] || configs.pending;
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      booked: 'Booked',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    };
-    return labels[status] || status;
-  };
+  const formatTime = (dateString: string) => format(new Date(dateString), 'h:mm a');
 
-  // Check if user can edit appointments (salon owners, employees, and admins)
-  const canEdit = user?.role === UserRole.SUPER_ADMIN || 
-                  user?.role === UserRole.ASSOCIATION_ADMIN || 
-                  user?.role === UserRole.SALON_OWNER || 
-                  user?.role === UserRole.SALON_EMPLOYEE;
+  const canEdit =
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.ASSOCIATION_ADMIN ||
+    user?.role === UserRole.SALON_OWNER ||
+    user?.role === UserRole.SALON_EMPLOYEE;
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading appointment details...</p>
-          </div>
-        </div>
+      <div className="max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
+        <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+          Loading appointment details...
+        </p>
       </div>
     );
   }
 
   if (error || !appointment) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
-        <div className="bg-danger/10 border border-danger/20 rounded-xl p-4 md:p-6 text-center">
-          <p className="text-sm text-danger mb-4">Failed to load appointment details.</p>
-          <Button onClick={() => router.push('/appointments')} variant="secondary" size="md">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Appointments
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="bg-error/10 border border-error/20 rounded-xl p-6 text-center">
+          <AlertCircle className="w-10 h-10 text-error mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-error mb-2">Failed to load appointment</h3>
+          <p className="text-sm text-error/80 mb-6">
+            The appointment details could not be retrieved.
+          </p>
+          <Button
+            onClick={() => router.back()}
+            variant="secondary"
+            size="sm"
+            className="bg-white/50 hover:bg-white/80"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Go Back
           </Button>
         </div>
       </div>
     );
   }
 
-  const statusColors = getStatusColor(appointment.status);
+  const statusConfig = getStatusConfig(appointment.status);
+  const StatusIcon = statusConfig.icon;
   const isPast = new Date(appointment.scheduledStart) < new Date();
-  const duration = appointment.service?.durationMinutes 
-    ? `${appointment.service.durationMinutes} minutes`
+  const duration = appointment.service?.durationMinutes
+    ? `${appointment.service.durationMinutes} mins`
     : 'N/A';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
-      {/* Header */}
-      <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 md:gap-4">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* Header with Navigation */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <Button
             onClick={() => router.back()}
             variant="secondary"
             size="sm"
-            className="p-2"
+            className="rounded-full w-8 h-8 p-0 flex items-center justify-center hover:bg-background-secondary dark:hover:bg-background-dark -ml-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
           </Button>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark">Appointment Details</h1>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              Appointment ID: <span className="font-mono">{appointment.id}</span>
-            </p>
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+              Appointment Details
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.text}`}
+              >
+                <StatusIcon className="w-3.5 h-3.5" />
+                {statusConfig.label}
+              </span>
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Hash className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+              <p className="text-xs font-mono text-text-light/60 dark:text-text-dark/60">
+                {appointment.id}
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* Action Buttons */}
         {canEdit && (
-          <div className="flex flex-wrap gap-2">
-            {appointment.customer && appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            {appointment.customer && !['cancelled', 'completed'].includes(appointment.status) && (
               <Button
-                onClick={() => {
-                  if (confirm('Send reminder to customer?')) {
-                    sendReminderMutation.mutate();
-                  }
-                }}
-                variant="secondary"
+                onClick={() => confirm('Send reminder?') && sendReminderMutation.mutate()}
+                variant="outline"
                 size="sm"
                 disabled={sendReminderMutation.isPending}
+                className="flex-1 sm:flex-none justify-center"
               >
                 {sendReminderMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                 ) : (
-                  <Bell className="w-4 h-4" />
+                  <Bell className="w-3.5 h-3.5 mr-1.5" />
                 )}
-                Send Reminder
+                Remind
               </Button>
             )}
-            <Button
-              onClick={() => router.push(`/appointments/${appointmentId}/edit`)}
-              variant="secondary"
-              size="sm"
-              disabled={appointment.status === 'completed'}
-              title={appointment.status === 'completed' ? 'Cannot edit completed appointments' : 'Edit appointment'}
-            >
-              <Edit className="w-4 h-4" />
-              Edit
-            </Button>
-            <Button
-              onClick={() => {
-                if (confirm('Are you sure you want to delete this appointment?')) {
-                  deleteMutation.mutate();
-                }
-              }}
-              variant="secondary"
-              size="sm"
-              className="text-danger hover:bg-danger/10"
-              disabled={deleteMutation.isPending || appointment.status === 'completed'}
-              title={appointment.status === 'completed' ? 'Cannot delete completed appointments' : 'Delete appointment'}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
-              Delete
-            </Button>
+            {!['completed'].includes(appointment.status) && (
+              <Button
+                onClick={() => router.push(`/appointments/${appointmentId}/edit`)}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none justify-center"
+              >
+                <Edit className="w-3.5 h-3.5 mr-1.5" />
+                Edit
+              </Button>
+            )}
+            {!['completed'].includes(appointment.status) && (
+              <Button
+                onClick={() => confirm('Delete appointment?') && deleteMutation.mutate()}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none justify-center text-error border-error/20 hover:bg-error/5"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Delete
+              </Button>
+            )}
           </div>
         )}
       </div>
 
-      {/* Appointment Card */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm overflow-hidden">
-        {/* Status Header */}
-        <div className={`${statusColors.bg} ${statusColors.border} border-b p-4 md:p-6`}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">
-                {appointment.service?.name || 'Service'}
-              </h2>
-              <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm text-text-light/60 dark:text-text-dark/60">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{formatDate(appointment.scheduledStart)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{formatTime(appointment.scheduledStart)} - {formatTime(appointment.scheduledEnd)}</span>
-                </div>
-              </div>
-            </div>
-            <div className={`px-3 py-1.5 rounded-full border ${statusColors.border} ${statusColors.bg}`}>
-              <span className={`text-xs font-medium ${statusColors.text}`}>
-                {getStatusLabel(appointment.status)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Appointment Information */}
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-          {/* Customer & Salon Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {appointment.customer && (
-              <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <User className="w-4 h-4 text-primary" />
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">Customer</h3>
-                </div>
-                <p className="text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  {appointment.customer.fullName}
-                </p>
-                <div className="space-y-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    <span>{appointment.customer.phone}</span>
-                  </div>
-                  {appointment.customer.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      <span>{appointment.customer.email}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {appointment.salon && (
-              <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <Building2 className="w-4 h-4 text-primary" />
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">Salon</h3>
-                </div>
-                <p className="text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  {appointment.salon.name}
-                </p>
-                <div className="space-y-1.5 text-sm text-text-light/60 dark:text-text-dark/60">
-                  {appointment.salon.address && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{appointment.salon.address}</span>
-                    </div>
-                  )}
-                  {appointment.salon.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      <span>{appointment.salon.phone}</span>
-                    </div>
-                  )}
-                  {appointment.salon.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      <span>{appointment.salon.email}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Service Details */}
-          {appointment.service && (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Main Content - Left Column */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Main Status Actions - Prominent */}
+          {canEdit && !isPast && !['completed', 'cancelled'].includes(appointment.status) && (
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <Scissors className="w-4 h-4 text-primary" />
-                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">Service Details</h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-text-light/60 dark:text-text-dark/60">Service Name</span>
-                  <span className="text-sm text-text-light dark:text-text-dark font-medium">
-                    {appointment.service.name}
-                  </span>
-                </div>
-                {appointment.service.description && (
-                  <div>
-                    <span className="text-xs text-text-light/60 dark:text-text-dark/60">Description</span>
-                    <p className="text-sm text-text-light dark:text-text-dark mt-1">
-                      {appointment.service.description}
-                    </p>
-                  </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-text-light/60 dark:text-text-dark/60">Duration</span>
-                  <span className="text-sm text-text-light dark:text-text-dark font-medium">{duration}</span>
-                </div>
-                {appointment.service.basePrice && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-text-light/60 dark:text-text-dark/60">Price</span>
-                    <span className="text-sm text-text-light dark:text-text-dark font-semibold text-primary">
-                      RWF {appointment.service.basePrice.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Employee Assignment & Commission Info */}
-          {appointment.salonEmployee && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-primary/20 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <User className="w-4 h-4 text-primary" />
-                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">Assigned Employee</h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-text-light/60 dark:text-text-dark/60">Employee</span>
-                  <span className="text-sm text-text-light dark:text-text-dark font-medium">
-                    {appointment.salonEmployee.user?.fullName || 'Unknown'}
-                    {appointment.salonEmployee.roleTitle && ` - ${appointment.salonEmployee.roleTitle}`}
-                  </span>
-                </div>
-                {appointment.salonEmployee.commissionRate !== undefined && appointment.salonEmployee.commissionRate > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-text-light/60 dark:text-text-dark/60">Commission Rate</span>
-                    <span className="text-sm text-text-light dark:text-text-dark font-medium text-primary">
-                      {appointment.salonEmployee.commissionRate}%
-                    </span>
-                  </div>
-                )}
-                {appointment.status === 'completed' && appointment.serviceAmount && appointment.salonEmployee.commissionRate && (
-                  <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-text-light/60 dark:text-text-dark/60">Service Amount</span>
-                      <span className="text-sm text-text-light dark:text-text-dark font-semibold">
-                        RWF {appointment.serviceAmount.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs text-text-light/60 dark:text-text-dark/60">Commission Earned</span>
-                      <span className="text-sm text-success font-bold">
-                        RWF {((appointment.serviceAmount * appointment.salonEmployee.commissionRate) / 100).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="mt-2 p-2 bg-success/10 border border-success/20 rounded-lg">
-                      <p className="text-[10px] text-success font-medium">
-                        ✓ Commission has been automatically created and recorded
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          {appointment.notes && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertCircle className="w-4 h-4 text-primary" />
-                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">Notes</h3>
-              </div>
-              <p className="text-sm text-text-light dark:text-text-dark">{appointment.notes}</p>
-            </div>
-          )}
-
-          {/* Status Actions (for salon owners/employees) */}
-          {canEdit && !isPast && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">Update Status</h3>
+              <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
+                Update Status
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {appointment.status === 'pending' && (
                   <Button
@@ -504,14 +319,13 @@ function AppointmentDetailContent() {
                     size="sm"
                     disabled={updateStatusMutation.isPending}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Confirm Booking
+                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Confirm Booking
                   </Button>
                 )}
-                {(appointment.status === 'booked' || appointment.status === 'confirmed') && (
+                {['booked', 'confirmed'].includes(appointment.status) && (
                   <Button
                     onClick={() => updateStatusMutation.mutate('in_progress')}
-                    variant="secondary"
+                    variant="primary"
                     size="sm"
                     disabled={updateStatusMutation.isPending}
                   >
@@ -525,52 +339,201 @@ function AppointmentDetailContent() {
                     size="sm"
                     disabled={updateStatusMutation.isPending}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Mark Complete
+                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Mark Complete
                   </Button>
                 )}
                 {['pending', 'booked', 'confirmed'].includes(appointment.status) && (
                   <Button
-                    onClick={() => {
-                      if (confirm('Are you sure you want to cancel this appointment?')) {
-                        updateStatusMutation.mutate('cancelled');
-                      }
-                    }}
+                    onClick={() => confirm('Cancel?') && updateStatusMutation.mutate('cancelled')}
                     variant="secondary"
                     size="sm"
-                    className="text-danger hover:bg-danger/10"
+                    className="text-error hover:bg-error/10 border-error/20"
                     disabled={updateStatusMutation.isPending}
                   >
-                    <XCircle className="w-4 h-4" />
-                    Cancel
+                    Cancel Appointment
                   </Button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Metadata */}
-          <div className="border-t border-border-light dark:border-border-dark pt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs text-text-light/60 dark:text-text-dark/60">Created</span>
-                <p className="text-sm text-text-light dark:text-text-dark mt-1">
-                  {format(new Date(appointment.createdAt), 'MMM d, yyyy h:mm a')}
-                </p>
-              </div>
-              {appointment.createdBy && (
+          {/* Service Info Card */}
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-primary to-primary/60" />
+            <div className="p-5">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <span className="text-xs text-text-light/60 dark:text-text-dark/60">Created By</span>
-                  <p className="text-sm text-text-light dark:text-text-dark mt-1">
-                    {appointment.createdBy.fullName}
+                  <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
+                    <Scissors className="w-4 h-4 text-primary" />
+                    {appointment.service?.name || 'Service'}
+                  </h2>
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                    {appointment.service?.description || 'No description provided'}
+                  </p>
+                </div>
+                {appointment.service?.basePrice && (
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">
+                      RWF {Number(appointment.service.basePrice).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40">Base Price</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 py-4 border-t border-b border-border-light dark:border-border-dark">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Calendar className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">Date</p>
+                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                      {format(new Date(appointment.scheduledStart), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Clock className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                      Time & Duration
+                    </p>
+                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                      {formatTime(appointment.scheduledStart)} • {duration}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {appointment.notes && (
+                <div className="mt-4 p-3 bg-secondary/5 rounded-lg border border-secondary/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-secondary" />
+                    <span className="text-xs font-bold text-secondary">Notes</span>
+                  </div>
+                  <p className="text-sm text-text-light/80 dark:text-text-dark/80 italic">
+                    &ldquo;{appointment.notes}&rdquo;
                   </p>
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Sidebar - Right Column */}
+        <div className="space-y-6">
+          {/* Customer Card */}
+          {appointment.customer && (
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-light/40 dark:text-text-dark/40 mb-4 flex items-center gap-2">
+                <User className="w-3.5 h-3.5" /> Customer
+              </h3>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                  {appointment.customer.fullName.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-bold text-text-light dark:text-text-dark">
+                    {appointment.customer.fullName}
+                  </p>
+                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                    Registered Customer
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <a
+                  href={`tel:${appointment.customer.phone}`}
+                  className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80 hover:text-primary transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                  {appointment.customer.phone}
+                </a>
+                {appointment.customer.email && (
+                  <a
+                    href={`mailto:${appointment.customer.email}`}
+                    className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80 hover:text-primary transition-colors"
+                  >
+                    <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                    {appointment.customer.email}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Salon Card */}
+          {appointment.salon && (
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-light/40 dark:text-text-dark/40 mb-4 flex items-center gap-2">
+                <Building2 className="w-3.5 h-3.5" /> Salon
+              </h3>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-text-light dark:text-text-dark">
+                    {appointment.salon.name}
+                  </p>
+                  <button
+                    className="text-xs text-primary hover:underline font-medium hover:text-primary-dark transition-colors text-left"
+                    onClick={() => router.push(`/salons/browse/${appointment.salon!.id}`)}
+                  >
+                    View Salon Profile
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {appointment.salon.phone && (
+                  <div className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80">
+                    <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                    {appointment.salon.phone}
+                  </div>
+                )}
+                {appointment.salon.address && (
+                  <div className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80">
+                    <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+                    {appointment.salon.address}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Employee Card */}
+          {appointment.salonEmployee && (
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-light/40 dark:text-text-dark/40 mb-4 flex items-center gap-2">
+                <User className="w-3.5 h-3.5" /> Professional
+              </h3>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-text-light/60 dark:text-text-dark/60">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-text-light dark:text-text-dark">
+                    {appointment.salonEmployee.user?.fullName || 'Unknown'}
+                  </p>
+                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                    {appointment.salonEmployee.roleTitle || 'Stylist'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Metadata Footer */}
+          <div className="px-2">
+            <p className="text-xs text-text-light/40 dark:text-text-dark/40 text-center">
+              Created on {format(new Date(appointment.createdAt), 'MMM d, yyyy h:mm a')}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

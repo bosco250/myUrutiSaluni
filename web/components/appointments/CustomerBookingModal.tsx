@@ -115,17 +115,33 @@ export default function CustomerBookingModal({
 
   // Parse operating hours from salon settings
   const parseOperatingHours = (): WorkingHours | null => {
-    if (!salonData?.settings?.operatingHours) return null;
-
-    try {
-      const hours = salonData.settings.operatingHours;
-      if (typeof hours === 'string') {
-        return JSON.parse(hours) as WorkingHours;
+    // Check settings.workingHours first (used by mobile app)
+    if (salonData?.settings?.workingHours) {
+      try {
+        const hours = salonData.settings.workingHours;
+        if (typeof hours === 'string') {
+          return JSON.parse(hours) as WorkingHours;
+        }
+        return hours as WorkingHours;
+      } catch {
+        // Fall through to try operatingHours
       }
-      return hours as WorkingHours;
-    } catch {
-      return null;
     }
+    
+    // Fallback to settings.operatingHours
+    if (salonData?.settings?.operatingHours) {
+      try {
+        const hours = salonData.settings.operatingHours;
+        if (typeof hours === 'string') {
+          return JSON.parse(hours) as WorkingHours;
+        }
+        return hours as WorkingHours;
+      } catch {
+        return null;
+      }
+    }
+    
+    return null;
   };
 
   const operatingHours = parseOperatingHours();

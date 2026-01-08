@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { useAuthStore } from '@/store/auth-store';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
@@ -13,13 +12,9 @@ import {
   TrendingUp,
   DollarSign,
   ShoppingCart,
-  Users,
   Package,
   Scissors,
-  CreditCard,
-  Calendar,
   Loader2,
-  Download,
 } from 'lucide-react';
 import {
   LineChart,
@@ -51,11 +46,23 @@ interface SalesAnalytics {
   topEmployees: Array<{ name: string; sales: number; revenue: number }>;
 }
 
+interface Salon {
+  id: string;
+  name: string;
+}
+
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function SalesAnalyticsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+      ]}
+    >
       <SalesAnalyticsContent />
     </ProtectedRoute>
   );
@@ -63,7 +70,6 @@ export default function SalesAnalyticsPage() {
 
 function SalesAnalyticsContent() {
   const router = useRouter();
-  const { user } = useAuthStore();
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: '',
     end: '',
@@ -71,20 +77,24 @@ function SalesAnalyticsContent() {
   const [salonFilter, setSalonFilter] = useState<string>('all');
 
   // Fetch salons for filter
-  const { data: salons = [] } = useQuery({
+  const { data: salons = [] } = useQuery<Salon[]>({
     queryKey: ['salons'],
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
         return response.data || [];
-      } catch (error) {
+      } catch (err) {
         return [];
       }
     },
   });
 
   // Fetch analytics
-  const { data: analytics, isLoading, error } = useQuery<SalesAnalytics>({
+  const {
+    data: analytics,
+    isLoading,
+    error,
+  } = useQuery<SalesAnalytics>({
     queryKey: ['sales-analytics', salonFilter, dateRange],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -110,11 +120,13 @@ function SalesAnalyticsContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">Loading analytics...</p>
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+              Loading analytics...
+            </p>
           </div>
         </div>
       </div>
@@ -123,7 +135,7 @@ function SalesAnalyticsContent() {
 
   if (error || !analytics) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
           <p className="text-danger">Failed to load analytics. Please try again.</p>
         </div>
@@ -132,41 +144,51 @@ function SalesAnalyticsContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/sales')}
-              variant="secondary"
-              className="p-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">Sales Analytics</h1>
-              <p className="text-text-light/60 dark:text-text-dark/60 mt-1">Comprehensive sales insights and trends</p>
-            </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button
+            onClick={() => router.push('/sales')}
+            variant="secondary"
+            size="sm"
+            className="p-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              Sales Analytics
+            </h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+              Comprehensive sales insights and trends
+            </p>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {salons.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label
+                htmlFor="salon-select"
+                className="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1"
+              >
                 Salon
               </label>
               <select
+                id="salon-select"
                 value={salonFilter}
                 onChange={(e) => setSalonFilter(e.target.value)}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="all">All Salons</option>
-                {salons.map((salon: any) => (
+                {salons.map((salon) => (
                   <option key={salon.id} value={salon.id}>
                     {salon.name}
                   </option>
@@ -175,69 +197,97 @@ function SalesAnalyticsContent() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label
+              htmlFor="start-date"
+              className="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1"
+            >
               Start Date
             </label>
             <input
+              id="start-date"
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label
+              htmlFor="end-date"
+              className="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1"
+            >
               End Date
             </label>
             <input
+              id="end-date"
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Revenue</span>
-            <DollarSign className="w-5 h-5 text-primary" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                Total Revenue
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                RWF {analytics.summary.totalRevenue.toLocaleString()}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+              <DollarSign className="w-4 h-4 text-white" />
+            </div>
           </div>
-          <p className="text-3xl font-bold text-text-light dark:text-text-dark">
-            RWF {analytics.summary.totalRevenue.toLocaleString()}
-          </p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Sales</span>
-            <ShoppingCart className="w-5 h-5 text-primary" />
+
+        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                Total Sales
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                {analytics.summary.totalSales}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+              <ShoppingCart className="w-4 h-4 text-white" />
+            </div>
           </div>
-          <p className="text-3xl font-bold text-text-light dark:text-text-dark">
-            {analytics.summary.totalSales}
-          </p>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Average Sale</span>
-            <TrendingUp className="w-5 h-5 text-primary" />
+
+        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                Average Sale
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                RWF {analytics.summary.averageSale.toFixed(0)}
+              </p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+              <TrendingUp className="w-4 h-4 text-white" />
+            </div>
           </div>
-          <p className="text-3xl font-bold text-text-light dark:text-text-dark">
-            RWF {analytics.summary.averageSale.toFixed(0)}
-          </p>
         </div>
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Monthly Revenue Trend */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
+          <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
             Monthly Revenue Trend
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={240}>
             <LineChart data={analytics.monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-30" />
               <XAxis
@@ -274,11 +324,11 @@ function SalesAnalyticsContent() {
         </div>
 
         {/* Daily Revenue (Last 30 Days) */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
+          <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
             Daily Revenue (Last 30 Days)
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={analytics.dailyRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-30" />
               <XAxis
@@ -312,14 +362,14 @@ function SalesAnalyticsContent() {
       </div>
 
       {/* Payment Methods & Top Performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Payment Methods */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
+          <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
             Payment Methods
           </h2>
           {paymentMethodData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie
                   data={paymentMethodData}
@@ -346,19 +396,19 @@ function SalesAnalyticsContent() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-text-light/60 dark:text-text-dark/60">
+            <div className="flex items-center justify-center h-[240px] text-text-light/60 dark:text-text-dark/60">
               No payment data available
             </div>
           )}
         </div>
 
         {/* Top Employees */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-text-light dark:text-text-dark mb-4">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
+          <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
             Top Employees by Revenue
           </h2>
           {analytics.topEmployees.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={240}>
               <BarChart data={analytics.topEmployees} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="opacity-30" />
                 <XAxis
@@ -389,7 +439,7 @@ function SalesAnalyticsContent() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-text-light/60 dark:text-text-dark/60">
+            <div className="flex items-center justify-center h-[240px] text-text-light/60 dark:text-text-dark/60">
               No employee data available
             </div>
           )}
@@ -397,30 +447,34 @@ function SalesAnalyticsContent() {
       </div>
 
       {/* Top Services and Products */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top Services */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-4">
             <Scissors className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Top Services</h2>
+            <h2 className="text-sm font-bold text-text-light dark:text-text-dark">Top Services</h2>
           </div>
           {analytics.topServices.length > 0 ? (
             <div className="space-y-3">
               {analytics.topServices.map((service, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg"
+                  className="block p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all"
                 >
-                  <div className="flex-1">
-                    <p className="font-medium text-text-light dark:text-text-dark">{service.name}</p>
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      {service.count} sold
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-primary">
-                      RWF {service.revenue.toLocaleString()}
-                    </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                        {service.name}
+                      </p>
+                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                        {service.count} sold
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-primary whitespace-nowrap">
+                        RWF {service.revenue.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -433,28 +487,32 @@ function SalesAnalyticsContent() {
         </div>
 
         {/* Top Products */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-4">
             <Package className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">Top Products</h2>
+            <h2 className="text-sm font-bold text-text-light dark:text-text-dark">Top Products</h2>
           </div>
           {analytics.topProducts.length > 0 ? (
             <div className="space-y-3">
               {analytics.topProducts.map((product, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg"
+                  className="block p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all"
                 >
-                  <div className="flex-1">
-                    <p className="font-medium text-text-light dark:text-text-dark">{product.name}</p>
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      {product.count} sold
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-primary">
-                      RWF {product.revenue.toLocaleString()}
-                    </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                        {product.count} sold
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-primary whitespace-nowrap">
+                        RWF {product.revenue.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -469,4 +527,3 @@ function SalesAnalyticsContent() {
     </div>
   );
 }
-
