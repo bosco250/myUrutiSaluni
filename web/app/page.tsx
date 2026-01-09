@@ -63,43 +63,43 @@ export default function Home() {
       icon: Building2,
       title: 'Membership Management',
       description: 'Register and manage salon owners, employees, and members with ease',
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/5',
     },
     {
       icon: Calendar,
       title: 'Smart Scheduling',
       description: 'Streamline bookings with an intuitive calendar and scheduling system',
-      color: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-50 dark:bg-purple-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/5',
     },
     {
       icon: ShoppingCart,
       title: 'Point of Sale (POS)',
       description: 'Complete sales management with inventory tracking and reporting',
-      color: 'text-green-600 dark:text-green-400',
-      bg: 'bg-green-50 dark:bg-green-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/5',
     },
     {
       icon: Package,
       title: 'Inventory Control',
       description: 'Track products, stock levels, and manage your salon supplies',
-      color: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-50 dark:bg-orange-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/5',
     },
     {
       icon: DollarSign,
       title: 'Finance & Accounting',
       description: 'Comprehensive financial management with real-time reporting',
-      color: 'text-indigo-600 dark:text-indigo-400',
-      bg: 'bg-indigo-50 dark:bg-indigo-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/5',
     },
     {
       icon: CreditCard,
       title: 'Micro-Lending',
       description: 'Access financial services and manage loans for your business',
-      color: 'text-rose-600 dark:text-rose-400',
-      bg: 'bg-rose-50 dark:bg-rose-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/5',
     },
   ];
 
@@ -116,29 +116,29 @@ export default function Home() {
     <div className="min-h-screen bg-background-light dark:bg-background-dark selection:bg-primary/20 selection:text-primary">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-background-light dark:bg-background-dark pt-32 pb-24 lg:pt-40 lg:pb-32">
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[600px] opacity-30 dark:opacity-20 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500 rounded-full blur-[120px]" />
-          <div className="absolute top-20 right-1/4 w-[400px] h-[400px] bg-purple-500 rounded-full blur-[100px]" />
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 opacity-5 dark:opacity-10 pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/10 rounded-full mb-4 hover:bg-primary/10 transition-colors">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-semibold text-primary/80 uppercase tracking-widest">Join the Revolution</span>
+          <div className="text-center max-w-4xl mx-auto space-y-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-text-light dark:text-text-dark">Professional Salon Management</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text-light dark:text-text-dark leading-[1.1]">
               Elevate Your
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400">
-                Salon Experience
+              <span className="block text-primary mt-2">
+                Salon Business
               </span>
             </h1>
             
-            <p className="text-xl text-text-light/60 dark:text-text-dark/60 max-w-2xl mx-auto leading-relaxed">
-              The all-in-one digital platform for modern salon operations. 
-              Manage memberships, bookings, finances, and growth with enterprise-grade tools.
+            <p className="text-xl text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto leading-relaxed">
+              Complete digital platform for salon operations. 
+              Manage memberships, bookings, finances, and inventory with professional-grade tools.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -146,25 +146,20 @@ export default function Home() {
                 onClick={() => {
                   document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="h-10 px-6 rounded-xl text-sm font-medium bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:scale-105 active:scale-95"
+                className="h-14 px-10 rounded-lg text-lg font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg transition-all"
               >
-                Start Free Trial
-                <ArrowRight className="w-4 h-4 ml-2" />
+                Apply for Membership
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Link href="/login">
                 <Button
                   variant="outline"
-                  className="h-10 px-6 rounded-xl text-sm font-medium border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-all hover:scale-105 active:scale-95"
+                  className="h-14 px-10 rounded-lg text-lg font-semibold border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-all"
                 >
                   Sign In
-                  <ChevronRight className="w-4 h-4 ml-1 opacity-50" />
+                  <ChevronRight className="w-5 h-5 ml-1" />
                 </Button>
               </Link>
-            </div>
-
-            {/* Platform Preview/Trust Elements could go here */}
-            <div className="pt-12 flex justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-              {/* Add trusted by logos here if available */}
             </div>
           </div>
         </div>
@@ -188,12 +183,12 @@ export default function Home() {
               return (
                 <div
                   key={index}
-                  className="group bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-6 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
+                  className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 hover:border-primary/30 transition-all duration-300"
                 >
-                  <div className={`inline-flex p-3 rounded-lg ${feature.bg} ${feature.color} mb-5 group-hover:scale-110 transition-transform`}>
+                  <div className={`inline-flex p-3 rounded-lg ${feature.bg} ${feature.color} mb-5 transition-transform`}>
                     <Icon className="w-6 h-6" />
                   </div>
-                  <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
                     {feature.title}
                   </h3>
                   <p className="text-sm text-text-light/60 dark:text-text-dark/60 leading-relaxed">
@@ -207,18 +202,18 @@ export default function Home() {
       </section>
 
       {/* Membership Application Section */}
-      <section id="membership-form" className="py-24 bg-background-light dark:bg-background-dark relative">
+      <section id="membership-form" className="py-24 bg-background-light dark:bg-background-dark">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-4">
               Join Our Network
             </h2>
-            <p className="text-base text-text-light/60 dark:text-text-dark/60 max-w-2xl mx-auto">
+            <p className="text-base text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
               Apply for membership to unlock the full potential of your salon business.
             </p>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl shadow-primary/5 overflow-hidden ring-1 ring-black/5">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-lg overflow-hidden">
             <MembershipApplicationForm showTitle={false} showProgress={true} />
           </div>
         </div>
@@ -232,17 +227,17 @@ export default function Home() {
               <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-6">
                 Why Choose Us?
               </h2>
-              <p className="text-lg text-text-light/60 dark:text-text-dark/60 mb-8 leading-relaxed">
+              <p className="text-lg text-text-light/70 dark:text-text-dark/70 mb-8 leading-relaxed">
                 We provide an ecosystem that scales with your business, from a single chair to a franchise.
               </p>
               
               <div className="space-y-4">
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-3 group">
-                    <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/20 transition-colors">
-                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-500" />
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-4 h-4 text-primary" />
                     </div>
-                    <p className="text-sm font-medium text-text-light/80 dark:text-text-dark/80 group-hover:text-text-light dark:group-hover:text-text-dark transition-colors">
+                    <p className="text-base text-text-light/80 dark:text-text-dark/80">
                       {benefit}
                     </p>
                   </div>
@@ -251,44 +246,43 @@ export default function Home() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur-3xl opacity-10 dark:opacity-20" />
-              <div className="relative bg-white/50 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-8 border border-white/20 dark:border-white/10 shadow-2xl">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-8 border border-border-light dark:border-border-dark shadow-lg">
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Bank-Grade Security</h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">Bank-Grade Security</h3>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
                         Your data is encrypted and protected with enterprise-level security protocols.
                       </p>
                     </div>
                   </div>
                   
-                  <div className="w-full h-px bg-border-light dark:bg-border-dark/50" />
+                  <div className="w-full h-px bg-border-light dark:bg-border-dark" />
                   
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-1">
-                      <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <BarChart3 className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Real-Time Analytics</h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                        Make informed decisions with live dashes and comprehensive reports.
+                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">Real-Time Analytics</h3>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                        Make informed decisions with live dashboards and comprehensive reports.
                       </p>
                     </div>
                   </div>
                   
-                  <div className="w-full h-px bg-border-light dark:bg-border-dark/50" />
+                  <div className="w-full h-px bg-border-light dark:bg-border-dark" />
                   
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Wallet className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Wallet className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-text-light dark:text-text-dark">Financial Growth</h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">Financial Growth</h3>
+                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
                         Access micro-loans and manage your cash flow effectively.
                       </p>
                     </div>
@@ -301,13 +295,12 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-background-light dark:bg-background-dark relative overflow-hidden">
-        <div className="absolute inset-0 bg-primary/5 clip-path-slant" /> 
-        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+      <section className="py-24 bg-surface-light/50 dark:bg-surface-dark/50 border-t border-border-light dark:border-border-dark">
+        <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-text-light dark:text-text-dark">
             Ready to Get Started?
           </h2>
-          <p className="text-lg text-text-light/60 dark:text-text-dark/60 mb-10 max-w-2xl mx-auto">
+          <p className="text-lg text-text-light/70 dark:text-text-dark/70 mb-10 max-w-2xl mx-auto">
             Join hundreds of salon owners who are already transforming their business with our platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -315,15 +308,15 @@ export default function Home() {
               onClick={() => {
                 document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="h-10 px-6 rounded-xl text-sm font-medium bg-primary text-white hover:bg-primary/90 shadow-xl hover:shadow-2xl hover:shadow-primary/20 transition-all hover:-translate-y-0.5"
+              className="h-14 px-10 rounded-lg text-lg font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg transition-all"
             >
               Apply Now
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Link href="/login">
               <Button
                 variant="outline"
-                className="h-10 px-6 rounded-xl text-sm font-medium border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:bg-background-light dark:hover:bg-background-dark"
+                className="h-14 px-10 rounded-lg text-lg font-semibold border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-all"
               >
                 Sign In
               </Button>

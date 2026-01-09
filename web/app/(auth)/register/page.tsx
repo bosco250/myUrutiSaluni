@@ -61,15 +61,16 @@ export default function RegisterPage() {
       } else {
         router.push('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      const maybeAxios = err as { response?: { data?: { message?: string } } };
+      setError(maybeAxios?.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-[400px] w-full mx-auto">
+    <div className="max-w-[420px] w-full mx-auto px-4 my-8">
       <div className="text-center mb-8 lg:text-left">
         <div className="inline-block p-3 rounded-2xl bg-primary/10 mb-4 lg:hidden">
             <Sparkles className="w-8 h-8 text-primary" />
@@ -117,7 +118,7 @@ export default function RegisterPage() {
         <div className="flex flex-col gap-[var(--gap-tight)]">
           {/* Full Name */}
           <div className="group">
-            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'fullName' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+            <label htmlFor="fullName" className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'fullName' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Full Name
             </label>
             <div className="relative">
@@ -125,6 +126,7 @@ export default function RegisterPage() {
                 <User className={`w-4 h-4 transition-colors ${focusedField === 'fullName' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
               </div>
               <input
+                id="fullName"
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -139,7 +141,7 @@ export default function RegisterPage() {
 
           {/* Email */}
           <div className="group">
-            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'email' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+            <label htmlFor="email" className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'email' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Email Address
             </label>
             <div className="relative">
@@ -147,6 +149,7 @@ export default function RegisterPage() {
                 <Mail className={`w-4 h-4 transition-colors ${focusedField === 'email' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
               </div>
               <input
+                id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -161,7 +164,7 @@ export default function RegisterPage() {
 
           {/* Phone (Optional) */}
           <div className="group">
-            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'phone' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+            <label htmlFor="phone" className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'phone' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Phone (Optional)
             </label>
             <div className="relative">
@@ -169,6 +172,7 @@ export default function RegisterPage() {
                 <Phone className={`w-4 h-4 transition-colors ${focusedField === 'phone' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
               </div>
               <input
+                id="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -182,7 +186,7 @@ export default function RegisterPage() {
 
           {/* Role Selection */}
           <div className="group">
-            <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'role' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+            <label htmlFor="role" className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'role' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               I am a...
             </label>
             <div className="relative">
@@ -190,8 +194,9 @@ export default function RegisterPage() {
                 <Briefcase className={`w-4 h-4 transition-colors ${focusedField === 'role' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
               </div>
               <select
+                id="role"
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'customer' | 'salon_owner' | 'salon_employee' })}
                 onFocus={() => setFocusedField('role')}
                 onBlur={() => setFocusedField(null)}
                 className="block w-full pl-9 pr-3 py-2.5 c-body bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none appearance-none"
@@ -213,7 +218,7 @@ export default function RegisterPage() {
 
           {/* Password */}
           <div className="group">
-             <label className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'password' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
+             <label htmlFor="password" className={`block c-secondary font-semibold uppercase tracking-wider mb-1 transition-colors ${focusedField === 'password' ? 'text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}>
               Password
             </label>
             <div className="relative">
@@ -221,6 +226,7 @@ export default function RegisterPage() {
                 <Lock className={`w-4 h-4 transition-colors ${focusedField === 'password' ? 'text-primary' : 'text-text-light/40 dark:text-text-dark/40'}`} />
               </div>
               <input
+                id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}

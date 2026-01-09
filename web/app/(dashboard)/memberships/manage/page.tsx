@@ -102,58 +102,58 @@ interface SalonEmployee {
 const statusConfig = {
   new: {
     icon: Clock,
-    color: 'text-blue-600',
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+    border: 'border-primary',
     label: 'New',
   },
   active: {
     icon: CheckCircle,
     color: 'text-success',
-    bg: 'bg-success/20',
+    bg: 'bg-success/10',
     border: 'border-success',
     label: 'Active',
   },
   pending_renewal: {
     icon: AlertCircle,
     color: 'text-warning',
-    bg: 'bg-warning/20',
+    bg: 'bg-warning/10',
     border: 'border-warning',
     label: 'Pending Renewal',
   },
   expired: {
     icon: XCircle,
-    color: 'text-danger',
-    bg: 'bg-danger/20',
-    border: 'border-danger',
+    color: 'text-error',
+    bg: 'bg-error/10',
+    border: 'border-error',
     label: 'Expired',
   },
   suspended: {
     icon: Ban,
-    color: 'text-gray-600',
-    bg: 'bg-gray-500/20',
-    border: 'border-gray-500',
+    color: 'text-text-light/60 dark:text-text-dark/60',
+    bg: 'bg-text-light/5 dark:bg-text-dark/5',
+    border: 'border-border-light dark:border-border-dark',
     label: 'Suspended',
   },
   pending: {
     icon: Clock,
-    color: 'text-blue-600',
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+    border: 'border-primary',
     label: 'Pending',
   },
   approved: {
     icon: CheckCircle,
     color: 'text-success',
-    bg: 'bg-success/20',
+    bg: 'bg-success/10',
     border: 'border-success',
     label: 'Approved',
   },
   rejected: {
     icon: XCircle,
-    color: 'text-danger',
-    bg: 'bg-danger/20',
-    border: 'border-danger',
+    color: 'text-error',
+    bg: 'bg-error/10',
+    border: 'border-error',
     label: 'Rejected',
   },
 };
@@ -382,24 +382,23 @@ function MembershipManagementContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-      {/* Header / Hero */}
-      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
-        <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
-              <Building2 className="w-5 h-5 text-white" />
+      {/* Header */}
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
+              <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
                 Membership Management
               </h1>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
                 Manage memberships, applications, and membership payments.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:flex-shrink-0">
             <Button
               onClick={() => router.push('/memberships/payments')}
               size="sm"
@@ -414,86 +413,81 @@ function MembershipManagementContent() {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Total Memberships
               </p>
-              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
                 {stats.totalMemberships}
               </p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Building2 className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <Building2 className="w-5 h-5" />
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Active
               </p>
-              <p className="text-xl font-black text-success mt-2">{stats.activeMemberships}</p>
+              <p className="text-2xl font-bold text-success mt-2">{stats.activeMemberships}</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
-              <CheckCircle className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
+              <CheckCircle className="w-5 h-5" />
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-warning/10 via-transparent to-warning/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Pending Applications
               </p>
-              <p className="text-xl font-black text-warning mt-2">{stats.pendingApplications}</p>
+              <p className="text-2xl font-bold text-warning mt-2">{stats.pendingApplications}</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+              <Clock className="w-5 h-5" />
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-purple-500/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Salon Owners
               </p>
-              <p className="text-xl font-black text-purple-600 dark:text-purple-400 mt-2">
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
                 {stats.totalOwners}
               </p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <UserCheck className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <UserCheck className="w-5 h-5" />
             </div>
           </div>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-500/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Employees
               </p>
-              <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-2">
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
                 {stats.totalEmployees}
               </p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <Users className="w-5 h-5" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-1">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-1">
         <div className="flex gap-1">
           {(
             [
@@ -512,9 +506,9 @@ function MembershipManagementContent() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.id
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'text-text-light/60 dark:text-text-dark/60 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light dark:hover:text-text-dark'
                 }`}
               >
@@ -527,7 +521,7 @@ function MembershipManagementContent() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
@@ -536,7 +530,7 @@ function MembershipManagementContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, email, membership number..."
-              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              className="w-full pl-10 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
             />
           </div>
 
@@ -738,14 +732,14 @@ function MembershipsTab({
 }) {
   if (memberships.length === 0) {
     return (
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-10 text-center">
-        <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
-          <Building2 className="w-6 h-6" />
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
+        <div className="h-16 w-16 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+          <Building2 className="w-8 h-8" />
         </div>
-        <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+        <p className="text-base font-semibold text-text-light dark:text-text-dark">
           No memberships found
         </p>
-        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-2">
           Try adjusting your filters or search query.
         </p>
       </div>
@@ -761,121 +755,112 @@ function MembershipsTab({
         return (
           <div
             key={membership.id}
-            className={`relative overflow-hidden rounded-2xl border ${config.border} bg-surface-light dark:bg-surface-dark hover:shadow-lg transition p-5`}
+            className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:shadow-sm transition-shadow overflow-hidden"
           >
-            {/* Left rail indicator */}
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bg.replace('/20', '')}`} />
+            {/* Left accent rail */}
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bg.replace('/10', '')}`} />
 
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`h-9 w-9 rounded-2xl ${config.bg} border ${config.border} flex items-center justify-center`}
+            <div className="p-3 pl-4">
+              <div className="flex items-center justify-between gap-3">
+                {/* Main content */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    className={`h-8 w-8 rounded ${config.bg} flex items-center justify-center flex-shrink-0`}
+                  >
+                    <Icon className={`w-4 h-4 ${config.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                        {membership.salon?.name || 'Unknown Salon'}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${config.bg} ${config.color} border ${config.border}`}
                       >
-                        <Icon className={`w-4 h-4 ${config.color}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-black tracking-tight text-text-light dark:text-text-dark truncate">
-                          {membership.salon?.name || 'Unknown Salon'}
-                        </p>
-                        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">
-                          {membership.salon?.owner?.fullName || 'Owner'} •{' '}
-                          {membership.membershipNumber || 'No #'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${config.bg} ${config.color} ${config.border}`}
-                  >
-                    {config.label}
-                  </span>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="flex items-center gap-2 text-xs text-text-light/70 dark:text-text-dark/70">
-                    <Building2 className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
-                    <span className="truncate">Category: {membership.category || 'N/A'}</span>
-                  </div>
-                  {membership.startDate && (
-                    <div className="flex items-center gap-2 text-xs text-text-light/70 dark:text-text-dark/70">
-                      <Clock className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
-                      <span className="truncate">
-                        Start: {new Date(membership.startDate).toLocaleDateString()}
+                        <Icon className="w-3 h-3" />
+                        {config.label}
                       </span>
                     </div>
-                  )}
-                  {membership.endDate && (
-                    <div className="flex items-center gap-2 text-xs text-text-light/70 dark:text-text-dark/70">
-                      <AlertCircle className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
-                      <span className="truncate">
-                        End: {new Date(membership.endDate).toLocaleDateString()}
+                    <div className="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
+                      <span>{membership.salon?.owner?.fullName || 'Owner'}</span>
+                      <span>•</span>
+                      <span className="text-primary font-medium">
+                        {membership.membershipNumber || 'N/A'}
                       </span>
+                      <span>•</span>
+                      <span>{membership.category || 'N/A'}</span>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                {membership.status === 'new' && (
-                  <Button
-                    onClick={() => onActivate(membership.id)}
-                    variant="primary"
-                    size="sm"
-                    disabled={isProcessing}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Activate
-                  </Button>
-                )}
-                {membership.status === 'active' && (
-                  <div className="flex items-center gap-2">
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {membership.status === 'new' && (
+                    <Button
+                      onClick={() => onActivate(membership.id)}
+                      variant="primary"
+                      size="sm"
+                      disabled={isProcessing}
+                      className="gap-1.5"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Activate
+                    </Button>
+                  )}
+                  {membership.status === 'active' && (
+                    <>
+                      <Button
+                        onClick={() => onRenew(membership)}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isProcessing}
+                        className="gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Renew
+                      </Button>
+                      <Button
+                        onClick={() => onSuspend(membership.id)}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isProcessing}
+                        className="text-warning hover:bg-warning/10"
+                      >
+                        <Ban className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        onClick={() => onExpire(membership.id)}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isProcessing}
+                        className="text-error hover:bg-error/10"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                      </Button>
+                    </>
+                  )}
+                  {membership.status === 'expired' && (
                     <Button
                       onClick={() => onRenew(membership)}
-                      variant="secondary"
+                      variant="primary"
                       size="sm"
                       disabled={isProcessing}
+                      className="gap-1.5"
                     >
-                      <RefreshCw className="w-4 h-4" />
+                      <RefreshCw className="w-3.5 h-3.5" />
                       Renew
                     </Button>
-                    <Button
-                      onClick={() => onSuspend(membership.id)}
-                      variant="secondary"
-                      size="sm"
-                      disabled={isProcessing}
-                      className="text-warning hover:bg-warning/10"
-                    >
-                      <Ban className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      onClick={() => onExpire(membership.id)}
-                      variant="secondary"
-                      size="sm"
-                      disabled={isProcessing}
-                      className="text-danger hover:bg-danger/10"
-                    >
-                      <XCircle className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-                {membership.status === 'expired' && (
+                  )}
                   <Button
-                    onClick={() => onRenew(membership)}
-                    variant="primary"
+                    onClick={() => onView(membership)}
+                    variant="secondary"
                     size="sm"
-                    disabled={isProcessing}
+                    className="gap-1.5"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    Renew
+                    <Eye className="w-3.5 h-3.5" />
+                    Details
                   </Button>
-                )}
-                <Button onClick={() => onView(membership)} variant="secondary" size="sm">
-                  <Eye className="w-4 h-4" />
-                  Details
-                </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -900,14 +885,14 @@ function ApplicationsTab({
 }) {
   if (applications.length === 0) {
     return (
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-10 text-center">
-        <div className="h-12 w-12 rounded-2xl bg-warning/10 text-warning flex items-center justify-center mx-auto mb-4">
-          <Clock className="w-6 h-6" />
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
+        <div className="h-16 w-16 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+          <Clock className="w-8 h-8" />
         </div>
-        <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+        <p className="text-base font-semibold text-text-light dark:text-text-dark">
           No applications found
         </p>
-        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-2">
           Try adjusting your filters or search query.
         </p>
       </div>
@@ -923,107 +908,88 @@ function ApplicationsTab({
         return (
           <div
             key={application.id}
-            className={`relative overflow-hidden rounded-2xl border ${config.border} bg-surface-light dark:bg-surface-dark hover:shadow-md transition p-4`}
+            className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:shadow-sm transition-shadow overflow-hidden"
           >
-            {/* Left rail indicator */}
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bg.replace('/20', '')}`} />
+            {/* Left accent rail */}
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bg.replace('/10', '')}`} />
 
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className={`h-9 w-9 rounded-2xl ${config.bg} border ${config.border} flex items-center justify-center flex-shrink-0`}
-                    >
-                      <Icon className={`w-4 h-4 ${config.color}`} />
+            <div className="p-3 pl-4">
+              <div className="flex items-center justify-between gap-3">
+                {/* Main content */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    className={`h-8 w-8 rounded ${config.bg} flex items-center justify-center flex-shrink-0`}
+                  >
+                    <Icon className={`w-4 h-4 ${config.color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                        {application.businessName || application.applicant.fullName}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${config.bg} ${config.color} border ${config.border}`}
+                      >
+                        <Icon className="w-3 h-3" />
+                        {config.label}
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm sm:text-base font-black tracking-tight text-text-light dark:text-text-dark truncate">
-                          {application.businessName || application.applicant.fullName}
-                        </h3>
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${config.bg} ${config.color} ${config.border}`}
-                        >
-                          {config.label}
-                        </span>
-                      </div>
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">
-                        {application.applicant.fullName} •{' '}
-                        <span className="text-primary font-semibold">
-                          {application.applicant.membershipNumber || 'Membership # pending'}
-                        </span>
-                      </p>
+                    <div className="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
+                      <span>{application.applicant.fullName}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {application.applicant.email}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {application.phone || 'N/A'}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {application.city || 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/70 dark:text-text-dark/70">
-                    <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                    <span className="truncate">{application.applicant.email}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/70 dark:text-text-dark/70">
-                    <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                    <span className="truncate">{application.phone || 'N/A'}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/70 dark:text-text-dark/70">
-                    <MapPin className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                    <span className="truncate">
-                      {(application.city || 'N/A') + ' • ' + (application.district || 'N/A')}
-                    </span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/70 dark:text-text-dark/70">
-                    <FileText className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                    <span className="truncate">{application.registrationNumber || 'N/A'}</span>
-                  </span>
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {application.status === 'pending' && (
+                    <>
+                      <Button
+                        onClick={() => onApprove(application)}
+                        variant="primary"
+                        size="sm"
+                        disabled={isProcessing}
+                        className="gap-1.5"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Approve
+                      </Button>
+                      <Button
+                        onClick={() => onReject(application)}
+                        size="sm"
+                        disabled={isProcessing}
+                        className="gap-1.5 bg-error hover:bg-error/90 text-white"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    onClick={() => onView(application)}
+                    variant="secondary"
+                    size="sm"
+                    className="gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    View
+                  </Button>
                 </div>
-
-                {application.rejectionReason && (
-                  <div className="mt-3 rounded-xl bg-danger/10 border border-danger/20 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-danger mb-1">
-                      Rejection reason
-                    </p>
-                    <p className="text-xs text-text-light dark:text-text-dark line-clamp-2">
-                      {application.rejectionReason}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex lg:flex-col gap-2 lg:items-end flex-shrink-0">
-                {application.status === 'pending' && (
-                  <>
-                    <Button
-                      onClick={() => onApprove(application)}
-                      variant="primary"
-                      size="sm"
-                      disabled={isProcessing}
-                      className="gap-2"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Approve
-                    </Button>
-                    <Button
-                      onClick={() => onReject(application)}
-                      size="sm"
-                      disabled={isProcessing}
-                      className="gap-2 bg-danger hover:bg-danger/90 text-white"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Reject
-                    </Button>
-                  </>
-                )}
-                <Button
-                  onClick={() => onView(application)}
-                  variant="secondary"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Eye className="w-4 h-4" />
-                  View
-                </Button>
               </div>
             </div>
           </div>
@@ -1096,11 +1062,11 @@ function OwnersTab({ owners, memberships }: { owners: OwnerUser[]; memberships: 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     {activeMembership ? (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-success/20 text-success">
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-success/10 text-success border border-success/20">
                         Active
                       </span>
                     ) : (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-warning/20 text-warning">
+                      <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-warning/10 text-warning border border-warning/20">
                         No Active Membership
                       </span>
                     )}
@@ -1204,11 +1170,11 @@ function EmployeesTab({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {salonMembership ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-success/20 text-success">
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-success/10 text-success border border-success/20">
                       Active
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-warning/20 text-warning">
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-warning/10 text-warning border border-warning/20">
                       No Active Membership
                     </span>
                   )}
@@ -1241,7 +1207,7 @@ function RenewMembershipModal({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
         onClick={onClose}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
@@ -1252,40 +1218,61 @@ function RenewMembershipModal({
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-w-md w-full p-6"
+          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl max-w-md w-full"
           role="presentation"
         >
-          <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-1">
-            Renew Membership
-          </h2>
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-4">
-            {membership.salon?.name || 'Selected salon'}
-          </p>
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor={`membership-renew-endDate-${membership.id}`}
-                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-              >
-                New End Date
-              </label>
-              <input
-                id={`membership-renew-endDate-${membership.id}`}
-                type="date"
-                value={endDate}
-                onChange={(e) => onEndDateChange(e.target.value)}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-text-light dark:text-text-dark">
+                  Renew Membership
+                </h2>
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                  {membership.salon?.name || 'Selected salon'}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button onClick={onClose} variant="secondary" disabled={isProcessing}>
-                Cancel
-              </Button>
-              <Button onClick={onRenew} variant="primary" disabled={isProcessing || !endDate}>
-                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Renew
-              </Button>
-            </div>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 py-4">
+            <label
+              htmlFor={`membership-renew-endDate-${membership.id}`}
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+            >
+              New End Date
+            </label>
+            <input
+              id={`membership-renew-endDate-${membership.id}`}
+              type="date"
+              value={endDate}
+              onChange={(e) => onEndDateChange(e.target.value)}
+              className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark rounded-b-xl flex gap-3 justify-end">
+            <Button onClick={onClose} variant="secondary" disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button
+              onClick={onRenew}
+              variant="primary"
+              disabled={isProcessing || !endDate}
+              className="gap-2"
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Renew Membership
+            </Button>
           </div>
         </div>
       </div>
@@ -1322,24 +1309,23 @@ function ConfirmReviewModal({
         aria-label="Close modal"
       />
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-          <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
-            <div
-              className={`absolute inset-0 ${
-                isApprove
-                  ? 'bg-gradient-to-br from-success to-success/70'
-                  : 'bg-gradient-to-br from-danger to-danger/70'
-              } opacity-90`}
-            />
-            <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
-            <div className="relative p-5 text-white flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="text-xl font-black tracking-tight">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl max-w-lg w-full">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
+            <div className="flex items-center gap-3">
+              <div
+                className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                  isApprove ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                }`}
+              >
+                {isApprove ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
                   {isApprove ? 'Confirm Approval' : 'Confirm Rejection'}
                 </h3>
-                <p className="text-xs text-white/80 mt-1 truncate">
-                  {application.businessName || 'Membership Application'} •{' '}
-                  {application.applicant?.fullName || 'Applicant'}
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                  {application.businessName || 'Membership Application'}
                 </p>
               </div>
               <Button
@@ -1347,7 +1333,7 @@ function ConfirmReviewModal({
                 variant="secondary"
                 size="sm"
                 onClick={onCancel}
-                className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20 flex-shrink-0"
+                className="h-9 w-9 p-0"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -1355,39 +1341,40 @@ function ConfirmReviewModal({
             </div>
           </div>
 
-          <div className="p-5 space-y-4">
-            <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium text-text-light/60 dark:text-text-dark/60">
-                    Applicant:{' '}
-                  </span>
-                  <span className="text-text-light dark:text-text-dark">
-                    {application.applicant?.fullName}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-text-light/60 dark:text-text-dark/60">
-                    Business:{' '}
-                  </span>
-                  <span className="text-text-light dark:text-text-dark">
-                    {application.businessName || 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-text-light/60 dark:text-text-dark/60">
-                    Email:{' '}
-                  </span>
-                  <span className="text-text-light dark:text-text-dark">{application.email}</span>
-                </div>
+          {/* Content */}
+          <div className="px-6 py-4 space-y-4">
+            <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 min-w-[80px]">
+                  Applicant:
+                </span>
+                <span className="text-sm text-text-light dark:text-text-dark font-medium">
+                  {application.applicant?.fullName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 min-w-[80px]">
+                  Business:
+                </span>
+                <span className="text-sm text-text-light dark:text-text-dark">
+                  {application.businessName || 'N/A'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 min-w-[80px]">
+                  Email:
+                </span>
+                <span className="text-sm text-text-light dark:text-text-dark">
+                  {application.email}
+                </span>
               </div>
             </div>
 
             {!isApprove && (
-              <div className="bg-danger/10 border border-danger/20 rounded-xl p-4">
+              <div className="bg-error/5 border border-error/20 rounded-lg p-4">
                 <label
                   htmlFor={`membership-manage-reject-${application.id}`}
-                  className="block text-sm font-semibold text-danger mb-2"
+                  className="block text-sm font-medium text-error mb-2"
                 >
                   Rejection Reason
                 </label>
@@ -1396,37 +1383,35 @@ function ConfirmReviewModal({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 bg-surface-light dark:bg-surface-dark border border-danger/30 rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-danger/30 focus:border-danger transition resize-none"
+                  className="w-full px-4 py-2.5 bg-surface-light dark:bg-surface-dark border border-error/30 rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-error/20 focus:border-error transition resize-none"
                   placeholder="Explain why this application is being rejected..."
                 />
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
-            <div className="flex gap-2">
-              <Button onClick={onCancel} variant="secondary" size="sm" className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={() => onConfirm(isApprove ? undefined : reason.trim() || undefined)}
-                variant={isApprove ? 'primary' : 'secondary'}
-                size="sm"
-                className={`flex-1 ${!isApprove ? 'bg-danger hover:bg-danger/90 text-white' : ''}`}
-              >
-                {isApprove ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Approve
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Reject
-                  </>
-                )}
-              </Button>
-            </div>
+          {/* Footer */}
+          <div className="px-6 py-4 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark rounded-b-xl flex gap-3">
+            <Button onClick={onCancel} variant="secondary" className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => onConfirm(isApprove ? undefined : reason.trim() || undefined)}
+              variant={isApprove ? 'primary' : 'secondary'}
+              className={`flex-1 gap-2 ${!isApprove ? 'bg-error hover:bg-error/90 text-white' : ''}`}
+            >
+              {isApprove ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Approve Application
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4" />
+                  Reject Application
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>

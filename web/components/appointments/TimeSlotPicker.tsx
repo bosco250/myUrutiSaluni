@@ -2,7 +2,8 @@
 
 import { TimeSlot } from '@/lib/availability';
 import { Loader2, Clock, AlertCircle } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { useMemo } from 'react';
 
 interface TimeSlotPickerProps {
   slots: TimeSlot[];
@@ -21,14 +22,38 @@ export default function TimeSlotPicker({
   selectedDate,
   serviceDuration = 30,
 }: TimeSlotPickerProps) {
+  // Filter out past time slots for today
+  const filteredSlots = useMemo(() => {
+    if (!selectedDate) return slots;
+
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+    // Not today - return all slots as-is
+    if (today !== selectedDateStr) return slots;
+
+    // Today - filter out past slots
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return slots.map((slot) => {
+      const [hours, mins] = slot.startTime.split(':').map(Number);
+      const slotMinutes = hours * 60 + mins;
+
+      // If slot is in the past (or current), mark as unavailable
+      if (slotMinutes <= currentMinutes) {
+        return { ...slot, available: false, reason: 'Past time slot' };
+      }
+      return slot;
+    });
+  }, [slots, selectedDate]);
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8 md:py-12">
+      <div className="flex items-center justify-center py-6">
         <div className="flex flex-col items-center">
-          <Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin text-primary mb-2" />
-          <p className="text-xs md:text-sm text-text-light/60 dark:text-text-dark/60">
-            Loading time slots...
-          </p>
+          <Loader2 className="w-5 h-5 animate-spin text-primary mb-2" />
+          <p className="text-xs text-text-light/60 dark:text-text-dark/60">Loading time slots...</p>
         </div>
       </div>
     );
@@ -36,28 +61,22 @@ export default function TimeSlotPicker({
 
   if (!selectedDate) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 md:py-12 text-center">
-        <Clock className="w-10 h-10 md:w-12 md:h-12 text-text-light/30 dark:text-text-dark/30 mb-3" />
-        <p className="text-xs md:text-sm text-text-light/60 dark:text-text-dark/60">
-          Select a date to see available time slots
-        </p>
+      <div className="flex flex-col items-center justify-center py-6 text-center">
+        <Clock className="w-8 h-8 text-text-light/30 dark:text-text-dark/30 mb-2" />
+        <p className="text-xs text-text-light/60 dark:text-text-dark/60">Select a date to see available time slots</p>
       </div>
     );
   }
 
-  const availableSlots = slots.filter((slot) => slot.available);
-  const unavailableSlots = slots.filter((slot) => !slot.available);
+  const availableSlots = filteredSlots.filter((slot) => slot.available);
+  const unavailableSlots = filteredSlots.filter((slot) => !slot.available);
 
-  if (slots.length === 0) {
+  if (filteredSlots.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 md:py-12 text-center">
-        <AlertCircle className="w-10 h-10 md:w-12 md:h-12 text-warning mb-3" />
-        <p className="text-sm md:text-base font-semibold text-text-light dark:text-text-dark mb-1">
-          No time slots available
-        </p>
-        <p className="text-xs md:text-sm text-text-light/60 dark:text-text-dark/60">
-          The employee doesn&apos;t work on this day or has no availability
-        </p>
+      <div className="flex flex-col items-center justify-center py-6 text-center">
+        <AlertCircle className="w-8 h-8 text-warning mb-2" />
+        <p className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">No time slots available</p>
+        <p className="text-xs text-text-light/60 dark:text-text-dark/60">The employee doesn't work on this day</p>
       </div>
     );
   }

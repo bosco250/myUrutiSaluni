@@ -83,7 +83,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="max-w-[400px] w-full mx-auto overflow-hidden">
+    <div className="max-w-[420px] w-full mx-auto px-4 my-8">
       <div className="text-center mb-5 sm:mb-8 lg:text-left">
         <div className="inline-block p-3 rounded-2xl bg-primary/10 mb-3 sm:mb-4 lg:hidden">
             <Sparkles className="w-8 h-8 text-primary" />

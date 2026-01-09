@@ -10,29 +10,20 @@ import Button from '@/components/ui/Button';
 
 // Dynamic imports - only load the dashboard component that's actually needed
 // This reduces initial bundle by ~150KB
-const CustomerDashboard = dynamic(
-  () => import('@/components/dashboards/CustomerDashboard'),
-  { 
-    loading: () => <DashboardSkeleton />,
-    ssr: false 
-  }
-);
+const CustomerDashboard = dynamic(() => import('@/components/dashboards/CustomerDashboard'), {
+  loading: () => <DashboardSkeleton />,
+  ssr: false,
+});
 
-const SalonOwnerDashboard = dynamic(
-  () => import('@/components/dashboards/SalonOwnerDashboard'),
-  { 
-    loading: () => <DashboardSkeleton />,
-    ssr: false 
-  }
-);
+const SalonOwnerDashboard = dynamic(() => import('@/components/dashboards/SalonOwnerDashboard'), {
+  loading: () => <DashboardSkeleton />,
+  ssr: false,
+});
 
-const AdminDashboard = dynamic(
-  () => import('@/components/dashboards/AdminDashboard'),
-  { 
-    loading: () => <DashboardSkeleton />,
-    ssr: false 
-  }
-);
+const AdminDashboard = dynamic(() => import('@/components/dashboards/AdminDashboard'), {
+  loading: () => <DashboardSkeleton />,
+  ssr: false,
+});
 
 // Skeleton component for loading state
 function DashboardSkeleton() {
@@ -50,11 +41,10 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
   const { user, refreshUser } = useAuthStore();
-  const { isCustomer, isSalonOwner, isAdmin, userRole } = usePermissions();
+  const { isCustomer, isSalonOwner, isAdmin } = usePermissions();
   const { data: membershipStatus } = useMembershipStatus();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showRefreshPrompt, setShowRefreshPrompt] = useState(false);
-
 
   // Check if user role might be outdated (e.g., after membership approval)
   useEffect(() => {
@@ -90,7 +80,8 @@ export default function DashboardPage() {
             Your Role Has Been Updated!
           </h2>
           <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
-            Your membership application has been approved and your role has been updated to <strong>SALON_OWNER</strong>.
+            Your membership application has been approved and your role has been updated to{' '}
+            <strong>SALON_OWNER</strong>.
             <br />
             Please refresh your profile to access the new features.
           </p>

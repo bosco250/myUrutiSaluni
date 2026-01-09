@@ -60,37 +60,37 @@ interface Membership {
 const statusConfig = {
   new: {
     icon: Clock,
-    color: 'text-blue-600',
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
+    border: 'border-primary',
     label: 'New',
   },
   active: {
     icon: CheckCircle,
     color: 'text-success',
-    bg: 'bg-success/20',
+    bg: 'bg-success/10',
     border: 'border-success',
     label: 'Active',
   },
   pending_renewal: {
     icon: AlertCircle,
     color: 'text-warning',
-    bg: 'bg-warning/20',
+    bg: 'bg-warning/10',
     border: 'border-warning',
     label: 'Pending Renewal',
   },
   expired: {
     icon: XCircle,
-    color: 'text-danger',
-    bg: 'bg-danger/20',
-    border: 'border-danger',
+    color: 'text-error',
+    bg: 'bg-error/10',
+    border: 'border-error',
     label: 'Expired',
   },
   suspended: {
-    icon: XCircle,
-    color: 'text-gray-600',
-    bg: 'bg-gray-500/20',
-    border: 'border-gray-500',
+    icon: Ban,
+    color: 'text-text-light/60 dark:text-text-dark/60',
+    bg: 'bg-text-light/5 dark:bg-text-dark/5',
+    border: 'border-border-light dark:border-border-dark',
     label: 'Suspended',
   },
 };
@@ -260,24 +260,23 @@ function MembershipsPageContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
-        <div className="relative p-5 sm:p-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
-              <Building2 className="w-5 h-5 text-white" />
+      <div className="border-b border-border-light dark:border-border-dark pb-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-text-light dark:text-text-dark">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
                   Memberships
                 </h1>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                  {filteredMemberships.length} shown
+                <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark">
+                  {filteredMemberships.length} total
                 </span>
               </div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                Track salon memberships, status health, and renewal needs.
+              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1.5">
+                Manage salon memberships, monitor status, and track renewal schedules
               </p>
             </div>
           </div>
@@ -291,7 +290,7 @@ function MembershipsPageContent() {
                 className="gap-2"
               >
                 <Users className="w-4 h-4" />
-                Advanced
+                Manage
               </Button>
               <Button
                 onClick={() => {
@@ -310,7 +309,7 @@ function MembershipsPageContent() {
       </div>
 
       {/* Search + Status Pills */}
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
@@ -319,7 +318,7 @@ function MembershipsPageContent() {
               placeholder="Search by salon, owner, or membership #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
             />
           </div>
 
@@ -405,103 +404,97 @@ function MembershipsPageContent() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
-          <div className="relative flex items-start justify-between gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Total
               </p>
-              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
                 {stats?.total || 0}
               </p>
               <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
                 {stats?.activePercentage || 0}% active
               </p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Building2 className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <Building2 className="w-5 h-5" />
             </div>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Active
               </p>
-              <p className="text-xl font-black text-success mt-2">{stats?.active || 0}</p>
-              <p className="text-xs text-success/70 mt-1">In good standing</p>
+              <p className="text-2xl font-bold text-success mt-2">{stats?.active || 0}</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">In good standing</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
-              <CheckCircle className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
+              <CheckCircle className="w-5 h-5" />
             </div>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-500/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 New
               </p>
-              <p className="text-xl font-black text-blue-600 mt-2">{stats?.new || 0}</p>
-              <p className="text-xs text-blue-600/70 mt-1">Pending activation</p>
+              <p className="text-2xl font-bold text-primary mt-2">{stats?.new || 0}</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">Pending</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <Clock className="w-5 h-5" />
             </div>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-warning/10 via-transparent to-warning/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
-                Pending renewal
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Renewal
               </p>
-              <p className="text-xl font-black text-warning mt-2">{stats?.pendingRenewal || 0}</p>
-              <p className="text-xs text-warning/70 mt-1">Follow-up required</p>
+              <p className="text-2xl font-bold text-warning mt-2">{stats?.pendingRenewal || 0}</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">Follow-up</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
-              <AlertCircle className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+              <AlertCircle className="w-5 h-5" />
             </div>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-danger/10 via-transparent to-danger/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Expired
               </p>
-              <p className="text-xl font-black text-danger mt-2">{stats?.expired || 0}</p>
-              <p className="text-xs text-danger/70 mt-1">Needs renewal</p>
+              <p className="text-2xl font-bold text-error mt-2">{stats?.expired || 0}</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">Needs action</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-danger/10 text-danger flex items-center justify-center">
-              <XCircle className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-error/10 text-error flex items-center justify-center">
+              <XCircle className="w-5 h-5" />
             </div>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-500/10 via-transparent to-gray-500/5" />
-          <div className="relative flex items-start justify-between gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Suspended
               </p>
-              <p className="text-xl font-black text-gray-600 mt-2">{stats?.suspended || 0}</p>
-              <p className="text-xs text-gray-600/70 mt-1">On hold</p>
+              <p className="text-2xl font-bold text-text-light/60 dark:text-text-dark/60 mt-2">{stats?.suspended || 0}</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">On hold</p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-gray-500/10 text-gray-600 flex items-center justify-center">
-              <Ban className="w-4 h-4" />
+            <div className="h-10 w-10 rounded-lg bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 flex items-center justify-center">
+              <Ban className="w-5 h-5" />
             </div>
           </div>
         </div>
@@ -739,21 +732,10 @@ function MembershipCard({
       : membership.status === 'pending_renewal'
         ? 'bg-warning'
         : membership.status === 'expired'
-          ? 'bg-danger'
+          ? 'bg-error'
           : membership.status === 'new'
-            ? 'bg-blue-600'
-            : 'bg-gray-500';
-
-  const softGlowClass =
-    membership.status === 'active'
-      ? 'from-success/10 via-transparent to-success/5'
-      : membership.status === 'pending_renewal'
-        ? 'from-warning/10 via-transparent to-warning/5'
-        : membership.status === 'expired'
-          ? 'from-danger/10 via-transparent to-danger/5'
-          : membership.status === 'new'
-            ? 'from-blue-500/10 via-transparent to-blue-500/5'
-            : 'from-gray-500/10 via-transparent to-gray-500/5';
+            ? 'bg-primary'
+            : 'bg-text-light/30 dark:bg-text-dark/30';
 
   // Calculate days until expiry
   const daysUntilExpiry = membership.endDate
@@ -776,22 +758,21 @@ function MembershipCard({
   const progress = getProgressPercentage();
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+    <div className="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:shadow-md transition-all">
       <div className={`absolute inset-y-0 left-0 w-1 ${railClass}`} />
-      <div className={`absolute inset-0 bg-gradient-to-br ${softGlowClass} opacity-60`} />
 
-      <div className="relative p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
+      <div className="relative p-4">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
             <div
-              className={`h-10 w-10 rounded-2xl flex items-center justify-center ring-1 ring-border-light dark:ring-border-dark ${config.bg} flex-shrink-0`}
+              className={`h-11 w-11 rounded-xl flex items-center justify-center ${config.bg} flex-shrink-0`}
             >
               <Icon className={`w-5 h-5 ${config.color}`} />
             </div>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-black text-text-light dark:text-text-dark truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h3 className="text-base font-semibold text-text-light dark:text-text-dark truncate">
                   {membership.salon?.name || 'Unknown Salon'}
                 </h3>
                 <Badge
@@ -800,7 +781,7 @@ function MembershipCard({
                       ? 'success'
                       : config.color === 'text-warning'
                         ? 'warning'
-                        : config.color === 'text-danger'
+                        : config.color === 'text-error'
                           ? 'danger'
                           : 'default'
                   }
@@ -808,21 +789,26 @@ function MembershipCard({
                 >
                   {config.label}
                 </Badge>
-                {membership.paymentStatus === 'paid' && (
-                  <Badge variant="success" size="sm" dot>
-                    Paid
-                  </Badge>
-                )}
-                {membership.paymentStatus === 'overdue' && (
-                  <Badge variant="danger" size="sm" dot>
-                    Overdue
-                  </Badge>
-                )}
               </div>
 
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                Membership #{membership.membershipNumber}
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                #{membership.membershipNumber}
               </p>
+              
+              <div className="flex items-center gap-2 mt-2">
+                {membership.paymentStatus === 'paid' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
+                    <CheckCircle className="w-3 h-3" />
+                    Paid
+                  </span>
+                )}
+                {membership.paymentStatus === 'overdue' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-error/10 text-error">
+                    <XCircle className="w-3 h-3" />
+                    Overdue
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -912,35 +898,35 @@ function MembershipCard({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50">
               Owner
             </p>
-            <p className="text-sm font-semibold text-text-light dark:text-text-dark mt-1 truncate">
+            <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">
               {membership.salon?.owner?.fullName || 'N/A'}
             </p>
           </div>
 
-          <div className="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+          <div className="space-y-1">
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50">
               Category
             </p>
-            <p className="text-sm font-semibold text-text-light dark:text-text-dark mt-1 truncate">
+            <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">
               {membership.category || 'N/A'}
             </p>
           </div>
 
-          <div className="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+          <div className="space-y-1">
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50">
               {daysUntilExpiry !== null && daysUntilExpiry > 0 ? 'Expires in' : 'Expired'}
             </p>
             <p
-              className={`text-sm font-semibold mt-1 truncate ${
+              className={`text-sm font-medium truncate ${
                 daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
                   ? 'text-warning'
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                    ? 'text-danger'
+                    ? 'text-error'
                     : 'text-text-light dark:text-text-dark'
               }`}
             >
@@ -957,15 +943,15 @@ function MembershipCard({
 
         {/* Progress Bar */}
         {membership.status === 'active' && membership.startDate && membership.endDate && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60 mb-2">
-              <span>Membership term</span>
-              <span>{Math.round(progress)}%</span>
+          <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+            <div className="flex items-center justify-between text-xs text-text-light/60 dark:text-text-dark/60 mb-2">
+              <span>Term progress</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
             </div>
-            <div className="h-2 bg-background-light dark:bg-background-dark rounded-full overflow-hidden border border-border-light dark:border-border-dark">
+            <div className="h-1.5 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
-                  progress >= 80 ? 'bg-warning' : 'bg-gradient-to-r from-primary to-primary-dark'
+                  progress >= 80 ? 'bg-warning' : 'bg-success'
                 }`}
                 style={{ width: `${progress}%` }}
               />
@@ -975,19 +961,19 @@ function MembershipCard({
 
         {/* Meta chips */}
         {(membership.lastReminderSent || membership.salon?.phone) && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark flex flex-wrap gap-2">
             {membership.lastReminderSent && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-full text-xs">
-                <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                <span className="text-text-light/70 dark:text-text-dark/70">
-                  Reminder: {new Date(membership.lastReminderSent).toLocaleDateString()}
+              <div className="inline-flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
+                <Mail className="w-3 h-3" />
+                <span>
+                  {new Date(membership.lastReminderSent).toLocaleDateString()}
                 </span>
               </div>
             )}
             {membership.salon?.phone && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-full text-xs">
-                <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                <span className="text-text-light/70 dark:text-text-dark/70">{membership.salon.phone}</span>
+              <div className="inline-flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
+                <Phone className="w-3 h-3" />
+                <span>{membership.salon.phone}</span>
               </div>
             )}
           </div>

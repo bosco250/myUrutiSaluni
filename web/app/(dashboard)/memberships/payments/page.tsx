@@ -57,10 +57,10 @@ type RecordPaymentForm = {
 };
 
 const statusConfig = {
-  pending: { icon: Clock, color: 'text-warning', bg: 'bg-warning/20', border: 'border-warning', label: 'Pending' },
-  paid: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/20', border: 'border-success', label: 'Paid' },
-  overdue: { icon: AlertCircle, color: 'text-danger', bg: 'bg-danger/20', border: 'border-danger', label: 'Overdue' },
-  cancelled: { icon: XCircle, color: 'text-gray-600', bg: 'bg-gray-500/20', border: 'border-gray-500', label: 'Cancelled' },
+  pending: { icon: Clock, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning', label: 'Pending' },
+  paid: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', border: 'border-success', label: 'Paid' },
+  overdue: { icon: AlertCircle, color: 'text-error', bg: 'bg-error/10', border: 'border-error', label: 'Overdue' },
+  cancelled: { icon: XCircle, color: 'text-text-light/60 dark:text-text-dark/60', bg: 'bg-text-light/5 dark:bg-text-dark/5', border: 'border-border-light dark:border-border-dark', label: 'Cancelled' },
 };
 
 export default function MembershipPaymentsPage() {
@@ -182,80 +182,127 @@ function MembershipPaymentsContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-6 h-6 text-primary" />
+            </div>
           <div>
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Membership Payments</h1>
-            <p className="text-text-light/60 dark:text-text-dark/60">Manage annual membership contributions (3000 RWF/year, 2 installments)</p>
+              <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+                Membership Payments
+              </h1>
+              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                Manage annual membership contributions (3000 RWF/year, 2 installments)
+              </p>
+            </div>
           </div>
+          <div className="sm:flex-shrink-0">
           <Button
             onClick={() => router.push('/memberships/manage')}
             variant="secondary"
+              size="sm"
           >
             Back to Management
           </Button>
+          </div>
         </div>
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Required</span>
-            <DollarSign className="w-5 h-5 text-primary" />
-          </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Total Required
+              </p>
+              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
             RWF {stats.totalRequired.toLocaleString()}
           </p>
-          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">{stats.totalPayments} installments</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                {stats.totalPayments} installments
+              </p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Total Paid</span>
-            <CheckCircle className="w-5 h-5 text-success" />
-          </div>
-          <p className="text-2xl font-bold text-success">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Total Paid
+              </p>
+              <p className="text-2xl font-bold text-success mt-2">
             RWF {stats.totalPaid.toLocaleString()}
           </p>
-          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">{stats.paid} paid</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                {stats.paid} paid
+              </p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+          </div>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Pending</span>
-            <Clock className="w-5 h-5 text-warning" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Pending
+              </p>
+              <p className="text-2xl font-bold text-warning mt-2">
+                {stats.pending}
+              </p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center flex-shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-warning">{stats.pending}</p>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-text-light/60 dark:text-text-dark/60">Overdue</span>
-            <AlertCircle className="w-5 h-5 text-danger" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Overdue
+              </p>
+              <p className="text-2xl font-bold text-error mt-2">
+                {stats.overdue}
+              </p>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-error/10 text-error flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-danger">{stats.overdue}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search Input - Takes more space */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by member name, membership number..."
-              className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="Search by member name, membership number"
+              className="w-full h-12 pl-12 pr-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+
+          {/* Status Filter */}
+          <div className="relative lg:w-64">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full h-12 pl-12 pr-10 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition appearance-none cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -263,23 +310,32 @@ function MembershipPaymentsContent() {
               <option value="overdue">Overdue</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
-          <div>
-            <label
-              htmlFor="membership-payments-year"
-              className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-            >
+
+          {/* Year Input */}
+          <div className="lg:w-48">
+            <div className="relative">
+              <label
+                htmlFor="membership-payments-year"
+                className="absolute -top-2 left-3 px-2 bg-surface-light dark:bg-surface-dark text-xs font-medium text-text-light/60 dark:text-text-dark/60"
+              >
               Year
             </label>
             <input
-              id="membership-payments-year"
+                id="membership-payments-year"
               type="number"
               value={yearFilter}
               onChange={(e) => setYearFilter(parseInt(e.target.value))}
               min={2020}
               max={2100}
-              className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full h-12 px-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
             />
+            </div>
           </div>
         </div>
       </div>
@@ -337,7 +393,7 @@ function MembershipPaymentsContent() {
                         {new Date(payment.dueDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.color}`}>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md ${config.bg} ${config.color} border ${config.border}`}>
                           <Icon className="w-3 h-3" />
                           {config.label}
                         </span>
@@ -424,7 +480,7 @@ function RecordPaymentModal({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
         onClick={onClose}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
@@ -435,120 +491,207 @@ function RecordPaymentModal({
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-w-md w-full p-6"
+          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
           role="presentation"
         >
-          <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-4">Record Payment</h2>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Member</p>
-              <p className="text-text-light dark:text-text-dark font-medium">{payment.member?.fullName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">Amount</p>
-              <p className="text-text-light dark:text-text-dark font-medium">RWF {Number(payment.installmentAmount).toLocaleString()}</p>
-            </div>
-            <div>
-              <label
-                htmlFor={`membership-record-method-${payment.id}`}
-                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-border-light dark:border-border-dark bg-gradient-to-r from-success/5 to-transparent">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center">
+                  <CreditCard className="w-6 h-6 text-success" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+                    Record Payment
+                  </h2>
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                    Complete payment details for {payment.member?.fullName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="h-8 w-8 rounded-lg bg-background-light dark:bg-background-dark hover:bg-error/10 hover:text-error flex items-center justify-center transition-colors"
+                aria-label="Close"
               >
-                Payment Method
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-180px)]">
+            <div className="space-y-5">
+              {/* Payment Info Card */}
+              <div className="bg-gradient-to-br from-primary/5 to-success/5 border border-primary/20 rounded-xl p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                    <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                      Member
+                    </p>
+                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                      {payment.member?.fullName}
+                    </p>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                      {payment.member?.membershipNumber}
+                    </p>
+            </div>
+            <div>
+                    <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                      Installment
+                    </p>
+                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                      {payment.installmentNumber} of 2
+                    </p>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                      Year {payment.paymentYear}
+                    </p>
+            </div>
+            <div>
+                    <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
+                      Amount Due
+                    </p>
+                    <p className="text-xl font-bold text-success">
+                      RWF {Number(payment.installmentAmount).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Payment Method */}
+                <div>
+                  <label
+                    htmlFor={`membership-record-method-${payment.id}`}
+                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+                  >
+                    Payment Method <span className="text-error">*</span>
               </label>
+                  <div className="relative">
               <select
-                id={`membership-record-method-${payment.id}`}
+                      id={`membership-record-method-${payment.id}`}
                 value={form.paymentMethod}
-                onChange={(e) => onFormChange({ ...form, paymentMethod: e.target.value as 'cash' | 'mobile_money' | 'bank_transfer' | 'card' })}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      onChange={(e) => onFormChange({ ...form, paymentMethod: e.target.value as 'cash' | 'mobile_money' | 'bank_transfer' | 'card' })}
+                      className="w-full h-11 pl-4 pr-10 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition appearance-none cursor-pointer"
               >
-                <option value="cash">Cash</option>
-                <option value="mobile_money">Mobile Money</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="card">Card</option>
+                      <option value="cash">💵 Cash</option>
+                      <option value="mobile_money">📱 Mobile Money</option>
+                      <option value="bank_transfer">🏦 Bank Transfer</option>
+                      <option value="card">💳 Card</option>
               </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg className="w-5 h-5 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paid Amount */}
+                <div>
+                  <label
+                    htmlFor={`membership-record-paidAmount-${payment.id}`}
+                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+                  >
+                    Paid Amount
+                  </label>
+                  <input
+                    id={`membership-record-paidAmount-${payment.id}`}
+                    type="number"
+                    value={form.paidAmount}
+                    onChange={(e) => onFormChange({ ...form, paidAmount: e.target.value })}
+                    placeholder={payment.installmentAmount.toString()}
+                    className="w-full h-11 px-4 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition"
+                  />
             </div>
+
+                {/* Payment Reference */}
             <div>
-              <label
-                htmlFor={`membership-record-paymentRef-${payment.id}`}
-                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-              >
+                  <label
+                    htmlFor={`membership-record-paymentRef-${payment.id}`}
+                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+                  >
                 Payment Reference
               </label>
               <input
-                id={`membership-record-paymentRef-${payment.id}`}
+                    id={`membership-record-paymentRef-${payment.id}`}
                 type="text"
                 value={form.paymentReference}
                 onChange={(e) => onFormChange({ ...form, paymentReference: e.target.value })}
-                placeholder="Optional"
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="e.g., INV-2024-001"
+                    className="w-full h-11 px-4 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition"
               />
             </div>
+
+                {/* Transaction Reference */}
             <div>
-              <label
-                htmlFor={`membership-record-txRef-${payment.id}`}
-                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-              >
+                  <label
+                    htmlFor={`membership-record-txRef-${payment.id}`}
+                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+                  >
                 Transaction Reference
               </label>
               <input
-                id={`membership-record-txRef-${payment.id}`}
+                    id={`membership-record-txRef-${payment.id}`}
                 type="text"
                 value={form.transactionReference}
                 onChange={(e) => onFormChange({ ...form, transactionReference: e.target.value })}
-                placeholder="Optional"
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="e.g., TXN123456789"
+                    className="w-full h-11 px-4 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition"
               />
             </div>
-            <div>
-              <label
-                htmlFor={`membership-record-paidAmount-${payment.id}`}
-                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-              >
-                Paid Amount (defaults to installment amount)
-              </label>
-              <input
-                id={`membership-record-paidAmount-${payment.id}`}
-                type="number"
-                value={form.paidAmount}
-                onChange={(e) => onFormChange({ ...form, paidAmount: e.target.value })}
-                placeholder={payment.installmentAmount.toString()}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
             </div>
+
+              {/* Notes */}
             <div>
-              <label
-                htmlFor={`membership-record-notes-${payment.id}`}
-                className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
-              >
-                Notes
+                <label
+                  htmlFor={`membership-record-notes-${payment.id}`}
+                  className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+                >
+                  Additional Notes
               </label>
               <textarea
-                id={`membership-record-notes-${payment.id}`}
+                  id={`membership-record-notes-${payment.id}`}
                 value={form.notes}
                 onChange={(e) => onFormChange({ ...form, notes: e.target.value })}
-                placeholder="Optional notes"
+                  placeholder="Add any additional information about this payment..."
                 rows={3}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition resize-none"
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button onClick={onClose} variant="secondary" disabled={isProcessing}>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark flex gap-3 justify-end">
+            <Button 
+              onClick={onClose} 
+              variant="secondary" 
+              disabled={isProcessing}
+              className="min-w-[100px]"
+            >
                 Cancel
               </Button>
-              <Button onClick={onRecord} variant="primary" disabled={isProcessing}>
+            <Button 
+              onClick={onRecord} 
+              variant="primary" 
+              disabled={isProcessing} 
+              className="gap-2 min-w-[160px] bg-success hover:bg-success/90"
+            >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                     Processing...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                  <CheckCircle className="w-4 h-4" />
                     Record Payment
                   </>
                 )}
               </Button>
-            </div>
           </div>
         </div>
       </div>

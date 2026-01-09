@@ -426,17 +426,6 @@ function SalonCard({ salon, onViewDetails }: { salon: Salon; onViewDetails: () =
   const hasImage = salon.images && salon.images.length > 0 && salon.images[0];
   const imageUrl = hasImage ? salon.images![0] : null;
 
-  // Gradient fallback colors
-  const gradients = [
-    'from-rose-500 to-pink-500',
-    'from-blue-500 to-cyan-500',
-    'from-purple-500 to-indigo-500',
-    'from-emerald-500 to-teal-500',
-    'from-amber-500 to-orange-500',
-  ];
-  const gradientIndex = salon.id.charCodeAt(0) % gradients.length;
-  const gradient = gradients[gradientIndex];
-
   const location = [salon.district, salon.city].filter(Boolean).join(', ') || salon.address || 'Location not available';
 
   return (
@@ -452,7 +441,7 @@ function SalonCard({ salon, onViewDetails }: { salon: Salon; onViewDetails: () =
       className="group bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer overflow-hidden flex flex-col"
     >
       {/* Image Section */}
-      <div className="relative h-36 overflow-hidden">
+      <div className="relative h-36 overflow-hidden bg-background-light dark:bg-background-dark">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -461,8 +450,13 @@ function SalonCard({ salon, onViewDetails }: { salon: Salon; onViewDetails: () =
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-            <Scissors className="w-10 h-10 text-white/80" />
+          <div className="w-full h-full bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Scissors className="w-8 h-8 text-primary/60" />
+              </div>
+              <span className="text-xs text-text-light/40 dark:text-text-dark/40 font-medium">No Image</span>
+            </div>
           </div>
         )}
         {/* Status Badge */}
