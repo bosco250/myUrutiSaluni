@@ -171,6 +171,11 @@ export class AddPayrollSystem1732400000000 implements MigrationInterface {
             isNullable: true,
           }),
         );
+      } else if (isPostgres) {
+        // Fix: Ensure column is UUID (it might be varchar from auto-sync)
+        await queryRunner.query(
+          'ALTER TABLE "commissions" ALTER COLUMN "payroll_item_id" TYPE uuid USING "payroll_item_id"::uuid',
+        );
       }
     }
 
