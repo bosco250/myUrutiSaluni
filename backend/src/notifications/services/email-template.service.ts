@@ -143,6 +143,7 @@ export class EmailTemplateService {
       commission_paid: this.getCommissionPaidTemplate(),
       points_earned: this.getPointsEarnedTemplate(),
       low_stock_alert: this.getLowStockAlertTemplate(),
+      password_reset: this.getPasswordResetTemplate(),
     };
 
     return templates[templateName] || this.getDefaultTemplate();
@@ -452,6 +453,38 @@ export class EmailTemplateService {
           <a href="{{actionUrl}}" class="button">Manage Inventory</a>
         </div>
         {{/if}}
+      `,
+      );
+  }
+
+  private getPasswordResetTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Reset Your Password')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello {{customerName}},</div>
+        <div class="message">We received a request to reset your password. Click the button below to create a new password:</div>
+        
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button">Reset Password</a>
+        </div>
+
+        <div class="info-card" style="border-left: 4px solid #f59e0b; margin-top: 24px;">
+          <div style="color: #92400e; font-size: 14px;">
+            <strong>⚠️ Important:</strong>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+              <li>This link expires in <strong>1 hour</strong></li>
+              <li>If you didn't request this, please ignore this email</li>
+              <li>Your password will remain unchanged until you create a new one</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="message" style="margin-top: 24px; color: #6b7280; font-size: 13px;">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <span style="word-break: break-all; color: #4f46e5;">{{actionUrl}}</span>
+        </div>
       `,
       );
   }

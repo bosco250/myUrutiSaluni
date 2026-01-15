@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(git -C \"c:\\\\Users\\\\dusen\\\\OneDrive\\\\Desktop\\\\URUTI\\\\urutiSaluni\" log --oneline -30)",
+      "Bash(git -C \"c:\\\\Users\\\\dusen\\\\OneDrive\\\\Desktop\\\\URUTI\\\\urutiSaluni\" branch -a)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

@@ -101,7 +101,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       await this.jsreportInitializing;
     }
 
-    await this.ensureJsReportReady();
+    if (!this.jsreportInstance) {
+      throw new Error('Failed to initialize jsreport instance');
+    }
   }
 
   async onModuleDestroy() {
@@ -355,7 +357,12 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async generateReceipt(saleId: string): Promise<Buffer> {
-    await this.ensureJsReportReady();
+    try {
+      await this.ensureJsReportReady();
+    } catch (initError) {
+      console.error('[RECEIPT] jsreport initialization failed:', initError);
+      throw new Error(`PDF generation service is not available: ${initError.message}`);
+    }
 
     const sale = await this.salesService.findOne(saleId);
 
@@ -491,14 +498,25 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       Object.keys(templateData),
     );
 
-    const report = await this.jsreportInstance.render({
-      template: {
-        name: 'receipt',
-      },
-      data: templateData,
-    });
+    try {
+      console.log('[RECEIPT] Starting PDF rendering...');
+      const report = await this.jsreportInstance.render({
+        template: {
+          name: 'receipt',
+        },
+        data: templateData,
+      });
 
-    return report.content;
+      if (!report || !report.content) {
+        throw new Error('jsreport returned empty content');
+      }
+
+      console.log(`[RECEIPT] PDF rendered successfully (${report.content.length} bytes)`);
+      return report.content;
+    } catch (renderError) {
+      console.error('[RECEIPT] PDF rendering failed:', renderError);
+      throw new Error(`Failed to generate PDF: ${renderError.message}`);
+    }
   }
 
   async generateSalesReport(filters: {

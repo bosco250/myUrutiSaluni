@@ -41,6 +41,7 @@ import { User } from '../users/entities/user.entity';
   exports: [
     NotificationsService,
     EmailService,
+    EmailTemplateService,
     InAppNotificationService,
     NotificationOrchestratorService,
     PushNotificationService,

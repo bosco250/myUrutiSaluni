@@ -41,10 +41,19 @@ export class ReportsController {
     @CurrentUser() user: any,
     @Res() res: Response,
   ) {
-    // Access control will be handled by the sales service
     try {
+      console.log(`[RECEIPT] Generating receipt for sale: ${saleId}`);
       const pdf = await this.reportsService.generateReceipt(saleId);
 
+      if (!pdf || pdf.length === 0) {
+        console.error('[RECEIPT] Generated PDF is empty');
+        return res.status(500).json({
+          message: 'Generated receipt is empty',
+          error: 'PDF generation failed'
+        });
+      }
+
+      console.log(`[RECEIPT] Successfully generated PDF (${pdf.length} bytes)`);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
@@ -52,9 +61,26 @@ export class ReportsController {
       );
       res.send(pdf);
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: 'Failed to generate receipt', error: error.message });
+      console.error('[RECEIPT] Error generating receipt:', error);
+
+      let statusCode = 500;
+      let errorMessage = 'Failed to generate receipt';
+
+      if (error.message?.includes('not found')) {
+        statusCode = 404;
+        errorMessage = 'Sale not found';
+      } else if (error.message?.includes('permission')) {
+        statusCode = 403;
+        errorMessage = 'Permission denied';
+      } else if (error.message?.includes('jsreport')) {
+        errorMessage = 'PDF generation service temporarily unavailable';
+      }
+
+      res.status(statusCode).json({
+        message: errorMessage,
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
 

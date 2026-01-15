@@ -169,6 +169,13 @@ export class User {
   @Column({ type: 'simple-json', default: '{}' })
   metadata: Record<string, any>;
 
+  // Password Reset
+  @Column({ name: 'reset_password_token', nullable: true, length: 255 })
+  resetPasswordToken: string;
+
+  @Column({ name: 'reset_password_expires', type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date;
+
   @Column({ name: 'expo_push_token', nullable: true, length: 255 })
   expoPushToken: string;
 
