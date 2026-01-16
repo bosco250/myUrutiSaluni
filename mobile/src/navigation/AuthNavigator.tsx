@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { LoginScreen, SignUpScreen, ForgotPasswordScreen, OTPVerificationScreen, ResetPasswordScreen } from '../screens/auth';
+import { LoginScreen, SignUpScreen, ForgotPasswordScreen, ResetPasswordScreen } from '../screens/auth';
 
-type AuthScreen = 'Login' | 'SignUp' | 'ForgotPassword' | 'OTPVerification' | 'ResetPassword';
+type AuthScreen = 'Login' | 'SignUp' | 'ForgotPassword' | 'ResetPassword';
 
 interface NavigationContext {
   navigate: (screen: string) => void;
@@ -40,8 +40,6 @@ export default function AuthNavigator({ onLoginSuccess }: AuthNavigatorProps) {
       return <SignUpScreen navigation={navigationContext} />;
     case 'ForgotPassword':
       return <ForgotPasswordScreen navigation={navigationContext} />;
-    case 'OTPVerification':
-      return <OTPVerificationScreen navigation={navigationContext} />;
     case 'ResetPassword':
       return <ResetPasswordScreen navigation={navigationContext} />;
     default:

@@ -13,6 +13,7 @@ import { Membership, MembershipStatus } from './entities/membership.entity';
 import {
   MembershipPayment,
   PaymentStatus,
+  PaymentMethod,
 } from './entities/membership-payment.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { Salon } from '../salons/entities/salon.entity';
@@ -26,6 +27,10 @@ import {
   CreateMembershipPaymentDto,
   RecordPaymentDto,
 } from './dto/create-membership-payment.dto';
+import { InitiateMembershipPaymentDto } from './dto/initiate-membership-payment.dto';
+import { AirtelMoneyService } from '../payments/services/airtel-money.service';
+import { v4 as uuidv4 } from 'uuid';
+import { PaymentMethod as GenericPaymentMethod } from '../payments/entities/payment.entity';
 
 @Injectable()
 export class MembershipsService {
@@ -40,6 +45,7 @@ export class MembershipsService {
     private usersRepository: Repository<User>,
     @InjectRepository(Salon)
     private salonsRepository: Repository<Salon>,
+    private airtelMoneyService: AirtelMoneyService,
   ) {}
 
   async createApplication(
@@ -117,8 +123,20 @@ export class MembershipsService {
       throw new BadRequestException('Application has already been reviewed');
     }
 
+    // Try to load the reviewer user to set the relation properly
+    const reviewer = await this.usersRepository.findOne({
+      where: { id: reviewerId },
+    });
+    
+    // If reviewer not found, log warning but continue (may happen with data integrity issues)
+    if (!reviewer) {
+      console.warn(`[Membership Review] Reviewer with ID ${reviewerId} not found in database. Proceeding without reviewer relation.`);
+    }
+
     application.status = reviewDto.status;
-    application.reviewedById = reviewerId;
+    if (reviewer) {
+      application.reviewedBy = reviewer; // Set the relation if reviewer exists
+    }
     application.reviewedAt = new Date();
 
     if (
@@ -363,9 +381,11 @@ export class MembershipsService {
       .reduce((sum, p) => sum + Number(p.paidAmount), 0);
 
     const requiredAmount = 3000; // 3000 RWF per year
-    if (totalPaid < requiredAmount) {
+    const partialAmount = 1500; // Minimum for 6 months
+
+    if (totalPaid < partialAmount) {
       throw new BadRequestException(
-        `Cannot activate membership. Payment incomplete. Required: ${requiredAmount} RWF, Paid: ${totalPaid} RWF. Please complete payment first.`,
+        `Cannot activate membership. Payment incomplete. Minimum required: ${partialAmount} RWF (6 months) or ${requiredAmount} RWF (1 year). Paid: ${totalPaid} RWF.`,
       );
     }
 
@@ -373,6 +393,19 @@ export class MembershipsService {
     if (!membership.startDate) {
       membership.startDate = new Date();
     }
+
+    // Set expiration based on payment amount
+    const startDate = new Date(membership.startDate);
+    const endDate = new Date(startDate);
+    
+    if (totalPaid >= requiredAmount) {
+      // Full year
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else {
+      // 6 months (Partial)
+      endDate.setMonth(endDate.getMonth() + 6);
+    }
+    membership.endDate = endDate;
 
     return this.membershipsRepository.save(membership);
   }
@@ -399,6 +432,12 @@ export class MembershipsService {
 
   async expireMembership(id: string): Promise<Membership> {
     const membership = await this.findOneMembership(id);
+    
+    // Prevent expiring valid memberships manually
+    if (membership.endDate && new Date(membership.endDate) > new Date()) {
+      throw new BadRequestException('Cannot expire a membership that is still active and valid.');
+    }
+
     membership.status = MembershipStatus.EXPIRED;
     return this.membershipsRepository.save(membership);
   }
@@ -533,7 +572,15 @@ export class MembershipsService {
     payment.paymentMethod = recordDto.paymentMethod;
     payment.paymentReference = recordDto.paymentReference;
     payment.transactionReference = recordDto.transactionReference;
-    payment.paidById = recordedById;
+    
+    // Verify if recording user exists to avoid FK violations
+    const recorder = await this.usersRepository.findOne({ where: { id: recordedById } });
+    if (recorder) {
+      payment.paidById = recordedById;
+    } else {
+      console.warn(`[Payment Record] Recorder with ID ${recordedById} not found. Proceeding without linking to admin user.`);
+    }
+
     if (recordDto.notes) {
       payment.notes = recordDto.notes;
     }
@@ -626,4 +673,160 @@ export class MembershipsService {
 
     return payments;
   }
+
+  // ========== Self-Service Payment ==========
+
+  async initiateSelfServicePayment(
+    userId: string,
+    dto: InitiateMembershipPaymentDto,
+  ): Promise<{ message: string; paymentId: string; status: string }> {
+    // 1. Validate User (Owner)
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const amount = dto.amount;
+    const year = new Date().getFullYear();
+
+    // 2. Create Pending Payment Record
+    const payment = this.paymentsRepository.create({
+      member: user,
+      memberId: user.id,
+      paymentYear: year,
+      installmentNumber: amount >= 3000 ? 1 : 1, // Default to 1st installment logic roughly
+      totalAmount: 3000,
+      installmentAmount: amount,
+      paidAmount: 0, // Not paid yet
+      dueDate: new Date(),
+      status: PaymentStatus.PENDING,
+      paymentMethod: PaymentMethod.MOBILE_MONEY,
+      transactionReference: uuidv4(), // Internal Ref
+    });
+
+    const savedPayment = await this.paymentsRepository.save(payment);
+
+    // 3. Request Payment via Airtel Money (Mock)
+    try {
+      const result = await this.airtelMoneyService.requestPayment({
+        phoneNumber: dto.phoneNumber,
+        amount: dto.amount,
+        externalId: savedPayment.transactionReference,
+        payerMessage: 'Membership Fee',
+      });
+
+      // Update with external ref
+      savedPayment.paymentReference = result.referenceId; // Provider Ref
+      await this.paymentsRepository.save(savedPayment);
+
+      // 4. Start Polling (Fire and forget)
+      this.pollSelfServicePayment(savedPayment.id, result.referenceId);
+
+      return {
+        message: 'Payment initiated. Please check your phone to approve.',
+        paymentId: savedPayment.id,
+        status: 'PENDING',
+      };
+    } catch (error) {
+      savedPayment.status = PaymentStatus.CANCELLED;
+      savedPayment.notes = `Failed to initiate: ${error.message}`;
+      await this.paymentsRepository.save(savedPayment);
+      throw new BadRequestException('Failed to initiate Mobile Money payment');
+    }
+  }
+
+  // Poll status specifically for Membership Payments
+  private async pollSelfServicePayment(
+    paymentId: string,
+    providerRef: string,
+  ): Promise<void> {
+    const maxAttempts = 20; // 60 seconds
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts++;
+      try {
+        const payment = await this.paymentsRepository.findOne({ where: { id: paymentId } });
+        if (!payment || payment.status === PaymentStatus.PAID) return;
+
+        // Check status
+        const result = await this.airtelMoneyService.checkPaymentStatus(providerRef);
+
+        if (result.status === 'SUCCESSFUL') {
+          // Update Payment
+          payment.status = PaymentStatus.PAID;
+          payment.paidAmount = payment.installmentAmount;
+          payment.paidDate = new Date();
+          payment.notes = `Auto-confirmed via Mobile Money (Ref: ${result.financialTransactionId})`;
+          await this.paymentsRepository.save(payment);
+
+          // Auto-Activate Memberships
+          await this.autoActivateMember(payment.memberId);
+          return;
+        } else if (result.status === 'FAILED') {
+          payment.status = PaymentStatus.CANCELLED;
+          payment.notes = `Payment failed: ${result.reason}`;
+          await this.paymentsRepository.save(payment);
+          return;
+        }
+
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 3000);
+        }
+      } catch (e) {
+        console.error('Polling error', e);
+      }
+    };
+
+    setTimeout(poll, 3000);
+  }
+
+  private async autoActivateMember(userId: string) {
+    // Find all memberships for this user's salons
+    const salons = await this.salonsRepository.find({ where: { ownerId: userId } });
+    const salonIds = salons.map(s => s.id);
+    
+    if (salonIds.length === 0) return;
+
+    const memberships = await this.membershipsRepository.find({
+        where: salonIds.map(id => ({ salonId: id }))
+    });
+
+    // Try to activate each
+    for (const membership of memberships) {
+        try {
+            await this.activateMembership(membership.id);
+            console.log(`Auto-activated membership ${membership.id} for user ${userId}`);
+        } catch (e) {
+            // Might fail if already active or payment still insufficient (though we just paid)
+            console.log(`Could not auto-activate membership ${membership.id}: ${e.message}`);
+        }
+    }
+  }
+
+  async findUserByMembershipNumber(membershipNumber: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { membershipNumber },
+    });
+  }
+
+  async findActiveMembershipByOwner(ownerId: string): Promise<Membership | null> {
+    // Find active membership for any of the owner's salons
+    const salons = await this.salonsRepository.find({
+      where: { ownerId },
+    });
+    
+    if (salons.length === 0) return null;
+
+    return this.membershipsRepository.findOne({
+      where: [
+        // Check for active memberships for these salons
+        ...salons.map(s => ({ salonId: s.id, status: MembershipStatus.ACTIVE })),
+        // Also check pending renewal as valid
+        ...salons.map(s => ({ salonId: s.id, status: MembershipStatus.PENDING_RENEWAL })),
+      ],
+      relations: ['salon'],
+      order: { endDate: 'DESC' },
+    });
+  }
 }
+
+

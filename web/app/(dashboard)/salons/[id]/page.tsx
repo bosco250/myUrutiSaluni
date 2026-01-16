@@ -309,7 +309,7 @@ function SalonDetailContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button onClick={() => router.push('/salons')} variant="secondary" size="sm">
+          <Button onClick={() => router.push('/salons')} variant="secondary" size="sm" className="flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

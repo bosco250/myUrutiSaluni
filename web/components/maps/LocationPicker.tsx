@@ -24,50 +24,47 @@ interface LocationPickerProps {
 // MapClickHandler component that uses the hook - dynamically imported
 const MapClickHandler = dynamic(
   () =>
-    Promise.all([import('react-leaflet'), import('react'), import('lucide-react')]).then(
-      ([leafletMod, reactMod, lucideMod]) => {
-        const { useMapEvents } = leafletMod;
-        const { useState } = reactMod;
-        const { Loader2 } = lucideMod;
+    import('react-leaflet').then((leafletMod) => {
+      const { useMapEvents } = leafletMod;
 
-        return function MapClickHandlerComponent({
-          onLocationSelect,
-          onReverseGeocode,
-        }: {
-          onLocationSelect: (lat: number, lng: number) => void;
-          onReverseGeocode?: (lat: number, lng: number) => Promise<void>;
-        }) {
-          const [isGeocoding, setIsGeocoding] = useState(false);
+      return function MapClickHandlerComponent({
+        onLocationSelect,
+        onReverseGeocode,
+      }: {
+        onLocationSelect: (lat: number, lng: number) => void;
+        onReverseGeocode?: (lat: number, lng: number) => Promise<void>;
+      }) {
+        const [isGeocoding, setIsGeocoding] = useState(false);
 
-          useMapEvents({
-            click: async (e: any) => {
-              const { lat, lng } = e.latlng;
-              onLocationSelect(lat, lng);
+        useMapEvents({
+          click: async (e: unknown) => {
+            const event = e as { latlng: { lat: number; lng: number } };
+            const { lat, lng } = event.latlng;
+            onLocationSelect(lat, lng);
 
-              if (onReverseGeocode) {
-                setIsGeocoding(true);
-                try {
-                  await onReverseGeocode(lat, lng);
-                } catch (error: any) {
-                  console.error('Reverse geocoding error:', error);
-                } finally {
-                  setIsGeocoding(false);
-                }
+            if (onReverseGeocode) {
+              setIsGeocoding(true);
+              try {
+                await onReverseGeocode(lat, lng);
+              } catch (error: unknown) {
+                console.error('Reverse geocoding error:', error);
+              } finally {
+                setIsGeocoding(false);
               }
-            },
-          });
+            }
+          },
+        });
 
-          return isGeocoding ? (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <span className="text-sm text-text-light dark:text-text-dark">
-                Getting address...
-              </span>
-            </div>
-          ) : null;
-        };
-      }
-    ),
+        return isGeocoding ? (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-sm text-text-light dark:text-text-dark">
+              Getting address...
+            </span>
+          </div>
+        ) : null;
+      };
+    }),
   { ssr: false }
 );
 

@@ -203,6 +203,51 @@ export class SalonEmployeePermissionsController {
     };
   }
 
+  @Get('me')
+  @Roles(UserRole.SALON_EMPLOYEE, UserRole.SALON_OWNER, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get permissions for the current user in this salon' })
+  @ApiParam({ name: 'salonId', description: 'Salon ID' })
+  async getMyPermissions(
+    @Param('salonId', ParseUUIDPipe) salonId: string,
+    @CurrentUser() user: any,
+  ) {
+    // If owner, return all permissions (conceptually) or handle specially
+    // But for now, primarily for employees
+    if (
+      user.role === UserRole.SALON_OWNER ||
+      user.role === UserRole.SUPER_ADMIN
+    ) {
+      // Owners have all permissions implicitly, but frontend might expect a list.
+      // We'll return a special flag or all permission enums.
+      return {
+        salonId,
+        permissions: Object.values(EmployeePermission),
+        isOwner: true,
+      };
+    }
+
+    const employee = await this.permissionsService.getEmployeeRecordByUserId(
+      user.id,
+      salonId,
+    );
+
+    if (!employee) {
+      throw new ForbiddenException('You are not an employee of this salon');
+    }
+
+    const permissions = await this.permissionsService.getEmployeePermissions(
+      employee.id,
+      salonId,
+    );
+
+    return {
+      salonId,
+      employeeId: employee.id,
+      permissions,
+      isOwner: false,
+    };
+  }
+
   @Get('available')
   @ApiOperation({ summary: 'Get list of available permissions' })
   @ApiResponse({

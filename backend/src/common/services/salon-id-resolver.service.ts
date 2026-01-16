@@ -174,6 +174,25 @@ export class SalonIdResolverService {
       }
     }
 
+    // Try expenseId
+    const expenseId = params.expenseId || params.id || body.expenseId;
+    if (expenseId && this.isValidUUID(expenseId)) {
+      try {
+        const result = await this.dataSource.query(
+          `SELECT salon_id as "salonId" FROM expenses WHERE id = $1`,
+          [expenseId],
+        );
+        if (result?.[0]?.salonId) {
+          return {
+            salonId: result[0].salonId,
+            source: 'entity_expense' as any,
+          };
+        }
+      } catch (error) {
+        this.logger.debug(`Could not find expense: ${expenseId}`);
+      }
+    }
+
     return {
       salonId: null,
       source: 'not_found',

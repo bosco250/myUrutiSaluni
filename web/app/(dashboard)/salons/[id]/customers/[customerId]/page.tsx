@@ -315,10 +315,9 @@ function SalonCustomerDetailContent() {
           onClick={() => router.push(`/salons/${salonId}/customers`)}
           variant="secondary"
           size="sm"
-          className="flex items-center gap-2"
+          className="flex-shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
         </Button>
         <div className="flex items-center gap-2">
           <Button

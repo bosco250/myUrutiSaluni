@@ -36,6 +36,7 @@ export class SalonsService {
       await this.membershipsService.createMembership({
         salonId: savedSalon.id,
         status: MembershipStatus.NEW,
+        category: 'Standard',
         startDate: new Date().toISOString(),
       });
     } catch (error) {

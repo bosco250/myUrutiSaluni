@@ -13,6 +13,7 @@ import { Button, Input } from "../../components";
 import { MailIcon, LockIcon, ChevronLeftIcon } from "../../components/common/Icons";
 import { useTheme } from "../../context";
 import { theme } from "../../theme";
+import { authService } from "../../services/auth";
 
 interface ForgotPasswordScreenProps {
   navigation?: {
@@ -47,18 +48,23 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [generalError, setGeneralError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const validate = () => {
     if (!email.trim()) {
       setError("Email is required");
+      setGeneralError("");
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError("Email is invalid");
+      setGeneralError("");
       return false;
     }
     setError("");
+    setGeneralError("");
     return true;
   };
 
@@ -66,15 +72,17 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    setGeneralError("");
+
+    try {
+      const response = await authService.requestPasswordReset(email.trim());
       setSuccess(true);
-      // Navigate to OTP verification screen after showing success
-      setTimeout(() => {
-        navigation?.navigate("OTPVerification");
-      }, 2000);
-    }, 1500);
+      setSuccessMessage(response.message);
+    } catch (apiError: any) {
+      setGeneralError(apiError.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -84,8 +92,18 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
           <Text style={styles.successIcon}>✓</Text>
           <Text style={styles.successTitle}>Email Sent!</Text>
           <Text style={styles.successMessage}>
-            We've sent a verification code to {email}
+            {successMessage || `We've sent password reset instructions to ${email}. Please check your inbox for the token.`}
           </Text>
+          <Button
+            title="Open Reset Form"
+            onPress={() => navigation?.navigate("ResetPassword")}
+            style={styles.resetEntryButton}
+          />
+          <TouchableOpacity onPress={() => navigation?.navigate("Login")}
+            style={styles.backToLoginLink}
+          >
+            <Text style={styles.backToLoginText}>Return to Login</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -124,8 +142,8 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
             <View style={styles.header}>
               <Text style={[styles.title, dynamicStyles.text]}>Forgot Password?</Text>
               <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>
-                Don't worry! It happens. Please enter the email associated with
-                your account.
+                Enter the email associated with your account and we’ll send you a
+                secure reset link containing your token.
               </Text>
             </View>
 
@@ -138,6 +156,7 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
               onChangeText={(value) => {
                 setEmail(value);
                 setError("");
+                setGeneralError("");
               }}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -146,8 +165,12 @@ export default function ForgotPasswordScreen({ navigation }: ForgotPasswordScree
               leftIcon={<MailIcon size={20} color={theme.colors.primary} />}
             />
 
+            {generalError ? (
+              <Text style={styles.generalErrorText}>{generalError}</Text>
+            ) : null}
+
             <Button
-              title="Send Code"
+              title="Send Reset Link"
               onPress={handleResetPassword}
               loading={loading}
               style={styles.sendButton}
@@ -265,6 +288,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: theme.spacing.xl,
     lineHeight: 24,
+    fontFamily: theme.fonts.regular,
+  },
+  resetEntryButton: {
+    width: "100%",
+    marginTop: theme.spacing.lg,
+  },
+  backToLoginLink: {
+    marginTop: theme.spacing.md,
+  },
+  backToLoginText: {
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.bold,
+    fontSize: 16,
+  },
+  generalErrorText: {
+    color: theme.colors.error,
+    fontSize: 14,
+    marginTop: -theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
     fontFamily: theme.fonts.regular,
   },
 });

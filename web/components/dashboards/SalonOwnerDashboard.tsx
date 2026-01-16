@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
+import { useMembershipStatus } from '@/hooks/useMembershipStatus';
 import Button from '@/components/ui/Button';
 import {
   DollarSign,
@@ -24,6 +25,10 @@ import {
   BarChart3,
   Activity,
   User,
+  FileText,
+  RefreshCw,
+  XCircle,
+  CheckCircle,
   Star,
 } from 'lucide-react';
 import {
@@ -130,6 +135,9 @@ interface SalonOwnerStats {
 export default function SalonOwnerDashboard() {
   const router = useRouter();
   const { user } = useAuthStore();
+  
+  // Check membership status
+  const { data: membershipStatus } = useMembershipStatus();
 
   // Fetch salons
   const { data: salons = [], isLoading: salonsLoading } = useQuery<Salon[]>({
@@ -445,49 +453,236 @@ export default function SalonOwnerDashboard() {
   // Note: loading.tsx handles the initial loading skeleton
   // We only show minimal inline loading for data refresh, not full-page loaders
 
-  // Empty state - no salons
-  if (salons && salons.length === 0) {
+  // No membership application - prompt to apply
+  if (membershipStatus && !membershipStatus.application) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Building2 className="w-8 h-8 text-primary" />
+            <FileText className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
             Welcome, {user?.fullName || 'Salon Owner'}!
           </h1>
           <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
-            Get started by adding your first salon to begin managing your business.
+            To start managing your salon business, you need to apply for membership first.
           </p>
-          <Button onClick={() => router.push('/salons')} variant="primary" className="flex items-center gap-2 mx-auto">
-            <Plus className="w-4 h-4" />
-            Add Your First Salon
+          <Button onClick={() => router.push('/membership/apply')} variant="primary" className="flex items-center gap-2 mx-auto">
+            <FileText className="w-4 h-4" />
+            Apply for Membership
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 text-center">
-            <Building2 className="w-6 h-6 text-primary mx-auto mb-2" />
-            <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">Add Salons</h3>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-              Register all your salon locations
-            </p>
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 mt-8">
+          <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-4">How It Works</h3>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">1</div>
+              <div>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Apply for Membership</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Submit your business information</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-border-light dark:bg-border-dark rounded-full flex items-center justify-center text-text-light/60 dark:text-text-dark/60 text-xs font-bold flex-shrink-0">2</div>
+              <div>
+                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Wait for Approval</p>
+                <p className="text-xs text-text-light/40 dark:text-text-dark/40">Usually within 24-48 hours</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-border-light dark:bg-border-dark rounded-full flex items-center justify-center text-text-light/60 dark:text-text-dark/60 text-xs font-bold flex-shrink-0">3</div>
+              <div>
+                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Create Your Salon</p>
+                <p className="text-xs text-text-light/40 dark:text-text-dark/40">Set up your salon profile</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 text-center">
-            <Users className="w-6 h-6 text-primary mx-auto mb-2" />
-            <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">Manage Employees</h3>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-              Add and manage your team members
-            </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Membership application pending
+  if (membershipStatus?.application?.status === 'pending') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Clock className="w-8 h-8 text-warning" />
           </div>
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 text-center">
-            <Calendar className="w-6 h-6 text-primary mx-auto mb-2" />
-            <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">
-              Schedule Appointments
-            </h3>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-              Start booking customer appointments
-            </p>
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+            Application Pending
+          </h1>
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+            Your membership application is being reviewed. We&apos;ll notify you once it&apos;s approved.
+          </p>
+          <Button onClick={() => router.push('/membership/status')} variant="secondary" className="flex items-center gap-2 mx-auto">
+            <Clock className="w-4 h-4" />
+            View Application Status
+          </Button>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 mt-8">
+          <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-4">Application Status</h3>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-success rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Application Submitted</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Your application has been received</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-warning rounded-full flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Under Review</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Usually takes 24-48 hours</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-border-light dark:bg-border-dark rounded-full flex items-center justify-center text-text-light/60 dark:text-text-dark/60 text-xs font-bold flex-shrink-0">3</div>
+              <div>
+                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Approval & Salon Creation</p>
+                <p className="text-xs text-text-light/40 dark:text-text-dark/40">Coming soon!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Membership application rejected
+  if (membershipStatus?.application?.status === 'rejected') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <XCircle className="w-8 h-8 text-danger" />
+          </div>
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+            Application Not Approved
+          </h1>
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+            Unfortunately, your application was not approved. You can apply again with updated information.
+          </p>
+          <Button onClick={() => router.push('/membership/apply')} variant="primary" className="flex items-center gap-2 mx-auto">
+            <RefreshCw className="w-4 h-4" />
+            Apply Again
+          </Button>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 mt-8">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-1">Need Help?</h3>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                Contact our support team to learn more about why your application was not approved.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Membership approved but unpaid/inactive
+  if (membershipStatus?.application?.status === 'approved' && !membershipStatus.isMember) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle className="w-8 h-8 text-success" />
+          </div>
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+            Application Approved!
+          </h1>
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-6">
+            Your application has been approved, but your membership is not yet active.
+          </p>
+          
+          <div className="bg-warning/10 border border-warning/30 rounded-xl p-6 max-w-lg mx-auto">
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-3 bg-warning/20 rounded-full">
+                <DollarSign className="w-6 h-6 text-warning" />
+              </div>
+              <h3 className="font-bold text-lg text-text-light dark:text-text-dark">
+                Membership Payment Required
+              </h3>
+              <p className="text-sm text-center text-text-light/80 dark:text-text-dark/80 mb-2">
+                To activate your account and start managing salons, you need to pay the membership fee.
+              </p>
+              <div className="bg-background-light dark:bg-background-dark p-3 rounded-lg border border-border-light dark:border-border-dark w-full">
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Required Amount: 3,000 RWF</p>
+              </div>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
+                Please visit the association office or contact an administrator to complete your payment.
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-8 flex justify-center gap-4">
+             <Button onClick={() => router.push('/membership/status')} variant="secondary">
+                View Application Details
+             </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Membership approved but no salons - show create salon prompt
+  if (salons && salons.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle className="w-8 h-8 text-success" />
+          </div>
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+            Welcome, {user?.fullName || 'Salon Owner'}!
+          </h1>
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+            Your membership has been approved! Now let&apos;s set up your salon.
+          </p>
+          <Button onClick={() => router.push('/salons')} variant="primary" className="flex items-center gap-2 mx-auto">
+            <Plus className="w-4 h-4" />
+            Create Your First Salon
+          </Button>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 mt-8">
+          <h3 className="font-bold text-text-light dark:text-text-dark text-sm mb-4">Get Started</h3>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-success rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Membership Approved</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">You&apos;re now a verified salon owner</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">2</div>
+              <div>
+                <p className="text-sm font-medium text-text-light dark:text-text-dark">Create Your Salon</p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Add your salon info and location</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-border-light dark:bg-border-dark rounded-full flex items-center justify-center text-text-light/60 dark:text-text-dark/60 text-xs font-bold flex-shrink-0">3</div>
+              <div>
+                <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60">Add Services & Staff</p>
+                <p className="text-xs text-text-light/40 dark:text-text-dark/40">Set up your offerings</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

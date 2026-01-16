@@ -7,12 +7,12 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
 import MembershipApplicationForm from '@/components/forms/MembershipApplicationForm';
-import { 
-  Building2, 
-  Calendar, 
-  DollarSign, 
-  CreditCard, 
-  Package, 
+import {
+  Building2,
+  Calendar,
+  DollarSign,
+  CreditCard,
+  Package,
   ShoppingCart,
   Shield,
   CheckCircle,
@@ -23,7 +23,7 @@ import {
   MapPin,
   Phone,
   Mail,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
@@ -126,25 +126,27 @@ export default function Home() {
           <div className="text-center max-w-4xl mx-auto space-y-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-text-light dark:text-text-dark">Professional Salon Management</span>
+              <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                Professional Salon Management
+              </span>
             </div>
-            
+
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text-light dark:text-text-dark leading-[1.1]">
               Elevate Your
-              <span className="block text-primary mt-2">
-                Salon Business
-              </span>
+              <span className="block text-primary mt-2">Salon Business</span>
             </h1>
-            
+
             <p className="text-xl text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto leading-relaxed">
-              Complete digital platform for salon operations. 
-              Manage memberships, bookings, finances, and inventory with professional-grade tools.
+              Complete digital platform for salon operations. Manage memberships, bookings,
+              finances, and inventory with professional-grade tools.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
               <Button
                 onClick={() => {
-                  document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' });
+                  document
+                    .getElementById('membership-form')
+                    ?.scrollIntoView({ behavior: 'smooth' });
                 }}
                 className="h-14 px-10 rounded-lg text-lg font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg transition-all"
               >
@@ -173,7 +175,8 @@ export default function Home() {
               Everything You Need
             </h2>
             <p className="text-base text-text-light/60 dark:text-text-dark/60">
-              Powerful tools designed specifically for salon businesses, helping you save time and grow revenue.
+              Powerful tools designed specifically for salon businesses, helping you save time and
+              grow revenue.
             </p>
           </div>
 
@@ -185,7 +188,9 @@ export default function Home() {
                   key={index}
                   className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 hover:border-primary/30 transition-all duration-300"
                 >
-                  <div className={`inline-flex p-3 rounded-lg ${feature.bg} ${feature.color} mb-5 transition-transform`}>
+                  <div
+                    className={`inline-flex p-3 rounded-lg ${feature.bg} ${feature.color} mb-5 transition-transform`}
+                  >
                     <Icon className="w-6 h-6" />
                   </div>
                   <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
@@ -228,18 +233,17 @@ export default function Home() {
                 Why Choose Us?
               </h2>
               <p className="text-lg text-text-light/70 dark:text-text-dark/70 mb-8 leading-relaxed">
-                We provide an ecosystem that scales with your business, from a single chair to a franchise.
+                We provide an ecosystem that scales with your business, from a single chair to a
+                franchise.
               </p>
-              
+
               <div className="space-y-4">
                 {benefits.map((benefit, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <CheckCircle className="w-4 h-4 text-primary" />
                     </div>
-                    <p className="text-base text-text-light/80 dark:text-text-dark/80">
-                      {benefit}
-                    </p>
+                    <p className="text-base text-text-light/80 dark:text-text-dark/80">{benefit}</p>
                   </div>
                 ))}
               </div>
@@ -253,35 +257,42 @@ export default function Home() {
                       <Shield className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">Bank-Grade Security</h3>
+                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
+                        Bank-Grade Security
+                      </h3>
                       <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                        Your data is encrypted and protected with enterprise-level security protocols.
+                        Your data is encrypted and protected with enterprise-level security
+                        protocols.
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="w-full h-px bg-border-light dark:bg-border-dark" />
-                  
+
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <BarChart3 className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">Real-Time Analytics</h3>
+                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
+                        Real-Time Analytics
+                      </h3>
                       <p className="text-sm text-text-light/60 dark:text-text-dark/60">
                         Make informed decisions with live dashboards and comprehensive reports.
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="w-full h-px bg-border-light dark:bg-border-dark" />
-                  
+
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Wallet className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">Financial Growth</h3>
+                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
+                        Financial Growth
+                      </h3>
                       <p className="text-sm text-text-light/60 dark:text-text-dark/60">
                         Access micro-loans and manage your cash flow effectively.
                       </p>
@@ -301,7 +312,8 @@ export default function Home() {
             Ready to Get Started?
           </h2>
           <p className="text-lg text-text-light/70 dark:text-text-dark/70 mb-10 max-w-2xl mx-auto">
-            Join hundreds of salon owners who are already transforming their business with our platform.
+            Join hundreds of salon owners who are already transforming their business with our
+            platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -337,18 +349,34 @@ export default function Home() {
                 Empowering salon businesses with next-generation digital tools.
               </p>
             </div>
-            
+
             <div>
-              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">Platform</h3>
+              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">
+                Platform
+              </h3>
               <ul className="space-y-3 text-sm text-text-light/60 dark:text-text-dark/60">
-                <li><Link href="#membership-form" className="hover:text-primary transition-colors">Membership</Link></li>
-                <li><Link href="/login" className="hover:text-primary transition-colors">Sign In</Link></li>
-                <li><Link href="/register" className="hover:text-primary transition-colors">Sign Up</Link></li>
+                <li>
+                  <Link href="#membership-form" className="hover:text-primary transition-colors">
+                    Membership
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login" className="hover:text-primary transition-colors">
+                    Sign In
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/register" className="hover:text-primary transition-colors">
+                    Sign Up
+                  </Link>
+                </li>
               </ul>
             </div>
-            
+
             <div>
-              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">Features</h3>
+              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">
+                Features
+              </h3>
               <ul className="space-y-3 text-sm text-text-light/60 dark:text-text-dark/60">
                 <li>Salon Management</li>
                 <li>Appointment Scheduling</li>
@@ -356,9 +384,11 @@ export default function Home() {
                 <li>Inventory Management</li>
               </ul>
             </div>
-            
+
             <div>
-              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">Contact</h3>
+              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">
+                Contact
+              </h3>
               <ul className="space-y-3 text-sm text-text-light/60 dark:text-text-dark/60">
                 <li className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-primary" />
@@ -375,7 +405,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          
+
           <div className="pt-8 border-t border-border-light dark:border-border-dark text-center text-sm text-text-light/40 dark:text-text-dark/40">
             <p>&copy; {new Date().getFullYear()} UrutiSaluni Platform. All rights reserved.</p>
           </div>

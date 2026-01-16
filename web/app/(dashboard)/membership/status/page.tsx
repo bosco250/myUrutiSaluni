@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -15,12 +16,14 @@ import {
   AlertCircle, 
   Building2, 
   MapPin, 
-  Phone, 
-  Mail,
+  Phone,
+  Mail, 
   FileText,
   Calendar,
-  User
+  User,
+  DollarSign
 } from 'lucide-react';
+import { SelfServicePaymentModal } from '@/components/memberships/SelfServicePaymentModal';
 
 interface MembershipApplication {
   id: string;
@@ -57,6 +60,7 @@ function MembershipStatusContent() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { isSalonOwner } = usePermissions();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Fetch membership status - refetch on mount to get latest data
   const { data: membershipStatus, isLoading, error } = useQuery<MembershipStatus>({
@@ -176,6 +180,8 @@ function MembershipStatusContent() {
 
   // Show application status
   const app = application || membershipStatus.application;
+  const isApprovedButUnpaid = app.status === 'approved' && !membershipStatus.isMember;
+
   const statusConfig = {
     pending: {
       icon: Clock,
@@ -185,7 +191,14 @@ function MembershipStatusContent() {
       title: 'Application Pending Review',
       message: 'Your membership application is currently under review. We will notify you once a decision has been made.',
     },
-    approved: {
+    approved: isApprovedButUnpaid ? {
+      icon: AlertCircle,
+      color: 'text-warning',
+      bgColor: 'bg-warning/10',
+      borderColor: 'border-warning',
+      title: 'Payment Required',
+      message: 'Your application has been approved, but your membership fee (3,000 RWF) has not been paid. Please contact an administrator to complete payment.',
+    } : {
       icon: CheckCircle,
       color: 'text-success',
       bgColor: 'bg-success/10',
@@ -237,7 +250,7 @@ function MembershipStatusContent() {
             )}
 
             <div className="flex gap-4">
-              {app.status === 'approved' && (
+              {app.status === 'approved' && !isApprovedButUnpaid && (
                 <>
                   <Button onClick={() => router.push('/salons')} variant="primary">
                     Go to Salons
@@ -246,6 +259,22 @@ function MembershipStatusContent() {
                     Go to Dashboard
                   </Button>
                 </>
+              )}
+              {isApprovedButUnpaid && (
+                 <div className="mt-2 p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl w-full">
+                    <div className="flex items-center gap-3 mb-2">
+                       <DollarSign className="w-5 h-5 text-warning" />
+                       <span className="font-semibold text-text-light dark:text-text-dark">Payment Instructions</span>
+                    </div>
+                    <p className="text-sm text-text-light/80 dark:text-text-dark/80">
+                       Please visit the association office or contact an administrator to pay the 3,000 RWF membership fee. Once paid, your account will be activated immediately.
+                    </p>
+                    <div className="mt-3">
+                      <Button onClick={() => setShowPaymentModal(true)} variant="primary" className="w-full sm:w-auto">
+                        Pay Membership Fee
+                      </Button>
+                    </div>
+                 </div>
               )}
               {app.status === 'rejected' && (
                 <>
@@ -388,6 +417,13 @@ function MembershipStatusContent() {
           </div>
         </div>
       </div>
+      
+      <SelfServicePaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        requiredAmount={3000}
+        email={user?.email}
+      />
     </div>
   );
 }

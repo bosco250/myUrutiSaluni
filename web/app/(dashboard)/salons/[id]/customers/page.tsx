@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Eye,
   ChevronDown,
+  ArrowLeft,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -162,13 +163,23 @@ function SalonCustomersContent() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
-            Customer Management
-          </h1>
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-            Manage your salon&apos;s customers, track visits, and analyze customer behavior
-          </p>
+        <div className="flex items-center gap-3 min-w-0">
+          <Button
+            onClick={() => router.push(`/salons/${salonId}`)}
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+              Customer Management
+            </h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+              Manage your salon&apos;s customers, track visits, and analyze customer behavior
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <Button

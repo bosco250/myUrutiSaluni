@@ -8,6 +8,7 @@ import { JournalEntryLine } from './entities/journal-entry-line.entity';
 import { Invoice } from './entities/invoice.entity';
 import { Expense } from './entities/expense.entity';
 import { SalesModule } from '../sales/sales.module';
+import { SalonsModule } from '../salons/salons.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SalesModule } from '../sales/sales.module';
       Invoice,
       Expense,
     ]),
+    SalonsModule,
     forwardRef(() => SalesModule),
   ],
   controllers: [AccountingController],

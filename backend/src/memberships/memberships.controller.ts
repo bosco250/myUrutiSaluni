@@ -9,6 +9,7 @@ import {
   UseGuards,
   Query,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,6 +18,7 @@ import { MembershipsService } from './memberships.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { Salon } from '../salons/entities/salon.entity';
@@ -30,6 +32,7 @@ import {
   CreateMembershipPaymentDto,
   RecordPaymentDto,
 } from './dto/create-membership-payment.dto';
+import { InitiateMembershipPaymentDto } from './dto/initiate-membership-payment.dto';
 import { ApplicationStatus } from './entities/membership-application.entity';
 
 @ApiTags('Memberships')
@@ -341,5 +344,51 @@ export class MembershipsController {
       memberId,
       parseInt(year),
     );
+  }
+
+  @Post('payments/initiate')
+  @Roles(UserRole.SALON_OWNER)
+  @ApiOperation({ summary: 'Initiate self-service membership payment' })
+  async initiateSelfServicePayment(
+    @Body() dto: InitiateMembershipPaymentDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.membershipsService.initiateSelfServicePayment(user.id, dto);
+  }
+  @Get('verify/:membershipNumber')
+  @Public()
+  @ApiOperation({ summary: 'Verify membership by number (Public)' })
+  async verifyMembership(@Param('membershipNumber') membershipNumber: string) {
+    const user = await this.membershipsService.findUserByMembershipNumber(
+      membershipNumber,
+    );
+
+    if (!user) {
+      throw new NotFoundException('Membership not found');
+    }
+
+    // Get active membership to check expiry
+    const membership = await this.membershipsService.findActiveMembershipByOwner(
+      user.id,
+    );
+
+    return {
+      isValid: true,
+      member: {
+        fullName: user.fullName,
+        membershipNumber: user.membershipNumber,
+        email: user.email, // Maybe mask this for public view?
+        memberSince: user.createdAt,
+      },
+      membership: membership
+        ? {
+            status: membership.status,
+            startDate: membership.startDate,
+            endDate: membership.endDate,
+            salonName: membership.salon.name,
+          }
+        : null,
+      verificationDate: new Date(),
+    };
   }
 }

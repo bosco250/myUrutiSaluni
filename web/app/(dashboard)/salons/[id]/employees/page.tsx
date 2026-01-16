@@ -89,11 +89,11 @@ function SalonEmployeesContent() {
 
   if (isLoadingSalon || isLoadingEmployees) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
-            <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">Loading employees...</p>
+            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading employees...</p>
           </div>
         </div>
       </div>
@@ -103,10 +103,10 @@ function SalonEmployeesContent() {
   if (salonError) {
     const errorMsg = (salonError as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || (salonError as { message?: string })?.message || 'Unknown error';
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-danger/10 border border-danger rounded-2xl p-6">
-          <p className="text-danger font-semibold">Error loading salon</p>
-          <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <p className="text-error font-semibold text-sm">Error loading salon</p>
+          <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-xs">
             {errorMsg}
           </p>
         </div>
@@ -116,9 +116,9 @@ function SalonEmployeesContent() {
 
   if (!salon) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-danger/10 border border-danger rounded-2xl p-6">
-          <p className="text-danger font-semibold">Salon not found</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <p className="text-error font-semibold text-sm">Salon not found</p>
         </div>
       </div>
     );
@@ -132,10 +132,10 @@ function SalonEmployeesContent() {
     // Handle 403 Forbidden (access denied)
     if (errorStatus === 403) {
       return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="bg-warning/10 border border-warning rounded-2xl p-6">
-            <p className="text-warning font-semibold">Access Denied</p>
-            <p className="text-text-light/60 dark:text-text-dark/60 mt-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="bg-warning/10 border border-warning/20 rounded-xl p-4">
+            <p className="text-warning font-semibold text-sm">Access Denied</p>
+            <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-xs">
               {errorMessage || 'You can only access employees of your own salon.'}
             </p>
           </div>
@@ -145,10 +145,10 @@ function SalonEmployeesContent() {
     
     // Handle other errors
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-danger/10 border border-danger rounded-2xl p-6">
-          <p className="text-danger font-semibold">Error loading employees</p>
-          <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <p className="text-error font-semibold text-sm">Error loading employees</p>
+          <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-xs">
             {errorMessage}
           </p>
         </div>
@@ -165,36 +165,34 @@ function SalonEmployeesContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <Button onClick={() => router.push(`/salons/${salonId}`)} variant="secondary" className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Salon
-        </Button>
-
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-text-light dark:text-text-dark mb-2">
-                  Employees - {salon.name}
-                </h1>
-                <p className="text-text-light/60 dark:text-text-dark/60">
-                  Manage your salon employees and payroll
-                </p>
-              </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* Compact Header */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={() => router.push(`/salons/${salonId}`)} 
+              variant="secondary" 
+              size="sm" 
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
+                Employees
+              </h1>
+              <p className="text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60">
+                {salon.name}
+              </p>
             </div>
           </div>
-
           <div className="flex gap-2">
             <Button
               onClick={() => router.push(`/payroll?salonId=${salonId}`)}
               variant="outline"
-              className="flex items-center gap-2"
+              size="sm"
+              className="hidden sm:flex items-center gap-2"
             >
               <Calculator className="w-4 h-4" />
               Payroll
@@ -205,171 +203,100 @@ function SalonEmployeesContent() {
                 setShowAddModal(true);
               }}
               variant="primary"
+              size="sm"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
+              <UserPlus className="w-4 h-4 mr-1.5" />
               Add Employee
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                Total Employees
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-                {stats.total}
-              </p>
+        {/* Compact Statistics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Total</p>
+                <p className="text-lg font-bold text-text-light dark:text-text-dark">{stats.total}</p>
+              </div>
+              <Users className="w-4 h-4 text-primary" />
             </div>
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <Users className="w-6 h-6 text-primary" />
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Active</p>
+                <p className="text-lg font-bold text-success">{stats.active}</p>
+              </div>
+              <Check className="w-4 h-4 text-success" />
+            </div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Commission</p>
+                <p className="text-lg font-bold text-text-light dark:text-text-dark">{stats.withCommission}</p>
+              </div>
+              <TrendingUp className="w-4 h-4 text-primary" />
+            </div>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Salary</p>
+                <p className="text-lg font-bold text-text-light dark:text-text-dark">{stats.withSalary}</p>
+              </div>
+              <DollarSign className="w-4 h-4 text-success" />
             </div>
           </div>
         </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                Active
-              </p>
-              <p className="text-2xl font-bold text-success">
-                {stats.active}
-              </p>
-            </div>
-            <div className="p-3 bg-success/10 rounded-xl">
-              <Check className="w-6 h-6 text-success" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                With Commission
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-                {stats.withCommission}
-              </p>
-            </div>
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-primary" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                With Salary
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-                {stats.withSalary}
-              </p>
-            </div>
-            <div className="p-3 bg-success/10 rounded-xl">
-              <DollarSign className="w-6 h-6 text-success" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Access Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <button
-          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
-          className="bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 rounded-2xl p-6 text-left text-white transition-all shadow-lg hover:shadow-xl group"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <Calculator className="w-6 h-6" />
-            </div>
-            <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <h3 className="text-xl font-bold mb-1">Calculate Payroll</h3>
-          <p className="text-white/80 text-sm">Process payroll for all employees</p>
-        </button>
-
-        <button
-          onClick={() => router.push('/commissions')}
-          className="bg-gradient-to-br from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 rounded-2xl p-6 text-left text-white transition-all shadow-lg hover:shadow-xl group"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <h3 className="text-xl font-bold mb-1">View Commissions</h3>
-          <p className="text-white/80 text-sm">Track employee commissions</p>
-        </button>
-
-        <button
-          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
-          className="bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-2xl p-6 text-left text-white transition-all shadow-lg hover:shadow-xl group"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <DollarSign className="w-6 h-6" />
-            </div>
-            <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <h3 className="text-xl font-bold mb-1">Payroll History</h3>
-          <p className="text-white/80 text-sm">View past payroll runs</p>
-        </button>
       </div>
 
       {/* Employees Table */}
       {employees && employees.length > 0 ? (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
+              <thead className="bg-background-light/50 dark:bg-background-dark/50 border-b border-border-light dark:border-border-dark">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                     Employee
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Role & Skills
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider hidden lg:table-cell">
+                    Role
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider hidden md:table-cell">
                     Contact
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Payment Type & Compensation
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider hidden xl:table-cell">
+                    Compensation
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-light dark:divide-border-dark">
+              <tbody className="divide-y divide-border-light/50 dark:divide-border-dark/50">
                 {isLoadingEmployees ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8">
-                      <div className="flex items-center justify-center gap-3">
-                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                        <span className="text-text-light/60 dark:text-text-dark/60">
-                          Loading employees...
+                    <td colSpan={6} className="px-4 py-8">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                          Loading...
                         </span>
                       </div>
                     </td>
                   </tr>
                 ) : employees.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td colSpan={6} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-2">
-                        <Users className="w-12 h-12 text-text-light/40 dark:text-text-dark/40 mb-2" />
-                        <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                        <Users className="w-10 h-10 text-text-light/40 dark:text-text-dark/40 mb-1" />
+                        <p className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
                           No employees found
                         </p>
                         <p className="text-xs text-text-light/40 dark:text-text-dark/40">
@@ -382,29 +309,54 @@ function SalonEmployeesContent() {
                   employees.map((employee) => (
                   <tr
                     key={employee.id}
-                    className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                    className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors group"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Users className="w-5 h-5 text-white" />
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Users className="w-4 h-4 text-white" />
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <button
                             onClick={() => router.push(`/salons/${salonId}/employees/${employee.id}`)}
-                            className="text-sm font-semibold text-text-light dark:text-text-dark hover:text-primary transition text-left"
+                            className="text-sm font-semibold text-text-light dark:text-text-dark hover:text-primary transition text-left block truncate"
                           >
                             {employee.user?.fullName || 'Unknown User'}
                           </button>
                           {employee.hireDate && (
-                            <div className="text-xs text-text-light/60 dark:text-text-dark/60">
-                              Hired {new Date(employee.hireDate).toLocaleDateString()}
+                            <div className="text-xs text-text-light/50 dark:text-text-dark/50">
+                              {new Date(employee.hireDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                           )}
+                          {/* Mobile: Show role and skills */}
+                          <div className="lg:hidden mt-1">
+                            {employee.roleTitle && (
+                              <div className="text-xs font-medium text-text-light/80 dark:text-text-dark/80 mb-1">
+                                {employee.roleTitle}
+                              </div>
+                            )}
+                            {employee.skills && employee.skills.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {employee.skills.slice(0, 2).map((skill, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium"
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+                                {employee.skills.length > 2 && (
+                                  <span className="px-1.5 py-0.5 text-text-light/50 dark:text-text-dark/50 rounded text-[10px]">
+                                    +{employee.skills.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3 hidden lg:table-cell">
                       <div className="space-y-1">
                         {employee.roleTitle && (
                           <div className="text-sm font-medium text-text-light dark:text-text-dark">
@@ -413,102 +365,93 @@ function SalonEmployeesContent() {
                         )}
                         {employee.skills && employee.skills.length > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {employee.skills.slice(0, 3).map((skill, index) => (
+                            {employee.skills.slice(0, 2).map((skill, index) => (
                               <span
                                 key={index}
-                                className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium"
+                                className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium"
                               >
                                 {skill}
                               </span>
                             ))}
-                            {employee.skills.length > 3 && (
-                              <span className="px-2 py-0.5 text-text-light/60 dark:text-text-dark/60 rounded text-xs">
-                                +{employee.skills.length - 3}
+                            {employee.skills.length > 2 && (
+                              <span className="px-1.5 py-0.5 text-text-light/50 dark:text-text-dark/50 rounded text-[10px]">
+                                +{employee.skills.length - 2}
                               </span>
                             )}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <div className="space-y-0.5">
                         {employee.user?.email && (
-                          <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
-                            <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                            <span className="truncate max-w-[200px]">{employee.user.email}</span>
+                          <div className="flex items-center gap-1.5 text-xs text-text-light dark:text-text-dark">
+                            <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+                            <span className="truncate max-w-[180px]">{employee.user.email}</span>
                           </div>
                         )}
                         {employee.user?.phone && (
-                          <div className="flex items-center gap-2 text-sm text-text-light/80 dark:text-text-dark/80">
-                            <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                          <div className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
+                            <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
                             {employee.user.phone}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-2">
-                        {/* Payment Type Badge - Prominent */}
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      <div className="space-y-1.5">
                         {employee.salaryType ? (
-                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold ${
                             employee.salaryType === 'COMMISSION_ONLY' 
-                              ? 'bg-primary/15 text-primary border-2 border-primary/30 shadow-sm'
+                              ? 'bg-primary/15 text-primary border border-primary/30'
                               : employee.salaryType === 'SALARY_ONLY'
-                              ? 'bg-success/15 text-success border-2 border-success/30 shadow-sm'
-                              : 'bg-warning/15 text-warning border-2 border-warning/30 shadow-sm'
+                              ? 'bg-success/15 text-success border border-success/30'
+                              : 'bg-warning/15 text-warning border border-warning/30'
                           }`}>
-                            {employee.salaryType === 'COMMISSION_ONLY' && <TrendingUp className="w-4 h-4" />}
-                            {employee.salaryType === 'SALARY_ONLY' && <DollarSign className="w-4 h-4" />}
-                            {employee.salaryType === 'SALARY_PLUS_COMMISSION' && <Calculator className="w-4 h-4" />}
-                            <span className="uppercase tracking-wide">
-                              {employee.salaryType === 'COMMISSION_ONLY' && 'Commission Based'}
-                              {employee.salaryType === 'SALARY_ONLY' && 'Salary Based'}
-                              {employee.salaryType === 'SALARY_PLUS_COMMISSION' && 'Salary + Commission'}
+                            {employee.salaryType === 'COMMISSION_ONLY' && <TrendingUp className="w-3 h-3" />}
+                            {employee.salaryType === 'SALARY_ONLY' && <DollarSign className="w-3 h-3" />}
+                            {employee.salaryType === 'SALARY_PLUS_COMMISSION' && <Calculator className="w-3 h-3" />}
+                            <span className="uppercase">
+                              {employee.salaryType === 'COMMISSION_ONLY' && 'Commission'}
+                              {employee.salaryType === 'SALARY_ONLY' && 'Salary'}
+                              {employee.salaryType === 'SALARY_PLUS_COMMISSION' && 'Hybrid'}
                             </span>
                           </div>
                         ) : (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-text-light/5 dark:bg-text-dark/5 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark">
+                          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-text-light/5 dark:bg-text-dark/5 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark">
                             Not Set
                           </div>
                         )}
-                        <div className="space-y-1.5 pt-1">
+                        <div className="space-y-0.5">
                           {employee.commissionRate > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <TrendingUp className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <TrendingUp className="w-3 h-3 text-primary flex-shrink-0" />
                               <span className="text-text-light dark:text-text-dark">
-                                <span className="font-semibold text-primary">{employee.commissionRate}%</span> commission rate
+                                <span className="font-semibold text-primary">{employee.commissionRate}%</span>
                               </span>
                             </div>
                           )}
                           {employee.baseSalary && employee.baseSalary > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <DollarSign className="w-3.5 h-3.5 text-success flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <DollarSign className="w-3 h-3 text-success flex-shrink-0" />
                               <span className="text-text-light/80 dark:text-text-dark/80">
                                 <span className="font-semibold text-success">RWF {Number(employee.baseSalary).toLocaleString()}</span>
                                 {employee.payFrequency && (
-                                  <span className="text-xs text-text-light/60 dark:text-text-dark/60 ml-1">
-                                    / {employee.payFrequency.toLowerCase()}
+                                  <span className="text-[10px] text-text-light/50 dark:text-text-dark/50 ml-1">
+                                    /{employee.payFrequency.toLowerCase().slice(0, 3)}
                                   </span>
                                 )}
-                              </span>
-                            </div>
-                          )}
-                          {employee.hourlyRate && employee.hourlyRate > 0 && (
-                            <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
-                              <Clock className="w-3 h-3 flex-shrink-0" />
-                              <span>
-                                {employee.payFrequency === 'DAILY' ? 'Daily' : 'Hourly'} rate: RWF {Number(employee.hourlyRate).toLocaleString()}
                               </span>
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border ${
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold ${
                           employee.isActive
-                            ? 'bg-success/10 text-success border-success/20'
+                            ? 'bg-success/10 text-success border border-success/20'
                             : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark'
                         }`}
                       >
@@ -525,42 +468,35 @@ function SalonEmployeesContent() {
                         )}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => router.push(`/salons/${salonId}/employees/${employee.id}`)}
-                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
-                          title="View Details"
+                          className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition opacity-0 group-hover:opacity-100"
+                          title="View"
                         >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => router.push(`/payroll?salonId=${salonId}`)}
-                          className="p-2 text-success hover:bg-success/10 rounded-lg transition"
-                          title="View Payroll"
-                        >
-                          <Calculator className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => {
                             setEditingEmployee(employee);
                             setShowAddModal(true);
                           }}
-                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
+                          className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition opacity-0 group-hover:opacity-100"
                           title="Edit"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => {
-                            if (confirm(`Are you sure you want to remove ${employee.user?.fullName || 'this employee'} from the salon?`)) {
+                            if (confirm(`Remove ${employee.user?.fullName || 'this employee'}?`)) {
                               deleteMutation.mutate(employee.id);
                             }
                           }}
-                          className="p-2 text-danger hover:bg-danger/10 rounded-lg transition"
+                          className="p-1.5 text-danger hover:bg-danger/10 rounded-md transition opacity-0 group-hover:opacity-100"
                           title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -572,12 +508,12 @@ function SalonEmployeesContent() {
           </div>
         </div>
       ) : (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-12 text-center">
-          <Users className="w-16 h-16 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-          <p className="text-text-light/60 dark:text-text-dark/60 text-lg font-medium mb-2">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
+          <Users className="w-12 h-12 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium mb-1">
             No employees yet
           </p>
-          <p className="text-text-light/40 dark:text-text-dark/40 text-sm mb-6">
+          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mb-4">
             Add your first employee to get started
           </p>
           <Button
@@ -586,9 +522,10 @@ function SalonEmployeesContent() {
               setShowAddModal(true);
             }}
             variant="primary"
+            size="sm"
           >
-            <UserPlus className="w-5 h-5" />
-            Add Your First Employee
+            <UserPlus className="w-4 h-4 mr-1.5" />
+            Add Employee
           </Button>
         </div>
       )}
@@ -1350,3 +1287,4 @@ function EmployeeFormModal({
     </div>
   );
 }
+

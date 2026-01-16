@@ -49,6 +49,14 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -133,6 +141,53 @@ class AuthService {
         throw new Error('Network error. Please check your connection.');
       }
       throw new Error(error.message || 'Registration failed. Please try again.');
+    }
+  }
+
+  /**
+   * Request a password reset token to be sent via email
+   */
+  async requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+    try {
+      const response = await api.post<ForgotPasswordResponse>(
+        '/auth/forgot-password',
+        { email },
+        { requireAuth: false }
+      );
+
+      return response;
+    } catch (error: any) {
+      if (error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your connection.');
+      }
+
+      throw new Error(
+        error.message || 'Failed to request password reset. Please try again.'
+      );
+    }
+  }
+
+  /**
+   * Reset password using email token
+   */
+  async resetPassword(
+    token: string,
+    newPassword: string
+  ): Promise<ResetPasswordResponse> {
+    try {
+      const response = await api.post<ResetPasswordResponse>(
+        '/auth/reset-password',
+        { token, newPassword },
+        { requireAuth: false }
+      );
+
+      return response;
+    } catch (error: any) {
+      if (error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your connection.');
+      }
+
+      throw new Error(error.message || 'Password reset failed. Please try again.');
     }
   }
 

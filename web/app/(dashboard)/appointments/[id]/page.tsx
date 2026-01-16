@@ -144,30 +144,31 @@ function AppointmentDetailContent() {
   });
 
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { bg: string; text: string; icon: typeof Clock; label: string }> = {
-      pending: { bg: 'bg-warning/10', text: 'text-warning', icon: Clock, label: 'Pending' },
-      booked: { bg: 'bg-primary/10', text: 'text-primary', icon: Calendar, label: 'Booked' },
-      confirmed: {
-        bg: 'bg-success/10',
-        text: 'text-success',
-        icon: CheckCircle2,
-        label: 'Confirmed',
-      },
-      in_progress: {
-        bg: 'bg-primary/10',
-        text: 'text-primary',
-        icon: CalendarCheck,
-        label: 'In Progress',
-      },
-      completed: {
-        bg: 'bg-background-secondary dark:bg-background-dark',
-        text: 'text-text-light/60 dark:text-text-dark/60',
-        icon: CheckCircle2,
-        label: 'Completed',
-      },
-      cancelled: { bg: 'bg-error/10', text: 'text-error', icon: XCircle, label: 'Cancelled' },
-      no_show: { bg: 'bg-warning/10', text: 'text-warning', icon: AlertCircle, label: 'No Show' },
-    };
+    const configs: Record<string, { bg: string; text: string; icon: typeof Clock; label: string }> =
+      {
+        pending: { bg: 'bg-warning/10', text: 'text-warning', icon: Clock, label: 'Pending' },
+        booked: { bg: 'bg-primary/10', text: 'text-primary', icon: Calendar, label: 'Booked' },
+        confirmed: {
+          bg: 'bg-success/10',
+          text: 'text-success',
+          icon: CheckCircle2,
+          label: 'Confirmed',
+        },
+        in_progress: {
+          bg: 'bg-primary/10',
+          text: 'text-primary',
+          icon: CalendarCheck,
+          label: 'In Progress',
+        },
+        completed: {
+          bg: 'bg-background-secondary dark:bg-background-dark',
+          text: 'text-text-light/60 dark:text-text-dark/60',
+          icon: CheckCircle2,
+          label: 'Completed',
+        },
+        cancelled: { bg: 'bg-error/10', text: 'text-error', icon: XCircle, label: 'Cancelled' },
+        no_show: { bg: 'bg-warning/10', text: 'text-warning', icon: AlertCircle, label: 'No Show' },
+      };
     return configs[status] || configs.pending;
   };
 
@@ -200,7 +201,7 @@ function AppointmentDetailContent() {
             The appointment details could not be retrieved.
           </p>
           <Button
-            onClick={() => router.back()}
+            onClick={() => router.push('/appointments')}
             variant="secondary"
             size="sm"
             className="bg-white/50 hover:bg-white/80"
@@ -226,12 +227,12 @@ function AppointmentDetailContent() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => router.back()}
+            onClick={() => router.push('/appointments')}
             variant="secondary"
             size="sm"
-            className="rounded-full w-8 h-8 p-0 flex items-center justify-center hover:bg-background-secondary dark:hover:bg-background-dark -ml-2"
+            className="flex-shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">

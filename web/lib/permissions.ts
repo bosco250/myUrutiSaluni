@@ -129,6 +129,7 @@ export function canAccessAccounting(userRole: string | null | undefined): boolea
     UserRole.ASSOCIATION_ADMIN,
     UserRole.DISTRICT_LEADER,
     UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
   ]);
 }
 

@@ -8,6 +8,7 @@ import { MembershipPayment } from './entities/membership-payment.entity';
 import { User } from '../users/entities/user.entity';
 import { Salon } from '../salons/entities/salon.entity';
 import { SalonsModule } from '../salons/salons.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SalonsModule } from '../salons/salons.module';
       Salon,
     ]),
     forwardRef(() => SalonsModule),
+    forwardRef(() => PaymentsModule),
   ],
   controllers: [MembershipsController],
   providers: [MembershipsService],

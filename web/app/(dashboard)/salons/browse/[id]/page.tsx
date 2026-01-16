@@ -382,9 +382,9 @@ function SalonDetailsContent() {
             variant="secondary"
             size="sm"
             onClick={() => router.push('/salons/browse')}
-            className="flex items-center gap-2 px-4 py-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-full text-white text-sm font-medium hover:bg-black/40 transition-all"
+            className="flex-shrink-0"
           >
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex gap-3">
             <Button

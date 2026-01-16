@@ -1,5 +1,6 @@
 import { config } from '../config';
 import { tokenStorage } from './tokenStorage';
+import { sessionManager } from './sessionManager';
 
 // API service configuration and methods
 const API_BASE_URL = config.apiUrl;
@@ -22,6 +23,15 @@ class ApiService {
   private cache: Map<string, CacheEntry> = new Map();
   private pendingRequests: Map<string, Promise<any>> = new Map();
   
+  private ensureSessionActive(requireAuth: boolean): void {
+    if (requireAuth && sessionManager.hasSessionExpired()) {
+      const error = new Error('Session expired. Please login again.');
+      (error as any).status = 401;
+      (error as any).isSessionExpired = true;
+      throw error;
+    }
+  }
+
   /**
    * Get cached data if available and not expired
    */
@@ -115,7 +125,9 @@ class ApiService {
         } catch {
           // Ignore errors on clear
         }
-        
+
+        sessionManager.notifySessionExpired();
+
         const error = new Error('Session expired. Please login again.');
         (error as any).status = 401;
         (error as any).isSessionExpired = true;
@@ -155,6 +167,7 @@ class ApiService {
   async get<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { requireAuth = true, cache = false, cacheDuration = 300000 } = options;
     const cacheKey = `GET:${endpoint}`;
+    this.ensureSessionActive(requireAuth);
     
     // Check cache if enabled
     if (cache) {
@@ -213,6 +226,7 @@ class ApiService {
    */
   async post<T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> {
     const { requireAuth = true, isLoginRequest = false } = options;
+    this.ensureSessionActive(requireAuth && !isLoginRequest);
     const headers = await this.getHeaders(requireAuth);
 
     const isFormData = (data as any) instanceof FormData;
@@ -250,6 +264,7 @@ class ApiService {
    */
   async put<T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> {
     const { requireAuth = true } = options;
+    this.ensureSessionActive(requireAuth);
     const headers = await this.getHeaders(requireAuth);
 
     try {
@@ -276,6 +291,7 @@ class ApiService {
    */
   async patch<T>(endpoint: string, data: unknown, options: RequestOptions = {}): Promise<T> {
     const { requireAuth = true } = options;
+    this.ensureSessionActive(requireAuth);
     const headers = await this.getHeaders(requireAuth);
 
     try {
@@ -302,6 +318,7 @@ class ApiService {
    */
   async delete<T>(endpoint: string, options: RequestOptions & { data?: unknown } = {}): Promise<T> {
     const { requireAuth = true, data } = options;
+    this.ensureSessionActive(requireAuth);
     const headers = await this.getHeaders(requireAuth);
 
     try {

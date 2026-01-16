@@ -674,212 +674,144 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Times New Roman', serif;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      padding: 40px;
-      min-height: 100vh;
-    }
-    .certificate {
-      background: white;
-      border: 8px solid #2c3e50;
-      padding: 60px;
-      max-width: 900px;
-      margin: 0 auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      position: relative;
-    }
-    .certificate::before {
-      content: '';
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      right: 20px;
-      bottom: 20px;
-      border: 2px solid #3498db;
-      pointer-events: none;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-      border-bottom: 3px solid #2c3e50;
-      padding-bottom: 20px;
-    }
-    .header h1 {
-      font-size: 36px;
-      color: #2c3e50;
-      margin-bottom: 10px;
-      font-weight: bold;
-      letter-spacing: 2px;
-    }
-    .header h2 {
-      font-size: 24px;
-      color: #34495e;
-      font-weight: normal;
-      font-style: italic;
-    }
-    .main-content {
-      text-align: center;
-      margin: 50px 0;
-    }
-    .main-content p {
-      font-size: 18px;
-      line-height: 1.8;
-      color: #2c3e50;
-      margin-bottom: 20px;
-    }
-    .member-name {
-      font-size: 32px;
-      font-weight: bold;
-      color: #2c3e50;
-      margin: 30px 0;
-      text-decoration: underline;
-      text-decoration-color: #3498db;
-      text-decoration-thickness: 3px;
-    }
-    .member-details {
-      margin: 40px 0;
-      padding: 30px;
-      background: #f8f9fa;
-      border-left: 5px solid #3498db;
-    }
-    .member-details p {
-      font-size: 16px;
-      margin: 10px 0;
-      text-align: left;
-    }
-    .member-details strong {
-      color: #2c3e50;
-      min-width: 150px;
-      display: inline-block;
-    }
-    .qr-section {
-      margin: 40px 0;
-      text-align: center;
-    }
-    .qr-code {
-      display: inline-block;
-      padding: 20px;
-      background: white;
-      border: 3px solid #2c3e50;
-      border-radius: 10px;
-    }
-    .qr-code img {
-      display: block;
-      width: 200px;
-      height: 200px;
-    }
-    .qr-label {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #7f8c8d;
-    }
-    .footer {
-      margin-top: 60px;
-      border-top: 2px solid #2c3e50;
-      padding-top: 30px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .signature {
-      text-align: center;
-      flex: 1;
-    }
-    .signature-line {
-      border-top: 2px solid #2c3e50;
-      width: 200px;
-      margin: 50px auto 10px;
-    }
-    .signature p {
-      font-size: 14px;
-      color: #2c3e50;
-      margin-top: 5px;
-    }
-    .certificate-number {
-      position: absolute;
-      bottom: 20px;
-      right: 30px;
-      font-size: 11px;
-      color: #95a5a6;
-    }
-    .seal {
-      position: absolute;
-      top: 30px;
-      right: 30px;
-      width: 100px;
-      height: 100px;
-      border: 3px solid #e74c3c;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: white;
-      font-size: 12px;
-      text-align: center;
-      color: #e74c3c;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; width: 210mm; height: 297mm; margin: 0; padding: 0; background: #fff; }
+  .certificate { width: 100%; height: 100%; padding: 12mm 15mm; background: linear-gradient(180deg, #fffdf5 0%, #fff8e7 100%); position: relative; overflow: hidden; }
+  .border-outer { position: absolute; top: 6mm; left: 6mm; right: 6mm; bottom: 6mm; border: 3px solid #8B6914; }
+  .border-inner { position: absolute; top: 10mm; left: 10mm; right: 10mm; bottom: 10mm; border: 1px solid #C9A227; }
+  .corner { position: absolute; width: 20mm; height: 20mm; border: 2px solid #8B6914; }
+  .corner-tl { top: 8mm; left: 8mm; border-right: none; border-bottom: none; }
+  .corner-tr { top: 8mm; right: 8mm; border-left: none; border-bottom: none; }
+  .corner-bl { bottom: 8mm; left: 8mm; border-right: none; border-top: none; }
+  .corner-br { bottom: 8mm; right: 8mm; border-left: none; border-top: none; }
+  .content { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; }
+  .header { text-align: center; padding-bottom: 6mm; border-bottom: 2px solid #C9A227; margin-bottom: 5mm; }
+  .org-name { font-size: 13pt; color: #8B6914; text-transform: uppercase; letter-spacing: 3px; font-weight: bold; margin-bottom: 2mm; }
+  .title { font-size: 26pt; color: #2C3E50; text-transform: uppercase; letter-spacing: 4px; font-weight: bold; margin-bottom: 2mm; }
+  .subtitle { font-size: 10pt; color: #5D6D7E; font-style: italic; }
+  .body { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; text-align: center; position: relative; }
+  .certify-text { font-size: 11pt; color: #34495E; margin-top: 4mm; margin-bottom: 3mm; }
+  .member-name { font-size: 22pt; font-weight: bold; color: #1A5276; margin: 3mm 0; padding: 2mm 0; border-bottom: 2px solid #C9A227; border-top: 2px solid #C9A227; display: inline-block; }
+  .description { font-size: 10pt; color: #5D6D7E; line-height: 1.5; margin-bottom: 4mm; max-width: 150mm; margin-left: auto; margin-right: auto; }
+  .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 8mm; margin: 4mm auto; padding: 3mm 6mm; background: rgba(201, 162, 39, 0.08); border-radius: 2mm; max-width: 155mm; text-align: left; }
+  .detail-item { display: flex; align-items: center; font-size: 9pt; padding: 1mm 0; }
+  .detail-label { color: #7F8C8D; font-weight: 600; min-width: 32mm; }
+  .detail-value { color: #2C3E50; font-weight: bold; }
+  
+  /* QR Section positioned at bottom right */
+  .qr-section { position: absolute; bottom: 0; right: 0; text-align: center; background: rgba(255,255,255,0.9); padding: 3mm; border: 1px solid #C9A227; border-radius: 2mm; }
+  .qr-box img { width: 35mm; height: 35mm; display: block; }
+  .qr-text { font-size: 8pt; color: #7F8C8D; margin-top: 2mm; font-weight: bold; }
+  
+  .footer { margin-top: auto; padding-top: 4mm; border-top: 1px solid #C9A227; }
+  .signatures { display: flex; justify-content: space-around; padding: 4mm 0; }
+  .signature-block { text-align: center; min-width: 40mm; }
+  .signature-line { border-top: 1.5px solid #2C3E50; width: 40mm; margin: 0 auto 2mm; }
+  .signature-title { font-size: 8pt; color: #2C3E50; font-weight: bold; }
+  .signature-org { font-size: 7pt; color: #7F8C8D; }
+  .seal { position: absolute; bottom: 25mm; left: 25mm; width: 20mm; height: 20mm; border: 2px solid #C9A227; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #fff 0%, #fffdf5 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .seal-text { font-size: 5pt; color: #8B6914; text-transform: uppercase; font-weight: bold; letter-spacing: 0.3px; }
+  .seal-year { font-size: 9pt; color: #8B6914; font-weight: bold; }
+  .cert-id { position: absolute; bottom: 4mm; left: 50%; transform: translateX(-50%); font-size: 6pt; color: #95A5A6; letter-spacing: 1px; }
+</style>
 </head>
 <body>
-  <div class="certificate">
-    <div class="seal">
-      <div>OFFICIAL<br>SEAL</div>
+<div class="certificate">
+  <div class="border-outer"></div>
+  <div class="border-inner"></div>
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+  
+  <div class="content">
+    <div class="header">
+      <div class="org-name">Salon Association of Rwanda</div>
+      <div class="title">Certificate of Membership</div>
+      <div class="subtitle">Official Recognition of Professional Standing</div>
     </div>
     
-    <div class="header">
-      <h1>MEMBERSHIP CERTIFICATE</h1>
-      <h2>Salon Association of Rwanda</h2>
-    </div>
-
-    <div class="main-content">
-      <p>This is to certify that</p>
+    <div class="body">
+      <div class="certify-text">This is to certify that</div>
       <div class="member-name">{{member.fullName}}</div>
-      <p>is a duly registered member of the Salon Association of Rwanda</p>
-      <p>with the following membership details:</p>
-    </div>
-
-    <div class="member-details">
-      <p><strong>Membership Number:</strong> {{member.membershipNumber}}</p>
-      <p><strong>Member Name:</strong> {{member.fullName}}</p>
-      <p><strong>Email:</strong> {{member.email}}</p>
-      {{#if member.phone}}<p><strong>Phone:</strong> {{member.phone}}</p>{{/if}}
-      <p><strong>Member Since:</strong> {{member.memberSince}}</p>
-      {{#if salon}}
-      <p><strong>Salon:</strong> {{salon.name}}</p>
-      {{#if salon.registrationNumber}}<p><strong>Salon Registration:</strong> {{salon.registrationNumber}}</p>{{/if}}
-      {{/if}}
-    </div>
-
-    <div class="qr-section">
-      <div class="qr-code">
-        <img src="{{qrCodeDataUrl}}" alt="QR Code" />
+      <div class="description">
+        is a duly registered and recognized member of the Salon Association of Rwanda,
+        entitled to all the rights, privileges, and benefits of membership.
       </div>
-      <div class="qr-label">Scan to verify membership</div>
+      
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="detail-label">Membership No:</span>
+          <span class="detail-value">{{member.membershipNumber}}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Member Since:</span>
+          <span class="detail-value">{{member.memberSince}}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Email:</span>
+          <span class="detail-value">{{member.email}}</span>
+        </div>
+        {{#if member.phone}}
+        <div class="detail-item">
+          <span class="detail-label">Phone:</span>
+          <span class="detail-value">{{member.phone}}</span>
+        </div>
+        {{/if}}
+        {{#if salon}}
+        <div class="detail-item">
+          <span class="detail-label">Salon:</span>
+          <span class="detail-value">{{salon.name}}</span>
+        </div>
+        {{#if salon.registrationNumber}}
+        <div class="detail-item">
+          <span class="detail-label">Registration:</span>
+          <span class="detail-value">{{salon.registrationNumber}}</span>
+        </div>
+        {{/if}}
+        {{/if}}
+      </div>
+      
+      <div class="qr-section">
+        <div class="qr-box">
+          <img src="{{qrCodeDataUrl}}" alt="Verify" />
+        </div>
+        <div class="qr-text">Scan to verify</div>
+      </div>
     </div>
-
+    
     <div class="footer">
-      <div class="signature">
-        <div class="signature-line"></div>
-        <p>Association Secretary</p>
+      <div class="signatures">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-title">Association Secretary</div>
+          <div class="signature-org">Salon Association of Rwanda</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-title">Issue Date</div>
+          <div class="signature-org">{{issueDate}}</div>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-title">Association President</div>
+          <div class="signature-org">Salon Association of Rwanda</div>
+        </div>
       </div>
-      <div class="signature">
-        <div class="signature-line"></div>
-        <p>Date: {{issueDate}}</p>
-      </div>
-    </div>
-
-    <div class="certificate-number">
-      Certificate ID: {{certificateId}}
     </div>
   </div>
+  
+  <div class="seal">
+    <div class="seal-text">Official</div>
+    <div class="seal-year">{{currentYear}}</div>
+    <div class="seal-text">Seal</div>
+  </div>
+  
+  <div class="cert-id">Certificate ID: {{certificateId}}</div>
+</div>
 </body>
 </html>
     `;
@@ -920,13 +852,15 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
 
       // Generate QR code
       // QR code will contain a verification URL or membership number
-      const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify/membership/${user.membershipNumber}`;
+      // Use FRONTEND_URL environment variable or default to localhost:3001 (frontend port)
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const verificationUrl = `${frontendUrl}/verify/membership/${user.membershipNumber}`;
       let qrCodeDataUrl: string;
       try {
         qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
           errorCorrectionLevel: 'H',
           type: 'image/png',
-          width: 200,
+          width: 400,
           margin: 1,
         });
       } catch (error) {
@@ -957,6 +891,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           : null,
         qrCodeDataUrl,
         certificateId,
+        currentYear: new Date().getFullYear(),
         issueDate: new Date().toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',

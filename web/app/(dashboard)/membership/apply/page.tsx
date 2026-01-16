@@ -11,7 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Building2, CheckCircle, XCircle, Clock, AlertCircle, Phone, Mail, MapPin, Navigation, Loader2 } from 'lucide-react';
+import { Building2, CheckCircle, XCircle, Clock, AlertCircle, Phone, Mail, MapPin, Navigation, Loader2, ArrowLeft } from 'lucide-react';
 import LocationPicker from '@/components/maps/LocationPicker';
 
 interface MembershipApplication {
@@ -292,7 +292,7 @@ function MembershipApplyContent() {
         <div className="bg-success/10 border border-success rounded-2xl p-6 text-center">
           <CheckCircle className="w-16 h-16 mx-auto mb-4 text-success" />
           <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">
-            You're Already an Approved Member!
+            You&apos;re Already an Approved Member!
           </h2>
           <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
             Your membership has been approved. You can now add salons and employees.
@@ -317,16 +317,28 @@ function MembershipApplyContent() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       {/* Header Section */}
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl mb-4 shadow-lg">
-          <Building2 className="w-8 h-8 text-white" />
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Button
+            onClick={() => router.push('/dashboard')}
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-text-light dark:text-text-dark mb-3">
-          Apply for Membership
-        </h1>
-        <p className="text-lg text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
-          Join the Salon Association to start managing your salons and employees. Fill out the form below to begin your application.
-        </p>
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl mb-4 shadow-lg">
+            <Building2 className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-text-light dark:text-text-dark mb-3">
+            Apply for Membership
+          </h1>
+          <p className="text-lg text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
+            Join the Salon Association to start managing your salons and employees. Fill out the form below to begin your application.
+          </p>
+        </div>
       </div>
 
       {/* Main Form Card */}
@@ -349,10 +361,11 @@ function MembershipApplyContent() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-businessName" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Business Name <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="membership-apply-businessName"
                   type="text"
                   value={formData.businessName}
                   onChange={(e) => updateField('businessName', e.target.value)}
@@ -370,11 +383,12 @@ function MembershipApplyContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-registrationNumber" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Registration Number
                   <span className="text-xs font-normal text-text-light/50 dark:text-text-dark/50 ml-2">(Optional)</span>
                 </label>
                 <input
+                  id="membership-apply-registrationNumber"
                   type="text"
                   value={formData.registrationNumber}
                   onChange={(e) => updateField('registrationNumber', e.target.value)}
@@ -384,11 +398,12 @@ function MembershipApplyContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-taxId" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Tax ID
                   <span className="text-xs font-normal text-text-light/50 dark:text-text-dark/50 ml-2">(Optional)</span>
                 </label>
                 <input
+                  id="membership-apply-taxId"
                   type="text"
                   value={formData.taxId}
                   onChange={(e) => updateField('taxId', e.target.value)}
@@ -398,11 +413,12 @@ function MembershipApplyContent() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-businessDescription" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Business Description
                   <span className="text-xs font-normal text-text-light/50 dark:text-text-dark/50 ml-2">(Optional)</span>
                 </label>
                 <textarea
+                  id="membership-apply-businessDescription"
                   value={formData.businessDescription}
                   onChange={(e) => updateField('businessDescription', e.target.value)}
                   rows={4}
@@ -462,7 +478,7 @@ function MembershipApplyContent() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-locationPicker" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Select Location on Map
                 </label>
                 <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-3">
@@ -479,10 +495,11 @@ function MembershipApplyContent() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-businessAddress" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Business Address <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="membership-apply-businessAddress"
                   type="text"
                   value={formData.businessAddress}
                   onChange={(e) => updateField('businessAddress', e.target.value)}
@@ -500,10 +517,11 @@ function MembershipApplyContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-city" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   City <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="membership-apply-city"
                   type="text"
                   value={formData.city}
                   onChange={(e) => updateField('city', e.target.value)}
@@ -521,10 +539,11 @@ function MembershipApplyContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-district" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   District <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="membership-apply-district"
                   type="text"
                   value={formData.district}
                   onChange={(e) => updateField('district', e.target.value)}
@@ -560,10 +579,11 @@ function MembershipApplyContent() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-phone" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Phone Number <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="membership-apply-phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => updateField('phone', e.target.value)}
@@ -581,10 +601,11 @@ function MembershipApplyContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
+                <label htmlFor="membership-apply-email" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
                   Email Address <span className="text-danger">*</span>
                 </label>
                 <input
+                  id="membership-apply-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => updateField('email', e.target.value)}
@@ -620,7 +641,7 @@ function MembershipApplyContent() {
           <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-border-light dark:border-border-dark">
             <Button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push('/dashboard')}
               variant="secondary"
               className="flex-1 order-2 sm:order-1"
             >

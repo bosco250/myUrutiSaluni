@@ -396,7 +396,7 @@ export default function CustomerDetailPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => router.push('/customers')}
-                    className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                    className="flex-shrink-0"
                     aria-label="Back to customers"
                     title="Back"
                   >

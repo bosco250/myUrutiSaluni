@@ -424,24 +424,28 @@ function SalesHistoryContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
-            {user?.role !== UserRole.CUSTOMER && (
-              <button 
-                onClick={() => router.push('/sales')}
-                className="p-1.5 hover:bg-surface-light dark:hover:bg-surface-dark rounded-lg transition-colors md:hidden"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
-            {user?.role === UserRole.CUSTOMER ? 'My Purchases' : 'Sales History'}
-          </h1>
-          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-            {user?.role === UserRole.CUSTOMER
-              ? 'View your purchase history and receipts'
-              : 'Track and manage transaction history'}
-          </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {user?.role !== UserRole.CUSTOMER && (
+            <Button
+              onClick={() => router.push('/sales')}
+              variant="secondary"
+              size="sm"
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
+              {user?.role === UserRole.CUSTOMER ? 'My Purchases' : 'Sales History'}
+            </h1>
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+              {user?.role === UserRole.CUSTOMER
+                ? 'View your purchase history and receipts'
+                : 'Track and manage transaction history'}
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-2">

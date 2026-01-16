@@ -110,6 +110,21 @@ export enum EmployeePermission {
 
   /** Update salon profile information */
   MANAGE_SALON_PROFILE = 'MANAGE_SALON_PROFILE',
+
+  // ============================================
+  // Expense Management
+  // ============================================
+  /** Full access to create, update, delete expenses */
+  MANAGE_EXPENSES = 'MANAGE_EXPENSES',
+
+  /** Create new expense records */
+  CREATE_EXPENSES = 'CREATE_EXPENSES',
+
+  /** View expense reports and analytics */
+  VIEW_EXPENSE_REPORTS = 'VIEW_EXPENSE_REPORTS',
+
+  /** Approve or reject expense submissions */
+  APPROVE_EXPENSES = 'APPROVE_EXPENSES',
 }
 
 /**
@@ -122,6 +137,7 @@ export enum PermissionCategory {
   SALES = 'SALES',
   STAFF = 'STAFF',
   INVENTORY = 'INVENTORY',
+  EXPENSES = 'EXPENSES',
   SALON = 'SALON',
 }
 
@@ -194,6 +210,15 @@ export function getPermissionCategory(
     return PermissionCategory.SALON;
   }
 
+  if (
+    permission === EmployeePermission.MANAGE_EXPENSES ||
+    permission === EmployeePermission.CREATE_EXPENSES ||
+    permission === EmployeePermission.VIEW_EXPENSE_REPORTS ||
+    permission === EmployeePermission.APPROVE_EXPENSES
+  ) {
+    return PermissionCategory.EXPENSES;
+  }
+
   return PermissionCategory.SALON; // Default
 }
 
@@ -249,6 +274,14 @@ export function getPermissionDescription(
     [EmployeePermission.MANAGE_BUSINESS_HOURS]: 'Update salon operating hours',
     [EmployeePermission.MANAGE_SALON_PROFILE]:
       'Update salon profile information',
+    [EmployeePermission.MANAGE_EXPENSES]:
+      'Full access to create, update, and delete expenses',
+    [EmployeePermission.CREATE_EXPENSES]:
+      'Create new expense records for the salon',
+    [EmployeePermission.VIEW_EXPENSE_REPORTS]:
+      'View expense reports and analytics',
+    [EmployeePermission.APPROVE_EXPENSES]:
+      'Approve or reject expense submissions',
   };
 
   return descriptions[permission] || 'No description available';

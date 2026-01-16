@@ -6,7 +6,7 @@ import api from '@/lib/api';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
-import { Calendar, Clock, User, ChevronLeft, ChevronRight, Plus, GripVertical } from 'lucide-react';
+import { Calendar, Clock, User, ChevronLeft, ChevronRight, Plus, GripVertical, ArrowLeft } from 'lucide-react';
 import {
   format,
   startOfMonth,
@@ -172,16 +172,26 @@ function CalendarViewContent() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg">
-              <Calendar className="w-5 h-5 text-white" />
-            </div>
-            Calendar View
-          </h1>
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-            Schedule and manage bookings visually
-          </p>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => router.push('/appointments')}
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg">
+                <Calendar className="w-5 h-5 text-white" />
+              </div>
+              Calendar View
+            </h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+              Schedule and manage bookings visually
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button

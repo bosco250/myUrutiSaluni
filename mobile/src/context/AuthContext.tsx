@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useRef,
 } from "react";
 import {
   authService,
@@ -11,6 +12,7 @@ import {
   LoginResponse,
   RegisterCredentials,
 } from "../services/auth";
+import { sessionManager } from "../services/sessionManager";
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isLoggingOutRef = useRef(false);
 
   // Initialize auth state from storage on mount
   useEffect(() => {
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedToken && savedUser) {
         setToken(savedToken);
         setUser(savedUser);
+        sessionManager.reset();
       }
     } catch (error) {
       console.error("Error initializing auth:", error);
@@ -66,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setToken(response.access_token);
       setUser(response.user);
+      sessionManager.reset();
 
       return response;
     } catch (error) {
@@ -90,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async (): Promise<void> => {
     try {
+      isLoggingOutRef.current = true;
       await authService.logout();
 
       setToken(null);
@@ -98,6 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error during logout:", error);
       setToken(null);
       setUser(null);
+    } finally {
+      isLoggingOutRef.current = false;
     }
   };
 
@@ -145,6 +153,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser,
     updateUser,
   };
+
+  useEffect(() => {
+    const unsubscribe = sessionManager.onSessionExpired(async () => {
+      if (isLoggingOutRef.current) {
+        return;
+      }
+
+      isLoggingOutRef.current = true;
+      try {
+        await authService.logout();
+      } catch (error) {
+        console.error("Error during session-expired logout:", error);
+      } finally {
+        setToken(null);
+        setUser(null);
+        isLoggingOutRef.current = false;
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

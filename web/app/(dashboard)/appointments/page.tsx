@@ -23,7 +23,7 @@ import {
   X,
   Download,
 } from 'lucide-react';
-import { format, isToday, isTomorrow, isPast, parseISO, isAfter, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { useState, useMemo } from 'react';
 import { exportToCSV, formatDateForExport } from '@/lib/export-utils';
 import CalendarBookingModal from '@/components/appointments/CalendarBookingModal';
@@ -93,7 +93,7 @@ function AppointmentsContent() {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('upcoming');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [salonFilter, setSalonFilter] = useState<string>('all');
   const queryClient = useQueryClient();
 
@@ -176,19 +176,15 @@ function AppointmentsContent() {
 
   // Filter appointments
   const filteredAppointments = useMemo(() => {
-    const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-
     return appointments.filter((appointment) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
-          appointment.customer?.fullName?.toLowerCase().includes(query) ||
-          appointment.service?.name?.toLowerCase().includes(query) ||
-          appointment.salon?.name?.toLowerCase().includes(query) ||
-          appointment.customer?.phone?.includes(query);
+          appointment.customer?.fullName.toLowerCase().includes(query) ||
+          appointment.service?.name.toLowerCase().includes(query) ||
+          appointment.salon?.name.toLowerCase().includes(query) ||
+          appointment.customer?.phone.includes(query);
         if (!matchesSearch) return false;
       }
 
@@ -202,55 +198,31 @@ function AppointmentsContent() {
         return false;
       }
 
-      // Date filter - improved logic
+      // Date filter
       if (dateFilter !== 'all') {
         const appointmentDate = parseISO(appointment.scheduledStart);
-        
-        if (dateFilter === 'today') {
-          // Today: only show appointments that haven't started yet OR all for today
-          if (!isToday(appointmentDate)) return false;
-        } else if (dateFilter === 'tomorrow') {
-          if (!isTomorrow(appointmentDate)) return false;
-        } else if (dateFilter === 'this_week') {
-          if (!isWithinInterval(appointmentDate, { start: weekStart, end: weekEnd })) return false;
-        } else if (dateFilter === 'upcoming') {
-          // Upcoming: only appointments that haven't started yet
-          if (!isAfter(appointmentDate, now)) return false;
-        } else if (dateFilter === 'past') {
-          if (isAfter(appointmentDate, now)) return false;
-        }
+        if (dateFilter === 'today' && !isToday(appointmentDate)) return false;
+        if (dateFilter === 'tomorrow' && !isTomorrow(appointmentDate)) return false;
+        if (dateFilter === 'upcoming' && isPast(appointmentDate)) return false;
+        if (dateFilter === 'past' && !isPast(appointmentDate)) return false;
       }
 
       return true;
     });
   }, [appointments, searchQuery, statusFilter, dateFilter, salonFilter]);
 
-  // Group appointments by date with proper sorting
+  // Group appointments by date
   const groupedAppointments = useMemo(() => {
     const groups: Record<string, Appointment[]> = {};
-    
-    // First, sort all filtered appointments by time
-    const sortedAppointments = [...filteredAppointments].sort((a, b) => {
-      const dateA = parseISO(a.scheduledStart);
-      const dateB = parseISO(b.scheduledStart);
-      // Sort ascending (earliest first) for upcoming, descending for past
-      if (dateFilter === 'past') {
-        return dateB.getTime() - dateA.getTime(); // Most recent first
-      }
-      return dateA.getTime() - dateB.getTime(); // Soonest first
-    });
-    
-    // Group by date
-    sortedAppointments.forEach((appointment) => {
+    filteredAppointments.forEach((appointment) => {
       const date = format(parseISO(appointment.scheduledStart), 'yyyy-MM-dd');
       if (!groups[date]) {
         groups[date] = [];
       }
       groups[date].push(appointment);
     });
-    
     return groups;
-  }, [filteredAppointments, dateFilter]);
+  }, [filteredAppointments]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -347,209 +319,209 @@ function AppointmentsContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Appointments</h1>
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-            Manage and track customer bookings
-          </p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Appointments</h1>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+              Manage and track customer appointments
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => {
+                const exportData = filteredAppointments.map((apt) => ({
+                  Date: formatDateForExport(apt.scheduledStart, 'yyyy-MM-dd'),
+                  Time: `${format(parseISO(apt.scheduledStart), 'HH:mm')} - ${format(parseISO(apt.scheduledEnd), 'HH:mm')}`,
+                  Customer: apt.customer?.fullName || 'Walk-in',
+                  Phone: apt.customer?.phone || 'N/A',
+                  Service: apt.service?.name || 'N/A',
+                  Salon: apt.salon?.name || 'N/A',
+                  Status: apt.status,
+                  Notes: apt.notes || '',
+                }));
+                exportToCSV(exportData, { filename: 'appointments' });
+              }}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
+            <Button
+              onClick={() => router.push('/appointments/calendar')}
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Calendar className="w-5 h-5" />
+              Calendar View
+            </Button>
+            <Button
+              onClick={() => setShowNewBookingModal(true)}
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              New Appointment
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            onClick={() => {
-              const exportData = filteredAppointments.map((apt) => ({
-                Date: formatDateForExport(apt.scheduledStart, 'yyyy-MM-dd'),
-                Time: `${format(parseISO(apt.scheduledStart), 'HH:mm')} - ${format(parseISO(apt.scheduledEnd), 'HH:mm')}`,
-                Customer: apt.customer?.fullName || 'Walk-in',
-                Phone: apt.customer?.phone || 'N/A',
-                Service: apt.service?.name || 'N/A',
-                Salon: apt.salon?.name || 'N/A',
-                Status: apt.status,
-                Notes: apt.notes || '',
-              }));
-              exportToCSV(exportData, { filename: 'appointments' });
-            }}
-            variant="secondary"
-            size="sm"
-            className="h-8 px-3 text-xs flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </Button>
-          <Button
-            onClick={() => router.push('/appointments/calendar')}
-            variant="secondary"
-            size="sm"
-            className="h-8 px-3 text-xs flex items-center gap-1.5"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            Calendar
-          </Button>
-          <Button
-            onClick={() => setShowNewBookingModal(true)}
-            variant="primary"
-            size="sm"
-            className="h-8 px-3 text-xs flex items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Booking
-          </Button>
-        </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide">
-                Total
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-0.5">
-                {stats.total}
-              </p>
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Total
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  {stats.total}
+                </p>
+              </div>
+              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+                <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              </div>
             </div>
-            <div className="p-2 bg-background-light dark:bg-background-dark rounded-lg">
-              <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Today
+                </p>
+                <p className="text-2xl font-black text-primary mt-1">{stats.today}</p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Upcoming
+                </p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                  {stats.upcoming}
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 dark:border-gray-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Completed
+                </p>
+                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
+                  {stats.completed}
+                </p>
+              </div>
+              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
+                <CheckCircle2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
+                  Confirmed
+                </p>
+                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                  {stats.confirmed}
+                </p>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-white" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide">
-                Today
-              </p>
-              <p className="text-xl font-bold text-primary mt-0.5">{stats.today}</p>
+        {/* Filters */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search appointments..."
+                className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
             </div>
-            <div className="p-2 bg-gradient-to-br from-primary to-blue-500 rounded-lg">
-              <Clock className="w-4 h-4 text-white" />
-            </div>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="all">All Status</option>
+              <option value="booked">Booked</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no_show">No Show</option>
+            </select>
+
+            {/* Date Filter */}
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="past">Past</option>
+            </select>
+
+            {/* Salon Filter */}
+            <select
+              value={salonFilter}
+              onChange={(e) => setSalonFilter(e.target.value)}
+              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="all">All Salons</option>
+              {salons.map((salon) => (
+                <option key={salon.id} value={salon.id}>
+                  {salon.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide">
-                Upcoming
-              </p>
-              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {stats.upcoming}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg">
-              <CheckCircle2 className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide">
-                Completed
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-0.5">
-                {stats.completed}
-              </p>
-            </div>
-            <div className="p-2 bg-background-light dark:bg-background-dark rounded-lg">
-              <CheckCircle2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide">
-                Confirmed
-              </p>
-              <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                {stats.confirmed}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-9 pr-3 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="booked">Booked</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="no_show">No Show</option>
-          </select>
-
-          {/* Date Filter */}
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">All Dates</option>
-            <option value="today">Today</option>
-            <option value="tomorrow">Tomorrow</option>
-            <option value="this_week">This Week</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="past">Past</option>
-          </select>
-
-          {/* Salon Filter */}
-          <select
-            value={salonFilter}
-            onChange={(e) => setSalonFilter(e.target.value)}
-            className="px-3 py-2 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="all">All Salons</option>
-            {salons.map((salon) => (
-              <option key={salon.id} value={salon.id}>
-                {salon.name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
       {/* Appointments List */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {Object.keys(groupedAppointments).length === 0 ? (
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
-            <Calendar className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
+            <Calendar className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
               No appointments found
             </h3>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-4">
+            <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
               {searchQuery ||
               statusFilter !== 'all' ||
               dateFilter !== 'all' ||
@@ -564,34 +536,30 @@ function AppointmentsContent() {
                 <Button
                   onClick={() => setShowNewBookingModal(true)}
                   variant="primary"
-                  size="sm"
-                  className="flex items-center gap-2 mx-auto h-8 text-xs"
+                  className="flex items-center gap-2 mx-auto"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4" />
                   Create Appointment
                 </Button>
               )}
           </div>
         ) : (
           Object.entries(groupedAppointments)
-            .sort((a, b) => dateFilter === 'past' ? b[0].localeCompare(a[0]) : a[0].localeCompare(b[0]))
+            .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([date, dateAppointments]) => (
               <div key={date} className="space-y-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 mb-2">
                   <div className="h-px flex-1 bg-border-light dark:bg-border-dark" />
-                  <h2 className="text-sm font-semibold text-text-light dark:text-text-dark px-2">
+                  <h2 className="text-lg font-semibold text-text-light dark:text-text-dark px-3">
                     {isToday(parseISO(date))
                       ? 'Today'
                       : isTomorrow(parseISO(date))
                         ? 'Tomorrow'
-                        : format(parseISO(date), 'EEE, MMM d')}
+                        : format(parseISO(date), 'EEEE, MMMM d, yyyy')}
                   </h2>
-                  <span className="text-[10px] text-text-light/50 dark:text-text-dark/50 bg-background-light dark:bg-background-dark px-1.5 py-0.5 rounded">
-                    {dateAppointments.length}
-                  </span>
                   <div className="h-px flex-1 bg-border-light dark:bg-border-dark" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {dateAppointments.map((appointment) => {
                     const statusColors = getStatusColor(appointment.status);
                     // Check if current user (employee) is the preferred employee for this appointment
@@ -603,75 +571,85 @@ function AppointmentsContent() {
                     return (
                       <div
                         key={appointment.id}
-                        className={`bg-surface-light dark:bg-surface-dark border rounded-xl p-4 hover:shadow-md transition-all group ${
+                        className={`bg-surface-light dark:bg-surface-dark border rounded-xl p-5 hover:shadow-lg transition-all group ${
                           isMyAppointment
                             ? 'border-primary/50 bg-primary/5 dark:bg-primary/10'
                             : 'border-border-light dark:border-border-dark'
                         }`}
                       >
-                        {/* Header with Service & Status */}
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                isMyAppointment
-                                  ? 'bg-gradient-to-br from-primary to-primary/80'
-                                  : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-                              }`}
-                            >
-                              <Calendar className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
-                                {appointment.service?.name || 'Service'}
-                              </p>
-                              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                                {format(parseISO(appointment.scheduledStart), 'h:mm a')} - {format(parseISO(appointment.scheduledEnd), 'h:mm a')}
-                              </p>
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  isMyAppointment
+                                    ? 'bg-gradient-to-br from-primary to-primary/80'
+                                    : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                                }`}
+                              >
+                                <Calendar className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-text-light dark:text-text-dark truncate">
+                                    {appointment.service?.name || 'Service'}
+                                  </p>
+                                  {isMyAppointment && (
+                                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full border border-primary/30">
+                                      Assigned to You
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                                  {formatAppointmentDate(appointment.scheduledStart)}
+                                </p>
+                              </div>
                             </div>
                           </div>
                           <div
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${statusColors.bg} ${statusColors.text}`}
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-medium ${statusColors.border} ${statusColors.bg}`}
                           >
-                            {getStatusLabel(appointment.status)}
+                            <span className={statusColors.text}>
+                              {getStatusLabel(appointment.status)}
+                            </span>
                           </div>
                         </div>
 
-                        {/* Details */}
-                        <div className="space-y-1.5 mb-3">
+                        <div className="space-y-2 mb-4">
                           {appointment.customer && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <User className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                              <span className="text-text-light dark:text-text-dark truncate">
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                              <span className="text-text-light dark:text-text-dark">
                                 {appointment.customer.fullName}
                               </span>
-                              {isMyAppointment && (
-                                <span className="ml-auto text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                  Assigned
-                                </span>
-                              )}
                             </div>
                           )}
                           {appointment.salon && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <Building2 className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                            <div className="flex items-center gap-2 text-sm">
+                              <Building2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
                               <span className="text-text-light/60 dark:text-text-dark/60 truncate">
                                 {appointment.salon.name}
                               </span>
                             </div>
                           )}
                           {preferredEmployeeName && !isMyAppointment && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <User className="w-3 h-3 text-primary/60" />
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="w-4 h-4 text-primary/60" />
                               <span className="text-text-light/80 dark:text-text-dark/80">
-                                {preferredEmployeeName}
+                                Preferred: {preferredEmployeeName}
                               </span>
                             </div>
                           )}
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                            <span className="text-text-light/60 dark:text-text-dark/60">
+                              {format(parseISO(appointment.scheduledStart), 'h:mm a')} -{' '}
+                              {format(parseISO(appointment.scheduledEnd), 'h:mm a')}
+                            </span>
+                          </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 pt-3 border-t border-border-light dark:border-border-dark">
+                        <div className="flex items-center gap-2 pt-4 border-t border-border-light dark:border-border-dark">
                           {canEdit && appointment.status === 'pending' && (
                             <Button
                               onClick={() =>
@@ -683,9 +661,9 @@ function AppointmentsContent() {
                               variant="primary"
                               size="sm"
                               disabled={updateStatusMutation.isPending}
-                              className="flex-1 h-7 text-xs"
+                              className="flex-1"
                             >
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
                               Confirm
                             </Button>
                           )}
@@ -704,21 +682,21 @@ function AppointmentsContent() {
                                 }}
                                 variant="secondary"
                                 size="sm"
-                                className="text-danger hover:bg-danger/10 h-7 px-2"
+                                className="text-danger hover:bg-danger/10 px-3"
                                 disabled={updateStatusMutation.isPending}
                               >
-                                <XCircle className="w-3.5 h-3.5" />
+                                <XCircle className="w-4 h-4" />
                               </Button>
                             )}
                           <Button
                             onClick={() => router.push(`/appointments/${appointment.id}`)}
                             variant="secondary"
                             size="sm"
-                            className={`h-7 text-xs ${
-                              canEdit && appointment.status === 'pending' ? 'px-2' : 'flex-1'
-                            }`}
+                            className={
+                              canEdit && appointment.status === 'pending' ? 'px-3' : 'flex-1'
+                            }
                           >
-                            <Eye className="w-3 h-3 mr-1" />
+                            <Eye className="w-4 h-4 mr-2" />
                             View
                           </Button>
                           {canEdit && (
@@ -729,9 +707,9 @@ function AppointmentsContent() {
                               }}
                               variant="secondary"
                               size="sm"
-                              className="h-7 px-2"
+                              className="px-3"
                             >
-                              <Edit className="w-3.5 h-3.5" />
+                              <Edit className="w-4 h-4" />
                             </Button>
                           )}
                         </div>

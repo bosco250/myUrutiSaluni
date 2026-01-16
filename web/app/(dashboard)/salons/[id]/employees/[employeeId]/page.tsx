@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import {
@@ -24,12 +24,30 @@ import {
   Award,
   Calculator,
   ShoppingBag,
+  Shield,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Save,
+  Scissors,
+  UserCog,
+  Package,
+  Settings,
+  Receipt,
 } from 'lucide-react';
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import {
+  EmployeePermission,
+  PermissionCategory,
+  PERMISSION_CATEGORIES,
+  PERMISSION_DESCRIPTIONS,
+  CATEGORY_LABELS,
+  ALL_CATEGORIES,
+} from '@/lib/employee-permissions';
 import {
   EMPLOYEE_ACTIVITY_TYPES,
   COMMISSION_STATUS,
@@ -170,7 +188,7 @@ interface Sale {
   }>;
 }
 
-type TabType = 'overview' | 'commissions' | 'payroll' | 'activity';
+type TabType = 'overview' | 'commissions' | 'payroll' | 'activity' | 'permissions';
 
 export default function EmployeeDetailPage() {
   return (
@@ -185,8 +203,14 @@ function EmployeeDetailContent() {
   const router = useRouter();
   const salonId = params.id as string;
   const employeeId = params.employeeId as string;
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState<EmployeePermission[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<PermissionCategory[]>(ALL_CATEGORIES);
+  const [permissionsSaving, setPermissionsSaving] = useState(false);
+  const [permissionsError, setPermissionsError] = useState<string | null>(null);
+  const [permissionsSuccess, setPermissionsSuccess] = useState(false);
 
   // Fetch employee details
   const { data: employee, isLoading: employeeLoading, error: employeeError } = useQuery<SalonEmployee>({
@@ -294,13 +318,80 @@ function EmployeeDetailContent() {
     enabled: !!salonId && !!employeeId,
   });
 
+  // Fetch employee permissions
+  interface PermissionRecord {
+    id: string;
+    permissionCode: EmployeePermission;
+    isActive: boolean;
+  }
+  const { data: permissionsData, isLoading: permissionsLoading, refetch: refetchPermissions } = useQuery<PermissionRecord[]>({
+    queryKey: ['employee-permissions', salonId, employeeId],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/salons/${salonId}/employees/${employeeId}/permissions`);
+        const permissions = response.data?.permissions || [];
+        const activePermissions = permissions
+          .filter((p: PermissionRecord) => p.isActive)
+          .map((p: PermissionRecord) => p.permissionCode);
+        setSelectedPermissions(activePermissions);
+        return permissions;
+      } catch (error) {
+        return [];
+      }
+    },
+    enabled: !!salonId && !!employeeId && activeTab === 'permissions',
+  });
+
+  const currentPermissions: EmployeePermission[] = permissionsData
+    ? permissionsData.filter(p => p.isActive).map(p => p.permissionCode)
+    : [];
+
+  const handleSavePermissions = async () => {
+    if (!salonId || !employeeId) return;
+    setPermissionsSaving(true);
+    setPermissionsError(null);
+    setPermissionsSuccess(false);
+    try {
+      const toGrant = selectedPermissions.filter(p => !currentPermissions.includes(p));
+      const toRevoke = currentPermissions.filter(p => !selectedPermissions.includes(p));
+      if (toGrant.length > 0) {
+        await api.post(`/salons/${salonId}/employees/${employeeId}/permissions`, { permissions: toGrant });
+      }
+      if (toRevoke.length > 0) {
+        await api.delete(`/salons/${salonId}/employees/${employeeId}/permissions`, { data: { permissions: toRevoke } });
+      }
+      await refetchPermissions();
+      setPermissionsSuccess(true);
+      setTimeout(() => setPermissionsSuccess(false), 3000);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      setPermissionsError(err?.response?.data?.message || err?.message || 'Failed to update permissions');
+    } finally {
+      setPermissionsSaving(false);
+    }
+  };
+
+  const togglePermission = (permission: EmployeePermission) => {
+    setSelectedPermissions(prev =>
+      prev.includes(permission) ? prev.filter(p => p !== permission) : [...prev, permission]
+    );
+  };
+
+  const toggleCategory = (category: PermissionCategory) => {
+    setExpandedCategories(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
+  };
+
+  const permissionsChanged = JSON.stringify([...selectedPermissions].sort()) !== JSON.stringify([...currentPermissions].sort());
+
   if (employeeLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
-            <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_EMPLOYEE}</p>
+            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_EMPLOYEE}</p>
           </div>
         </div>
       </div>
@@ -309,17 +400,17 @@ function EmployeeDetailContent() {
 
   if (employeeError || !employee) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-danger/10 border border-danger rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <AlertCircle className="w-5 h-5 text-danger" />
-            <p className="text-danger font-semibold">{MESSAGES.EMPLOYEE_NOT_FOUND}</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="bg-error/10 border border-error/20 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-4 h-4 text-error" />
+            <p className="text-error font-semibold text-sm">{MESSAGES.EMPLOYEE_NOT_FOUND}</p>
           </div>
-          <p className="text-text-light/60 dark:text-text-dark/60 mt-2">
+          <p className="text-text-light/60 dark:text-text-dark/60 mt-1 text-xs">
             {MESSAGES.EMPLOYEE_NOT_FOUND_DESCRIPTION}
           </p>
-          <Button onClick={() => router.push(`/salons/${salonId}/employees`)} variant="secondary" className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <Button onClick={() => router.push(`/salons/${salonId}/employees`)} variant="secondary" size="sm" className="mt-3">
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
             {MESSAGES.BACK_TO_EMPLOYEES}
           </Button>
         </div>
@@ -332,6 +423,7 @@ function EmployeeDetailContent() {
     { id: 'commissions', label: 'Commissions', icon: TrendingUp },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
     { id: 'activity', label: 'Activity', icon: Activity },
+    { id: 'permissions', label: 'Permissions', icon: Shield },
   ];
 
   // Combine all activities for activity timeline
@@ -385,62 +477,55 @@ function EmployeeDetailContent() {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <Button onClick={() => router.push(`/salons/${salonId}/employees`)} variant="secondary" className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Employees
-        </Button>
-
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-4 mb-2">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center">
-                <Users className="w-8 h-8 text-white" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* Compact Header */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={() => router.push(`/salons/${salonId}/employees`)} 
+              variant="secondary" 
+              size="sm" 
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
+                  {employee.user?.fullName || DEFAULT_VALUES.UNKNOWN_USER}
+                </h1>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
+                    employee.isActive
+                      ? 'bg-success/10 text-success border border-success/20'
+                      : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark'
+                  }`}
+                >
+                  {employee.isActive ? (
+                    <>
+                      <Check className="w-3 h-3 inline mr-1" />
+                      Active
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-3 h-3 inline mr-1" />
+                      Inactive
+                    </>
+                  )}
+                </span>
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
-                    {employee.user?.fullName || DEFAULT_VALUES.UNKNOWN_USER}
-                  </h1>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                      employee.isActive
-                        ? 'bg-success/20 text-success border-success/30'
-                        : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border-border-light dark:border-border-dark'
-                    }`}
-                  >
-                    {employee.isActive ? (
-                      <>
-                        <Check className="w-3 h-3 inline mr-1" />
-                        Active
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-3 h-3 inline mr-1" />
-                        Inactive
-                      </>
-                    )}
-                  </span>
-                </div>
-                {employee.roleTitle && (
-                  <p className="text-text-light/60 dark:text-text-dark/60">{employee.roleTitle}</p>
-                )}
-                {employee.salon?.name && (
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                    {employee.salon.name}
-                  </p>
-                )}
-              </div>
+              {employee.roleTitle && (
+                <p className="text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60">{employee.roleTitle}</p>
+              )}
             </div>
           </div>
-
           <div className="flex gap-2">
             <Button
               onClick={() => router.push(`/payroll?salonId=${salonId}`)}
               variant="outline"
-              className="flex items-center gap-2"
+              size="sm"
+              className="hidden sm:flex items-center gap-2"
             >
               <Calculator className="w-4 h-4" />
               Payroll
@@ -448,101 +533,81 @@ function EmployeeDetailContent() {
             <Button
               onClick={() => setShowEditModal(true)}
               variant="primary"
+              size="sm"
               className="flex items-center gap-2"
             >
               <Edit className="w-4 h-4" />
-              {MESSAGES.EDIT_EMPLOYEE}
+              Edit
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                Commission Rate
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-                {employee.commissionRate}%
-              </p>
-            </div>
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-primary" />
+        {/* Compact Statistics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Commission</p>
+                <p className="text-lg font-bold text-text-light dark:text-text-dark">{employee.commissionRate}%</p>
+              </div>
+              <TrendingUp className="w-4 h-4 text-primary" />
             </div>
           </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                Total Commissions
-              </p>
-              <p className="text-2xl font-bold text-success">
-                {CURRENCY.DEFAULT} {commissionSummary?.totalCommissions?.toLocaleString() || '0'}
-              </p>
-            </div>
-            <div className="p-3 bg-success/10 rounded-xl">
-              <DollarSign className="w-6 h-6 text-success" />
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Total</p>
+                <p className="text-lg font-bold text-success">
+                  {CURRENCY.DEFAULT} {commissionSummary?.totalCommissions?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <DollarSign className="w-4 h-4 text-success" />
             </div>
           </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                Unpaid
-              </p>
-              <p className="text-2xl font-bold text-warning">
-                {CURRENCY.DEFAULT} {commissionSummary?.unpaidCommissions?.toLocaleString() || '0'}
-              </p>
-            </div>
-            <div className="p-3 bg-warning/10 rounded-xl">
-              <Clock className="w-6 h-6 text-warning" />
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Unpaid</p>
+                <p className="text-lg font-bold text-warning">
+                  {CURRENCY.DEFAULT} {commissionSummary?.unpaidCommissions?.toLocaleString() || '0'}
+                </p>
+              </div>
+              <Clock className="w-4 h-4 text-warning" />
             </div>
           </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                Base Salary
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-                {employee.baseSalary && employee.baseSalary > 0
-                  ? `${CURRENCY.DEFAULT} ${Number(employee.baseSalary).toLocaleString()}`
-                  : DEFAULT_VALUES.NOT_AVAILABLE}
-              </p>
-            </div>
-            <div className="p-3 bg-indigo-500/10 rounded-xl">
-              <Briefcase className="w-6 h-6 text-indigo-500" />
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-0.5">Salary</p>
+                <p className="text-lg font-bold text-text-light dark:text-text-dark">
+                  {employee.baseSalary && employee.baseSalary > 0
+                    ? `${CURRENCY.DEFAULT} ${Number(employee.baseSalary).toLocaleString()}`
+                    : 'N/A'}
+                </p>
+              </div>
+              <Briefcase className="w-4 h-4 text-indigo-500" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
         <div className="border-b border-border-light dark:border-border-dark">
-          <nav className="flex -mb-px">
+          <nav className="flex -mb-px overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-primary text-primary'
                       : 'border-transparent text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:border-border-light dark:hover:border-border-dark'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -550,71 +615,71 @@ function EmployeeDetailContent() {
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Employee Information */}
-              <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-                <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5" />
+              <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+                <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
                   Employee Information
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <Phone className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
                       <div>
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60">Phone</p>
-                        <p className="text-text-light dark:text-text-dark font-medium">
+                        <p className="text-xs text-text-light/60 dark:text-text-dark/60">Phone</p>
+                        <p className="text-sm text-text-light dark:text-text-dark font-medium">
                           {employee.user?.phone || DEFAULT_VALUES.NOT_AVAILABLE}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <Mail className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
                       <div>
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60">Email</p>
-                        <p className="text-text-light dark:text-text-dark font-medium">
+                        <p className="text-xs text-text-light/60 dark:text-text-dark/60">Email</p>
+                        <p className="text-sm text-text-light dark:text-text-dark font-medium truncate">
                           {employee.user?.email || DEFAULT_VALUES.NOT_AVAILABLE}
                         </p>
                       </div>
                     </div>
                     {employee.hireDate && (
-                      <div className="flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
                         <div>
-                          <p className="text-sm text-text-light/60 dark:text-text-dark/60">Hire Date</p>
-                          <p className="text-text-light dark:text-text-dark font-medium">
+                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">Hire Date</p>
+                          <p className="text-sm text-text-light dark:text-text-dark font-medium">
                             {format(parseISO(employee.hireDate), DATE_FORMATS.DATE_ONLY)}
                           </p>
                         </div>
                       </div>
                     )}
                   </div>
-                  <div>
-                    <div className="mb-4">
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-2">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
                         Employment Type
                       </p>
-                      <p className="text-text-light dark:text-text-dark font-medium">
+                      <p className="text-sm text-text-light dark:text-text-dark font-medium">
                         {employee.employmentType?.replace(/_/g, ' ') || DEFAULT_VALUES.NOT_AVAILABLE}
                       </p>
                     </div>
-                    <div className="mb-4">
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-2">
+                    <div>
+                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
                         Payment Type
                       </p>
-                      <p className="text-text-light dark:text-text-dark font-medium">
+                      <p className="text-sm text-text-light dark:text-text-dark font-medium">
                         {employee.salaryType?.replace(/_/g, ' ') || DEFAULT_VALUES.COMMISSION_ONLY}
                       </p>
                     </div>
                     {employee.payFrequency && (
                       <div>
-                        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-2">
+                        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
                           Pay Frequency
                         </p>
-                        <p className="text-text-light dark:text-text-dark font-medium">
+                        <p className="text-sm text-text-light dark:text-text-dark font-medium">
                           {employee.payFrequency.replace(/_/g, ' ')}
                         </p>
                       </div>
@@ -625,16 +690,16 @@ function EmployeeDetailContent() {
 
               {/* Skills */}
               {employee.skills && employee.skills.length > 0 && (
-                <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
-                  <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4 flex items-center gap-2">
-                    <Award className="w-5 h-5" />
+                <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
+                  <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+                    <Award className="w-4 h-4" />
                     Skills & Specializations
                   </h2>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {employee.skills.map((skill, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-medium"
+                        className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-medium"
                       >
                         {skill}
                       </span>
@@ -647,43 +712,51 @@ function EmployeeDetailContent() {
 
           {/* Commissions Tab */}
           {activeTab === 'commissions' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {commissionsLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_COMMISSIONS}</p>
+                <div className="text-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_COMMISSIONS}</p>
                 </div>
               ) : !commissions || commissions.length === 0 ? (
-                <div className="text-center py-12">
-                  <TrendingUp className="w-12 h-12 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-                  <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.NO_COMMISSIONS}</p>
+                <div className="text-center py-8">
+                  <TrendingUp className="w-10 h-10 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.NO_COMMISSIONS}</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {commissions.map((commission) => (
                     <div
                       key={commission.id}
-                      className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-6"
+                      className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 sm:p-4"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <DollarSign className="w-5 h-5 text-success" />
-                            <p className="text-lg font-bold text-text-light dark:text-text-dark">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <DollarSign className="w-4 h-4 text-success flex-shrink-0" />
+                            <p className="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">
                               {CURRENCY.DEFAULT} {commission.amount.toLocaleString()}
                             </p>
                           </div>
                           {commission.sale && (
-                            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-1">
+                            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
                               Sale: {commission.sale.currency} {commission.sale.totalAmount.toLocaleString()}
                             </p>
                           )}
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                          <p className="text-xs text-text-light/50 dark:text-text-dark/50">
                             {format(parseISO(commission.createdAt), DATE_FORMATS.FULL)}
                           </p>
+                          {commission.paid && commission.paymentMethod && (
+                            <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                              Paid via {commission.paymentMethod}
+                              {commission.paymentReference && ` • ${commission.paymentReference}`}
+                              {commission.paidAt &&
+                                ` on ${format(parseISO(commission.paidAt), 'MMM d, yyyy')}`}
+                            </p>
+                          )}
                         </div>
                         <span
-                          className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                          className={`px-2 py-1 rounded-md text-[10px] font-semibold flex-shrink-0 ${
                             commission.paid
                               ? STATUS_COLORS.SUCCESS + ' border border-success/20'
                               : STATUS_COLORS.WARNING + ' border border-warning/20'
@@ -691,7 +764,7 @@ function EmployeeDetailContent() {
                         >
                           {commission.paid ? (
                             <>
-                              <CheckCircle2 className="w-3 h-3 inline mr-1" />
+                              <CheckCircle2 className="w-2.5 h-2.5 inline mr-1" />
                               {COMMISSION_STATUS.PAID}
                             </>
                           ) : (
@@ -699,16 +772,6 @@ function EmployeeDetailContent() {
                           )}
                         </span>
                       </div>
-                      {commission.paid && commission.paymentMethod && (
-                        <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                            Paid via {commission.paymentMethod}
-                            {commission.paymentReference && ` • ${commission.paymentReference}`}
-                            {commission.paidAt &&
-                              ` on ${format(parseISO(commission.paidAt), 'MMM d, yyyy')}`}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -718,38 +781,38 @@ function EmployeeDetailContent() {
 
           {/* Payroll Tab */}
           {activeTab === 'payroll' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {payrollLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_PAYROLL}</p>
+                <div className="text-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_PAYROLL}</p>
                 </div>
               ) : !payrollItems || payrollItems.length === 0 ? (
-                <div className="text-center py-12">
-                  <DollarSign className="w-12 h-12 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-                  <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.NO_PAYROLL}</p>
+                <div className="text-center py-8">
+                  <DollarSign className="w-10 h-10 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.NO_PAYROLL}</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {payrollItems.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-6"
+                      className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 sm:p-4"
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <p className="text-lg font-bold text-text-light dark:text-text-dark mb-1">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base sm:text-lg font-bold text-text-light dark:text-text-dark mb-1">
                             {CURRENCY.DEFAULT} {item.netPay.toLocaleString()}
                           </p>
                           {item.payrollRun && (
-                            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                              Period: {format(parseISO(item.payrollRun.periodStart), DATE_FORMATS.MONTH_DAY)} -{' '}
+                            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                              {format(parseISO(item.payrollRun.periodStart), DATE_FORMATS.MONTH_DAY)} -{' '}
                               {format(parseISO(item.payrollRun.periodEnd), DATE_FORMATS.DATE_ONLY)}
                             </p>
                           )}
                         </div>
                         <span
-                          className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                          className={`px-2 py-1 rounded-md text-[10px] font-semibold flex-shrink-0 ${
                             item.paid
                               ? STATUS_COLORS.SUCCESS + ' border border-success/20'
                               : STATUS_COLORS.WARNING + ' border border-warning/20'
@@ -758,36 +821,28 @@ function EmployeeDetailContent() {
                           {item.paid ? PAYROLL_STATUS.PAID : PAYROLL_STATUS.PENDING}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border-light dark:border-border-dark">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-border-light dark:border-border-dark">
                         <div>
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
-                            Base Salary
-                          </p>
-                          <p className="text-sm font-medium text-text-light dark:text-text-dark">
+                          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mb-0.5">Base Salary</p>
+                          <p className="text-xs font-medium text-text-light dark:text-text-dark">
                             {CURRENCY.DEFAULT} {item.baseSalary.toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
-                            Commissions
-                          </p>
-                          <p className="text-sm font-medium text-text-light dark:text-text-dark">
+                          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mb-0.5">Commissions</p>
+                          <p className="text-xs font-medium text-text-light dark:text-text-dark">
                             {CURRENCY.DEFAULT} {item.commissionAmount.toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
-                            Gross Pay
-                          </p>
-                          <p className="text-sm font-medium text-text-light dark:text-text-dark">
+                          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mb-0.5">Gross Pay</p>
+                          <p className="text-xs font-medium text-text-light dark:text-text-dark">
                             {CURRENCY.DEFAULT} {item.grossPay.toLocaleString()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">
-                            Deductions
-                          </p>
-                          <p className="text-sm font-medium text-text-light dark:text-text-dark">
+                          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mb-0.5">Deductions</p>
+                          <p className="text-xs font-medium text-text-light dark:text-text-dark">
                             {CURRENCY.DEFAULT} {item.deductions.toLocaleString()}
                           </p>
                         </div>
@@ -801,21 +856,21 @@ function EmployeeDetailContent() {
 
           {/* Activity Tab */}
           {activeTab === 'activity' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {(appointmentsLoading || salesLoading || commissionsLoading || payrollLoading) ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_ACTIVITIES}</p>
+                <div className="text-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.LOADING_ACTIVITIES}</p>
                 </div>
               ) : activities.length === 0 ? (
-                <div className="text-center py-12">
-                  <Activity className="w-12 h-12 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-                  <p className="text-text-light/60 dark:text-text-dark/60">{MESSAGES.NO_ACTIVITY}</p>
+                <div className="text-center py-8">
+                  <Activity className="w-10 h-10 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{MESSAGES.NO_ACTIVITY}</p>
                 </div>
               ) : (
                 <div className="relative">
-                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border-light dark:bg-border-dark"></div>
-                  <div className="space-y-6">
+                  <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-border-light dark:bg-border-dark"></div>
+                  <div className="space-y-3">
                     {activities.map((activity, idx) => {
                       const IconComponent = ACTIVITY_ICON_MAP[activity.type] || DollarSign;
                       const iconColor = 
@@ -835,26 +890,26 @@ function EmployeeDetailContent() {
                       }
 
                       return (
-                        <div key={idx} className="relative flex gap-4">
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark flex items-center justify-center z-10`}>
-                            <IconComponent className={`w-4 h-4 ${iconColor}`} />
+                        <div key={idx} className="relative flex gap-3">
+                          <div className={`flex-shrink-0 w-6 h-6 rounded-full bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark flex items-center justify-center z-10`}>
+                            <IconComponent className={`w-3 h-3 ${iconColor}`} />
                           </div>
-                          <div className="flex-1 pb-6">
-                            <div className="bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium text-text-light dark:text-text-dark">
+                          <div className="flex-1 pb-3">
+                            <div className="bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark p-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-text-light dark:text-text-dark">
                                     {activity.title}
                                   </p>
-                                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                                  <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
                                     {activity.description}
                                   </p>
-                                  <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
+                                  <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-1">
                                     {format(parseISO(activity.date), DATE_FORMATS.FULL)}
                                   </p>
                                 </div>
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded capitalize ${statusColor}`}
+                                  className={`px-1.5 py-0.5 text-[10px] font-medium rounded capitalize flex-shrink-0 ${statusColor}`}
                                 >
                                   {activity.status.replace(/_/g, ' ')}
                                 </span>
@@ -865,6 +920,90 @@ function EmployeeDetailContent() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Permissions Tab */}
+          {activeTab === 'permissions' && (
+            <div className="space-y-3">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark">Manage Permissions</h3>
+                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">Select which actions this employee can perform</p>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {permissionsSuccess && (
+                    <span className="flex items-center gap-1.5 text-xs text-success"><CheckCircle2 className="w-3.5 h-3.5" />Saved</span>
+                  )}
+                  <Button onClick={handleSavePermissions} variant="primary" size="sm" disabled={permissionsSaving || !permissionsChanged} className="flex-1 sm:flex-none">
+                    {permissionsSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                    Save
+                  </Button>
+                </div>
+              </div>
+
+              {permissionsError && (
+                <div className="bg-error/10 border border-error/20 rounded-lg p-2 flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-error flex-shrink-0" />
+                  <p className="text-xs text-error">{permissionsError}</p>
+                </div>
+              )}
+
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5">
+                <p className="text-xs font-medium text-primary">{selectedPermissions.length} of {Object.values(EmployeePermission).length} permissions selected</p>
+              </div>
+
+              {permissionsLoading ? (
+                <div className="text-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading permissions...</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {ALL_CATEGORIES.map((category) => {
+                    const categoryPermissions = PERMISSION_CATEGORIES[category];
+                    const grantedCount = categoryPermissions.filter(p => selectedPermissions.includes(p)).length;
+                    const isExpanded = expandedCategories.includes(category);
+                    return (
+                      <div key={category} className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg overflow-hidden">
+                        <button type="button" onClick={() => toggleCategory(category)} className="w-full flex items-center justify-between p-3 hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-primary/10 rounded-md">
+                              {category === PermissionCategory.APPOINTMENTS && <Calendar className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.SERVICES && <Scissors className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.CUSTOMERS && <Users className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.SALES && <DollarSign className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.STAFF && <UserCog className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.INVENTORY && <Package className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.EXPENSES && <Receipt className="w-3.5 h-3.5 text-primary" />}
+                              {category === PermissionCategory.SALON && <Settings className="w-3.5 h-3.5 text-primary" />}
+                            </div>
+                            <span className="text-sm font-medium text-text-light dark:text-text-dark">{CATEGORY_LABELS[category]}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-text-light/60 dark:text-text-dark/60">{grantedCount}/{categoryPermissions.length}</span>
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-text-light/40" /> : <ChevronDown className="w-4 h-4 text-text-light/40" />}
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-border-light dark:border-border-dark">
+                            {categoryPermissions.map((permission) => (
+                              <label key={permission} className="flex items-start gap-2 p-2.5 hover:bg-background-light dark:hover:bg-background-dark cursor-pointer border-b border-border-light/50 dark:border-border-dark/50 last:border-b-0">
+                                <input type="checkbox" checked={selectedPermissions.includes(permission)} onChange={() => togglePermission(permission)} className="mt-0.5 w-3.5 h-3.5 rounded border-border-light text-primary focus:ring-primary" />
+                                <div className="flex-1">
+                                  <p className="text-xs font-medium text-text-light dark:text-text-dark">{permission.replace(/_/g, ' ')}</p>
+                                  <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mt-0.5">{PERMISSION_DESCRIPTIONS[permission]}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

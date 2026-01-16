@@ -7,7 +7,6 @@ import { useAuthStore } from '@/store/auth-store';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
-import { useState } from 'react';
 import {
   ArrowLeft,
   Receipt,
@@ -20,16 +19,6 @@ import {
   Scissors,
   Users,
   Check,
-  Clock,
-  MapPin,
-  Phone,
-  Mail,
-  Tag,
-  Calendar,
-  TrendingDown,
-  Calculator,
-  AlertCircle,
-  Building2,
 } from 'lucide-react';
 
 interface SaleItem {
@@ -98,8 +87,6 @@ function SaleDetailContent() {
   const router = useRouter();
   const { user } = useAuthStore();
   const saleId = params.id as string;
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const { data: sale, isLoading, error } = useQuery<Sale>({
     queryKey: ['sale', saleId],
@@ -113,7 +100,7 @@ function SaleDetailContent() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -132,71 +119,31 @@ function SaleDetailContent() {
   };
 
   const handleDownloadPDF = async () => {
-    setIsDownloading(true);
-    setDownloadError(null);
-
     try {
       const response = await api.get(`/reports/receipt/${saleId}`, {
         responseType: 'blob',
       });
-
-      if (!response.data) {
-        throw new Error('No data received from server');
-      }
-
       const blob = new Blob([response.data], { type: 'application/pdf' });
-
-      if (blob.size === 0) {
-        throw new Error('Received empty file');
-      }
-
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `receipt-${saleId.slice(0, 8)}-${Date.now()}.pdf`;
-      link.style.display = 'none';
+      link.download = `receipt-${saleId.slice(0, 8)}.pdf`;
       document.body.appendChild(link);
       link.click();
-
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }, 100);
-
-    } catch (err: any) {
-      console.error('PDF download error:', err);
-
-      let errorMessage = 'Unable to download receipt';
-
-      if (err.response) {
-        if (err.response.status === 404) {
-          errorMessage = 'Receipt not found on server';
-        } else if (err.response.status === 403) {
-          errorMessage = 'You do not have permission to download this receipt';
-        } else if (err.response.status === 500) {
-          errorMessage = 'Server error occurred while generating receipt';
-        } else {
-          errorMessage = `Server error: ${err.response.statusText || 'Unknown error'}`;
-        }
-      } else if (err.request) {
-        errorMessage = 'Unable to reach server. Please check your connection';
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setDownloadError(errorMessage);
-    } finally {
-      setIsDownloading(false);
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to download PDF receipt. Please try again.');
     }
   };
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-3" />
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading sale details...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-text-light/60 dark:text-text-dark/60">Loading sale details...</p>
           </div>
         </div>
       </div>
@@ -205,12 +152,12 @@ function SaleDetailContent() {
 
   if (error || !sale) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-warning/10 border-2 border-warning rounded-xl p-4 text-center">
-          <p className="text-sm text-danger mb-4">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
+          <p className="text-danger mb-4">
             {error ? 'Failed to load sale details. You may not have permission to view this sale.' : 'Sale not found.'}
           </p>
-          <Button onClick={() => router.push('/sales/history')} variant="secondary" size="sm">
+          <Button onClick={() => router.push('/sales/history')} variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to {user?.role === UserRole.CUSTOMER ? 'Purchase History' : 'Sales History'}
           </Button>
@@ -225,12 +172,12 @@ function SaleDetailContent() {
     const quantity = Number(item.quantity) || 0;
     return sum + (unitPrice * quantity);
   }, 0) || 0;
-
+  
   // Calculate total discount
   const totalDiscount = sale.items?.reduce((sum, item) => {
     return sum + (Number(item.discountAmount) || 0);
   }, 0) || 0;
-
+  
   // Calculate tax for products (tax is applied to amount after discount)
   const tax = sale.items?.reduce((sum, item) => {
     if (item.product) {
@@ -245,347 +192,251 @@ function SaleDetailContent() {
     }
     return sum;
   }, 0) || 0;
-
+  
   // Total = (Subtotal - Discount) + Tax
   const calculatedTotal = Math.max(0, subtotal - totalDiscount + tax);
 
-  const isCustomer = user?.role === UserRole.CUSTOMER;
-
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-        {/* Header Section - Hidden on print */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/sales/history')}
-              variant="secondary"
-              size="sm"
-              className="h-9 w-9 p-0 flex items-center justify-center"
-            >
-              <ArrowLeft className="w-4 h-4" />
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={() => router.push('/sales/history')}
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
+              {user?.role === UserRole.CUSTOMER ? 'Purchase Details' : 'Sale Details'}
+            </h1>
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+              {user?.role === UserRole.CUSTOMER ? 'Receipt' : 'Sale'} ID: <span className="font-mono">{sale.id}</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handlePrint} variant="secondary">
+            <Printer className="w-4 h-4 mr-2" />
+            Print Receipt
+          </Button>
+          <Button onClick={handleDownloadPDF} variant="secondary">
+            <Download className="w-4 h-4 mr-2" />
+            Download PDF
+          </Button>
+          {user?.role !== UserRole.CUSTOMER && (
+            <Button onClick={() => router.push('/sales')} variant="primary">
+              <Receipt className="w-4 h-4 mr-2" />
+              New Sale
             </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Receipt Card */}
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-lg overflow-hidden print:shadow-none">
+        {/* Receipt Header */}
+        <div className="bg-primary/10 p-6 border-b border-border-light dark:border-border-dark">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-text-light dark:text-text-dark">
-                {isCustomer ? 'Purchase Receipt' : 'Sale Receipt'}
-              </h1>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                ID: <span className="font-mono">{sale.id.slice(0, 8)}</span>
+              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+                {sale.salon?.name || 'Salon Receipt'}
+              </h2>
+              {sale.salon?.address && (
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.salon.address}</p>
+              )}
+              {sale.salon?.phone && (
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.salon.phone}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="inline-flex px-3 py-1 bg-success/20 text-success rounded-full text-sm font-semibold mb-2">
+                <Check className="w-4 h-4 mr-1" />
+                {sale.status.toUpperCase()}
+              </div>
+              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                {formatDate(sale.createdAt)}
               </p>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handlePrint} variant="outline" size="sm">
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-            <Button
-              onClick={handleDownloadPDF}
-              variant="outline"
-              size="sm"
-              disabled={isDownloading}
-            >
-              {isDownloading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              {isDownloading ? 'Downloading...' : 'PDF'}
-            </Button>
-            {!isCustomer && (
-              <Button onClick={() => router.push('/sales')} variant="primary" size="sm">
-                <Receipt className="w-4 h-4 mr-2" />
-                New Sale
-              </Button>
-            )}
-          </div>
         </div>
 
-        {/* Download Error Alert */}
-        {downloadError && (
-          <div className="bg-danger/10 border border-danger/30 rounded-lg p-3 flex items-start gap-3 print:hidden">
-            <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-danger">Download Failed</p>
-              <p className="text-xs text-text-light/80 dark:text-text-dark/80 mt-0.5">{downloadError}</p>
-            </div>
-            <button
-              onClick={() => setDownloadError(null)}
-              className="text-text-light/60 hover:text-text-light dark:text-text-dark/60 dark:hover:text-text-dark text-lg leading-none"
-            >
-              ×
-            </button>
+        {/* Sale Information */}
+        <div className="p-6 space-y-6">
+          {/* Customer & Employee Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sale.customer && user?.role !== UserRole.CUSTOMER && (
+              <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-text-light dark:text-text-dark">Customer</h3>
+                </div>
+                <p className="text-text-light dark:text-text-dark">{sale.customer.fullName}</p>
+                <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.customer.phone}</p>
+                {sale.customer.email && (
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.customer.email}</p>
+                )}
+              </div>
+            )}
+            {sale.createdBy && user?.role !== UserRole.CUSTOMER && (
+              <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-text-light dark:text-text-dark">Processed By</h3>
+                </div>
+                <p className="text-text-light dark:text-text-dark">{sale.createdBy.fullName}</p>
+                {sale.createdBy.email && (
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.createdBy.email}</p>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Main Receipt Card */}
-        <div className="print-content">
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-sm overflow-hidden print:shadow-none print:border-2 print:border-black">
-
-            {/* Receipt Header */}
-            <div className="bg-primary/5 dark:bg-primary/10 p-6 border-b border-border-light dark:border-border-dark print:bg-white print:p-6 print:border-b-2 print:border-black">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Building2 className="w-5 h-5 text-primary dark:text-primary print:text-black" />
-                    <h2 className="text-xl font-bold text-text-light dark:text-text-dark print:text-black">
-                      {sale.salon?.name || 'Receipt'}
-                    </h2>
-                  </div>
-                  {sale.salon?.address && (
-                    <div className="flex items-start gap-2 text-sm text-text-light/70 dark:text-text-dark/70 mb-1 print:text-black">
-                      <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      <span>{sale.salon.address}</span>
-                    </div>
-                  )}
-                  {sale.salon?.phone && (
-                    <div className="flex items-center gap-2 text-sm text-text-light/70 dark:text-text-dark/70 print:text-black">
-                      <Phone className="w-4 h-4 flex-shrink-0" />
-                      <span>{sale.salon.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-right">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-success/20 dark:bg-success/30 text-success rounded-full text-xs font-semibold mb-2 print:bg-green-100 print:text-green-800">
-                    <Check className="w-3.5 h-3.5" />
-                    {sale.status.toUpperCase()}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-text-light/70 dark:text-text-dark/70 justify-end print:text-black">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{formatDate(sale.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Customer & Payment Info Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-background-light/50 dark:bg-background-dark/50 border-b border-border-light dark:border-border-dark print:bg-gray-50 print:border-b-2 print:border-black">
-              {/* Customer Info */}
-              {sale.customer && (
-                <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-2 print:text-black">
-                    <User className="w-3.5 h-3.5" />
-                    Customer
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-text-light dark:text-text-dark print:text-black">
-                      {sale.customer.fullName}
-                    </p>
-                    <p className="text-xs text-text-light/70 dark:text-text-dark/70 print:text-gray-700">
-                      {sale.customer.phone}
-                    </p>
-                    {sale.customer.email && (
-                      <p className="text-xs text-text-light/70 dark:text-text-dark/70 print:text-gray-700">
-                        {sale.customer.email}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Info */}
-              <div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-2 print:text-black">
-                  <CreditCard className="w-3.5 h-3.5" />
-                  Payment
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-text-light dark:text-text-dark print:text-black">
-                    {formatPaymentMethod(sale.paymentMethod)}
-                  </p>
-                  {sale.paymentReference && (
-                    <p className="text-xs text-text-light/70 dark:text-text-dark/70 font-mono print:text-gray-700">
-                      Ref: {sale.paymentReference}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Items List */}
-            <div className="p-6 print:p-6">
-              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide mb-4 print:text-black">
-                Items
-              </h3>
-
-              <div className="space-y-3">
-                {sale.items && sale.items.length > 0 ? (
-                  sale.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start justify-between gap-4 p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg print:bg-white print:border-gray-300"
-                    >
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="flex-shrink-0 mt-1">
+          {/* Sale Items */}
+          <div>
+            <h3 className="font-semibold text-text-light dark:text-text-dark mb-4">Items</h3>
+            <div className="space-y-2">
+              {sale.items && sale.items.length > 0 ? (
+                sale.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
                           {item.service ? (
-                            <Scissors className="w-5 h-5 text-primary dark:text-primary print:text-black" />
+                            <>
+                              <Scissors className="w-4 h-4 text-primary" />
+                              <span className="font-semibold text-text-light dark:text-text-dark">
+                                {item.service.name}
+                              </span>
+                            </>
                           ) : (
-                            <Package className="w-5 h-5 text-primary dark:text-primary print:text-black" />
+                            <>
+                              <Package className="w-4 h-4 text-primary" />
+                              <span className="font-semibold text-text-light dark:text-text-dark">
+                                {item.product?.name}
+                              </span>
+                              {item.product?.sku && (
+                                <span className="text-xs text-text-light/40 dark:text-text-dark/40">
+                                  (SKU: {item.product.sku})
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-text-light dark:text-text-dark mb-0.5 print:text-black">
-                            {item.service?.name || item.product?.name}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60 print:text-gray-600">
-                            <span>{sale.currency || 'RWF'} {item.unitPrice.toLocaleString()} × {item.quantity}</span>
-                            {item.product?.sku && (
-                              <span>SKU: {item.product.sku}</span>
-                            )}
-                          </div>
-                          {item.salonEmployee && !isCustomer && (
-                            <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1 print:text-gray-500">
-                              By: {item.salonEmployee.user?.fullName || item.salonEmployee.roleTitle || 'Staff'}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-bold text-text-light dark:text-text-dark print:text-black">
-                          {sale.currency || 'RWF'} {item.lineTotal.toLocaleString()}
-                        </p>
-                        {item.discountAmount > 0 && (
-                          <p className="text-xs text-success flex items-center gap-1 justify-end mt-0.5 print:text-green-600">
-                            <TrendingDown className="w-3 h-3" />
-                            -{sale.currency || 'RWF'} {item.discountAmount.toLocaleString()}
+                        {item.salonEmployee && user?.role !== UserRole.CUSTOMER && (
+                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                            Assigned to: {item.salonEmployee.user?.fullName || item.salonEmployee.roleTitle || 'Employee'}
                           </p>
                         )}
                       </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-text-light dark:text-text-dark">
+                          {sale.currency || 'RWF'} {item.lineTotal.toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Package className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-2" />
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">No items found</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Total Summary */}
-            <div className="p-6 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark print:bg-gray-50 print:border-t-2 print:border-black">
-              <div className="max-w-md ml-auto space-y-2">
-                <div className="flex justify-between text-sm text-text-light dark:text-text-dark print:text-black">
-                  <span>Subtotal</span>
-                  <span className="font-medium">{sale.currency || 'RWF'} {subtotal.toLocaleString()}</span>
-                </div>
-
-                {totalDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-success print:text-green-600">
-                    <div className="flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5" />
-                      <span>Discount</span>
+                    <div className="flex items-center justify-between text-sm text-text-light/60 dark:text-text-dark/60">
+                      <span>
+                        {sale.currency || 'RWF'} {item.unitPrice.toLocaleString()} × {item.quantity}
+                      </span>
+                      {item.discountAmount > 0 && (
+                        <span className="text-success">-{sale.currency || 'RWF'} {item.discountAmount.toLocaleString()}</span>
+                      )}
                     </div>
-                    <span className="font-medium">-{sale.currency || 'RWF'} {totalDiscount.toLocaleString()}</span>
                   </div>
-                )}
-
-                {tax > 0 && (
-                  <div className="flex justify-between text-sm text-text-light dark:text-text-dark print:text-black">
-                    <div className="flex items-center gap-1.5">
-                      <Calculator className="w-3.5 h-3.5" />
-                      <span>Tax</span>
-                    </div>
-                    <span className="font-medium">{sale.currency || 'RWF'} {tax.toFixed(2)}</span>
-                  </div>
-                )}
-
-                <div className="pt-3 mt-3 border-t-2 border-border-light dark:border-border-dark print:border-black">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base font-bold text-text-light dark:text-text-dark print:text-black">Total</span>
-                    <span className="text-2xl font-bold text-primary dark:text-primary print:text-black">
-                      {sale.currency || 'RWF'} {Number(sale.totalAmount || calculatedTotal).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            {sale.createdBy && !isCustomer && (
-              <div className="px-6 py-4 bg-background-light/30 dark:bg-background-dark/30 border-t border-border-light dark:border-border-dark text-sm text-text-light/60 dark:text-text-dark/60 print:bg-white print:border-t print:border-gray-300 print:text-black">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <span>Processed by: <span className="font-medium text-text-light dark:text-text-dark print:text-black">{sale.createdBy.fullName}</span></span>
-                </div>
-              </div>
-            )}
-
-            <div className="px-6 py-4 text-center text-xs text-text-light/50 dark:text-text-dark/50 border-t border-border-light dark:border-border-dark print:border-t print:border-gray-300 print:text-gray-600">
-              <p>Thank you for your business!</p>
-              <p className="mt-1 font-mono">ID: {sale.id}</p>
+                ))
+              ) : (
+                <p className="text-text-light/60 dark:text-text-dark/60 text-center py-4">No items found</p>
+              )}
             </div>
           </div>
+
+          {/* Payment Summary */}
+          <div className="border-t border-border-light dark:border-border-dark pt-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-text-light dark:text-text-dark">
+                <span>Subtotal</span>
+                <span>{sale.currency || 'RWF'} {subtotal.toLocaleString()}</span>
+              </div>
+              {totalDiscount > 0 && (
+                <div className="flex justify-between text-text-light dark:text-text-dark">
+                  <span>Discount</span>
+                  <span className="text-success">-{sale.currency || 'RWF'} {totalDiscount.toLocaleString()}</span>
+                </div>
+              )}
+              {tax > 0 && (
+                <div className="flex justify-between text-text-light dark:text-text-dark">
+                  <span>Tax</span>
+                  <span>{sale.currency || 'RWF'} {tax.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark pt-2 border-t border-border-light dark:border-border-dark">
+                <span>Total</span>
+                <span className="text-primary">{sale.currency || 'RWF'} {Number(sale.totalAmount || calculatedTotal).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Information */}
+          <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CreditCard className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold text-text-light dark:text-text-dark">Payment Information</h3>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-text-light/60 dark:text-text-dark/60">Payment Method</span>
+                <span className="text-text-light dark:text-text-dark font-medium">
+                  {formatPaymentMethod(sale.paymentMethod)}
+                </span>
+              </div>
+              {sale.paymentReference && (
+                <div className="flex justify-between">
+                  <span className="text-text-light/60 dark:text-text-dark/60">Reference</span>
+                  <span className="text-text-light dark:text-text-dark font-mono text-sm">
+                    {sale.paymentReference}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-background-light dark:bg-background-dark p-6 border-t border-border-light dark:border-border-dark text-center">
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+            Thank you for your business!
+          </p>
+          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
+            Sale ID: <span className="font-mono">{sale.id}</span>
+          </p>
         </div>
       </div>
 
       {/* Print Styles */}
       <style jsx global>{`
         @media print {
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
-
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-            background: white !important;
-          }
-
           body * {
             visibility: hidden;
           }
-
-          .print-content,
-          .print-content * {
+          .max-w-4xl,
+          .max-w-4xl * {
             visibility: visible;
           }
-
-          .print-content {
+          .max-w-4xl {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
-            max-width: 100%;
-            padding: 0;
-            margin: 0;
           }
-
-          button,
-          .print\\:hidden {
+          button {
             display: none !important;
-          }
-
-          .print\\:text-black {
-            color: #000 !important;
-          }
-
-          .print\\:bg-white {
-            background-color: #fff !important;
-          }
-
-          .print\\:bg-gray-50 {
-            background-color: #f9fafb !important;
-          }
-
-          .print\\:border-black {
-            border-color: #000 !important;
-          }
-
-          .print\\:border-2 {
-            border-width: 2px !important;
-          }
-
-          .print\\:border-b-2 {
-            border-bottom-width: 2px !important;
-          }
-
-          .print\\:border-t-2 {
-            border-top-width: 2px !important;
           }
         }
       `}</style>

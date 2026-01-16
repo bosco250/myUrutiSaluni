@@ -7,13 +7,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Modal,
 } from "react-native";
 import { Button, Input } from "../../components";
 import { LockIcon, ChevronLeftIcon } from "../../components/common/Icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { authService } from "../../services/auth";
 
 interface ResetPasswordScreenProps {
   navigation?: {
@@ -52,15 +52,26 @@ export default function ResetPasswordScreen({
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{
     newPassword?: string;
     confirmPassword?: string;
+    token?: string;
+    general?: string;
   }>({});
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const validate = () => {
-    const newErrors: { newPassword?: string; confirmPassword?: string } = {};
+    const newErrors: {
+      token?: string;
+      newPassword?: string;
+      confirmPassword?: string;
+    } = {};
+
+    if (!token.trim()) {
+      newErrors.token = "Reset token is required";
+    }
 
     if (!newPassword.trim()) {
       newErrors.newPassword = "New password is required";
@@ -82,17 +93,50 @@ export default function ResetPasswordScreen({
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    setErrors((prev) => ({ ...prev, general: "" }));
+
+    try {
+      const response = await authService.resetPassword(token.trim(), newPassword);
+      setSuccessMessage(response.message);
+    } catch (apiError: any) {
+      setErrors((prev) => ({
+        ...prev,
+        general:
+          apiError.message || "Unable to reset password. Please verify the token and try again.",
+      }));
+    } finally {
       setLoading(false);
-      setShowSuccessModal(true);
-    }, 1500);
+    }
   };
 
   const handleBackToLogin = () => {
-    setShowSuccessModal(false);
     navigation?.navigate("Login");
   };
+
+  if (successMessage) {
+    return (
+      <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
+        <View style={styles.successContainer}>
+          <View style={styles.successIconContainer}>
+            <View style={[styles.successIconCircle, { backgroundColor: theme.colors.success + '15' }]}>
+              <Text style={styles.successCheckmark}>✓</Text>
+            </View>
+          </View>
+          <Text style={[styles.successTitle, dynamicStyles.text]}>Password Changed!</Text>
+          <Text style={[styles.successMessage, dynamicStyles.textSecondary]}>
+            {successMessage}
+          </Text>
+          <TouchableOpacity
+            style={styles.backToLoginButton}
+            onPress={handleBackToLogin}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backToLoginButtonText}>Back to Login</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
@@ -135,6 +179,21 @@ export default function ResetPasswordScreen({
             {/* Form */}
             <View style={styles.form}>
               <Input
+                label="Reset Token"
+                placeholder="Paste the token from your email"
+                value={token}
+                onChangeText={(value) => {
+                  setToken(value);
+                  if (errors.token) {
+                    setErrors((prev) => ({ ...prev, token: "" }));
+                  }
+                }}
+                autoCapitalize="none"
+                autoComplete="off"
+                error={errors.token}
+              />
+
+              <Input
                 label="New Password"
                 placeholder="Enter your new password"
                 value={newPassword}
@@ -168,6 +227,10 @@ export default function ResetPasswordScreen({
                 leftIcon={<LockIcon size={20} color={theme.colors.primary} />}
               />
 
+              {errors.general ? (
+                <Text style={styles.generalErrorText}>{errors.general}</Text>
+              ) : null}
+
               <View style={styles.buttonWrapper}>
                 <Button
                   title="Reset Password"
@@ -180,50 +243,6 @@ export default function ResetPasswordScreen({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Success Modal */}
-      <Modal
-        visible={showSuccessModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-          <View style={[styles.modalContent, dynamicStyles.card]}>
-            {/* Close Button */}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowSuccessModal(false)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-
-            {/* Success Icon */}
-            <View style={styles.successIconContainer}>
-              <View style={[styles.successIconCircle, { backgroundColor: theme.colors.success + '15' }]}>
-                <Text style={styles.successCheckmark}>✓</Text>
-              </View>
-            </View>
-
-            {/* Success Title */}
-            <Text style={[styles.successTitle, dynamicStyles.text]}>Password Changed!</Text>
-
-            {/* Success Message */}
-            <Text style={[styles.successMessage, dynamicStyles.textSecondary]}>
-              Your password has been changed successfully.
-            </Text>
-
-            {/* Back to Login Button */}
-            <TouchableOpacity
-              style={styles.backToLoginButton}
-              onPress={handleBackToLogin}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.backToLoginButtonText}>Back to Login</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -312,34 +331,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
-  // Modal Styles
-  modalOverlay: {
+  successContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.lg,
-  },
-  modalContent: {
-    borderRadius: 24,
     padding: theme.spacing.xl,
-    width: "100%",
-    maxWidth: 360,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  closeButton: {
-    position: "absolute",
-    top: theme.spacing.md,
-    right: theme.spacing.md,
-    padding: theme.spacing.xs,
-  },
-  closeButtonText: {
-    fontSize: 20,
-    opacity: 0.5,
+    paddingHorizontal: theme.spacing.xxl,
   },
   successIconContainer: {
     marginBottom: theme.spacing.lg,
@@ -390,4 +387,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontFamily: theme.fonts.bold,
   },
-});
+  generalErrorText: {
+    color: theme.colors.error,
+    fontSize: 14,
+    marginTop: -theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+  },
+})

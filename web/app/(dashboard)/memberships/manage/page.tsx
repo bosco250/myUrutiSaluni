@@ -28,6 +28,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface Membership {
   id: string;
@@ -97,6 +98,14 @@ interface SalonEmployee {
     email?: string;
   };
   [key: string]: unknown;
+}
+
+interface PaymentStatus {
+  memberId: string;
+  totalRequired: number;
+  totalPaid: number;
+  remaining: number;
+  isComplete: boolean;
 }
 
 const statusConfig = {
@@ -253,6 +262,39 @@ function MembershipManagementContent() {
     },
   });
 
+  // Fetch payment statuses for membership owners
+  const { data: paymentStatuses = {} } = useQuery<Record<string, PaymentStatus>>({
+    queryKey: ['membership-payment-statuses', memberships.map(m => m.salon?.owner?.id).filter(Boolean)],
+    queryFn: async () => {
+      const currentYear = new Date().getFullYear();
+      const statusMap: Record<string, PaymentStatus> = {};
+      
+      // Get unique owner IDs from memberships
+      const ownerIds = Array.from(new Set(memberships.map(m => m.salon?.owner?.id).filter(Boolean)));
+      
+      for (const ownerId of ownerIds) {
+        try {
+          const response = await api.get(`/memberships/payments/status/${ownerId}/${currentYear}`);
+          statusMap[ownerId] = {
+            memberId: ownerId,
+            ...response.data,
+          };
+        } catch {
+          // Default to no payment if API fails
+          statusMap[ownerId] = {
+            memberId: ownerId,
+            totalRequired: 3000,
+            totalPaid: 0,
+            remaining: 3000,
+            isComplete: false,
+          };
+        }
+      }
+      
+      return statusMap;
+    },
+    enabled: memberships.length > 0,
+  });
   // Mutations
   const activateMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -336,6 +378,36 @@ function MembershipManagementContent() {
       return matchesSearch && matchesStatus;
     });
   }, [applications, searchQuery, statusFilter]);
+
+  // Suspend/Expire Confirmation State
+  const [suspendExpireConfirm, setSuspendExpireConfirm] = useState<{
+    type: 'suspend' | 'expire';
+    membership: Membership;
+  } | null>(null);
+
+  const requestSuspend = (id: string) => {
+    const membership = filteredMemberships.find(m => m.id === id);
+    if (membership) {
+        setSuspendExpireConfirm({ type: 'suspend', membership });
+    }
+  };
+
+  const requestExpire = (id: string) => {
+    const membership = filteredMemberships.find(m => m.id === id);
+    if (membership) {
+        setSuspendExpireConfirm({ type: 'expire', membership });
+    }
+  };
+
+  const handleConfirmSuspendExpire = () => {
+    if (!suspendExpireConfirm) return;
+    if (suspendExpireConfirm.type === 'suspend') {
+        suspendMutation.mutate(suspendExpireConfirm.membership.id);
+    } else {
+        expireMutation.mutate(suspendExpireConfirm.membership.id);
+    }
+    setSuspendExpireConfirm(null);
+  };
 
   // Statistics
   const stats = useMemo(() => {
@@ -621,10 +693,11 @@ function MembershipManagementContent() {
       {activeTab === 'memberships' && (
         <MembershipsTab
           memberships={filteredMemberships}
+          paymentStatuses={paymentStatuses}
           onView={setSelectedMembership}
           onActivate={(id) => activateMutation.mutate(id)}
-          onSuspend={(id) => suspendMutation.mutate(id)}
-          onExpire={(id) => expireMutation.mutate(id)}
+          onSuspend={requestSuspend}
+          onExpire={requestExpire}
           onRenew={(membership) => {
             setSelectedMembership(membership);
             setShowRenewModal(true);
@@ -708,6 +781,23 @@ function MembershipManagementContent() {
           }}
         />
       )}
+
+      {/* Suspend/Expire Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!suspendExpireConfirm}
+        onClose={() => setSuspendExpireConfirm(null)}
+        onConfirm={handleConfirmSuspendExpire}
+        title={suspendExpireConfirm?.type === 'expire' ? 'Expire Membership' : 'Suspend Membership'}
+        message={suspendExpireConfirm ? 
+            (suspendExpireConfirm.type === 'expire' 
+                ? `Are you sure you want to expire membership #${suspendExpireConfirm.membership.membershipNumber}? This action cannot be undone if the membership is still valid.` 
+                : `Are you sure you want to suspend membership #${suspendExpireConfirm.membership.membershipNumber}? The member will lose access temporarily.`)
+            : ''
+        }
+        variant={suspendExpireConfirm?.type === 'expire' ? 'danger' : 'warning'}
+        confirmLabel={suspendExpireConfirm?.type === 'expire' ? 'Expire' : 'Suspend'}
+        isProcessing={suspendMutation.isPending || expireMutation.isPending}
+      />
     </div>
   );
 }
@@ -715,6 +805,7 @@ function MembershipManagementContent() {
 // Tab Components
 function MembershipsTab({
   memberships,
+  paymentStatuses,
   onView,
   onActivate,
   onSuspend,
@@ -723,6 +814,7 @@ function MembershipsTab({
   isProcessing,
 }: {
   memberships: Membership[];
+  paymentStatuses: Record<string, PaymentStatus>;
   onView: (m: Membership) => void;
   onActivate: (id: string) => void;
   onSuspend: (id: string) => void;
@@ -751,7 +843,11 @@ function MembershipsTab({
       {memberships.map((membership) => {
         const config = statusConfig[membership.status];
         const Icon = config.icon;
-
+        const paymentStatus = membership.salon?.owner?.id ? paymentStatuses[membership.salon.owner.id] : null;
+        const isPaid = paymentStatus?.isComplete;
+        const paidAmount = paymentStatus?.totalPaid || 0;
+        const totalAmount = paymentStatus?.totalRequired || 3000;
+        
         return (
           <div
             key={membership.id}
@@ -788,7 +884,15 @@ function MembershipsTab({
                         {membership.membershipNumber || 'N/A'}
                       </span>
                       <span>•</span>
-                      <span>{membership.category || 'N/A'}</span>
+                      <span>{membership.category || 'Standard'}</span>
+                      {paymentStatus && (
+                        <>
+                          <span>•</span>
+                          <span className={`${isPaid ? 'text-success' : 'text-error'} font-medium`}>
+                            {paidAmount.toLocaleString()} / {totalAmount.toLocaleString()} RWF
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -796,16 +900,31 @@ function MembershipsTab({
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {membership.status === 'new' && (
-                    <Button
-                      onClick={() => onActivate(membership.id)}
-                      variant="primary"
-                      size="sm"
-                      disabled={isProcessing}
-                      className="gap-1.5"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      Activate
-                    </Button>
+                    (isPaid || paidAmount >= 1500) ? (
+                      <Button
+                        onClick={() => onActivate(membership.id)}
+                        variant="primary"
+                        size="sm"
+                        disabled={isProcessing}
+                        className="gap-1.5"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Activate
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          const url = `/memberships/payments?search=${membership.membershipNumber || ''}`;
+                          window.location.href = url;
+                        }}
+                        variant="secondary"
+                        size="sm"
+                        className="gap-1.5 text-error border-1 border-error/50 hover:bg-error/10 hover:border-error"
+                      >
+                        <DollarSign className="w-3.5 h-3.5" />
+                        Record Payment
+                      </Button>
+                    )
                   )}
                   {membership.status === 'active' && (
                     <>

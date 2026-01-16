@@ -66,7 +66,8 @@ export default function SalonsPage() {
     return (
       canManageSalons() &&
       (hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN]) ||
-        user?.id === salon.ownerId || user?.id === salon.owner?.id)
+        user?.id === salon.ownerId ||
+        user?.id === salon.owner?.id)
     );
   };
 
@@ -110,7 +111,10 @@ export default function SalonsPage() {
         const salonsData = response.data?.data || response.data;
         return Array.isArray(salonsData) ? salonsData : [];
       } catch (err: unknown) {
-        if ((err as { response?: { status?: number } }).response?.status === 401 || (err as Error).message?.includes('token')) {
+        if (
+          (err as { response?: { status?: number } }).response?.status === 401 ||
+          (err as Error).message?.includes('token')
+        ) {
           if (typeof window !== 'undefined') {
             // Session expired - clear all localStorage data
             clearAllSessionData();
@@ -163,7 +167,9 @@ export default function SalonsPage() {
   }
 
   if (error) {
-    const errorData = (error as { response?: { data?: { message?: string | string[]; error?: string } } })?.response?.data;
+    const errorData = (
+      error as { response?: { data?: { message?: string | string[]; error?: string } } }
+    )?.response?.data;
     const statusCode = (error as { response?: { status?: number } })?.response?.status;
     let errorMessage = 'Unknown error';
     if (Array.isArray(errorData?.message)) {
@@ -194,7 +200,61 @@ export default function SalonsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-      {/* Membership Warning Banner */}
+      {/* Membership Status Banners */}
+      {isSalonOwner() && membershipStatus && (
+        <>
+          {/* No membership application */}
+          {!membershipStatus.application && (
+            <div className="mb-6 bg-primary/10 border border-primary/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-primary font-semibold text-sm mb-1">Membership Required</p>
+                <p className="text-xs text-primary/80">
+                  You must apply for membership before you can add a salon.
+                </p>
+              </div>
+              <Button variant="primary" size="sm" onClick={() => router.push('/membership/apply')}>
+                Apply for Membership
+              </Button>
+            </div>
+          )}
+
+          {/* Membership application pending */}
+          {membershipStatus.application?.status === 'pending' && (
+            <div className="mb-6 bg-warning/10 border border-warning/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-warning font-semibold text-sm mb-1">Application Pending</p>
+                <p className="text-xs text-warning/80">
+                  Your membership application is being reviewed. You&apos;ll be notified once
+                  it&apos;s approved.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push('/membership/status')}
+              >
+                View Status
+              </Button>
+            </div>
+          )}
+
+          {/* Membership application rejected */}
+          {membershipStatus.application?.status === 'rejected' && (
+            <div className="mb-6 bg-danger/10 border border-danger/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-danger font-semibold text-sm mb-1">Application Not Approved</p>
+                <p className="text-xs text-danger/80">
+                  Your membership application was not approved. You can re-apply with updated
+                  information.
+                </p>
+              </div>
+              <Button variant="primary" size="sm" onClick={() => router.push('/membership/apply')}>
+                Apply Again
+              </Button>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Header */}
       <div>
@@ -212,7 +272,7 @@ export default function SalonsPage() {
               onClick={() => {
                 if (isSalonOwner() && membershipStatus && !membershipStatus.isMember) {
                   alert(
-                    'You need to be an approved member to add salons. Please apply for membership first.'
+                    'You must apply for membership and wait for approval before adding a salon.'
                   );
                   return;
                 }
@@ -221,6 +281,12 @@ export default function SalonsPage() {
               }}
               variant="primary"
               size="sm"
+              disabled={isSalonOwner() && membershipStatus && !membershipStatus.isMember}
+              title={
+                isSalonOwner() && membershipStatus && !membershipStatus.isMember
+                  ? 'Apply for membership and wait for approval to add a salon.'
+                  : ''
+              }
             >
               <Plus className="w-4 h-4" />
               Add Salon
@@ -319,26 +385,30 @@ export default function SalonsPage() {
 
       {/* Salons View */}
       {filteredSalons.length === 0 ? (
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
-            <Building2 className="w-12 h-12 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
-            <p className="text-text-light/60 dark:text-text-dark/60 text-sm font-medium mb-1">
-              {searchQuery || statusFilter !== 'all'
-                ? 'No salons match your filters'
-                : 'No salons found'}
-            </p>
-            <p className="text-text-light/40 dark:text-text-dark/40 text-xs mb-4">
-              {searchQuery || statusFilter !== 'all'
-                ? 'Try adjusting your search or filters'
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
+          <Building2 className="w-12 h-12 mx-auto mb-3 text-text-light/20 dark:text-text-dark/20" />
+          <p className="text-text-light/60 dark:text-text-dark/60 text-sm font-medium mb-1">
+            {searchQuery || statusFilter !== 'all'
+              ? 'No salons match your filters'
+              : 'No salons found'}
+          </p>
+          <p className="text-text-light/40 dark:text-text-dark/40 text-xs mb-4">
+            {searchQuery || statusFilter !== 'all'
+              ? 'Try adjusting your search or filters'
+              : isSalonOwner() && membershipStatus && !membershipStatus.isMember
+                ? 'Complete membership to create your first salon'
                 : 'Create your first salon to get started'}
-            </p>
-            {!searchQuery && statusFilter === 'all' && (
-              <RoleGuard
-                requiredRoles={[
-                  UserRole.SUPER_ADMIN,
-                  UserRole.ASSOCIATION_ADMIN,
-                  UserRole.SALON_OWNER,
-                ]}
-              >
+          </p>
+          {!searchQuery && statusFilter === 'all' && (
+            <RoleGuard
+              requiredRoles={[
+                UserRole.SUPER_ADMIN,
+                UserRole.ASSOCIATION_ADMIN,
+                UserRole.SALON_OWNER,
+              ]}
+            >
+              {/* Only show button if salon owner has approved membership OR user is admin */}
+              {!isSalonOwner() || (membershipStatus && membershipStatus.isMember) ? (
                 <Button
                   onClick={() => {
                     setEditingSalon(null);
@@ -350,9 +420,10 @@ export default function SalonsPage() {
                   <Plus className="w-4 h-4" />
                   Add Your First Salon
                 </Button>
-              </RoleGuard>
-            )}
-          </div>
+              ) : null}
+            </RoleGuard>
+          )}
+        </div>
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSalons.map((salon) => (
@@ -411,7 +482,6 @@ export default function SalonsPage() {
       )}
     </div>
   );
-
 }
 
 const BUSINESS_ICONS: Record<string, any> = {
@@ -482,10 +552,10 @@ function SalonCard({
             <div className="flex items-center gap-2 mb-1.5">
               <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
                 {salon.images?.[0] || salon.image ? (
-                  <img 
-                    src={salon.images?.[0] || salon.image} 
-                    alt={salon.name} 
-                    className="w-full h-full object-cover" 
+                  <img
+                    src={salon.images?.[0] || salon.image}
+                    alt={salon.name}
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <Building2 className="w-6 h-6 text-white" />
@@ -519,10 +589,12 @@ function SalonCard({
 
               {showMenu && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
-                    onKeyDown={(e) => { if (e.key === 'Escape') setShowMenu(false); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setShowMenu(false);
+                    }}
                     role="button"
                     tabIndex={-1}
                     aria-label="Close menu"
@@ -567,54 +639,55 @@ function SalonCard({
           )}
         </div>
 
-
-          
-          {/* Status & Open Indicator */}
-          <div className="flex items-center gap-2 mb-3">
-             <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
-                statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive
-              }`}
-            >
-              {salon.status}
+        {/* Status & Open Indicator */}
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+              statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive
+            }`}
+          >
+            {salon.status}
+          </span>
+          {isSalonOpen(salon.settings?.operatingHours) && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-success/10 text-success border-success/20">
+              <Clock className="w-3 h-3" />
+              Open Now
             </span>
-            {isSalonOpen(salon.settings?.operatingHours) && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-success/10 text-success border-success/20">
-                <Clock className="w-3 h-3" />
-                Open Now
-              </span>
-            )}
-          </div>
+          )}
+        </div>
 
-          {/* Business Types & Clientele */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {salon.settings?.businessTypes?.slice(0, 3).map((type) => {
-              const Icon = BUSINESS_ICONS[type] || Star;
-              return (
-                <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
-                  <Icon className="w-3 h-3 text-primary" />
-                  <span className="capitalize">{type.replace('_', ' ')}</span>
-                </span>
-              );
-            })}
-             {/* Fallback for single businessType */}
-             {!salon.settings?.businessTypes && salon.settings?.businessType && (
-               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
-                  <Star className="w-3 h-3 text-primary" />
-                  <span className="capitalize">{salon.settings.businessType.replace('_', ' ')}</span>
-                </span>
-             )}
-            
-            {salon.settings?.targetClientele && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
-                 {(() => {
-                    const Icon = CLIENTELE_ICONS[salon.settings.targetClientele] || Users;
-                    return <Icon className="w-3 h-3 text-secondary" />;
-                 })()}
-                 <span className="capitalize">{salon.settings.targetClientele}</span>
+        {/* Business Types & Clientele */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {salon.settings?.businessTypes?.slice(0, 3).map((type) => {
+            const Icon = BUSINESS_ICONS[type] || Star;
+            return (
+              <span
+                key={type}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80"
+              >
+                <Icon className="w-3 h-3 text-primary" />
+                <span className="capitalize">{type.replace('_', ' ')}</span>
               </span>
-            )}
-          </div>
+            );
+          })}
+          {/* Fallback for single businessType */}
+          {!salon.settings?.businessTypes && salon.settings?.businessType && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
+              <Star className="w-3 h-3 text-primary" />
+              <span className="capitalize">{salon.settings.businessType.replace('_', ' ')}</span>
+            </span>
+          )}
+
+          {salon.settings?.targetClientele && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-medium text-text-light/80 dark:text-text-dark/80">
+              {(() => {
+                const Icon = CLIENTELE_ICONS[salon.settings.targetClientele] || Users;
+                return <Icon className="w-3 h-3 text-secondary" />;
+              })()}
+              <span className="capitalize">{salon.settings.targetClientele}</span>
+            </span>
+          )}
+        </div>
 
         {/* Details */}
         <div className="space-y-1.5">
@@ -732,7 +805,6 @@ function SalonsTable({
   onEdit: (salon: Salon) => void;
   onDelete: (id: string) => void;
 }) {
-  
   return (
     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
       <div className="overflow-x-auto">
@@ -761,15 +833,16 @@ function SalonsTable({
           </thead>
           <tbody className="divide-y divide-border-light/50 dark:divide-border-dark/50">
             {salons.map((salon) => (
-              <tr
-                key={salon.id}
-                className="hover:bg-primary/5 transition-colors group"
-              >
+              <tr key={salon.id} className="hover:bg-primary/5 transition-colors group">
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                       {salon.images?.[0] || salon.image ? (
-                        <img src={salon.images?.[0] || salon.image} alt={salon.name} className="w-full h-full object-cover" />
+                        <img
+                          src={salon.images?.[0] || salon.image}
+                          alt={salon.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <Building2 className="w-5 h-5 text-white" />
                       )}
@@ -792,7 +865,10 @@ function SalonsTable({
                     {salon.settings?.businessTypes?.slice(0, 2).map((type) => {
                       const Icon = BUSINESS_ICONS[type] || Star;
                       return (
-                        <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80">
+                        <span
+                          key={type}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80"
+                        >
                           <Icon className="w-3 h-3 text-primary" />
                           <span className="capitalize">{type.replace('_', ' ')}</span>
                         </span>

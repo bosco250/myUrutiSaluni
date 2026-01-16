@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import Accordion from '@/components/ui/Accordion';
 import Button from '@/components/ui/Button';
 import ProgressBar from '@/components/ui/ProgressBar';
@@ -14,6 +16,7 @@ interface DocumentFile {
 }
 
 export default function DocumentUploadPage() {
+  const router = useRouter();
   const [documents, setDocuments] = useState<DocumentFile[]>([
     {
       id: '1',
@@ -43,7 +46,7 @@ export default function DocumentUploadPage() {
     setDocuments(docs => docs.filter(doc => doc.id !== id));
   };
 
-  const handleUpload = (id: string, type: 'camera' | 'library') => {
+  const handleUpload = (id: string, _type: 'camera' | 'library') => {
     // Simulate file upload
     const doc = documents.find(d => d.id === id);
     if (doc) {
@@ -80,17 +83,22 @@ export default function DocumentUploadPage() {
   return (
     <div className="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden antialiased">
       {/* Header */}
-      <div className="flex items-center bg-surface-dark dark:bg-surface-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-border-dark dark:border-border-dark">
-        <div className="flex size-10 shrink-0 items-center justify-start text-text-dark dark:text-text-dark">
-          <button onClick={() => window.history.back()}>
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
+      <div className="flex items-center bg-surface-light dark:bg-surface-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-border-light dark:border-border-dark">
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => router.push('/dashboard')}
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <h1 className="text-text-light dark:text-text-dark text-lg font-bold leading-tight tracking-tight">
+            Document Verification
+          </h1>
         </div>
-        <h1 className="text-text-dark dark:text-text-dark text-lg font-bold leading-tight tracking-tight flex-1 text-center">
-          Document Verification
-        </h1>
         <div className="flex w-10 items-center justify-end">
-          <button className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-text-dark dark:text-text-dark gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+          <button className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-text-light dark:text-text-dark gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
             <span className="material-symbols-outlined">help_outline</span>
           </button>
         </div>
@@ -140,7 +148,7 @@ export default function DocumentUploadPage() {
             status="warning"
           >
             <p className="text-slate-400 dark:text-slate-400 text-sm font-normal leading-normal pb-4">
-              Please provide a clear, color photo of your driver's license, passport, or national ID card.
+              Please provide a clear, color photo of your driver&apos;s license, passport, or national ID card.
             </p>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-3 rounded-lg border border-border-dark dark:border-border-dark bg-background-dark dark:bg-background-dark p-3">
@@ -223,11 +231,11 @@ export default function DocumentUploadPage() {
           <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
             lock
           </span>
-          <p className="text-xs">
+            <p className="text-xs">
             Your documents are encrypted and securely stored.{' '}
-            <a className="font-medium text-primary" href="#">
+            <button type="button" className="font-medium text-primary hover:underline" onClick={() => {}}>
               Privacy Policy
-            </a>
+            </button>
             .
           </p>
         </div>

@@ -29,8 +29,14 @@ import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
+import { useAuthStore } from '@/store/auth-store';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
+import { useMembershipStatus } from '@/hooks/useMembershipStatus';
+import { Modal, ModalFooter } from '@/components/ui/Modal';
+import { DollarSign } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { SelfServicePaymentModal } from '@/components/memberships/SelfServicePaymentModal';
 
 interface Membership {
   id: string;
@@ -55,6 +61,14 @@ interface Membership {
   lastReminderSent?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface PaymentStatus {
+  memberId: string;
+  totalRequired: number;
+  totalPaid: number;
+  remaining: number;
+  isComplete: boolean;
 }
 
 const statusConfig = {
@@ -117,8 +131,12 @@ function MembershipsPageContent() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null);
   const [showQuickActions, setShowQuickActions] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(3000);
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const { canManageUsers } = usePermissions();
+  const { data: membershipStatus } = useMembershipStatus();
 
   const { data: memberships, isLoading } = useQuery<Membership[]>({
     queryKey: ['memberships'],
@@ -137,12 +155,71 @@ function MembershipsPageContent() {
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
+  // Fetch payment statuses for membership owners
+  const { data: paymentStatuses = {} } = useQuery<Record<string, PaymentStatus>>({
+    queryKey: [
+      'membership-payment-statuses-dashboard',
+      memberships?.map((m) => m.salon?.owner?.id).filter(Boolean),
+    ],
+    queryFn: async () => {
+      if (!memberships) return {};
+      const currentYear = new Date().getFullYear();
+      const statusMap: Record<string, PaymentStatus> = {};
+
+      const ownerIds = Array.from(
+        new Set(memberships.map((m) => m.salon?.owner?.id).filter(Boolean))
+      );
+
+      for (const ownerId of ownerIds) {
+        try {
+          const response = await api.get(`/memberships/payments/status/${ownerId}/${currentYear}`);
+          statusMap[ownerId] = {
+            memberId: ownerId,
+            ...response.data,
+          };
+        } catch {
+          statusMap[ownerId] = {
+            memberId: ownerId,
+            totalRequired: 3000,
+            totalPaid: 0,
+            remaining: 3000,
+            isComplete: false,
+          };
+        }
+      }
+
+      return statusMap;
+    },
+    enabled: !!memberships && memberships.length > 0,
+  });
+
+  const [activationError, setActivationError] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    membershipNumber?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
   const activateMutation = useMutation({
     mutationFn: async (id: string) => {
       await api.patch(`/memberships/${id}/activate`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memberships'] });
+    },
+    onError: (error: any) => {
+      // Extract specific payment error details if available
+      const message = error.response?.data?.message || 'Failed to activate membership';
+
+      setActivationError({
+        isOpen: true,
+        title: 'Activation Failed',
+        message: message,
+      });
     },
   });
 
@@ -161,8 +238,52 @@ function MembershipsPageContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memberships'] });
+      setConfirmationAction(null);
     },
+    onError: (error: any) => {
+       // Could add error handling here
+       setConfirmationAction(null);
+       alert("Failed to update membership: " + error.response?.data?.message || error.message);
+    }
   });
+
+  // Confirmation Logic
+  const [confirmationAction, setConfirmationAction] = useState<{
+    type: 'suspend' | 'expire';
+    id: string;
+    title: string;
+    message: string;
+    variant: 'warning' | 'danger';
+  } | null>(null);
+
+  const requestSuspend = (id: string, number: string) => {
+    setConfirmationAction({
+        type: 'suspend',
+        id,
+        title: 'Suspend Membership',
+        message: `Are you sure you want to suspend membership #${number}? The member will lose access temporarily.`,
+        variant: 'warning'
+    });
+  };
+
+  const requestExpire = (id: string, number: string) => {
+    setConfirmationAction({
+        type: 'expire',
+        id,
+        title: 'Expire Membership',
+        message: `Are you sure you want to expire membership #${number} immediately? This action cannot be undone if the membership is still valid.`,
+        variant: 'danger'
+    });
+  };
+
+  const handleConfirmAction = () => {
+     if (!confirmationAction) return;
+     if (confirmationAction.type === 'suspend') {
+         suspendMutation.mutate(confirmationAction.id);
+     } else {
+         expireMutation.mutate(confirmationAction.id);
+     }
+  };
 
   const filteredMemberships =
     memberships?.filter((membership) => {
@@ -259,6 +380,62 @@ function MembershipsPageContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Membership Status Banners */}
+      {membershipStatus && (
+        <>
+          {/* No membership application */}
+          {!membershipStatus.application && (
+            <div className="mb-6 bg-primary/10 border border-primary/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-primary font-semibold text-sm mb-1">Apply for Membership</p>
+                <p className="text-xs text-primary/80">
+                  You have not applied for membership. Apply now to unlock full features.
+                </p>
+              </div>
+              <Button variant="primary" size="sm" onClick={() => router.push('/membership/apply')}>
+                Apply Now
+              </Button>
+            </div>
+          )}
+
+          {/* Membership application pending */}
+          {membershipStatus.application?.status === 'pending' && (
+            <div className="mb-6 bg-warning/10 border border-warning/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-warning font-semibold text-sm mb-1">Application Pending</p>
+                <p className="text-xs text-warning/80">
+                  Your membership application is being reviewed. You&apos;ll be notified once
+                  it&apos;s approved.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push('/membership/status')}
+              >
+                View Status
+              </Button>
+            </div>
+          )}
+
+          {/* Membership application rejected */}
+          {membershipStatus.application?.status === 'rejected' && (
+            <div className="mb-6 bg-danger/10 border border-danger/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-danger font-semibold text-sm mb-1">Application Not Approved</p>
+                <p className="text-xs text-danger/80">
+                  Your membership application was not approved. You can re-apply with updated
+                  information.
+                </p>
+              </div>
+              <Button variant="primary" size="sm" onClick={() => router.push('/membership/apply')}>
+                Apply Again
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Hero */}
       <div className="border-b border-border-light dark:border-border-dark pb-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -431,7 +608,9 @@ function MembershipsPageContent() {
                 Active
               </p>
               <p className="text-2xl font-bold text-success mt-2">{stats?.active || 0}</p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">In good standing</p>
+              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                In good standing
+              </p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
               <CheckCircle className="w-5 h-5" />
@@ -490,7 +669,9 @@ function MembershipsPageContent() {
               <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
                 Suspended
               </p>
-              <p className="text-2xl font-bold text-text-light/60 dark:text-text-dark/60 mt-2">{stats?.suspended || 0}</p>
+              <p className="text-2xl font-bold text-text-light/60 dark:text-text-dark/60 mt-2">
+                {stats?.suspended || 0}
+              </p>
               <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">On hold</p>
             </div>
             <div className="h-10 w-10 rounded-lg bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 flex items-center justify-center">
@@ -618,10 +799,19 @@ function MembershipsPageContent() {
                   <MembershipCard
                     key={membership.id}
                     membership={membership}
+                    paymentStatus={
+                      membership.salon?.owner?.id
+                        ? paymentStatuses[membership.salon.owner.id]
+                        : undefined
+                    }
                     onView={() => setSelectedMembership(membership)}
                     onActivate={() => activateMutation.mutate(membership.id)}
-                    onSuspend={() => suspendMutation.mutate(membership.id)}
-                    onExpire={() => expireMutation.mutate(membership.id)}
+                    onSuspend={() => requestSuspend(membership.id, membership.membershipNumber)}
+                    onExpire={() => requestExpire(membership.id, membership.membershipNumber)}
+                    onRenew={() => {
+                      setPaymentAmount(3000);
+                      setShowPaymentModal(true);
+                    }}
                     canManage={canManageUsers()}
                     isProcessing={
                       activateMutation.isPending ||
@@ -631,6 +821,14 @@ function MembershipsPageContent() {
                     showQuickActions={showQuickActions === membership.id}
                     onToggleQuickActions={() =>
                       setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
+                    }
+                    onError={(message) =>
+                      setActivationError({
+                        isOpen: true,
+                        title: 'Activation Failed',
+                        message,
+                        membershipNumber: membership.membershipNumber,
+                      })
                     }
                   />
                 ))}
@@ -670,10 +868,19 @@ function MembershipsPageContent() {
                   <MembershipCard
                     key={membership.id}
                     membership={membership}
+                    paymentStatus={
+                      membership.salon?.owner?.id
+                        ? paymentStatuses[membership.salon.owner.id]
+                        : undefined
+                    }
                     onView={() => setSelectedMembership(membership)}
                     onActivate={() => activateMutation.mutate(membership.id)}
-                    onSuspend={() => suspendMutation.mutate(membership.id)}
-                    onExpire={() => expireMutation.mutate(membership.id)}
+                    onSuspend={() => requestSuspend(membership.id, membership.membershipNumber)}
+                    onExpire={() => requestExpire(membership.id, membership.membershipNumber)}
+                    onRenew={() => {
+                      setPaymentAmount(3000);
+                      setShowPaymentModal(true);
+                    }}
                     canManage={canManageUsers()}
                     isProcessing={
                       activateMutation.isPending ||
@@ -684,6 +891,14 @@ function MembershipsPageContent() {
                     onToggleQuickActions={() =>
                       setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
                     }
+                    onError={(message) =>
+                      setActivationError({
+                        isOpen: true,
+                        title: 'Activation Failed',
+                        message,
+                        membershipNumber: membership.membershipNumber,
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -692,6 +907,64 @@ function MembershipsPageContent() {
         </div>
       )}
 
+      {/* Activation Error Modal */}
+      <Modal
+        isOpen={activationError.isOpen}
+        onClose={() => setActivationError((prev) => ({ ...prev, isOpen: false }))}
+        title={activationError.title}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-error/10 text-error p-4 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-semibold">Activation stopped</p>
+              <p>{activationError.message}</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-text-light/80 dark:text-text-dark/80">
+            Memberships cannot be activated until the required payment is recorded.
+          </p>
+
+          <ModalFooter>
+            <div className="flex gap-3 justify-end w-full">
+              <Button
+                variant="secondary"
+                onClick={() => setActivationError((prev) => ({ ...prev, isOpen: false }))}
+              >
+                Close
+              </Button>
+              {activationError.membershipNumber && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    const url = `/memberships/payments?search=${activationError.membershipNumber}`;
+                    window.location.href = url;
+                  }}
+                  className="gap-2"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Go to Payments
+                </Button>
+              )}
+            </div>
+          </ModalFooter>
+        </div>
+      </Modal>
+
+      {/* Action Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!confirmationAction}
+        onClose={() => setConfirmationAction(null)}
+        onConfirm={handleConfirmAction}
+        title={confirmationAction?.title || ''}
+        message={confirmationAction?.message || ''}
+        variant={confirmationAction?.variant}
+        isProcessing={suspendMutation.isPending || expireMutation.isPending}
+        confirmLabel={confirmationAction?.type === 'expire' ? 'Expire' : 'Suspend'}
+      />
+
       {/* Membership Detail Modal */}
       {selectedMembership && (
         <MembershipDetailModal
@@ -699,33 +972,50 @@ function MembershipsPageContent() {
           onClose={() => setSelectedMembership(null)}
         />
       )}
+      
+      <SelfServicePaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        requiredAmount={paymentAmount}
+        email={user?.email}
+      />
     </div>
   );
 }
 
 function MembershipCard({
   membership,
+  paymentStatus,
   onView,
   onActivate,
   onSuspend,
   onExpire,
+  onRenew,
   canManage,
   isProcessing,
   showQuickActions,
   onToggleQuickActions,
+  onError,
 }: {
   membership: Membership;
+  paymentStatus?: PaymentStatus;
   onView: () => void;
   onActivate: () => void;
   onSuspend: () => void;
   onExpire: () => void;
+  onRenew: () => void;
   canManage: boolean;
   isProcessing: boolean;
   showQuickActions: boolean;
   onToggleQuickActions: () => void;
+  onError?: (message: string) => void;
 }) {
   const config = statusConfig[membership.status];
   const Icon = config.icon;
+
+  const isPaid = paymentStatus?.isComplete;
+  const paidAmount = paymentStatus?.totalPaid || 0;
+  const totalAmount = paymentStatus?.totalRequired || 3000;
   const railClass =
     membership.status === 'active'
       ? 'bg-success'
@@ -794,18 +1084,18 @@ function MembershipCard({
               <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                 #{membership.membershipNumber}
               </p>
-              
+
               <div className="flex items-center gap-2 mt-2">
-                {membership.paymentStatus === 'paid' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-success/10 text-success">
-                    <CheckCircle className="w-3 h-3" />
-                    Paid
-                  </span>
-                )}
-                {membership.paymentStatus === 'overdue' && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-error/10 text-error">
-                    <XCircle className="w-3 h-3" />
-                    Overdue
+                {paymentStatus && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${isPaid ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}
+                  >
+                    {isPaid ? (
+                      <CheckCircle className="w-3 h-3" />
+                    ) : (
+                      <DollarSign className="w-3 h-3" />
+                    )}
+                    {paidAmount.toLocaleString()} / {totalAmount.toLocaleString()} RWF
                   </span>
                 )}
               </div>
@@ -814,12 +1104,27 @@ function MembershipCard({
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {canManage && membership.status === 'new' && (
-              <Button onClick={onActivate} size="sm" disabled={isProcessing} className="gap-2">
-                <CheckCircle className="w-4 h-4" />
-                Activate
-              </Button>
-            )}
+            {canManage &&
+              membership.status === 'new' &&
+              (isPaid || paidAmount >= 1500 ? (
+                <Button onClick={onActivate} size="sm" disabled={isProcessing} className="gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Activate
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    const url = `/memberships/payments?search=${membership.membershipNumber || ''}`;
+                    window.location.href = url;
+                  }}
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 text-error border-1 border-error/50 hover:bg-error/10 hover:border-error"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Record Payment
+                </Button>
+              ))}
 
             {canManage ? (
               <div className="relative">
@@ -890,39 +1195,81 @@ function MembershipCard({
                 )}
               </div>
             ) : (
-              <Button onClick={onView} variant="secondary" size="sm" className="gap-2">
-                <Eye className="w-4 h-4" />
-                View
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Salon owner self-service: Pay/Renew button for expired or pending_renewal */}
+                {(membership.status === 'expired' || membership.status === 'pending_renewal') && (
+                  <Button onClick={onRenew} variant="primary" size="sm" className="gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Pay & Renew
+                  </Button>
+                )}
+                {/* Certificate download for active memberships */}
+                {membership.status === 'active' && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const response = await api.get(
+                          `/reports/membership-certificate/${membership.salon?.owner?.id}`,
+                          { responseType: 'blob' }
+                        );
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.setAttribute(
+                          'download',
+                          `membership-certificate-${membership.membershipNumber}.pdf`
+                        );
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        window.URL.revokeObjectURL(url);
+                      } catch {
+                        alert('Failed to download certificate');
+                      }
+                    }}
+                    variant="secondary"
+                    size="sm"
+                    className="gap-2"
+                    title="Download Certificate"
+                  >
+                    <Download className="w-4 h-4" />
+                    Certificate
+                  </Button>
+                )}
+                <Button onClick={onView} variant="secondary" size="sm" className="gap-2">
+                  <Eye className="w-4 h-4" />
+                  View
+                </Button>
+              </div>
             )}
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1">
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50">
-              Owner
-            </p>
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50">Owner</p>
             <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">
               {membership.salon?.owner?.fullName || 'N/A'}
             </p>
           </div>
 
           <div className="space-y-1">
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50">
-              Category
-            </p>
-            <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">
-              {membership.category || 'N/A'}
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50">Category</p>
+            <p className="text-sm italic font-medium text-text-light dark:text-text-dark truncate">
+              {membership.category || 'Standard'}
             </p>
           </div>
 
           <div className="space-y-1">
             <p className="text-xs text-text-light/50 dark:text-text-dark/50">
-              {daysUntilExpiry !== null && daysUntilExpiry > 0 ? 'Expires in' : 'Expired'}
+              {membership.status === 'new'
+                ? 'Status'
+                : daysUntilExpiry !== null && daysUntilExpiry > 0
+                  ? 'Expires in'
+                  : 'Expired'}
             </p>
             <p
-              className={`text-sm font-medium truncate ${
+              className={`text-sm italic font-medium truncate ${
                 daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
                   ? 'text-warning'
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
@@ -936,7 +1283,9 @@ function MembershipCard({
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
                     ? `${Math.abs(daysUntilExpiry)} days ago`
                     : new Date(membership.endDate).toLocaleDateString()
-                : 'N/A'}
+                : membership.status === 'new'
+                  ? 'Not Activated'
+                  : 'N/A'}
             </p>
           </div>
         </div>
@@ -965,9 +1314,7 @@ function MembershipCard({
             {membership.lastReminderSent && (
               <div className="inline-flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
                 <Mail className="w-3 h-3" />
-                <span>
-                  {new Date(membership.lastReminderSent).toLocaleDateString()}
-                </span>
+                <span>{new Date(membership.lastReminderSent).toLocaleDateString()}</span>
               </div>
             )}
             {membership.salon?.phone && (
@@ -1203,7 +1550,7 @@ function MembershipDetailModal({
                           {membership.salon?.owner?.fullName || 'N/A'}
                         </p>
                         {membership.salon?.owner?.email && (
-                          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                          <p className="text-sm text-text-light/60 dark:text-text_dark/60 mt-0.5">
                             {membership.salon.owner.email}
                           </p>
                         )}

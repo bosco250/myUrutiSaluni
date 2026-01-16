@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
@@ -29,6 +29,10 @@ interface MembershipPayment {
     membershipNumber: string;
   };
   membershipId?: string;
+  membership?: {
+    id: string;
+    membershipNumber: string;
+  };
   paymentYear: number;
   installmentNumber: number;
   totalAmount: number;
@@ -73,10 +77,29 @@ export default function MembershipPaymentsPage() {
 
 function MembershipPaymentsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Initialize search from URL parameter (e.g., ?search=MEM-2025-12345)
+  const initialSearch = searchParams.get('search') || '';
+  
+  // Extract year from membership number if present (MEM-YYYY-XXXXXX or MEMBER-YYYY-XXXXXX format)
+  const extractYearFromMembershipNumber = (membershipNum: string): number => {
+    const match = membershipNum.match(/(?:MEM|MEMBER)-(\d{4})-/i);
+    if (match && match[1]) {
+      const year = parseInt(match[1], 10);
+      if (year >= 2020 && year <= 2100) {
+        return year;
+      }
+    }
+    return new Date().getFullYear();
+  };
+  
+  const initialYear = initialSearch ? extractYearFromMembershipNumber(initialSearch) : new Date().getFullYear();
+  
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
+  const [yearFilter, setYearFilter] = useState<number>(initialYear);
   const [selectedPayment, setSelectedPayment] = useState<MembershipPayment | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [recordForm, setRecordForm] = useState<RecordPaymentForm>({
@@ -121,10 +144,13 @@ function MembershipPaymentsContent() {
   // Filter payments
   const filteredPayments = useMemo(() => {
     return payments.filter((payment) => {
+      const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
-        payment.member?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.member?.membershipNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.member?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+        payment.member?.fullName?.toLowerCase().includes(searchLower) ||
+        payment.member?.membershipNumber?.toLowerCase().includes(searchLower) ||
+        payment.member?.email?.toLowerCase().includes(searchLower) ||
+        // Also search by salon membership number (MEM-YYYY-XXXXXX format)
+        payment.membership?.membershipNumber?.toLowerCase().includes(searchLower);
       const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
       return matchesSearch && matchesStatus;
     });

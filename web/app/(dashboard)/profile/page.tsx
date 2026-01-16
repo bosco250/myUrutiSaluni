@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import { User, Save, Loader2, CheckCircle, X } from 'lucide-react';
+import { User, Save, Loader2, CheckCircle, X, ArrowLeft } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
@@ -103,17 +103,30 @@ function ProfileContent() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-2">My Profile</h1>
-        <p className="text-text-light/60 dark:text-text-dark/60">Update your personal information</p>
+        <div className="flex items-center gap-3 mb-4">
+          <Button
+            onClick={() => router.push('/dashboard')}
+            variant="secondary"
+            size="sm"
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-4xl font-bold text-text-light dark:text-text-dark mb-2">My Profile</h1>
+            <p className="text-text-light/60 dark:text-text-dark/60">Update your personal information</p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="profile-fullName" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Full Name
             </label>
             <input
+              id="profile-fullName"
               type="text"
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
@@ -123,10 +136,11 @@ function ProfileContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="profile-phone" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Phone Number
             </label>
             <input
+              id="profile-phone"
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -135,10 +149,11 @@ function ProfileContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+            <label htmlFor="profile-email" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
               Email Address
             </label>
             <input
+              id="profile-email"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -158,7 +173,7 @@ function ProfileContent() {
           <div className="flex gap-3 pt-4">
             <Button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push('/dashboard')}
               variant="outline"
               className="flex-1"
             >

@@ -634,267 +634,170 @@ function ProductModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/55 dark:bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose();
-        }}
-        role="button"
-        tabIndex={-1}
-        aria-label="Close modal"
+        aria-hidden="true"
       />
-
       <div
-        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-        role="presentation"
+        className="relative w-full max-w-2xl overflow-hidden rounded-xl bg-surface-light shadow-2xl dark:bg-surface-dark flex flex-col max-h-[90vh]"
+        role="dialog"
+        aria-modal="true"
       >
-        {/* Hero Header */}
-        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
-          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
-          <div className="relative p-5 text-white">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
-                  <Package className="w-5 h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-xl font-black tracking-tight">
-                    {product ? 'Edit Product' : 'Create Product'}
-                  </h2>
-                  <p className="text-xs text-white/80 mt-1">
-                    Products can be sold; inventory items can also be stock-managed.
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={onClose}
-                className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                aria-label="Close"
-              >
-                <XCircle className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Quick Specs */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
-                  Unit Price
-                </p>
-                <p className="text-lg font-black mt-1">
-                  RWF {Number(formData.unitPrice || 0).toLocaleString()}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
-                  Tax Rate
-                </p>
-                <p className="text-lg font-black mt-1">{Number(formData.taxRate || 0)}%</p>
-              </div>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border-light px-4 py-3 dark:border-border-dark">
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+            {product ? 'Edit Product' : 'New Product'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1 text-text-light/50 hover:bg-background-light hover:text-text-light dark:text-text-dark/50 dark:hover:bg-background-dark dark:hover:text-text-dark transition-colors"
+          >
+            <XCircle className="h-5 w-5" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-5 space-y-5">
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-5">
+          <div className="space-y-4">
             {error && (
-              <div className="p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl">
+              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
                 {error}
               </div>
             )}
 
-            {/* Basics */}
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-bold text-text-light dark:text-text-dark">Basics</p>
-                <span className="text-[10px] uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                  Required
-                </span>
+            {/* Salon Selection */}
+            {(salons.length > 1 || canViewAllSalons(null)) && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Salon *
+                </label>
+                <select
+                  required
+                  value={formData.salonId}
+                  onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                >
+                  <option value="">Select Salon</option>
+                  {salons.map((salon) => (
+                    <option key={salon.id} value={salon.id}>
+                      {salon.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g. Professional Shampoo"
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {salons.length > 1 ? (
-                  <div className="md:col-span-2">
-                    <label
-                      htmlFor="inventory-product-salon"
-                      className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
-                    >
-                      Salon *
-                    </label>
-                    <select
-                      id="inventory-product-salon"
-                      required
-                      value={formData.salonId}
-                      onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                      className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                    >
-                      <option value="">Select salon</option>
-                      {salons.map((salon) => (
-                        <option key={salon.id} value={salon.id}>
-                          {salon.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : salons.length === 1 ? (
-                  <div className="md:col-span-2 text-xs text-text-light/60 dark:text-text-dark/60">
-                    Salon:{' '}
-                    <span className="font-semibold text-text-light dark:text-text-dark">
-                      {salons[0].name}
-                    </span>
-                  </div>
-                ) : null}
-
-                <div className="md:col-span-2">
-                  <label
-                    htmlFor="inventory-product-name"
-                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
-                  >
-                    Product Name *
-                  </label>
-                  <input
-                    id="inventory-product-name"
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Professional Shampoo"
-                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="inventory-product-sku"
-                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
-                  >
-                    SKU
-                  </label>
-                  <input
-                    id="inventory-product-sku"
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    placeholder="e.g., SHP-001"
-                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="inventory-product-description"
-                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
-                  >
-                    Description
-                  </label>
-                  <textarea
-                    id="inventory-product-description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    placeholder="Product description (optional)"
-                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
-                  />
-                </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  SKU
+                </label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder="e.g. SHP-001"
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                />
               </div>
-            </div>
 
-            {/* Pricing & Tax */}
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <p className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Pricing</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="inventory-product-unitPrice"
-                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
-                  >
-                    Unit Price (RWF)
-                  </label>
-                  <input
-                    id="inventory-product-unitPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.unitPrice}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        unitPrice: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="inventory-product-taxRate"
-                    className="block text-[10px] font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-2"
-                  >
-                    Tax Rate (%)
-                  </label>
-                  <input
-                    id="inventory-product-taxRate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={formData.taxRate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        taxRate: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    placeholder="0.00"
-                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  />
-                </div>
-
-                <div className="md:col-span-2 flex items-start gap-3 p-3 rounded-xl border border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40">
-                  <input
-                    id="inventory-product-track"
-                    type="checkbox"
-                    checked={formData.isInventoryItem}
-                    onChange={(e) =>
-                      setFormData({ ...formData, isInventoryItem: e.target.checked })
-                    }
-                    className="mt-0.5 w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
-                  />
-                  <div className="min-w-0">
-                    <label
-                      htmlFor="inventory-product-track"
-                      className="text-sm font-semibold text-text-light dark:text-text-dark"
-                    >
-                      Track inventory
-                    </label>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                      Enables stock level management for this item.
-                    </p>
-                  </div>
-                </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Type
+                </label>
+                 <select
+                    value={formData.isInventoryItem ? 'inventory' : 'service'}
+                    onChange={(e) => setFormData({...formData, isInventoryItem: e.target.value === 'inventory'})}
+                    className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                 >
+                    <option value="inventory">Inventory Item (Track Stock)</option>
+                    <option value="service">Non-Inventory / Service</option>
+                 </select>
               </div>
-            </div>
-          </div>
 
-          {/* Sticky actions */}
-          <div className="sticky bottom-0 p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
-            <div className="flex gap-2">
-              <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button type="submit" loading={loading} loadingText="Saving..." className="flex-1">
-                {product ? 'Update Product' : 'Create Product'}
-              </Button>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Unit Price (RWF)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.unitPrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, unitPrice: parseFloat(e.target.value) || 0 })
+                  }
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Tax Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={formData.taxRate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, taxRate: parseFloat(e.target.value) || 0 })
+                  }
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={2}
+                  placeholder="Optional product description..."
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark resize-none"
+                />
+              </div>
             </div>
           </div>
         </form>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 border-t border-border-light bg-surface-light px-4 py-3 dark:border-border-dark dark:bg-surface-dark">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            className="h-9 px-4 text-sm font-semibold"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            loading={loading}
+            onClick={handleSubmit} // Explicitly trigger submit here if button is outside form, or rely on form id but putting it inside form or trigger is easier. Putting click handler is safe.
+            loadingText="Saving..."
+            className="h-9 px-4 text-sm font-semibold"
+          >
+            {product ? 'Save Changes' : 'Create Product'}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -29,7 +29,6 @@ import {
   ChevronRight,
   MoreHorizontal,
   Wallet,
-  AlertCircle,
 } from 'lucide-react';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 
@@ -269,28 +268,20 @@ function CommissionsContent() {
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-
   const markAsPaidMutation = useMutation({
     mutationFn: async (data: any) => {
       const endpoint = data.ids 
         ? '/commissions/mark-paid-batch' 
         : `/commissions/${data.id}/mark-paid`;
-      // Only send required fields to backend, not id/ids
       const body = data.ids 
-        ? { commissionIds: data.ids, paymentMethod: data.paymentMethod, paymentReference: data.paymentReference } 
-        : { paymentMethod: data.paymentMethod, paymentReference: data.paymentReference };
+        ? { commissionIds: data.ids, ...data } 
+        : data;
       return api.post(endpoint, body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
       setShowPaymentModal(false);
       setSelectedCommission(null);
-      setPaymentError(null);
-    },
-    onError: (err: any) => {
-      const message = err?.response?.data?.message || err?.message || 'Payment failed. Please try again.';
-      setPaymentError(message);
     },
   });
 
@@ -622,11 +613,9 @@ function CommissionsContent() {
           commission={selectedCommission}
           totalAmount={selectedCommission.id === 'batch' ? selectedCommission.amount : toNumber(selectedCommission.amount)}
           count={selectedCommission.id === 'batch' ? stats.unpaidCount : 1}
-          error={paymentError}
           onClose={() => {
             setShowPaymentModal(false);
             setSelectedCommission(null);
-            setPaymentError(null);
           }}
           onSubmit={(method: string, ref: string) => markAsPaidMutation.mutate({
             id: selectedCommission.id !== 'batch' ? selectedCommission.id : undefined,
@@ -645,44 +634,12 @@ function CommissionPaymentModal({
   commission,
   totalAmount,
   count,
-  error,
   onClose,
   onSubmit,
   isLoading,
 }: any) {
-  const router = useRouter();
-  const [method, setMethod] = useState<'wallet' | 'mobile_money'>('wallet');
+  const [method, setMethod] = useState('cash');
   const [reference, setReference] = useState('');
-
-  // Fetch wallet balance
-  const { data: walletData, isLoading: walletLoading } = useQuery({
-    queryKey: ['my-wallet'],
-    queryFn: async () => {
-      const response = await api.get('/wallets/my-wallet');
-      return response.data;
-    },
-  });
-
-  const walletBalance = walletData?.balance ? Number(walletData.balance) : 0;
-  const hasInsufficientBalance = walletBalance < totalAmount;
-
-  // Payment methods config
-  const paymentMethods = [
-    { 
-      id: 'wallet' as const, 
-      label: 'Wallet', 
-      icon: Wallet,
-      description: `Balance: RWF ${walletBalance.toLocaleString()}`,
-      disabled: hasInsufficientBalance,
-    },
-    { 
-      id: 'mobile_money' as const, 
-      label: 'Airtel Money', 
-      icon: CreditCard,
-      description: 'Direct transfer',
-      disabled: false,
-    },
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -703,9 +660,9 @@ function CommissionPaymentModal({
               <Wallet className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Pay Commission</h2>
+              <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Record Payment</h2>
               <p className="text-sm text-text-light/60">
-                {count > 1 ? `${count} pending commissions` : 'Single commission payment'}
+                {count > 1 ? `Paying ${count} pending commissions` : 'Paying single commission'}
               </p>
             </div>
           </div>
@@ -714,117 +671,57 @@ function CommissionPaymentModal({
           </button>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="mb-4 p-3 bg-danger/10 border border-danger/20 text-danger rounded-lg text-sm font-medium flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span>{error}</span>
-              {error.toLowerCase().includes('insufficient') && (
-                <button 
-                  onClick={() => { onClose(); router.push('/wallets'); }}
-                  className="block mt-1 text-primary hover:underline font-semibold"
-                >
-                  → Top up your wallet
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         <div className="space-y-4">
-          {/* Amount Display */}
           <div className="bg-background-light dark:bg-background-dark rounded-xl p-4 text-center border border-border-light dark:border-border-dark">
-            <span className="text-xs font-semibold text-text-light/60 uppercase">Total to Pay</span>
+            <span className="text-xs font-semibold text-text-light/60 uppercase">Total Amount</span>
             <p className="text-3xl font-bold text-primary mt-1">
               RWF {totalAmount.toLocaleString()}
             </p>
           </div>
 
-          {/* Wallet Balance Warning */}
-          {method === 'wallet' && hasInsufficientBalance && !error && (
-            <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
-                <div className="flex-1 text-sm">
-                  <p className="font-semibold text-warning">Insufficient Balance</p>
-                  <p className="text-text-light/70 dark:text-text-dark/70 mt-0.5">
-                    Your wallet has RWF {walletBalance.toLocaleString()}, but you need RWF {totalAmount.toLocaleString()}.
-                  </p>
-                  <button 
-                    onClick={() => { onClose(); router.push('/wallets'); }}
-                    className="mt-2 text-primary hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <Wallet className="w-3.5 h-3.5" />
-                    Top up your wallet
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Payment Method Selection */}
           <div>
-            <p className="block text-sm font-medium mb-2">Payment Method</p>
-            <div className="grid grid-cols-2 gap-3">
-              {paymentMethods.map((pm) => {
-                const Icon = pm.icon;
-                const isSelected = method === pm.id;
-                const isDisabled = pm.disabled && pm.id === 'wallet';
-                return (
-                  <button
-                    key={pm.id}
-                    onClick={() => !isDisabled && setMethod(pm.id)}
-                    disabled={isLoading}
-                    className={`p-3 rounded-xl border-2 transition-all text-left ${
-                      isSelected 
-                        ? 'bg-primary/10 border-primary' 
-                        : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                    } ${isDisabled ? 'opacity-50' : ''}`}
-                    type="button"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-text-light/60'}`} />
-                      <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : ''}`}>
-                        {pm.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-text-light/50 dark:text-text-dark/50">
-                      {walletLoading && pm.id === 'wallet' ? 'Loading...' : pm.description}
-                    </p>
-                  </button>
-                );
-              })}
+            <p className="block text-sm font-medium mb-1.5">Payment Method</p>
+            <div className="grid grid-cols-3 gap-2">
+              {['cash', 'mobile_money', 'bank_transfer'].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMethod(m)}
+                  className={`py-2 px-1 text-xs font-medium rounded-lg border transition-all ${
+                    method === m 
+                      ? 'bg-primary/10 border-primary text-primary' 
+                      : 'border-border-light dark:border-border-dark hover:border-primary/50'
+                  }`}
+                  type="button"
+                >
+                  {m.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Reference Input (for Airtel) */}
-          {method === 'mobile_money' && (
-            <div>
-              <label htmlFor="commission-payment-reference" className="block text-sm font-medium mb-1.5">
-                Transaction Reference
-              </label>
-              <input
-                id="commission-payment-reference"
-                type="text"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Airtel Money Transaction ID"
-                className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-              />
-            </div>
-          )}
+          <div>
+            <label htmlFor="commission-payment-reference" className="block text-sm font-medium mb-1.5">
+              Reference (Optional)
+            </label>
+            <input
+              id="commission-payment-reference"
+              type="text"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="Transaction ID / Receipt #"
+              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            />
+          </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
             <Button 
               variant="primary" 
               className="flex-1" 
               onClick={() => onSubmit(method, reference)}
-              disabled={isLoading || (method === 'wallet' && hasInsufficientBalance)}
+              disabled={isLoading}
             >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay Now'}
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Payment'}
             </Button>
           </div>
         </div>

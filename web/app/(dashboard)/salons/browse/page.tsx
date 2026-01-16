@@ -16,6 +16,13 @@ import {
   ChevronDown,
   SortAsc,
   Scissors,
+  Sparkles,
+  TrendingUp,
+  Heart,
+  Zap,
+  Award,
+  Grid3x3,
+  List,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -54,8 +61,9 @@ interface Service {
   salonId?: string;
 }
 
-type SortOption = 'name' | 'rating' | 'reviews' | 'newest';
+type SortOption = 'name' | 'rating' | 'reviews' | 'newest' | 'trending' | 'trending_today';
 type FilterCategory = 'all' | 'hair' | 'nails' | 'makeup' | 'spa' | 'barber';
+type ViewMode = 'grid' | 'list';
 
 export default function BrowseSalonsPage() {
   return (
@@ -69,10 +77,12 @@ function BrowseSalonsContent() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [sortBy, setSortBy] = useState<SortOption>('trending');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const itemsPerPage = viewMode === 'grid' ? 12 : 8;
 
   const {
     data: salons,
@@ -168,6 +178,13 @@ function BrowseSalonsContent() {
           return (b.reviewCount || 0) - (a.reviewCount || 0);
         case 'newest':
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'trending':
+        case 'trending_today':
+          return (
+            (b.reviewCount || 0) * 0.3 +
+            (b.rating || 0) * 10 -
+            ((a.reviewCount || 0) * 0.3 + (a.rating || 0) * 10)
+          );
         default:
           return 0;
       }
@@ -213,51 +230,64 @@ function BrowseSalonsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
-              Browse Salons
+    <div className="min-h-screen bg-gradient-to-br from-background-light via-background-light to-primary/5 dark:from-background-dark dark:via-background-dark dark:to-primary/10 pb-16">
+      {/* HERO SECTION WITH PREMIUM SEARCH */}
+      <div className="relative overflow-hidden py-6 md:py-8 px-4 sm:px-6">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-4">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-xs font-semibold text-primary">Find Your Perfect Salon</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark mb-2">
+              Discover Beauty Excellence
             </h1>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-              Discover the best beauty professionals near you
+            <p className="text-sm text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
+              Handpicked salons and stylists nearby — book a look you'll love.
             </p>
           </div>
 
-          {/* Search */}
-          <div className="relative w-full md:w-80 group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-text-light/40 dark:text-text-dark/40" />
+          {/* Premium Search Bar */}
+          <div className="max-w-3xl mx-auto mb-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-2xl px-4 py-3 flex items-center gap-3 group-focus-within:border-primary transition-colors">
+                <Search className="w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+                <input
+                  type="text"
+                  className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder-text-light/40 dark:placeholder-text-dark/40 focus:outline-none text-sm"
+                  placeholder="Search salons, services, or stylists..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                    className="text-text-light/40 hover:text-text-light dark:hover:text-text-dark transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
             </div>
-            <input
-              type="text"
-              className="block w-full pl-9 pr-9 py-2 border border-border-light dark:border-border-dark rounded-xl text-sm bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder-text-light/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              placeholder="Search salons, services..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setCurrentPage(1);
-                }}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-light/40 hover:text-text-light transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
           </div>
-        </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex overflow-x-auto pb-2 gap-2 scrollbar-hide flex-1">
+          {/* Filter Pills */}
+          <div className="flex flex-wrap justify-center gap-2">
             {categories.map((category) => (
               <button
                 key={category.value}
@@ -265,92 +295,171 @@ function BrowseSalonsContent() {
                   setSelectedCategory(category.value);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   selectedCategory === category.value
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? 'bg-primary text-white shadow-lg'
+                    : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:border-primary/30 hover:bg-primary/5'
                 }`}
               >
                 {category.label}
               </button>
             ))}
           </div>
+        </div>
+      </div>
 
-          {/* Sort */}
-          <div className="relative">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-xs text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              <SortAsc className="w-3 h-3" />
-              <span className="capitalize">{sortBy}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
+      {/* MAIN CONTENT */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* TOP STATS & CONTROLS */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border-light dark:border-border-dark">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Results Count */}
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Total Results</p>
+                <p className="text-lg font-bold text-text-light dark:text-text-dark">
+                  {filteredAndSortedSalons.length}
+                </p>
+              </div>
+            </div>
 
-            {showFilters && (
-              <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowFilters(false)}
-                  onKeyDown={(e) => { if (e.key === 'Escape') setShowFilters(false); }}
-                  role="button"
-                  tabIndex={-1}
-                  aria-label="Close sort menu"
-                />
-                <div className="absolute right-0 mt-2 w-40 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg z-20 py-1">
-                  {(['name', 'rating', 'reviews', 'newest'] as SortOption[]).map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        setSortBy(option);
-                        setShowFilters(false);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                        sortBy === option
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-text-light dark:text-text-dark hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <span className="capitalize">{option}</span>
-                    </button>
-                  ))}
+            {/* Average Rating */}
+            {filteredAndSortedSalons.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-warning fill-warning" />
                 </div>
-              </>
+                <div>
+                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">Avg. Rating</p>
+                  <p className="text-lg font-bold text-text-light dark:text-text-dark">
+                    {(
+                      filteredAndSortedSalons.reduce((sum, s) => sum + (s.rating || 0), 0) /
+                      filteredAndSortedSalons.length
+                    ).toFixed(1)}
+                  </p>
+                </div>
+              </div>
             )}
+          </div>
+
+          {/* View & Sort Controls */}
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 bg-surface-light dark:bg-surface-dark p-1 rounded-lg border border-border-light dark:border-border-dark">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded transition-all ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded transition-all ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark hover:border-primary/30 transition-colors"
+              >
+                <SortAsc className="w-4 h-4" />
+                <span className="capitalize hidden sm:inline">
+                  {sortBy === 'trending_today' ? 'Trending' : sortBy}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {showFilters && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowFilters(false)} />
+                  <div className="absolute right-0 mt-2 w-56 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl z-20 py-2">
+                    {[
+                      {
+                        value: 'trending' as SortOption,
+                        label: '🔥 Trending Now',
+                        icon: TrendingUp,
+                      },
+                      {
+                        value: 'trending_today' as SortOption,
+                        label: '⚡ Trending Today',
+                        icon: Zap,
+                      },
+                      { value: 'rating' as SortOption, label: '⭐ Highest Rated', icon: Star },
+                      {
+                        value: 'reviews' as SortOption,
+                        label: '💬 Most Reviewed',
+                        icon: TrendingUp,
+                      },
+                      { value: 'newest' as SortOption, label: '✨ Newest', icon: Sparkles },
+                      { value: 'name' as SortOption, label: '🔤 Name (A-Z)', icon: null },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortBy(option.value);
+                          setShowFilters(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
+                          sortBy === option.value
+                            ? 'bg-primary/15 text-primary font-semibold'
+                            : 'text-text-light dark:text-text-dark hover:bg-primary/5'
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Results Count */}
-        {filteredAndSortedSalons.length > 0 && (
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-            Showing {paginatedSalons.length} of {filteredAndSortedSalons.length} salons
-          </p>
-        )}
-
-        {/* Salons Grid */}
+        {/* SALONS GRID/LIST */}
         {paginatedSalons.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                  : 'space-y-4'
+              }
+            >
               {paginatedSalons.map((salon) => (
                 <SalonCard
                   key={salon.id}
                   salon={salon}
+                  isFavorited={favorites.includes(salon.id)}
+                  onToggleFavorite={(id) => {
+                    setFavorites((prev) =>
+                      prev.includes(id) ? prev.filter((fid) => fid !== id) : [...prev, id]
+                    );
+                  }}
                   onViewDetails={() => router.push(`/salons/browse/${salon.id}`)}
+                  viewMode={viewMode}
                 />
               ))}
             </div>
 
-            {/* Pagination */}
+            {/* PAGINATION */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-4">
+              <div className="flex items-center justify-center gap-2 pt-8 border-t border-border-light dark:border-border-dark">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="h-7 text-xs"
                 >
-                  Previous
+                  ← Previous
                 </Button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -368,10 +477,10 @@ function BrowseSalonsContent() {
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+                        className={`px-3 py-2 rounded-lg transition-all ${
                           currentPage === pageNum
-                            ? 'bg-primary text-white'
-                            : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800'
+                            ? 'bg-primary text-white shadow-lg'
+                            : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:border-primary/30'
                         }`}
                       >
                         {pageNum}
@@ -384,36 +493,32 @@ function BrowseSalonsContent() {
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="h-7 text-xs"
                 >
-                  Next
+                  Next →
                 </Button>
               </div>
             )}
           </>
         ) : (
-          <div className="text-center py-12 bg-surface-light dark:bg-surface-dark rounded-xl border border-dashed border-border-light dark:border-border-dark">
-            <div className="bg-gray-50 dark:bg-gray-800 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Search className="w-6 h-6 text-text-light/30 dark:text-text-dark/30" />
+          <div className="py-16 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <Search className="w-8 h-8 text-primary/60" />
             </div>
-            <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">
+            <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
               No salons found
             </h3>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-4">
-              {searchQuery
-                ? `No results for "${searchQuery}"`
-                : 'No salons match your filters'}
+            <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
+              {searchQuery ? `No results for "${searchQuery}"` : 'No salons match your filters'}
             </p>
             <Button
-              variant="outline"
-              size="sm"
+              variant="primary"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
                 setCurrentPage(1);
               }}
             >
-              Clear filters
+              Clear filters & try again
             </Button>
           </div>
         )}
@@ -422,112 +527,276 @@ function BrowseSalonsContent() {
   );
 }
 
-function SalonCard({ salon, onViewDetails }: { salon: Salon; onViewDetails: () => void }) {
+function SalonCard({
+  salon,
+  isFavorited,
+  onToggleFavorite,
+  onViewDetails,
+  viewMode = 'grid',
+}: {
+  salon: Salon;
+  isFavorited?: boolean;
+  onToggleFavorite?: (id: string) => void;
+  onViewDetails: () => void;
+  viewMode?: ViewMode;
+}) {
   const hasImage = salon.images && salon.images.length > 0 && salon.images[0];
   const imageUrl = hasImage ? salon.images![0] : null;
+  const location =
+    [salon.district, salon.city].filter(Boolean).join(', ') ||
+    salon.address ||
+    'Location not available';
 
-  const location = [salon.district, salon.city].filter(Boolean).join(', ') || salon.address || 'Location not available';
+  // Determine badges
+  const isTrending = (salon.reviewCount || 0) > 50;
+  const isTopRated = (salon.rating || 0) >= 4.5;
+  const isNew = salon.createdAt
+    ? Date.now() - new Date(salon.createdAt).getTime() < 30 * 24 * 60 * 60 * 1000
+    : false;
 
+  if (viewMode === 'list') {
+    return (
+      <div className="group bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50 hover:shadow-xl transition-all cursor-pointer overflow-hidden flex flex-row">
+        {/* Image */}
+        <div className="relative w-32 h-32 flex-shrink-0 overflow-hidden bg-background-light dark:bg-background-dark">
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={salon.name}
+              fill
+              className="object-cover group-hover:scale-110 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Scissors className="w-8 h-8 text-primary/40" />
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 p-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex-1">
+                <h3 className="font-bold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition-colors">
+                  {salon.name}
+                </h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <div className="flex items-center gap-1 text-xs">
+                    <Star className="w-3 h-3 text-warning fill-warning" />
+                    <span className="font-semibold text-text-light dark:text-text-dark">
+                      {salon.rating?.toFixed(1)}
+                    </span>
+                    <span className="text-text-light/40 dark:text-text-dark/40">
+                      ({salon.reviewCount})
+                    </span>
+                  </div>
+                  {isTrending && (
+                    <span className="text-[10px] bg-warning/20 text-warning px-2 py-0.5 rounded-full font-semibold">
+                      Trending
+                    </span>
+                  )}
+                  {isTopRated && (
+                    <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-semibold">
+                      Top Rated
+                    </span>
+                  )}
+                  {isNew && (
+                    <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-semibold">
+                      New
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite?.(salon.id);
+                }}
+                className="text-text-light/40 hover:text-error transition-colors"
+              >
+                <Heart className={`w-5 h-5 ${isFavorited ? 'fill-error text-error' : ''}`} />
+              </button>
+            </div>
+
+            <div className="space-y-1 text-xs text-text-light/60 dark:text-text-dark/60">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-3 h-3 flex-shrink-0" />
+                <span>{location}</span>
+              </div>
+              {salon.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3 h-3 flex-shrink-0" />
+                  <span>{salon.phone}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-border-light dark:border-border-dark">
+            <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full font-medium">
+              {salon.services?.length || 0} services
+            </span>
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails();
+              }}
+              className="text-xs"
+            >
+              View Details
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Grid view (default)
   return (
     <div
       onClick={onViewDetails}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          onViewDetails();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      className="group bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer overflow-hidden flex flex-col"
+      className="group bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark hover:border-primary/50 hover:shadow-2xl transition-all cursor-pointer overflow-hidden flex flex-col h-full"
     >
-      {/* Image Section */}
-      <div className="relative h-36 overflow-hidden bg-background-light dark:bg-background-dark">
+      {/* Image Section with Overlays */}
+      <div className="relative h-44 overflow-hidden bg-background-light dark:bg-background-dark">
         {imageUrl ? (
           <Image
             src={imageUrl}
             alt={salon.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover group-hover:scale-110 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Scissors className="w-8 h-8 text-primary/60" />
               </div>
-              <span className="text-xs text-text-light/40 dark:text-text-dark/40 font-medium">No Image</span>
+              <span className="text-xs text-text-light/40 dark:text-text-dark/40 font-medium">
+                No Image
+              </span>
             </div>
           </div>
         )}
+
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
         {/* Status Badge */}
-        <div className="absolute top-2 right-2">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-            salon.status === 'active' 
-              ? 'bg-success/90 text-white' 
-              : 'bg-gray-500/90 text-white'
-          }`}>
+        <div className="absolute top-3 right-3">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
+              salon.status === 'active'
+                ? 'bg-success/20 text-success'
+                : 'bg-gray-200/20 text-text-secondary'
+            }`}
+            aria-label={salon.status === 'active' ? 'Open' : 'Closed'}
+          >
             {salon.status === 'active' ? 'Open' : 'Closed'}
           </span>
         </div>
+
+        {/* Badges (visible on card hover) */}
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+          {isTrending && (
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-warning/20 text-warning">
+              Trending
+            </span>
+          )}
+          {isTopRated && (
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-success/20 text-success">
+              Top Rated
+            </span>
+          )}
+          {isNew && (
+            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+              New
+            </span>
+          )}
+        </div>
+
+        {/* Favorite Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite?.(salon.id);
+          }}
+          className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white transition-all transform hover:scale-110 opacity-0 group-hover:opacity-100"
+        >
+          <Heart
+            className={`w-5 h-5 transition-colors ${isFavorited ? 'fill-error text-error' : 'text-text-light/40'}`}
+          />
+        </button>
       </div>
 
       {/* Content */}
       <div className="p-4 flex-1 flex flex-col">
-        <div className="flex items-start justify-between mb-2">
+        {/* Title & Rating */}
+        <div className="mb-2">
           <h3 className="font-bold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition-colors line-clamp-1">
             {salon.name}
           </h3>
-          <div className="flex items-center gap-1 text-xs flex-shrink-0 ml-2">
-            <Star className="w-3 h-3 text-warning fill-warning" />
-            <span className="font-semibold text-text-light dark:text-text-dark">
-              {salon.rating?.toFixed(1)}
-            </span>
-            <span className="text-text-light/40 dark:text-text-dark/40">
-              ({salon.reviewCount})
-            </span>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1">
+              <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+              <span className="font-bold text-sm text-text-light dark:text-text-dark">
+                {salon.rating?.toFixed(1)}
+              </span>
+              <span className="text-xs text-text-light/40 dark:text-text-dark/40">
+                ({salon.reviewCount} reviews)
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* Description */}
         {salon.description && (
           <p className="text-xs text-text-light/70 dark:text-text-dark/70 line-clamp-2 mb-3">
             {salon.description}
           </p>
         )}
 
-        <div className="space-y-1.5 mt-auto">
-          <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
-            <MapPin className="w-3 h-3 flex-shrink-0" />
+        {/* Location & Contact */}
+        <div className="space-y-1.5 mt-auto mb-4 text-xs text-text-light/60 dark:text-text-dark/60">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
             <span className="truncate">{location}</span>
           </div>
 
           {salon.phone && (
-            <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
-              <Phone className="w-3 h-3 flex-shrink-0" />
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-primary flex-shrink-0" />
               <span className="truncate">{salon.phone}</span>
             </div>
           )}
 
           {salon.website && (
-            <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
-              <Globe className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{salon.website.replace(/^https?:\/\//, '')}</span>
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-primary flex-shrink-0" />
+              <span className="truncate text-primary hover:underline">
+                {salon.website.replace(/^https?:\/\//, '')}
+              </span>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="pt-3 mt-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
-          {salon.services && salon.services.length > 0 ? (
-            <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full font-medium">
-              {salon.services.length} services
-            </span>
-          ) : (
-            <span className="text-[10px] text-text-light/40 dark:text-text-dark/40">
-              No services listed
-            </span>
-          )}
-          <div className="flex items-center gap-1 text-xs font-semibold text-primary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-            Book <ArrowRight className="w-3 h-3" />
+        {/* Services */}
+        <div className="pt-3 border-t border-border-light dark:border-border-dark">
+          <div className="flex items-center justify-between">
+            {salon.services && salon.services.length > 0 ? (
+              <span className="text-xs font-semibold bg-primary/20 text-primary px-3 py-1.5 rounded-full">
+                {salon.services.length} Services
+              </span>
+            ) : (
+              <span className="text-xs text-text-light/40 dark:text-text-dark/40">
+                No services listed
+              </span>
+            )}
+            <div className="flex items-center gap-1 text-xs font-bold text-primary opacity-0 -translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+              View <ArrowRight className="w-3.5 h-3.5" />
+            </div>
           </div>
         </div>
       </div>

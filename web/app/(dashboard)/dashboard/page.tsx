@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useMembershipStatus } from '@/hooks/useMembershipStatus';
@@ -40,11 +41,19 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user, refreshUser } = useAuthStore();
   const { isCustomer, isSalonOwner, isAdmin } = usePermissions();
   const { data: membershipStatus } = useMembershipStatus();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showRefreshPrompt, setShowRefreshPrompt] = useState(false);
+
+  // Redirect customers to salons browse page (safety redirect in case they navigate to /dashboard directly)
+  useEffect(() => {
+    if (user?.role === 'customer') {
+      router.push('/salons/browse');
+    }
+  }, [user?.role, router]);
 
   // Check if user role might be outdated (e.g., after membership approval)
   useEffect(() => {
@@ -112,8 +121,10 @@ export default function DashboardPage() {
   }
 
   // Render role-specific dashboard
+  // Note: Customers are redirected to /salons/browse, so this won't render for them
+  // This serves as a fallback in case redirect hasn't completed yet
   if (isCustomer()) {
-    return <CustomerDashboard />;
+    return <DashboardSkeleton />; // Show loading while redirect happens
   }
 
   if (isSalonOwner()) {

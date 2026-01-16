@@ -21,7 +21,7 @@ import {
   ChevronDown,
   Briefcase,
   PieChart,
-  LucideIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useAuthStore } from '@/store/auth-store';
@@ -29,6 +29,8 @@ import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
+import { useEmployeePermissions } from '@/hooks/useEmployeePermissions';
+import { EmployeePermission } from '@/lib/employee-permissions';
 
 // --- Types ---
 interface FinancialSummary {
@@ -105,36 +107,39 @@ function StatCard({
   color?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
 }) {
   const colorMap = {
-    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    red: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-    purple: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-    orange: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    blue: 'bg-blue-500/10 text-blue-500',
+    green: 'bg-emerald-500/10 text-emerald-500',
+    red: 'bg-rose-500/10 text-rose-500',
+    purple: 'bg-violet-500/10 text-violet-500',
+    orange: 'bg-amber-500/10 text-amber-500',
   };
 
-  const trendColor = trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : trend === 'down' ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500';
+  const trendBadgeClass =
+    trend === 'up'
+      ? 'bg-emerald-500/10 text-emerald-500'
+      : trend === 'down'
+        ? 'bg-rose-500/10 text-rose-500'
+        : 'bg-gray-100 dark:bg-gray-800 text-text-light/60 dark:text-text-dark/60';
   const TrendIcon = trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : null;
 
   return (
-    <div className="relative overflow-hidden bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5 hover:border-primary/50 transition-all duration-300 shadow-sm group">
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-lg ${colorMap[color]} group-hover:scale-110 transition-transform`}>
-          <Icon className="w-6 h-6" />
+    <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all">
+      <div className="flex items-start justify-between mb-3">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorMap[color]} group-hover:scale-105 transition-transform`}>
+          <Icon className="h-4 w-4" />
         </div>
         {trend && TrendIcon && (
-          <div className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${trend === 'up' ? 'bg-emerald-100 dark:bg-emerald-500/10' : 'bg-rose-100 dark:bg-rose-500/10'} ${trendColor}`}>
-            <TrendIcon className="w-3 h-3 mr-1" />
+          <div className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${trendBadgeClass}`}>
+            <TrendIcon className="h-3 w-3" />
             {trendValue}
           </div>
         )}
       </div>
-      <div>
-        <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">{title}</p>
-        <h3 className="text-2xl font-bold text-text-light dark:text-text-dark">{amount}</h3>
-        {subtext && <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">{subtext}</p>}
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60">{title}</p>
+        <h3 className="text-xl font-bold text-text-light dark:text-text-dark">{amount}</h3>
+        {subtext && <p className="text-xs text-text-light/40 dark:text-text-dark/40">{subtext}</p>}
       </div>
-      {/* Background Decor */}
-      <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full opacity-5 pointer-events-none ${color.replace('text-', 'bg-').split(' ')[0]}`} />
     </div>
   );
 }
@@ -150,7 +155,7 @@ function TabNav({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex p-1 space-x-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl w-fit mb-6">
+    <div className="mb-4 flex w-fit gap-1 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-1 sm:mb-6">
       {tabs.map((tab) => {
         const isActive = activeString === tab.id;
         const Icon = tab.icon;
@@ -159,11 +164,15 @@ function TabNav({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={`
-              flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-              ${isActive ? 'bg-primary text-white shadow-md' : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800'}
+              flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors
+              ${
+                isActive
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-text-light/60 dark:text-text-dark/60 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light dark:hover:text-text-dark'
+              }
             `}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="h-3.5 w-3.5" />
             <span>{tab.name}</span>
           </button>
         );
@@ -176,14 +185,14 @@ function TabNav({
 function CategoryProgress({ name, amount, total, colorClass = 'bg-primary' }: { name: string, amount: number, total: number, colorClass?: string }) {
   const percentage = total > 0 ? (amount / total) * 100 : 0;
   return (
-    <div className="group">
-      <div className="flex justify-between text-sm mb-1">
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-text-light dark:text-text-dark">{name}</span>
         <span className="text-text-light/60 dark:text-text-dark/60">{formatCurrency(amount)}</span>
       </div>
-      <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-border-light/40 dark:bg-border-dark/40">
         <div 
-          className={`h-2 rounded-full ${colorClass} transition-all duration-500 ease-out group-hover:brightness-110`} 
+          className={`h-2 rounded-full ${colorClass} transition-all duration-500 ease-out`} 
           style={{ width: `${percentage}%` }} 
         />
       </div>
@@ -233,13 +242,35 @@ export default function AccountingPage() {
   }, [salons, selectedSalon]);
 
   const salonId = selectedSalon?.id || '';
+  
+  // Fetch permissions for the selected salon
+  const { can, isLoading: isLoadingPermissions } = useEmployeePermissions(salonId);
 
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: PieChart },
-    { id: 'expenses', name: 'Expenses', icon: Receipt },
-    { id: 'accounts', name: 'Accounts', icon: BookOpen },
-    { id: 'journals', name: 'Journals', icon: FileText },
-  ];
+  // Define tabs based on permissions
+  const tabs = useMemo(() => {
+    const t = [
+      { id: 'overview', name: 'Overview', icon: PieChart },
+    ];
+
+    if (can(EmployeePermission.VIEW_EXPENSE_REPORTS) || can(EmployeePermission.MANAGE_EXPENSES)) {
+      t.push({ id: 'expenses', name: 'Expenses', icon: Receipt });
+    }
+    
+    // Assuming Accounts/Journals require MANAGE_EXPENSES for now as they are advanced
+    // Adjust permissions as needed for these tabs
+    if (can(EmployeePermission.MANAGE_EXPENSES)) {
+      t.push({ id: 'accounts', name: 'Accounts', icon: BookOpen });
+      t.push({ id: 'journals', name: 'Journals', icon: FileText });
+    }
+    return t;
+  }, [can]);
+
+  // Redirect if active tab becomes inaccessible
+  useEffect(() => {
+     if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
+        setActiveTab(tabs[0].id);
+     }
+  }, [tabs, activeTab]);
 
   // Logic for quick date sets
   const handlePresetDate = (label: string, start: Date, end: Date) => {
@@ -279,33 +310,33 @@ export default function AccountingPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-16">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Accounting</h1>
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">
             Track your financial health and manage expenses
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Salon Selector */}
           {salons.length > 1 && (
-             <div className="relative group">
+             <div className="relative">
                 <select 
                   value={selectedSalon?.id || ''}
                   onChange={(e) => setSelectedSalon(salons.find(s => s.id === e.target.value) || null)}
-                  className="appearance-none pl-4 pr-10 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer hover:border-primary/50 transition-all"
+                  className="appearance-none rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-3 py-2 text-sm font-medium text-text-light dark:text-text-dark transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   {salons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <ChevronDown className="absolute right-3 top-2.5 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-text-light/40 dark:text-text-dark/40" />
              </div>
           )}
 
           {/* Date Picker Actions */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-1 flex items-center gap-1">
+          <div className="flex items-center gap-1 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-1 py-1">
             <Button
               type="button"
               size="sm"
@@ -313,7 +344,7 @@ export default function AccountingPage() {
               onClick={() =>
                 handlePresetDate('This Month', startOfMonth(new Date()), endOfMonth(new Date()))
               }
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs font-medium"
             >
               Month
             </Button>
@@ -328,13 +359,13 @@ export default function AccountingPage() {
                   endOfMonth(subMonths(new Date(), 1))
                 )
               }
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs font-medium"
             >
               Last Month
             </Button>
-            <div className="h-4 w-px bg-border-light dark:bg-border-dark mx-1" />
-            <div className="p-1 rounded bg-background-secondary dark:bg-background-dark text-text-light/40 border border-border-light/50">
-              <Calendar className="w-3 h-3" />
+            <div className="mx-1 h-4 w-px bg-border-light dark:bg-border-dark" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border-light/60 bg-background-secondary text-text-light/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark/40">
+              <Calendar className="h-3.5 w-3.5" />
             </div>
           </div>
         </div>
@@ -377,11 +408,11 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
 
   if (isLoadingSummary) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="h-28 bg-background-secondary dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl animate-pulse"
+            className="h-28 rounded-xl border border-border-light/60 bg-background-light/60 animate-pulse dark:border-border-dark/60 dark:bg-background-dark/40"
           />
         ))}
       </div>
@@ -395,7 +426,7 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Revenue" 
           amount={formatCurrency(summary?.totalRevenue || 0)} 
@@ -433,23 +464,25 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
       </div>
 
        {/* Breakdown Section */}
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Main Chart Placeholder */}
-          <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-text-light dark:text-text-dark">Financial Performance</h3>
-                <Badge variant="default" size="sm">Coming Soon</Badge>
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light p-4 shadow-sm dark:bg-surface-dark lg:col-span-2">
+             <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-text-light dark:text-text-dark">Financial Performance</h3>
+                <Badge variant="default" size="sm" className="text-[10px]">
+                  Coming Soon
+                </Badge>
              </div>
-             <div className="h-64 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                <PieChart className="w-10 h-10 text-gray-300 mb-2" />
-                <p className="text-gray-400 text-sm">Visual charts will appear here</p>
+             <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-dashed border-border-light/70 bg-background-light/60 text-center dark:border-border-dark/60 dark:bg-background-dark/40">
+                <PieChart className="mb-2 h-8 w-8 text-text-light/30 dark:text-text-dark/30" />
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Visual charts will appear here</p>
              </div>
           </div>
 
           {/* Expense Categories */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 shadow-sm">
-             <h3 className="font-bold text-text-light dark:text-text-dark mb-4">Top Expenses</h3>
-             <div className="space-y-4">
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light p-4 shadow-sm dark:bg-surface-dark">
+             <h3 className="mb-3 text-sm font-bold text-text-light dark:text-text-dark">Top Expenses</h3>
+             <div className="space-y-3">
                {expenseSummary?.byCategory?.length > 0 ? (
                  (expenseSummary.byCategory as Array<{ categoryName: string; total: number }>).slice(0, 5).map((cat) => (
                    <CategoryProgress 
@@ -461,11 +494,11 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                    />
                  ))
                ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm">No expenses recorded</div>
+                  <div className="rounded-lg border border-dashed border-border-light/70 py-6 text-center text-xs text-text-light/50 dark:border-border-dark/60 dark:text-text-dark/50">No expenses recorded</div>
                )}
              </div>
              {expenseSummary?.byCategory?.length > 5 && (
-                <Button variant="secondary" size="sm" className="w-full mt-4">
+                <Button variant="secondary" size="sm" className="mt-3 w-full text-xs font-medium">
                   View All Categories
                 </Button>
              )}
@@ -478,6 +511,10 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
 // --- TAB 2: EXPENSES ---
 
 function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { startDate: string; endDate: string } }) {
+  const { can } = useEmployeePermissions(salonId);
+  const canCreate = can(EmployeePermission.CREATE_EXPENSES) || can(EmployeePermission.MANAGE_EXPENSES);
+  const canDelete = can(EmployeePermission.MANAGE_EXPENSES);
+
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -548,90 +585,99 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
   return (
     <div className="space-y-6">
        {/* Actions Bar */}
-       <div className="flex flex-col sm:flex-row justify-between gap-4 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
-          <div className="flex flex-1 gap-3">
-             <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+       <div className="flex flex-col gap-3 rounded-xl border border-border-light bg-surface-light p-4 shadow-sm dark:border-border-dark dark:bg-surface-dark sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+             <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40" />
                 <input 
                   type="text" 
                   placeholder="Search expenses..." 
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full rounded-lg border border-border-light bg-background-light py-2 pl-9 pr-3 text-sm text-text-light shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                 />
              </div>
              <select 
                value={selectedCategory}
                onChange={e => setSelectedCategory(e.target.value)}
-               className="px-3 py-2 bg-background-light dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+               className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-background-dark dark:text-text-dark sm:w-auto"
              >
                 <option value="">All Categories</option>
                 {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
              </select>
           </div>
-          <Button variant="primary" onClick={() => setShowAddModal(true)} className="whitespace-nowrap">
-             <Plus className="w-4 h-4 mr-2" />
-             Add Expense
-          </Button>
+
+          {canCreate && (
+            <Button variant="primary" onClick={() => setShowAddModal(true)} className="h-9 whitespace-nowrap text-sm font-semibold">
+               <Plus className="mr-2 h-4 w-4" />
+               Add Expense
+            </Button>
+          )}
        </div>
 
        {/* Data Table */}
-       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm min-h-[400px]">
+       <div className="min-h-[400px] overflow-hidden rounded-xl border border-border-light bg-surface-light shadow-sm dark:border-border-dark dark:bg-surface-dark">
           {isLoading ? (
-             <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>
+             <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : filtered.length === 0 ? (
              <EmptyState 
                 title="No expenses found"
                 description={searchTerm ? "Try adjusting your search filters" : "Start tracking your business spending"}
                 icon={<Receipt className="w-16 h-16 text-gray-300" />}
-                action={!searchTerm && <Button variant="outline" size="sm" onClick={() => setShowAddModal(true)}>Create First Expense</Button>}
+                action={(!searchTerm && canCreate) && <Button variant="outline" size="sm" onClick={() => setShowAddModal(true)}>Create First Expense</Button>}
              />
           ) : (
             <div className="overflow-x-auto">
-               <table className="w-full text-sm text-left">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 dark:border-gray-700">
+               <table className="w-full text-left text-sm">
+                  <thead className="border-b border-border-light/80 bg-background-light/80 text-[11px] font-semibold uppercase text-text-light/60 dark:border-border-dark/70 dark:bg-background-dark/60 dark:text-text-dark/60">
                      <tr>
-                        <th className="px-6 py-4">Date</th>
-                        <th className="px-6 py-4">Description</th>
-                        <th className="px-6 py-4">Category</th>
-                        <th className="px-6 py-4">Method</th>
-                        <th className="px-6 py-4 text-right">Amount</th>
-                        <th className="px-6 py-4 w-20"></th>
+                        <th className="px-5 py-3">Date</th>
+                        <th className="px-5 py-3">Description</th>
+                        <th className="px-5 py-3">Category</th>
+                        <th className="px-5 py-3">Method</th>
+                        <th className="px-5 py-3 text-right">Amount</th>
+                        {canDelete && <th className="px-5 py-3 w-16"></th>}
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tbody className="divide-y divide-border-light/60 dark:divide-border-dark/60">
                      {filtered.map((expense: Expense) => (
-                        <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                           <td className="px-6 py-4 text-text-light dark:text-text-dark whitespace-nowrap">
+                        <tr key={expense.id} className="group transition-colors hover:bg-background-light/60 dark:hover:bg-background-dark/40">
+                           <td className="whitespace-nowrap px-5 py-3 text-sm text-text-light dark:text-text-dark">
                               {format(new Date(expense.expenseDate), 'MMM d, yyyy')}
                            </td>
-                           <td className="px-6 py-4">
-                              <div className="font-medium text-text-light dark:text-text-dark">{expense.description}</div>
-                              {expense.vendorName && <div className="text-xs text-gray-400">{expense.vendorName}</div>}
+                           <td className="px-5 py-3">
+                              <div className="text-sm font-medium text-text-light dark:text-text-dark">{expense.description}</div>
+                              {expense.vendorName && <div className="text-[11px] text-text-light/60 dark:text-text-dark/60">{expense.vendorName}</div>}
                            </td>
-                           <td className="px-6 py-4">
-                              <Badge variant="default" size="sm" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                           <td className="px-5 py-3">
+                              <Badge variant="default" size="sm" className="bg-primary/10 text-primary">
                                  {expense.category?.name || 'Uncategorized'}
                               </Badge>
                            </td>
-                           <td className="px-6 py-4 capitalize text-gray-500">
-                              {expense.paymentMethod?.replace('_', ' ')}
+                           <td className="px-5 py-3 text-sm capitalize text-text-light/60 dark:text-text-dark/60">
+                              {expense.paymentMethod?.replace('_', ' ') || 'N/A'}
                            </td>
-                           <td className="px-6 py-4 text-right font-bold text-text-light dark:text-text-dark">
+                           <td className="px-5 py-3 text-right text-sm font-semibold text-text-light dark:text-text-dark">
                               {formatCurrency(expense.amount)}
                            </td>
-                           <td className="px-6 py-4 text-right">
-                              <Button
-                                onClick={() => confirm('Delete expense?') && deleteMutation.mutate(expense.id)}
-                                variant="secondary"
-                                size="sm"
-                                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500"
-                                title="Delete expense"
-                                aria-label="Delete expense"
-                              >
-                                 <Trash2 className="w-4 h-4" />
-                              </Button>
-                           </td>
+
+                           {canDelete ? (
+                             <td className="px-5 py-3 text-right">
+                               <Button
+                                 onClick={() => confirm('Delete expense?') && deleteMutation.mutate(expense.id)}
+                                 variant="secondary"
+                                 size="sm"
+                                 className="h-8 w-8 rounded-lg p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-error/10 hover:text-error dark:hover:bg-error/20"
+                                 title="Delete expense"
+                                 aria-label="Delete expense"
+                               >
+                                  <Trash2 className="h-4 w-4" />
+                               </Button>
+                             </td>
+                           ) : (
+                             // Empty cell to maintain layout if header exists? No, conditional header means conditional cell
+                             null
+                           )}
                         </tr>
                      ))}
                   </tbody>
@@ -641,70 +687,74 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
        </div>
 
        {/* Add Expense Modal */}
-       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="New Expense">
-          <form onSubmit={handleSubmit} className="space-y-4">
-             <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                   <label htmlFor="expense-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (RWF) *</label>
-                   <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">RWF</div>
-                      <input 
-                         id="expense-amount"
-                         type="number" name="amount" required min="1" step="1"
-                         className="w-full pl-12 pr-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none font-bold text-lg"
-                         placeholder="0"
-                      />
-                   </div>
-                </div>
+       {canCreate && (
+         <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="New Expense">
+            <form onSubmit={handleSubmit} className="space-y-4">
+               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                     <label htmlFor="expense-amount" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Amount (RWF) *</label>
+                     <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-light/60 dark:text-text-dark/60">RWF</div>
+                        <input 
+                           id="expense-amount"
+                           type="number" name="amount" required min="1" step="1"
+                           className="w-full rounded-lg border border-border-light bg-background-light py-2 pl-12 pr-4 text-lg font-semibold text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                           placeholder="0"
+                        />
+                     </div>
+                  </div>
 
-                <div className="col-span-2">
-                   <label htmlFor="expense-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description *</label>
-                   <input id="expense-description" type="text" name="description" required placeholder="e.g. Monthly Rent"
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                   />
-                </div>
+                  <div>
+                     <label htmlFor="expense-description" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Description *</label>
+                     <input id="expense-description" type="text" name="description" required placeholder="e.g. Monthly Rent"
+                        className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                     />
+                  </div>
 
-                <div className="col-span-1">
-                   <label htmlFor="expense-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date *</label>
-                   <input id="expense-date" type="date" name="expenseDate" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                   />
-                </div>
+                  <div className="md:col-span-2 space-y-1">
+                     <label htmlFor="expense-date" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Date *</label>
+                     <input id="expense-date" type="date" name="expenseDate" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                        className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                     />
+                  </div>
 
-                <div className="col-span-1">
-                   <label htmlFor="expense-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
-                   <select id="expense-category" name="categoryId" required className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none">
-                      <option value="">Select...</option>
-                      {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                   </select>
-                </div>
+                  <div className="md:col-span-2 space-y-1">
+                     <label htmlFor="expense-category" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Category *</label>
+                     <select id="expense-category" name="categoryId" required className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark">
+                        <option value="">Select...</option>
+                        {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                     </select>
+                  </div>
 
-                <div className="col-span-1">
-                   <label htmlFor="expense-payment-method" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Method</label>
-                   <select id="expense-payment-method" name="paymentMethod" required className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none">
-                      <option value="cash">Cash</option>
-                      <option value="mobile_money">Mobile Money</option>
-                      <option value="bank_transfer">Bank Transfer</option>
-                      <option value="card">Card</option>
-                   </select>
-                </div>
+                  <div className="md:col-span-2 space-y-1">
+                     <label htmlFor="expense-payment-method" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Payment Method</label>
+                     <select id="expense-payment-method" name="paymentMethod" required className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark">
+                        <option value="cash">Cash</option>
+                        <option value="mobile_money">Mobile Money</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="card">Card</option>
+                     </select>
+                  </div>
 
-                 <div className="col-span-1">
-                   <label htmlFor="expense-vendor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor (Optional)</label>
-                   <input id="expense-vendor" type="text" name="vendorName" placeholder="e.g. Landlord"
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
-                   />
-                </div>
-             </div>
+                   <div className="md:col-span-2 space-y-1">
+                     <label htmlFor="expense-vendor" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Vendor (Optional)</label>
+                     <input id="expense-vendor" type="text" name="vendorName" placeholder="e.g. Landlord"
+                        className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                     />
+                  </div>
+               </div>
 
-             <div className="pt-4 flex justify-end gap-3">
-                <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                <Button type="submit" variant="primary" disabled={createMutation.isPending}>
-                   {createMutation.isPending ? 'Saving...' : 'Add Expense'}
-                </Button>
-             </div>
-          </form>
-       </Modal>
+               <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)} className="h-9 px-4 text-sm font-semibold">
+                     Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" disabled={createMutation.isPending} className="h-9 px-4 text-sm font-semibold">
+                     {createMutation.isPending ? 'Saving...' : 'Add Expense'}
+                  </Button>
+               </div>
+            </form>
+         </Modal>
+       )}
     </div>
   );
 }
@@ -742,40 +792,40 @@ function AccountsTab({ salonId }: { salonId: string }) {
 
   return (
     <div className="space-y-6">
-       <div className="flex justify-between items-center">
+       <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Chart of Accounts</h2>
-          <Button variant="outline" size="sm" onClick={() => setShowCreateCategory(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={() => setShowCreateCategory(true)} className="h-9 px-3 text-sm font-semibold">
+            <Plus className="mr-2 h-4 w-4" />
             Add Category
           </Button>
        </div>
        
        {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />)}
-          </div>
+         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="h-24 rounded-xl border border-border-light/60 bg-background-light/60 animate-pulse dark:border-border-dark/60 dark:bg-background-dark/40" />)}
+         </div>
        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-             {categories?.map((cat) => (
-                <div key={cat.id} className="group bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
-                   <div className="flex justify-between items-start mb-3">
-                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
-                         <BookOpen className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-mono text-gray-400">{cat.code}</span>
-                   </div>
-                   <h3 className="font-semibold text-text-light dark:text-text-dark mb-1">{cat.name}</h3>
-                   <p className="text-xs text-text-light/40 dark:text-text-dark/40">Expense Category</p>
+         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {categories?.map((cat) => (
+               <div key={cat.id} className="group rounded-xl border border-border-light bg-surface-light p-4 transition-all hover:border-primary/40 hover:shadow-md dark:border-border-dark dark:bg-surface-dark">
+                  <div className="mb-3 flex items-start justify-between">
+                     <div className="rounded-lg bg-blue-500/10 p-2 text-blue-500 transition-transform group-hover:scale-105">
+                        <BookOpen className="h-4 w-4" />
+                     </div>
+                     <span className="text-[11px] font-mono text-text-light/50 dark:text-text-dark/50">{cat.code}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark">{cat.name}</h3>
+                  <p className="text-[11px] text-text-light/50 dark:text-text-dark/50">Expense Category</p>
                 </div>
              ))}
              {/* Add New Card */}
              <button
                 type="button"
                 onClick={() => setShowCreateCategory(true)}
-                className="flex flex-col items-center justify-center p-5 rounded-xl border border-dashed border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-text-light/40 dark:text-text-dark/40 hover:text-primary"
+                className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border-light/70 p-4 text-sm font-medium text-text-light/50 transition-colors hover:text-primary dark:border-border-dark/60 dark:text-text-dark/50 dark:hover:bg-background-dark/40"
              >
-                <Plus className="w-8 h-8 mb-2 opacity-50" />
-                <span className="text-sm font-medium">Add Category</span>
+                <Plus className="h-6 w-6" />
+                <span>Add Category</span>
              </button>
           </div>
        )}
@@ -796,11 +846,11 @@ function AccountsTab({ salonId }: { salonId: string }) {
            }}
            className="space-y-4"
          >
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
              <div>
-               <label
-                 htmlFor="account-code"
-                 className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+                <label
+                  htmlFor="account-code"
+                 className="mb-2 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60"
                >
                  Code
                </label>
@@ -809,14 +859,14 @@ function AccountsTab({ salonId }: { salonId: string }) {
                  name="code"
                  type="text"
                  placeholder="e.g. EXP-NEW"
-                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                 className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                  required
                />
              </div>
              <div>
-               <label
-                 htmlFor="account-name"
-                 className="block text-sm font-medium text-text-light dark:text-text-dark mb-2"
+                <label
+                  htmlFor="account-name"
+                 className="mb-2 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60"
                >
                  Name
                </label>
@@ -825,17 +875,18 @@ function AccountsTab({ salonId }: { salonId: string }) {
                  name="name"
                  type="text"
                  placeholder="e.g. Insurance"
-                 className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                 className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                  required
                />
              </div>
            </div>
-           <div className="flex justify-end gap-2 pt-2">
-             <Button type="button" variant="secondary" onClick={() => setShowCreateCategory(false)}>
+           
+           <div className="flex justify-end gap-2 pt-4">
+             <Button type="button" variant="secondary" onClick={() => setShowCreateCategory(false)} className="h-9 px-4 text-sm font-semibold">
                Cancel
              </Button>
-             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending} loading={createCategoryMutation.isPending} loadingText="Saving...">
-               Create
+             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending} className="h-9 px-4 text-sm font-semibold">
+               {createCategoryMutation.isPending ? 'Saving...' : 'Create Category'}
              </Button>
            </div>
          </form>
@@ -844,17 +895,19 @@ function AccountsTab({ salonId }: { salonId: string }) {
   );
 }
 
-
-// --- TAB 4: JOURNALS ---
-
 function JournalsTab() {
   return (
-     <EmptyState 
-        title="Journal Entries"
-        description="View generic ledgers and double-entry records. Automatic entries are created from sales and expenses."
-        icon={<FileText className="w-16 h-16 text-gray-300" />}
-        action={<Button variant="outline" disabled>View General Ledger (Coming Soon)</Button>} 
-        className="min-h-[400px]"
-     />
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border-light bg-surface-light p-10 text-center shadow-sm dark:border-border-dark dark:bg-surface-dark">
+       <div className="rounded-full bg-blue-500/10 p-4 text-blue-500">
+          <FileText className="h-7 w-7" />
+       </div>
+       <div className="space-y-2">
+         <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Journal Entries</h3>
+         <p className="max-w-sm text-sm text-text-light/60 dark:text-text-dark/60">
+            Advanced journal entry management is coming soon. You can currently manage entries through the backend API.
+         </p>
+       </div>
+       <Button variant="outline" disabled className="h-9 px-4 text-sm font-semibold">View Journals</Button>
+    </div>
   );
 }

@@ -1107,7 +1107,7 @@ function ApplicationDetailModal({
               <div className="mb-2">
                 <label
                   htmlFor={`membership-reject-reason-${application.id}`}
-                  className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2 flex items-center gap-2"
+                  className=" text-sm font-semibold text-text-light dark:text-text-dark mb-2 flex items-center gap-2"
                 >
                   <MessageSquare className="w-4 h-4" />
                   Rejection Reason (if rejecting)

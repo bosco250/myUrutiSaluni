@@ -154,7 +154,7 @@ function InspectionDetailContent() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button onClick={() => router.push('/inspections')} variant="secondary" className="p-2">
+          <Button onClick={() => router.push('/inspections')} variant="secondary" size="sm" className="flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>

@@ -12,9 +12,8 @@ import {
   Clock,
   DollarSign,
   XCircle,
-  Upload,
 } from 'lucide-react';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -31,8 +30,6 @@ interface Service {
   durationMinutes: number;
   basePrice: number;
   isActive: boolean;
-  imageUrl?: string;
-  images?: string[];
   salon?: {
     id: string;
     name: string;
@@ -528,11 +525,6 @@ function ServiceModal({
   onSuccess: () => void;
   onClose: () => void;
 }) {
-  // Initialize images array from service data
-  const initialImages = service?.images?.length 
-    ? service.images 
-    : (service?.imageUrl ? [service.imageUrl] : []);
-  
   const [formData, setFormData] = useState({
     salonId: service?.salonId || salons[0]?.id || '',
     code: service?.code || '',
@@ -542,16 +534,11 @@ function ServiceModal({
     basePrice: service?.basePrice || 0,
     isActive: service?.isActive ?? true,
   });
-  const [imageUrls, setImageUrls] = useState<string[]>(initialImages);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const MAX_IMAGES = 5;
 
   const mutation = useMutation({
-    mutationFn: async (data: typeof formData & { imageUrl: string; images: string[] }) => {
+    mutationFn: async (data: typeof formData) => {
       if (service) {
         const response = await api.patch(`/services/${service.id}`, data);
         return response;
@@ -565,60 +552,10 @@ function ServiceModal({
     },
     onError: (err: unknown) => {
       const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(
-        maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to save service'
-      );
+      setError(maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to save service');
       setLoading(false);
     },
   });
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check max images limit
-    if (imageUrls.length >= MAX_IMAGES) {
-      setError(`Maximum ${MAX_IMAGES} images allowed.`);
-      return;
-    }
-
-    // Validate size (10MB limit matching backend)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image size too large. Max 10MB.');
-      return;
-    }
-
-    try {
-      setUploading(true);
-      setError('');
-      
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-
-      const response = await api.post('/uploads/service', uploadFormData, {
-        headers: {
-          'Content-Type': undefined, // Let browser set boundary
-        },
-      });
-
-      if (response.data && response.data.url) {
-        setImageUrls((prev) => [...prev, response.data.url]);
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError('Failed to upload image. Please try again.');
-    } finally {
-      setUploading(false);
-      // Reset input so same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -647,14 +584,7 @@ function ServiceModal({
       return;
     }
 
-    // Prepare submission data with images
-    const submitData = {
-      ...formData,
-      imageUrl: imageUrls[0] || '', // Primary image
-      images: imageUrls, // All images
-    };
-
-    mutation.mutate(submitData, {
+    mutation.mutate(formData, {
       onSettled: () => setLoading(false),
     });
   };
@@ -677,278 +607,259 @@ function ServiceModal({
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        {/* Header - Clean aesthetics, no gradients */}
-        <div className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-4 min-w-0">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Scissors className="w-6 h-6 text-primary" />
+        {/* Hero Header */}
+        <div className="relative overflow-hidden border-b border-border-light dark:border-border-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
+          <div className="relative p-5 text-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="h-11 w-11 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
+                  <Scissors className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-black tracking-tight">
+                    {service ? 'Edit Service' : 'Create Service'}
+                  </h2>
+                  <p className="text-xs text-white/80 mt-1">
+                    Keep it short, clear, and consistent for booking + sales.
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold tracking-tight text-text-light dark:text-text-dark">
-                  {service ? 'Edit Service' : 'Create Service'}
-                </h2>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Configure service details, pricing, and duration.
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClose}
+                className="h-9 w-9 p-0 bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                aria-label="Close"
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Quick Specs */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Duration
                 </p>
+                <p className="text-lg font-black mt-1">{Number(formData.durationMinutes) || 0} mins</p>
+              </div>
+              <div className="rounded-xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                  Base Price
+                </p>
+                <p className="text-lg font-black mt-1">RWF {Number(formData.basePrice || 0).toLocaleString()}</p>
               </div>
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0 rounded-full"
-              aria-label="Close"
-            >
-              <XCircle className="w-5 h-5 opacity-60 hover:opacity-100" />
-            </Button>
           </div>
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto">
+        <div className="p-5 overflow-y-auto">
           {error && (
-            <div className="mb-6 p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl flex items-start gap-3">
-              <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <p className="text-sm font-medium">{error}</p>
+            <div className="mb-4 p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl">
+              {error}
             </div>
           )}
 
-          <form id="service-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Basic Info */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-4 uppercase tracking-wide">
-                    Basic Information
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {/* Salon Selection */}
-                    {salons.length > 1 ? (
-                      <div>
-                        <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                          Salon *
-                        </label>
-                        <select
-                          required
-                          value={formData.salonId}
-                          onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                          className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                        >
-                          <option value="">Select salon</option>
-                          {salons.map((salon) => (
-                            <option key={salon.id} value={salon.id}>
-                              {salon.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : null}
-
-                    {/* Service Name */}
-                    <div>
-                      <label htmlFor="service-name" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Service Name *
-                      </label>
-                      <input
-                        id="service-name"
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g., Haircut - Men"
-                        className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      />
-                    </div>
-
-                    {/* Service Code */}
-                    <div>
-                      <label htmlFor="service-code" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Service Code
-                      </label>
-                      <input
-                        id="service-code"
-                        type="text"
-                        value={formData.code}
-                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                        placeholder="e.g., SRV-HC-M"
-                        className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      />
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                      <label htmlFor="service-description" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Description
-                      </label>
-                      <textarea
-                        id="service-description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={3}
-                        placeholder="What’s included? Any notes for staff/customers."
-                        className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
-                      />
-                    </div>
-                  </div>
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Basics */}
+            <div className="bg-background-secondary/40 dark:bg-background-dark/30 border border-border-light/60 dark:border-border-dark rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-black text-text-light dark:text-text-dark">Basics</p>
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-light/50 dark:text-text-dark/50">
+                  Required
+                </span>
               </div>
 
-              {/* Right Column: Pricing & Details */}
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {salons.length > 1 ? (
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="service-salon"
+                      className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                    >
+                      Salon *
+                    </label>
+                    <select
+                      id="service-salon"
+                      required
+                      value={formData.salonId}
+                      onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                      className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    >
+                      <option value="">Select salon</option>
+                      {salons.map((salon) => (
+                        <option key={salon.id} value={salon.id}>
+                          {salon.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : salons.length === 1 ? (
+                  <div className="md:col-span-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                    Salon:{' '}
+                    <span className="font-semibold text-text-light dark:text-text-dark">
+                      {salons[0].name}
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="service-name"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Service Name *
+                  </label>
+                  <input
+                    id="service-name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Haircut - Men"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
                 <div>
-                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-4 uppercase tracking-wide">
-                    Pricing & Details
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Price */}
-                      <div>
-                        <label htmlFor="service-price" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                          Price (RWF) *
-                        </label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
-                          <input
-                            id="service-price"
-                            type="number"
-                            required
-                            min="0"
-                            step="100"
-                            value={formData.basePrice}
-                            onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
-                            className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                          />
-                        </div>
-                      </div>
+                  <label
+                    htmlFor="service-code"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Service Code
+                  </label>
+                  <input
+                    id="service-code"
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    placeholder="e.g., SRV-HC-M"
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
 
-                      {/* Duration */}
-                      <div>
-                        <label htmlFor="service-duration" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                          Duration (min) *
-                        </label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
-                          <input
-                            id="service-duration"
-                            type="number"
-                            required
-                            min="1"
-                            value={formData.durationMinutes}
-                            onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 30 })}
-                            className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                <div>
+                  <label
+                    htmlFor="service-duration"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Duration (mins) *
+                  </label>
+                  <input
+                    id="service-duration"
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.durationMinutes}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        durationMinutes: parseInt(e.target.value) || 30,
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
 
-                    {/* Image Upload */}
-                    <div>
-                      <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Service Images <span className="font-normal opacity-70">({imageUrls.length}/{MAX_IMAGES})</span>
-                      </label>
-                      
-                      {/* Hidden file input */}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                      
-                      {/* Horizontal Image Gallery */}
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-                        {/* Add Photo Button */}
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading || imageUrls.length >= MAX_IMAGES}
-                          className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:border-primary/50 hover:bg-primary/5 transition flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {uploading ? (
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                          ) : (
-                            <>
-                              <Upload className="w-5 h-5 text-primary" />
-                              <span className="text-xs font-medium text-primary">Add Photo</span>
-                            </>
-                          )}
-                        </button>
-                        
-                        {/* Image Thumbnails */}
-                        {imageUrls.map((url, index) => (
-                          <div key={`${url}-${index}`} className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden group">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img 
-                              src={url} 
-                              alt={`Service image ${index + 1}`} 
-                              className="w-full h-full object-cover"
-                            />
-                            {/* Remove button */}
-                            <button
-                              type="button"
-                              onClick={() => removeImage(index)}
-                              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-danger flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                            >
-                              <XCircle className="w-4 h-4 text-white" />
-                            </button>
-                            {/* Primary badge */}
-                            {index === 0 && (
-                              <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-primary/90 text-white text-[9px] font-bold uppercase">
-                                Primary
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {imageUrls.length === 0 && !uploading && (
-                        <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-2 text-center">
-                          Add up to {MAX_IMAGES} photos for this service
-                        </p>
-                      )}
-                    </div>
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="service-description"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    id="service-description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    placeholder="What’s included? Any notes for staff/customers."
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
+                  />
+                </div>
+              </div>
+            </div>
 
-                    {/* Active Toggle */}
-                    <div className="p-4 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-xl flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-text-light dark:text-text-dark">Active Service</p>
-                        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Visible for booking</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={formData.isActive}
-                          onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                          className="sr-only peer" 
-                        />
-                        <div className="w-11 h-6 bg-border-light dark:bg-border-dark peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                      </label>
-                    </div>
+            {/* Pricing */}
+            <div className="bg-background-secondary/40 dark:bg-background-dark/30 border border-border-light/60 dark:border-border-dark rounded-2xl p-4">
+              <p className="text-sm font-black text-text-light dark:text-text-dark mb-3">Pricing</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="service-basePrice"
+                    className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase tracking-wide"
+                  >
+                    Base Price (RWF) *
+                  </label>
+                  <input
+                    id="service-basePrice"
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.basePrice}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        basePrice: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl border border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40">
+                  <input
+                    id="service-active"
+                    type="checkbox"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="mt-0.5 w-5 h-5 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary/50 focus:ring-2"
+                  />
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="service-active"
+                      className="text-sm font-semibold text-text-light dark:text-text-dark"
+                    >
+                      Active service
+                    </label>
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                      Available for booking and sales.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Sticky actions spacer */}
+            <div className="h-2" />
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={uploading}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form="service-form"
-            loading={loading || uploading}
-            loadingText={uploading ? 'Uploading...' : 'Saving...'}
-          >
-            {service ? 'Save Value' : 'Create Service'}
-          </Button>
+        {/* Sticky Action Bar */}
+        <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              onClick={(e) => {
+                // Keep the same submit path; this just triggers the form submit in a sticky footer.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (e as any)?.currentTarget?.form?.requestSubmit?.();
+              }}
+              loading={loading}
+              loadingText="Saving..."
+              className="flex-1"
+            >
+              {service ? 'Update Service' : 'Create Service'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

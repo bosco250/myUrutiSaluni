@@ -110,10 +110,10 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
       });
 
       console.log("Sign up successful:", response.user);
-      
-      // Navigate to OTP verification or home screen
-      // Note: You may want to navigate to home if registration auto-logs in
-      navigation?.navigate("OTPVerification");
+
+      // Registration automatically authenticates the user via AuthContext
+      // Navigate back to login as a fallback, though App-level routing should switch to the app shell
+      navigation?.navigate("Login");
     } catch (error: any) {
       // Handle errors
       const errorMessage = error.message || "Registration failed. Please try again.";
