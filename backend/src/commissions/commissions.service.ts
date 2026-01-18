@@ -4,6 +4,7 @@ import {
   Inject,
   forwardRef,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource } from 'typeorm';
@@ -111,6 +112,7 @@ export class CommissionsService {
     salonId?: string;
     salonIds?: string[];
     paid?: boolean;
+    paymentMethod?: string;
     startDate?: Date;
     endDate?: Date;
   }): Promise<Commission[]> {
@@ -148,6 +150,13 @@ export class CommissionsService {
       query.andWhere('commission.paid = :paid', { paid: filters.paid });
     }
 
+    // Filter by payment method (e.g., 'mobile_money' for external payments)
+    if (filters?.paymentMethod) {
+      query.andWhere('commission.paymentMethod = :paymentMethod', {
+        paymentMethod: filters.paymentMethod,
+      });
+    }
+
     if (filters?.startDate) {
       const startDate = new Date(filters.startDate);
       startDate.setUTCHours(0, 0, 0, 0);
@@ -161,6 +170,94 @@ export class CommissionsService {
     }
 
     return query.orderBy('commission.createdAt', 'DESC').getMany();
+  }
+
+  async findAllPaginated(
+    filters?: {
+      salonEmployeeId?: string;
+      salonEmployeeIds?: string[];
+      salonId?: string;
+      salonIds?: string[];
+      paid?: boolean;
+      paymentMethod?: string;
+      startDate?: Date;
+      endDate?: Date;
+    },
+    pagination?: {
+      page: number;
+      limit: number;
+    },
+  ): Promise<{
+    data: Commission[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const query = this.commissionsRepository
+      .createQueryBuilder('commission')
+      .leftJoinAndSelect('commission.salonEmployee', 'employee')
+      .leftJoinAndSelect('employee.user', 'user')
+      .leftJoinAndSelect('employee.salon', 'salon')
+      .leftJoinAndSelect('commission.saleItem', 'saleItem')
+      .leftJoinAndSelect('saleItem.sale', 'sale');
+
+    // Apply same filters as findAll...
+    if (filters?.salonEmployeeIds && filters.salonEmployeeIds.length > 0) {
+      query.andWhere('commission.salonEmployeeId IN (:...salonEmployeeIds)', {
+        salonEmployeeIds: filters.salonEmployeeIds,
+      });
+    } else if (filters?.salonEmployeeId) {
+      query.andWhere('commission.salonEmployeeId = :salonEmployeeId', {
+        salonEmployeeId: filters.salonEmployeeId,
+      });
+    }
+
+    if (filters?.salonIds && filters.salonIds.length > 0) {
+      query.andWhere('salon.id IN (:...salonIds)', {
+        salonIds: filters.salonIds,
+      });
+    } else if (filters?.salonId && !filters?.salonEmployeeIds) {
+      query.andWhere('salon.id = :salonId', { salonId: filters.salonId });
+    }
+
+    if (filters?.paid !== undefined) {
+      query.andWhere('commission.paid = :paid', { paid: filters.paid });
+    }
+
+    if (filters?.paymentMethod) {
+      query.andWhere('commission.paymentMethod = :paymentMethod', {
+        paymentMethod: filters.paymentMethod,
+      });
+    }
+
+    if (filters?.startDate) {
+      const startDate = new Date(filters.startDate);
+      startDate.setUTCHours(0, 0, 0, 0);
+      query.andWhere('commission.createdAt >= :startDate', { startDate });
+    }
+
+    if (filters?.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setUTCHours(23, 59, 59, 999);
+      query.andWhere('commission.createdAt <= :endDate', { endDate });
+    }
+
+    query.orderBy('commission.createdAt', 'DESC');
+
+    // Apply pagination
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await query.skip(skip).take(limit).getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findBySaleItemIds(saleItemIds: string[]): Promise<Commission[]> {
@@ -266,7 +363,8 @@ export class CommissionsService {
 
     this.logger.log(
       `[COMMISSION PAYMENT] Processing commission ${commissionId}: ` +
-        `Owner ${salonOwnerId} → Employee ${employeeUserId} (Amount: RWF ${commissionAmount.toLocaleString()})`,
+        `Owner ${salonOwnerId} → Employee ${employeeUserId} (Amount: RWF ${commissionAmount.toLocaleString()})` +
+        ` | PaymentMethod: '${paymentDetails?.paymentMethod}' | isExternal: ${paymentDetails?.paymentMethod === 'mobile_money'}`,
     );
 
     // Use database transaction to ensure atomicity - prevent race conditions and data loss
@@ -304,13 +402,13 @@ export class CommissionsService {
           ? parseFloat(ownerWallet.balance) || 0
           : Number(ownerWallet.balance) || 0;
 
-      if (ownerBalance < commissionAmount) {
-        throw new BadRequestException(
-          `Insufficient wallet balance. Current balance: RWF ${ownerBalance.toLocaleString()}, Required: RWF ${commissionAmount.toLocaleString()}`,
-        );
-      }
+      // For wallet payments, deduct from owner wallet
+      // For mobile_money (Airtel), owner pays externally - no wallet deduction needed
+      const isExternalPayment = paymentDetails?.paymentMethod === 'mobile_money';
+      let savedOwnerTransaction: WalletTransaction | null = null;
+      let ownerBalanceAfter = ownerBalance;
 
-      // Get or create employee wallet
+      // Get or create employee wallet (needed for both payment methods)
       let employeeWallet = await manager.findOne(Wallet, {
         where: { userId: employeeUserId },
       });
@@ -330,41 +428,54 @@ export class CommissionsService {
           ? parseFloat(employeeWallet.balance) || 0
           : Number(employeeWallet.balance) || 0;
 
-      // Step 1: Deduct from salon owner's wallet (atomic within transaction)
-      const ownerBalanceAfter = ownerBalance - commissionAmount;
-      await manager.update(
-        Wallet,
-        { id: ownerWallet.id },
-        { balance: ownerBalanceAfter },
-      );
+      if (!isExternalPayment) {
+        // Wallet payment: Check balance and deduct from owner
+        if (ownerBalance < commissionAmount) {
+          throw new BadRequestException(
+            `Insufficient wallet balance. Current balance: RWF ${ownerBalance.toLocaleString()}, Required: RWF ${commissionAmount.toLocaleString()}`,
+          );
+        }
 
-      // Create owner transaction record with status
-      const ownerTransaction = manager.create(WalletTransaction, {
-        walletId: ownerWallet.id,
-        transactionType: WalletTransactionType.TRANSFER,
-        amount: commissionAmount,
-        balanceBefore: ownerBalance,
-        balanceAfter: ownerBalanceAfter,
-        status: WalletTransactionStatus.COMPLETED, // Explicitly set status
-        description: `Commission payment to employee - Commission ID: ${commissionId}${commission.saleItemId ? `, Sale Item: ${commission.saleItemId}` : ''}`,
-        referenceType: 'commission_payment',
-        referenceId: commissionId,
-        metadata: {
-          commissionId: commissionId,
-          employeeUserId: employeeUserId,
-          employeeName: employeeName,
-          salonOwnerId: salonOwnerId,
-          salonOwnerName: salonOwnerName,
-          paymentMethod: paymentDetails?.paymentMethod || null,
-          paymentReference: paymentDetails?.paymentReference || null,
-          paidById: paymentDetails?.paidById || null,
-        },
-      });
-      const savedOwnerTransaction = await manager.save(ownerTransaction);
+        // Step 1: Deduct from salon owner's wallet (atomic within transaction)
+        ownerBalanceAfter = ownerBalance - commissionAmount;
+        await manager.update(
+          Wallet,
+          { id: ownerWallet.id },
+          { balance: ownerBalanceAfter },
+        );
 
-      this.logger.log(
-        `[COMMISSION PAYMENT] Owner transaction created: ID=${savedOwnerTransaction.id}, Status=${savedOwnerTransaction.status}, Amount=RWF ${commissionAmount.toLocaleString()}`,
-      );
+        // Create owner transaction record with status
+        const ownerTransaction = manager.create(WalletTransaction, {
+          walletId: ownerWallet.id,
+          transactionType: WalletTransactionType.TRANSFER,
+          amount: commissionAmount,
+          balanceBefore: ownerBalance,
+          balanceAfter: ownerBalanceAfter,
+          status: WalletTransactionStatus.COMPLETED,
+          description: `Commission payment to employee - Commission ID: ${commissionId}${commission.saleItemId ? `, Sale Item: ${commission.saleItemId}` : ''}`,
+          referenceType: 'commission_payment',
+          referenceId: commissionId,
+          metadata: {
+            commissionId: commissionId,
+            employeeUserId: employeeUserId,
+            employeeName: employeeName,
+            salonOwnerId: salonOwnerId,
+            salonOwnerName: salonOwnerName,
+            paymentMethod: paymentDetails?.paymentMethod || null,
+            paymentReference: paymentDetails?.paymentReference || null,
+            paidById: paymentDetails?.paidById || null,
+          },
+        });
+        savedOwnerTransaction = await manager.save(ownerTransaction);
+
+        this.logger.log(
+          `[COMMISSION PAYMENT] Owner transaction created: ID=${savedOwnerTransaction.id}, Status=${savedOwnerTransaction.status}, Amount=RWF ${commissionAmount.toLocaleString()}`,
+        );
+      } else {
+        this.logger.log(
+          `[COMMISSION PAYMENT] External payment (${paymentDetails?.paymentMethod}) - skipping owner wallet deduction. Reference: ${paymentDetails?.paymentReference || 'N/A'}`,
+        );
+      }
 
       // Step 2: Add to employee's wallet (atomic within transaction)
       const employeeBalanceAfter = employeeBalanceBefore + commissionAmount;
@@ -425,9 +536,9 @@ export class CommissionsService {
 
       this.logger.log(
         `[COMMISSION PAYMENT] ✅ SUCCESS - Commission ${commissionId} (RWF ${commissionAmount.toLocaleString()}) processed atomically. ` +
-          `Owner: RWF ${ownerBalance.toLocaleString()} → RWF ${ownerBalanceAfter.toLocaleString()}. ` +
+          `Owner: ${isExternalPayment ? 'EXTERNAL PAYMENT' : `RWF ${ownerBalance.toLocaleString()} → RWF ${ownerBalanceAfter.toLocaleString()}`}. ` +
           `Employee: RWF ${employeeBalanceBefore.toLocaleString()} → RWF ${employeeBalanceAfter.toLocaleString()}. ` +
-          `Owner Transaction: ${savedOwnerTransaction.id} (Status: ${savedOwnerTransaction.status}), ` +
+          `${savedOwnerTransaction ? `Owner Transaction: ${savedOwnerTransaction.id} (Status: ${savedOwnerTransaction.status}), ` : ''}` +
           `Employee Transaction: ${savedEmployeeTransaction.id} (Status: ${savedEmployeeTransaction.status})`,
       );
 
@@ -553,7 +664,10 @@ export class CommissionsService {
           ? parseFloat(ownerWallet.balance) || 0
           : Number(ownerWallet.balance) || 0;
 
-      if (ownerBalanceInTx < totalAmount) {
+      // For mobile_money (Airtel), skip balance check - owner pays externally
+      const isExternalPayment = paymentDetails?.paymentMethod === 'mobile_money';
+
+      if (!isExternalPayment && ownerBalanceInTx < totalAmount) {
         throw new BadRequestException(
           `Insufficient wallet balance. Current balance: RWF ${ownerBalanceInTx.toLocaleString()}, Required: RWF ${totalAmount.toLocaleString()}`,
         );
@@ -588,40 +702,44 @@ export class CommissionsService {
             ? parseFloat(employeeWallet.balance) || 0
             : Number(employeeWallet.balance) || 0;
 
-        // Deduct from owner's wallet
-        runningOwnerBalance -= commissionAmount;
-        await manager.update(
-          Wallet,
-          { id: ownerWallet.id },
-          { balance: runningOwnerBalance },
-        );
+        // For wallet payments, deduct from owner's wallet
+        // For mobile_money, skip owner deduction (owner pays externally)
+        let savedOwnerTransaction: WalletTransaction | null = null;
+        if (!isExternalPayment) {
+          runningOwnerBalance -= commissionAmount;
+          await manager.update(
+            Wallet,
+            { id: ownerWallet.id },
+            { balance: runningOwnerBalance },
+          );
 
-        // Create owner transaction record with status
-        const ownerTransaction = manager.create(WalletTransaction, {
-          walletId: ownerWallet.id,
-          transactionType: WalletTransactionType.TRANSFER,
-          amount: commissionAmount,
-          balanceBefore: runningOwnerBalance + commissionAmount,
-          balanceAfter: runningOwnerBalance,
-          status: WalletTransactionStatus.COMPLETED, // Explicitly set status
-          description: `Batch commission payment to employee - Commission ID: ${commission.id}`,
-          referenceType: 'commission_payment',
-          referenceId: commission.id,
-          metadata: {
-            commissionId: commission.id,
-            employeeUserId: employeeUserId,
-            employeeName: employeeName,
-            salonOwnerId: salonOwnerId,
-            salonOwnerName: salonOwnerName,
-            paymentMethod: paymentDetails?.paymentMethod || null,
-            paymentReference: paymentDetails?.paymentReference || null,
-            paidById: paymentDetails?.paidById || null,
-            batchPayment: true,
-          },
-        });
-        const savedOwnerTransaction = await manager.save(ownerTransaction);
+          // Create owner transaction record with status
+          const ownerTransaction = manager.create(WalletTransaction, {
+            walletId: ownerWallet.id,
+            transactionType: WalletTransactionType.TRANSFER,
+            amount: commissionAmount,
+            balanceBefore: runningOwnerBalance + commissionAmount,
+            balanceAfter: runningOwnerBalance,
+            status: WalletTransactionStatus.COMPLETED,
+            description: `Batch commission payment to employee - Commission ID: ${commission.id}`,
+            referenceType: 'commission_payment',
+            referenceId: commission.id,
+            metadata: {
+              commissionId: commission.id,
+              employeeUserId: employeeUserId,
+              employeeName: employeeName,
+              salonOwnerId: salonOwnerId,
+              salonOwnerName: salonOwnerName,
+              paymentMethod: paymentDetails?.paymentMethod || null,
+              paymentReference: paymentDetails?.paymentReference || null,
+              paidById: paymentDetails?.paidById || null,
+              batchPayment: true,
+            },
+          });
+          savedOwnerTransaction = await manager.save(ownerTransaction);
+        }
 
-        // Add to employee's wallet
+        // Add to employee's wallet (always happens)
         const employeeBalanceAfter = employeeBalanceBefore + commissionAmount;
         await manager.update(
           Wallet,
@@ -636,7 +754,7 @@ export class CommissionsService {
           amount: commissionAmount,
           balanceBefore: employeeBalanceBefore,
           balanceAfter: employeeBalanceAfter,
-          status: WalletTransactionStatus.COMPLETED, // Explicitly set status
+          status: WalletTransactionStatus.COMPLETED,
           description: `Commission payment - Commission ID: ${commission.id}${commission.saleItemId ? `, Sale Item: ${commission.saleItemId}` : ''}`,
           referenceType: 'commission',
           referenceId: commission.id,
@@ -650,13 +768,14 @@ export class CommissionsService {
             paymentReference: paymentDetails?.paymentReference || null,
             paidById: paymentDetails?.paidById || null,
             batchPayment: true,
+            externalPayment: isExternalPayment,
           },
         });
         const savedEmployeeTransaction =
           await manager.save(employeeTransaction);
 
         this.logger.log(
-          `[BATCH COMMISSION PAYMENT] Transaction created: Owner=${savedOwnerTransaction.id} (Status: ${savedOwnerTransaction.status}), Employee=${savedEmployeeTransaction.id} (Status: ${savedEmployeeTransaction.status})`,
+          `[BATCH COMMISSION PAYMENT] Transaction created: ${savedOwnerTransaction ? `Owner=${savedOwnerTransaction.id}` : 'Owner=EXTERNAL'}, Employee=${savedEmployeeTransaction.id} (Status: ${savedEmployeeTransaction.status})`,
         );
 
         // Mark commission as paid
@@ -760,5 +879,30 @@ export class CommissionsService {
       totalSales,
       count: commissions.length,
     };
+  }
+
+  async verifyPayment(commissionId: string, verifiedById: string): Promise<Commission> {
+    const commission = await this.commissionsRepository.findOne({
+      where: { id: commissionId },
+    });
+
+    if (!commission) {
+      throw new NotFoundException('Commission not found');
+    }
+
+    if (!commission.paid) {
+      throw new BadRequestException('Cannot verify an unpaid commission');
+    }
+
+    // Update metadata with verification info
+    const metadata = commission.metadata || {};
+    commission.metadata = {
+      ...metadata,
+      verified: true,
+      verifiedAt: new Date().toISOString(),
+      verifiedBy: verifiedById,
+    };
+
+    return this.commissionsRepository.save(commission);
   }
 }

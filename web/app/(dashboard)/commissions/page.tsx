@@ -658,7 +658,7 @@ function CommissionPaymentModal({
   const { data: walletData, isLoading: walletLoading } = useQuery({
     queryKey: ['my-wallet'],
     queryFn: async () => {
-      const response = await api.get('/wallets/my-wallet');
+      const response = await api.get('/wallets/me');
       return response.data;
     },
   });

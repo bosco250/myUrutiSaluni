@@ -109,11 +109,47 @@ export class WalletsService {
     });
   }
 
-  async getWalletTransactions(walletId: string): Promise<WalletTransaction[]> {
-    return this.transactionsRepository.find({
+  async getWalletTransactions(
+    walletId: string,
+    pagination?: { page: number; limit: number },
+  ): Promise<
+    | WalletTransaction[]
+    | {
+        data: WalletTransaction[];
+        meta: {
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        };
+      }
+  > {
+    if (!pagination) {
+      return this.transactionsRepository.find({
+        where: { walletId },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.transactionsRepository.findAndCount({
       where: { walletId },
       order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
     });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getWalletTransactionById(

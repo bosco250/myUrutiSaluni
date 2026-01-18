@@ -18,6 +18,8 @@ import {
   TrendingUp,
   ArrowDownLeft,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Button from '@/components/ui/Button';
@@ -53,6 +55,8 @@ export default function WalletsPage() {
   const queryClient = useQueryClient();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: wallet, isLoading: walletLoading } = useQuery<WalletData>({
     queryKey: ['wallet'],
@@ -62,15 +66,23 @@ export default function WalletsPage() {
     },
   });
 
-  const { data: transactions = [], isLoading: txLoading } = useQuery<WalletTransaction[]>({
-    queryKey: ['wallet-transactions', wallet?.id],
+  const { data: txResponse, isLoading: txLoading } = useQuery<{
+    data: WalletTransaction[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }>({
+    queryKey: ['wallet-transactions', wallet?.id, currentPage, itemsPerPage],
     queryFn: async () => {
-      if (!wallet?.id) return [];
-      const response = await api.get(`/wallets/${wallet.id}/transactions`);
-      return response.data || [];
+      if (!wallet?.id) return { data: [], meta: { total: 0, page: 1, limit: itemsPerPage, totalPages: 1 } };
+      const response = await api.get(
+        `/wallets/${wallet.id}/transactions?page=${currentPage}&limit=${itemsPerPage}`
+      );
+      return response.data;
     },
     enabled: !!wallet?.id,
   });
+
+  const transactions = txResponse?.data || [];
+  const meta = txResponse?.meta || { total: 0, page: 1, limit: itemsPerPage, totalPages: 1 };
 
   // Calculate stats
   const toNumber = (val: unknown) => Number(val) || 0;
@@ -366,6 +378,35 @@ export default function WalletsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls - Compact Design */}
+        {meta.totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50">
+            <div className="text-xs text-text-light/60">
+              Page {meta.page} of {meta.totalPages} • {meta.total} total
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || txLoading}
+                className="h-7 px-2 text-xs"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(meta.totalPages, p + 1))}
+                disabled={currentPage === meta.totalPages || txLoading}
+                className="h-7 px-2 text-xs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Withdraw Modal */}

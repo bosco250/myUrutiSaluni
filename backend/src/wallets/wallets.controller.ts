@@ -66,8 +66,20 @@ export class WalletsController {
 
   @Get(':walletId/transactions')
   @ApiOperation({ summary: 'Get wallet transactions' })
-  getTransactions(@Param('walletId') walletId: string) {
-    return this.walletsService.getWalletTransactions(walletId);
+  getTransactions(
+    @Param('walletId') walletId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const pagination =
+      page || limit
+        ? {
+            page: page ? Number(page) : 1,
+            limit: limit ? Number(limit) : 10,
+          }
+        : undefined;
+
+    return this.walletsService.getWalletTransactions(walletId, pagination);
   }
 
   @Post(':walletId/transactions')

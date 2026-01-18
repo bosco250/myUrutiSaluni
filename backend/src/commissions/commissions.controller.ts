@@ -57,14 +57,35 @@ export class CommissionsController {
     UserRole.SALON_EMPLOYEE,
   )
   @ApiOperation({ summary: 'Get all commissions' })
+  @ApiOperation({ summary: 'Get all commissions' })
   async findAll(
     @Query('salonEmployeeId') salonEmployeeId: string | undefined,
     @Query('salonId') salonId: string | undefined,
     @Query('paid') paid: string | undefined,
+    @Query('paymentMethod') paymentMethod: string | undefined,
     @Query('startDate') startDate: string | undefined,
     @Query('endDate') endDate: string | undefined,
+    @Query('page') page: number | undefined,
+    @Query('limit') limit: number | undefined,
     @CurrentUser() user: any,
   ) {
+    // Pagination options
+    const pagination =
+      page || limit
+        ? {
+            page: page ? Number(page) : 1,
+            limit: limit ? Number(limit) : 10,
+          }
+        : undefined;
+
+    // Filters object
+    const filters = {
+      paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
+      paymentMethod,
+      startDate: this.parseDateFilter(startDate, false),
+      endDate: this.parseDateFilter(endDate, true),
+    };
+
     // If salon employee, automatically filter to their own commissions only
     if (user.role === UserRole.SALON_EMPLOYEE) {
       // Find ALL employee records for this user (they may work at multiple salons)
@@ -73,21 +94,24 @@ export class CommissionsController {
       );
 
       if (!employees || employees.length === 0) {
-        // Log warning for debugging
         this.logger.warn(
           `No employee records found for user ${user.id} (${user.email || 'unknown email'}). User may need to be added as an employee to a salon.`,
         );
-        // Return empty array instead of throwing error - employee might not have record yet
         return [];
       }
 
       const employeeIds = employees.map((emp) => emp.id);
 
+      if (pagination) {
+        return this.commissionsService.findAllPaginated(
+          { ...filters, salonEmployeeIds: employeeIds },
+          pagination,
+        );
+      }
+
       return this.commissionsService.findAll({
+        ...filters,
         salonEmployeeIds: employeeIds,
-        paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
-        startDate: this.parseDateFilter(startDate, false),
-        endDate: this.parseDateFilter(endDate, true),
       });
     } else if (user.role === UserRole.SALON_OWNER) {
       // Salon owners can see commissions for their salons
@@ -116,24 +140,35 @@ export class CommissionsController {
         }
       }
 
-      // Filter by owner's salons - if specific salonId provided, use it, otherwise use all owner's salons
-      return this.commissionsService.findAll({
+      const ownerFilters = {
+        ...filters,
         salonEmployeeId,
         salonId: salonId || undefined,
         salonIds: salonId ? undefined : salonIds, // Use salonIds if no specific salonId
-        paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
-        startDate: this.parseDateFilter(startDate, false),
-        endDate: this.parseDateFilter(endDate, true),
-      });
+      };
+
+      if (pagination) {
+        return this.commissionsService.findAllPaginated(
+          ownerFilters,
+          pagination,
+        );
+      }
+
+      return this.commissionsService.findAll(ownerFilters);
     }
 
-    return this.commissionsService.findAll({
+    // Admin access
+    const adminFilters = {
+      ...filters,
       salonEmployeeId,
       salonId,
-      paid: paid === 'true' ? true : paid === 'false' ? false : undefined,
-      startDate: this.parseDateFilter(startDate, false),
-      endDate: this.parseDateFilter(endDate, true),
-    });
+    };
+
+    if (pagination) {
+      return this.commissionsService.findAllPaginated(adminFilters, pagination);
+    }
+
+    return this.commissionsService.findAll(adminFilters);
   }
 
   @Get('employee/:employeeId/summary')
@@ -205,5 +240,12 @@ export class CommissionsController {
       paymentReference: body.paymentReference,
       paidById: user.id,
     });
+  }
+
+  @Post(':id/verify')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @ApiOperation({ summary: 'Verify an external payment' })
+  async verifyPayment(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.commissionsService.verifyPayment(id, user.id);
   }
 }

@@ -11,7 +11,7 @@ interface ThemeContextType {
 }
 
 const defaultContextValue: ThemeContextType = {
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
   setTheme: () => {},
 };
@@ -21,7 +21,7 @@ const ThemeContext = createContext<ThemeContextType>(defaultContextValue);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   // Start with a safe default that matches server render
   // This ensures hydration doesn't fail
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
   const applyTheme = (newTheme: Theme) => {
@@ -57,8 +57,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Check localStorage or system preference
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    const initialTheme = savedTheme || systemTheme;
+    const initialTheme = savedTheme || 'light';
     
     // Update theme state and apply it
     setThemeState(initialTheme);

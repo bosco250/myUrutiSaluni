@@ -292,12 +292,8 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         <td class="text-right">{{quantity}}</td>
         <td class="text-right">{{currency}} {{unitPrice}}</td>
         <td class="text-right">
-          {{#if discountAmount}}
-            {{#unless (eq discountAmount "0.00")}}
-              {{currency}} {{discountAmount}}
-            {{else}}
-              -
-            {{/unless}}
+          {{#if hasDiscount}}
+            {{currency}} {{discountAmount}}
           {{else}}
             -
           {{/if}}
@@ -463,6 +459,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
           discountAmount: item.discountAmount
             ? formatNumber(Number(item.discountAmount))
             : '0.00',
+          hasDiscount: Number(item.discountAmount || 0) > 0,
           salonEmployee: item.salonEmployee
             ? {
                 id: item.salonEmployee.id,
