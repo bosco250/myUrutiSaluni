@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
@@ -17,7 +17,15 @@ import {
   CreditCard,
   Loader2,
   AlertCircle,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+import {
+  MEMBERSHIP_INSTALLMENT_AMOUNT,
+  PAYMENT_STATUS_CONFIG,
+  formatCurrency,
+} from '@/lib/membership-config';
 
 interface MembershipPayment {
   id: string;
@@ -83,23 +91,11 @@ function MembershipPaymentsContent() {
   // Initialize search from URL parameter (e.g., ?search=MEM-2025-12345)
   const initialSearch = searchParams.get('search') || '';
   
-  // Extract year from membership number if present (MEM-YYYY-XXXXXX or MEMBER-YYYY-XXXXXX format)
-  const extractYearFromMembershipNumber = (membershipNum: string): number => {
-    const match = membershipNum.match(/(?:MEM|MEMBER)-(\d{4})-/i);
-    if (match && match[1]) {
-      const year = parseInt(match[1], 10);
-      if (year >= 2020 && year <= 2100) {
-        return year;
-      }
-    }
-    return new Date().getFullYear();
-  };
-  
-  const initialYear = initialSearch ? extractYearFromMembershipNumber(initialSearch) : new Date().getFullYear();
-  
+  // If there's a search param, default to 'all' years to ensure the result is found
+  // Otherwise default to current year
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<number>(initialYear);
+  const [yearFilter, setYearFilter] = useState<number | 'all'>(initialSearch ? 'all' : new Date().getFullYear());
   const [selectedPayment, setSelectedPayment] = useState<MembershipPayment | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [recordForm, setRecordForm] = useState<RecordPaymentForm>({
@@ -110,12 +106,17 @@ function MembershipPaymentsContent() {
     notes: '',
   });
 
-  // Fetch payments for the year
+  // Fetch payments - either for specific year or all payments
   const { data: payments = [], isLoading } = useQuery<MembershipPayment[]>({
     queryKey: ['membership-payments', yearFilter],
     queryFn: async () => {
-      const response = await api.get(`/memberships/payments/year/${yearFilter}`);
-      return response.data || [];
+      if (yearFilter === 'all') {
+        const response = await api.get('/memberships/payments/all');
+        return response.data || [];
+      } else {
+        const response = await api.get(`/memberships/payments/year/${yearFilter}`);
+        return response.data || [];
+      }
     },
   });
 
@@ -127,6 +128,9 @@ function MembershipPaymentsContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['membership-payments'] });
       queryClient.invalidateQueries({ queryKey: ['memberships'] });
+      // Also invalidate payment statuses so manage page updates
+      queryClient.invalidateQueries({ queryKey: ['membership-payment-statuses'] });
+      queryClient.invalidateQueries({ queryKey: ['membership-payment-statuses-dashboard'] });
       setShowRecordModal(false);
       setSelectedPayment(null);
       setRecordForm({
@@ -136,6 +140,22 @@ function MembershipPaymentsContent() {
         paidAmount: '',
         notes: '',
       });
+    },
+  });
+
+  // Initialize payments for all members (admin function)
+  const initializePaymentsMutation = useMutation({
+    mutationFn: async () => {
+      // Fetch all salon owners and initialize payments for each
+      const response = await api.post('/memberships/payments/initialize-all-members');
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['membership-payments'] });
+      alert('Payment records initialized successfully!');
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.message || 'Failed to initialize payments');
     },
   });
 
@@ -156,9 +176,24 @@ function MembershipPaymentsContent() {
     });
   }, [payments, searchQuery, statusFilter]);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, yearFilter]);
+
+  // Calculate paginated payments
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPayments = filteredPayments.slice(startIndex, endIndex);
+
   // Statistics
   const stats = useMemo(() => {
-    const totalRequired = payments.length * 1500; // Each payment is 1500 RWF
+    const totalRequired = payments.length * MEMBERSHIP_INSTALLMENT_AMOUNT;
     const totalPaid = payments
       .filter(p => p.status === 'paid')
       .reduce((sum, p) => sum + Number(p.paidAmount), 0);
@@ -183,6 +218,16 @@ function MembershipPaymentsContent() {
     const paidAmount = recordForm.paidAmount
       ? parseFloat(recordForm.paidAmount)
       : selectedPayment.installmentAmount;
+
+    // Validate amount
+    if (paidAmount <= 0) {
+      alert('Amount must be greater than 0');
+      return;
+    }
+    if (paidAmount > selectedPayment.installmentAmount * 2) {
+      alert(`Amount cannot exceed ${formatCurrency(selectedPayment.installmentAmount * 2)}`);
+      return;
+    }
 
     recordPaymentMutation.mutate({
       paymentId: selectedPayment.id,
@@ -213,9 +258,13 @@ function MembershipPaymentsContent() {
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
         <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <DollarSign className="w-6 h-6 text-primary" />
-            </div>
+            <button
+              onClick={() => router.push('/memberships')}
+              className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 hover:bg-primary/20 transition-colors cursor-pointer"
+              title="Back to Memberships"
+            >
+              <ArrowLeft className="w-6 h-6 text-primary" />
+            </button>
           <div>
               <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
                 Membership Payments
@@ -224,15 +273,6 @@ function MembershipPaymentsContent() {
                 Manage annual membership contributions (3000 RWF/year, 2 installments)
               </p>
             </div>
-          </div>
-          <div className="sm:flex-shrink-0">
-          <Button
-            onClick={() => router.push('/memberships/manage')}
-            variant="secondary"
-              size="sm"
-          >
-            Back to Management
-          </Button>
           </div>
         </div>
       </div>
@@ -343,24 +383,29 @@ function MembershipPaymentsContent() {
             </div>
           </div>
 
-          {/* Year Input */}
+          {/* Year Filter */}
           <div className="lg:w-48">
             <div className="relative">
-              <label
-                htmlFor="membership-payments-year"
-                className="absolute -top-2 left-3 px-2 bg-surface-light dark:bg-surface-dark text-xs font-medium text-text-light/60 dark:text-text-dark/60"
-              >
-              Year
-            </label>
-            <input
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+              <select
                 id="membership-payments-year"
-              type="number"
-              value={yearFilter}
-              onChange={(e) => setYearFilter(parseInt(e.target.value))}
-              min={2020}
-              max={2100}
-                className="w-full h-12 px-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
-            />
+                value={yearFilter}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setYearFilter(val === 'all' ? 'all' : parseInt(val));
+                }}
+                className="w-full h-12 pl-12 pr-10 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition appearance-none cursor-pointer"
+              >
+                <option value="all">All Years</option>
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -386,11 +431,45 @@ function MembershipPaymentsContent() {
               {filteredPayments.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center">
-                    <p className="text-text-light/60 dark:text-text-dark/60">No payments found</p>
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Clock className="w-8 h-8 text-text-light/30 dark:text-text-dark/30" />
+                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                        {searchQuery ? 'No payments match your search' : 'No payments found'}
+                      </p>
+                      <p className="text-xs text-text-light/40 dark:text-text-dark/40">
+                        {searchQuery 
+                          ? 'Try adjusting your search or changing the year filter to "All Years"'
+                          : yearFilter === 'all' 
+                            ? 'No payment records exist yet. Initialize payments for all members to get started.'
+                            : `No payments for ${yearFilter}. Try selecting "All Years"`
+                        }
+                      </p>
+                      {!searchQuery && payments.length === 0 && (
+                        <Button
+                          onClick={() => initializePaymentsMutation.mutate()}
+                          disabled={initializePaymentsMutation.isPending}
+                          variant="primary"
+                          size="sm"
+                          className="gap-2 mt-2"
+                        >
+                          {initializePaymentsMutation.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Initializing...
+                            </>
+                          ) : (
+                            <>
+                              <DollarSign className="w-4 h-4" />
+                              Initialize Payments for All Members
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredPayments.map((payment) => {
+                paginatedPayments.map((payment) => {
                   const config = statusConfig[payment.status];
                   const Icon = config.icon;
 
@@ -468,6 +547,78 @@ function MembershipPaymentsContent() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {filteredPayments.length > 0 && (
+          <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-text-light/60 dark:text-text-dark/60">
+              <span>Showing</span>
+              <span className="font-medium text-text-light dark:text-text-dark">
+                {Math.min(startIndex + 1, filteredPayments.length)}
+              </span>
+              <span>to</span>
+              <span className="font-medium text-text-light dark:text-text-dark">
+                {Math.min(endIndex, filteredPayments.length)}
+              </span>
+              <span>of</span>
+              <span className="font-medium text-text-light dark:text-text-dark">
+                {filteredPayments.length}
+              </span>
+              <span>items</span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-light/60 dark:text-text-dark/60">Rows:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="h-8 pl-2 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                >
+                  {[10, 20, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1 mx-2">
+                  <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                    {currentPage}
+                  </span>
+                  <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                    / {totalPages}
+                  </span>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Record Payment Modal */}

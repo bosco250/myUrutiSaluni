@@ -21,6 +21,8 @@ import {
   Phone,
   MapPin,
   UserPlus,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -37,6 +39,11 @@ import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { DollarSign } from 'lucide-react';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { SelfServicePaymentModal } from '@/components/memberships/SelfServicePaymentModal';
+import {
+  MEMBERSHIP_ANNUAL_FEE,
+  MEMBERSHIP_STATUS_CONFIG,
+  formatCurrency,
+} from '@/lib/membership-config';
 
 interface Membership {
   id: string;
@@ -132,7 +139,10 @@ function MembershipsPageContent() {
   const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null);
   const [showQuickActions, setShowQuickActions] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState(3000);
+  const [paymentAmount, setPaymentAmount] = useState(MEMBERSHIP_ANNUAL_FEE);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { canManageUsers } = usePermissions();
@@ -180,9 +190,9 @@ function MembershipsPageContent() {
         } catch {
           statusMap[ownerId] = {
             memberId: ownerId,
-            totalRequired: 3000,
+            totalRequired: MEMBERSHIP_ANNUAL_FEE,
             totalPaid: 0,
-            remaining: 3000,
+            remaining: MEMBERSHIP_ANNUAL_FEE,
             isComplete: false,
           };
         }
@@ -298,10 +308,22 @@ function MembershipsPageContent() {
       return matchesSearch && matchesStatus && matchesCategory;
     }) || [];
 
-  const needsAttentionMemberships = filteredMemberships.filter(
+  // Reset to page 1 when filters change
+  const handleFilterChange = (setter: (val: string) => void, value: string) => {
+    setter(value);
+    setCurrentPage(1);
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredMemberships.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMemberships = filteredMemberships.slice(startIndex, endIndex);
+
+  const needsAttentionMemberships = paginatedMemberships.filter(
     (m) => m.status === 'pending_renewal' || m.status === 'expired' || m.status === 'new'
   );
-  const otherMemberships = filteredMemberships.filter(
+  const otherMemberships = paginatedMemberships.filter(
     (m) => !(m.status === 'pending_renewal' || m.status === 'expired' || m.status === 'new')
   );
 
@@ -471,7 +493,33 @@ function MembershipsPageContent() {
               </Button>
               <Button
                 onClick={() => {
-                  /* Export functionality */
+                  // Export memberships as CSV
+                  if (!memberships || memberships.length === 0) {
+                    alert('No memberships to export');
+                    return;
+                  }
+                  
+                  const headers = ['Membership Number', 'Salon Name', 'Owner', 'Status', 'Start Date', 'End Date', 'Category'];
+                  const csvContent = [
+                    headers.join(','),
+                    ...memberships.map(m => [
+                      m.membershipNumber || 'N/A',
+                      `"${(m.salon?.name || 'N/A').replace(/"/g, '""')}"`,
+                      `"${(m.salon?.owner?.fullName || 'N/A').replace(/"/g, '""')}"`,
+                      m.status,
+                      m.startDate ? new Date(m.startDate).toLocaleDateString() : 'N/A',
+                      m.endDate ? new Date(m.endDate).toLocaleDateString() : 'N/A',
+                      m.category || 'N/A',
+                    ].join(','))
+                  ].join('\n');
+                  
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `memberships-export-${new Date().toISOString().split('T')[0]}.csv`;
+                  link.click();
+                  URL.revokeObjectURL(url);
                 }}
                 variant="secondary"
                 size="sm"
@@ -809,7 +857,7 @@ function MembershipsPageContent() {
                     onSuspend={() => requestSuspend(membership.id, membership.membershipNumber)}
                     onExpire={() => requestExpire(membership.id, membership.membershipNumber)}
                     onRenew={() => {
-                      setPaymentAmount(3000);
+                      setPaymentAmount(MEMBERSHIP_ANNUAL_FEE);
                       setShowPaymentModal(true);
                     }}
                     canManage={canManageUsers()}
@@ -878,7 +926,7 @@ function MembershipsPageContent() {
                     onSuspend={() => requestSuspend(membership.id, membership.membershipNumber)}
                     onExpire={() => requestExpire(membership.id, membership.membershipNumber)}
                     onRenew={() => {
-                      setPaymentAmount(3000);
+                      setPaymentAmount(MEMBERSHIP_ANNUAL_FEE);
                       setShowPaymentModal(true);
                     }}
                     canManage={canManageUsers()}
@@ -903,6 +951,77 @@ function MembershipsPageContent() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Pagination Controls */}
+      {filteredMemberships.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t border-border-light dark:border-border-dark">
+          <div className="flex items-center gap-2 text-sm text-text-light/60 dark:text-text-dark/60">
+            <span>Showing</span>
+            <span className="font-medium text-text-light dark:text-text-dark">
+              {Math.min(startIndex + 1, filteredMemberships.length)}
+            </span>
+            <span>to</span>
+            <span className="font-medium text-text-light dark:text-text-dark">
+              {Math.min(endIndex, filteredMemberships.length)}
+            </span>
+            <span>of</span>
+            <span className="font-medium text-text-light dark:text-text-dark">
+              {filteredMemberships.length}
+            </span>
+            <span>items</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-light/60 dark:text-text-dark/60">Rows per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="h-8 pl-2 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+              >
+                {[10, 20, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1 mx-2">
+                <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                  {currentPage}
+                </span>
+                <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                  / {totalPages}
+                </span>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -940,7 +1059,7 @@ function MembershipsPageContent() {
                   variant="primary"
                   onClick={() => {
                     const url = `/memberships/payments?search=${activationError.membershipNumber}`;
-                    window.location.href = url;
+                    router.push(url);
                   }}
                   className="gap-2"
                 >
@@ -1047,26 +1166,27 @@ function MembershipCard({
 
   const progress = getProgressPercentage();
 
+  // Condensed layout
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:shadow-md transition-all">
+    <div className="group relative overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:shadow-md transition-all">
       <div className={`absolute inset-y-0 left-0 w-1 ${railClass}`} />
 
-      <div className="relative p-4">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div
-              className={`h-11 w-11 rounded-xl flex items-center justify-center ${config.bg} flex-shrink-0`}
-            >
-              <Icon className={`w-5 h-5 ${config.color}`} />
-            </div>
+      <div className="relative p-3 flex flex-col gap-3">
+        {/* Header Row: Icon + Name + Actions */}
+        <div className="flex items-center gap-3">
+          <div
+            className={`h-9 w-9 rounded-lg flex items-center justify-center ${config.bg} flex-shrink-0`}
+          >
+            <Icon className={`w-4 h-4 ${config.color}`} />
+          </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h3 className="text-base font-semibold text-text-light dark:text-text-dark truncate">
-                  {membership.salon?.name || 'Unknown Salon'}
-                </h3>
-                <Badge
-                  variant={
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                {membership.salon?.name || 'Unknown Salon'}
+              </h3>
+              <Badge
+                 variant={
                     config.color === 'text-success'
                       ? 'success'
                       : config.color === 'text-warning'
@@ -1074,41 +1194,26 @@ function MembershipCard({
                         : config.color === 'text-error'
                           ? 'danger'
                           : 'default'
-                  }
+                  } 
                   size="sm"
+                  className="px-1.5 py-0 text-[10px] h-5"
                 >
-                  {config.label}
-                </Badge>
-              </div>
-
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                #{membership.membershipNumber}
-              </p>
-
-              <div className="flex items-center gap-2 mt-2">
-                {paymentStatus && (
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${isPaid ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}
-                  >
-                    {isPaid ? (
-                      <CheckCircle className="w-3 h-3" />
-                    ) : (
-                      <DollarSign className="w-3 h-3" />
-                    )}
-                    {paidAmount.toLocaleString()} / {totalAmount.toLocaleString()} RWF
-                  </span>
-                )}
-              </div>
+                {config.label}
+              </Badge>
             </div>
+            <p className="text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium">
+              #{membership.membershipNumber}
+            </p>
           </div>
 
+          
           {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {canManage &&
               membership.status === 'new' &&
               (isPaid || paidAmount >= 1500 ? (
-                <Button onClick={onActivate} size="sm" disabled={isProcessing} className="gap-2">
-                  <CheckCircle className="w-4 h-4" />
+                <Button onClick={onActivate} size="sm" disabled={isProcessing} className="h-7 px-2 text-xs gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5" />
                   Activate
                 </Button>
               ) : (
@@ -1119,10 +1224,10 @@ function MembershipCard({
                   }}
                   variant="secondary"
                   size="sm"
-                  className="gap-2 text-error border-1 border-error/50 hover:bg-error/10 hover:border-error"
+                  className="h-7 px-2 text-xs gap-1.5 text-error border-1 border-error/50 hover:bg-error/10 hover:border-error"
                 >
-                  <DollarSign className="w-4 h-4" />
-                  Record Payment
+                  <DollarSign className="w-3.5 h-3.5" />
+                  Pay
                 </Button>
               ))}
 
@@ -1130,16 +1235,16 @@ function MembershipCard({
               <div className="relative">
                 <Button
                   onClick={onToggleQuickActions}
-                  variant="secondary"
+                  variant="secondary" 
                   size="sm"
-                  className="h-9 w-9 p-0"
+                  className="h-7 w-7 p-0 hover:bg-background-light dark:hover:bg-background-dark border-none bg-transparent"
                   aria-label="Open actions"
                 >
-                  <MoreVertical className="w-4 h-4" />
+                  <MoreVertical className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
                 </Button>
 
                 {showQuickActions && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xl z-10 py-2 animate-in fade-in slide-in-from-top-2">
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl z-20 py-1 animate-in fade-in slide-in-from-top-1">
                     {membership.status === 'active' && (
                       <>
                         <button
@@ -1148,9 +1253,9 @@ function MembershipCard({
                             onToggleQuickActions();
                           }}
                           disabled={isProcessing}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
                         >
-                          <Ban className="w-4 h-4" />
+                          <Ban className="w-3.5 h-3.5" />
                           Suspend
                         </button>
                         <button
@@ -1159,9 +1264,9 @@ function MembershipCard({
                             onToggleQuickActions();
                           }}
                           disabled={isProcessing}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
                         >
-                          <XCircle className="w-4 h-4" />
+                          <XCircle className="w-3.5 h-3.5" />
                           Expire
                         </button>
                         <div className="my-1 border-t border-border-light dark:border-border-dark" />
@@ -1172,162 +1277,130 @@ function MembershipCard({
                         onView();
                         onToggleQuickActions();
                       }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5" />
                       View Details
-                    </button>
-                    <button
-                      onClick={onToggleQuickActions}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={onToggleQuickActions}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Send Reminder
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                {/* Salon owner self-service: Pay/Renew button for expired or pending_renewal */}
+              <div className="flex items-center gap-1">
                 {(membership.status === 'expired' || membership.status === 'pending_renewal') && (
-                  <Button onClick={onRenew} variant="primary" size="sm" className="gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Pay & Renew
+                  <Button onClick={onRenew} variant="primary" size="sm" className="h-7 px-2 text-xs gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5" />
+                    Renew
                   </Button>
                 )}
-                {/* Certificate download for active memberships */}
-                {membership.status === 'active' && (
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const response = await api.get(
-                          `/reports/membership-certificate/${membership.salon?.owner?.id}`,
-                          { responseType: 'blob' }
-                        );
-                        const url = window.URL.createObjectURL(new Blob([response.data]));
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.setAttribute(
-                          'download',
-                          `membership-certificate-${membership.membershipNumber}.pdf`
-                        );
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-                        window.URL.revokeObjectURL(url);
-                      } catch {
-                        alert('Failed to download certificate');
-                      }
-                    }}
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    title="Download Certificate"
-                  >
-                    <Download className="w-4 h-4" />
-                    Certificate
-                  </Button>
-                )}
-                <Button onClick={onView} variant="secondary" size="sm" className="gap-2">
-                  <Eye className="w-4 h-4" />
-                  View
+                <Button onClick={onView} variant="secondary" size="sm" className="h-7 w-7 p-0">
+                  <Eye className="w-3.5 h-3.5" />
                 </Button>
               </div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1">
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50">Owner</p>
-            <p className="text-sm font-medium text-text-light dark:text-text-dark truncate">
-              {membership.salon?.owner?.fullName || 'N/A'}
-            </p>
-          </div>
+        {/* Details Grid */}
+        <div className="grid grid-cols-2 gap-x-2 gap-y-2 pt-2 border-t border-border-light/50 dark:border-border-dark/50">
+           {/* Owner */}
+           <div className="flex items-center gap-1.5 overflow-hidden">
+              <Users className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+              <span className="text-xs text-text-light/80 dark:text-text-dark/80 truncate font-medium">
+                {membership.salon?.owner?.fullName || 'N/A'}
+              </span>
+           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50">Category</p>
-            <p className="text-sm italic font-medium text-text-light dark:text-text-dark truncate">
-              {membership.category || 'Standard'}
-            </p>
-          </div>
+           {/* Payment Status */}
+           <div className="flex items-center gap-1.5 overflow-hidden justify-end">
+              {paymentStatus ? (
+                <>
+                   {isPaid ? (
+                      <CheckCircle className="w-3 h-3 text-success flex-shrink-0" />
+                   ) : (
+                      <DollarSign className="w-3 h-3 text-error flex-shrink-0" />
+                   )}
+                   <span className={`text-xs font-medium truncate ${isPaid ? 'text-success' : 'text-error'}`}>
+                     {paidAmount.toLocaleString()} RWF
+                   </span>
+                </>
+              ) : (
+                <span className="text-xs text-text-light/40 dark:text-text-dark/40 italic">No payment info</span>
+              )}
+           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50">
-              {membership.status === 'new'
-                ? 'Status'
-                : daysUntilExpiry !== null && daysUntilExpiry > 0
-                  ? 'Expires in'
-                  : 'Expired'}
-            </p>
-            <p
-              className={`text-sm italic font-medium truncate ${
-                daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
+           {/* Membership Status/Expiry */}
+           <div className="col-span-2 flex items-center gap-1.5">
+              <Clock className={`w-3 h-3 ${
+                  daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
                   ? 'text-warning'
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
                     ? 'text-error'
-                    : 'text-text-light dark:text-text-dark'
-              }`}
-            >
-              {membership.endDate
-                ? daysUntilExpiry !== null && daysUntilExpiry > 0
-                  ? `${daysUntilExpiry} days`
+                    : 'text-text-light/40 dark:text-text-dark/40'
+              } flex-shrink-0`} />
+              
+              <span className={`text-xs truncate ${
+                 daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
+                  ? 'text-warning font-medium'
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                    ? `${Math.abs(daysUntilExpiry)} days ago`
-                    : new Date(membership.endDate).toLocaleDateString()
-                : membership.status === 'new'
-                  ? 'Not Activated'
-                  : 'N/A'}
-            </p>
-          </div>
+                    ? 'text-error font-medium'
+                    : 'text-text-light/70 dark:text-text-dark/70'
+              }`}>
+                {membership.status === 'new' 
+                  ? 'Payment pending' 
+                  : membership.endDate && daysUntilExpiry !== null
+                    ? daysUntilExpiry > 0 
+                      ? `Expires in ${daysUntilExpiry} days` 
+                      : `Expired ${Math.abs(daysUntilExpiry!)} days ago`
+                    : 'Not activated'}
+              </span>
+           </div>
         </div>
 
-        {/* Progress Bar */}
+        {/* Compact Progress Bar */}
         {membership.status === 'active' && membership.startDate && membership.endDate && (
-          <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-            <div className="flex items-center justify-between text-xs text-text-light/60 dark:text-text-dark/60 mb-2">
-              <span>Term progress</span>
-              <span className="font-medium">{Math.round(progress)}%</span>
-            </div>
-            <div className="h-1.5 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 ${
-                  progress >= 80 ? 'bg-warning' : 'bg-success'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Meta chips */}
-        {(membership.lastReminderSent || membership.salon?.phone) && (
-          <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark flex flex-wrap gap-2">
-            {membership.lastReminderSent && (
-              <div className="inline-flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
-                <Mail className="w-3 h-3" />
-                <span>{new Date(membership.lastReminderSent).toLocaleDateString()}</span>
-              </div>
-            )}
-            {membership.salon?.phone && (
-              <div className="inline-flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
-                <Phone className="w-3 h-3" />
-                <span>{membership.salon.phone}</span>
-              </div>
-            )}
-          </div>
+             <div className="mt-0.5">
+                <div className="flex items-center justify-between text-[10px] text-text-light/50 dark:text-text-dark/50 mb-1">
+                   <span>{new Date(membership.startDate).toLocaleDateString()}</span>
+                   <span>{new Date(membership.endDate).toLocaleDateString()}</span>
+                </div>
+                <div className="h-1 bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      progress >= 80 ? 'bg-warning' : 'bg-success'
+                    }`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+             </div>
         )}
       </div>
     </div>
   );
+}
+
+// Compact version of meta info, removed for space saving unless critical
+function MembershipCardMeta({
+    membership
+}: { membership: Membership }) {
+  if (!membership.lastReminderSent && !membership.salon?.phone) return null;
+   return (
+       <div className="mt-2 pt-2 border-t border-border-light dark:border-border-dark flex flex-wrap gap-2">
+            {membership.lastReminderSent && (
+              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+                <Mail className="w-2.5 h-2.5" />
+                <span>{new Date(membership.lastReminderSent).toLocaleDateString()}</span>
+              </div>
+            )}
+            {membership.salon?.phone && (
+              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+                <Phone className="w-2.5 h-2.5" />
+                <span>{membership.salon.phone}</span>
+              </div>
+            )}
+       </div>
+   )
+
 }
 
 function MembershipDetailModal({

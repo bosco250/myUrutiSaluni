@@ -2,22 +2,22 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, DollarSign, Smartphone, CheckCircle } from 'lucide-react';
+import { Loader2, DollarSign, Smartphone, CheckCircle, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-
-// ... (rest of imports)
-
-// ...
-
-
+import {
+  MEMBERSHIP_ANNUAL_FEE,
+  MEMBERSHIP_INSTALLMENT_AMOUNT,
+  isValidRwandaPhone,
+  formatCurrency,
+} from '@/lib/membership-config';
 
 interface SelfServicePaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  requiredAmount: number; // 3000
-  email?: string; // prefill hints if needed
+  requiredAmount: number;
+  email?: string;
 }
 
 export function SelfServicePaymentModal({
@@ -28,19 +28,33 @@ export function SelfServicePaymentModal({
 }: SelfServicePaymentModalProps) {
   const queryClient = useQueryClient();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [amount, setAmount] = useState<number>(3000); // Default to full amount
+  const [amount, setAmount] = useState<number>(MEMBERSHIP_ANNUAL_FEE);
   const [step, setStep] = useState<'input' | 'processing' | 'success'>('input');
   const [error, setError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) {
+      setPhoneError('Phone number is required');
+      return false;
+    }
+    if (!isValidRwandaPhone(phone)) {
+      setPhoneError('Enter a valid Rwanda number (078, 079, 072, or 073 + 7 digits)');
+      return false;
+    }
+    setPhoneError(null);
+    return true;
+  };
 
   const initiatePaymentMutation = useMutation({
     mutationFn: async (data: { phoneNumber: string; amount: number }) => {
       const response = await api.post('/memberships/payments/initiate', data);
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       setStep('success');
-      // Invalidate membership status to reflect potential partial updates or just refresh
       queryClient.invalidateQueries({ queryKey: ['membership-status'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'] });
     },
     onError: (err: any) => {
       setError(
@@ -52,7 +66,7 @@ export function SelfServicePaymentModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber) return;
+    if (!validatePhone(phoneNumber)) return;
     
     setError(null);
     setStep('processing');
@@ -61,12 +75,13 @@ export function SelfServicePaymentModal({
 
   const handleClose = () => {
     if (step === 'success') {
-      // Refresh page or queries on final close
-       queryClient.invalidateQueries({ queryKey: ['membership-status'] });
+      queryClient.invalidateQueries({ queryKey: ['membership-status'] });
+      queryClient.invalidateQueries({ queryKey: ['memberships'] });
     }
     setStep('input');
     setPhoneNumber('');
     setError(null);
+    setPhoneError(null);
     onClose();
   };
 
@@ -96,25 +111,25 @@ export function SelfServicePaymentModal({
               <div className="grid grid-cols-2 gap-3">
                  <button
                     type="button"
-                    onClick={() => setAmount(3000)}
+                    onClick={() => setAmount(MEMBERSHIP_ANNUAL_FEE)}
                     className={`p-3 rounded-lg border text-sm font-medium transition-all ${
-                        amount === 3000 
+                        amount === MEMBERSHIP_ANNUAL_FEE 
                         ? 'border-primary bg-primary/10 text-primary' 
                         : 'border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:border-primary/50'
                     }`}
                  >
-                    Full Year (3,000 RWF)
+                    Full Year ({formatCurrency(MEMBERSHIP_ANNUAL_FEE)})
                  </button>
                  <button
                     type="button"
-                    onClick={() => setAmount(1500)}
+                    onClick={() => setAmount(MEMBERSHIP_INSTALLMENT_AMOUNT)}
                     className={`p-3 rounded-lg border text-sm font-medium transition-all ${
-                        amount === 1500 
+                        amount === MEMBERSHIP_INSTALLMENT_AMOUNT 
                         ? 'border-primary bg-primary/10 text-primary' 
                         : 'border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:border-primary/50'
                     }`}
                  >
-                    6 Months (1,500 RWF)
+                    6 Months ({formatCurrency(MEMBERSHIP_INSTALLMENT_AMOUNT)})
                  </button>
               </div>
             </div>
@@ -129,19 +144,27 @@ export function SelfServicePaymentModal({
                   type="tel"
                   placeholder="078..."
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                  required
+                  onChange={(e) => {
+                    setPhoneNumber(e.target.value);
+                    if (phoneError) setPhoneError(null);
+                  }}
+                  className={`w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${
+                    phoneError ? 'border-error' : 'border-border-light dark:border-border-dark'
+                  }`}
                 />
               </div>
-              <p className="text-xs text-text-light/50 mt-1">
-                Enter your Airtel Money or MTN MoMo number
-              </p>
+              {phoneError ? (
+                <p className="text-xs text-error mt-1">{phoneError}</p>
+              ) : (
+                <p className="text-xs text-text-light/50 mt-1">
+                  Enter your Airtel Money or MTN MoMo number
+                </p>
+              )}
             </div>
 
             {error && (
               <div className="p-3 bg-danger/10 text-danger text-sm rounded-lg flex items-start gap-2">
-                <span className="mt-0.5">⚠️</span>
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 {error}
               </div>
             )}

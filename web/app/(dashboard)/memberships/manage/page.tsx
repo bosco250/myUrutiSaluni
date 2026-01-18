@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
@@ -26,6 +26,9 @@ import {
   Phone,
   MapPin,
   DollarSign,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
@@ -379,6 +382,21 @@ function MembershipManagementContent() {
     });
   }, [applications, searchQuery, statusFilter]);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  // Calculate paginated memberships
+  const totalPages = Math.ceil(filteredMemberships.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMemberships = filteredMemberships.slice(startIndex, endIndex);
+
   // Suspend/Expire Confirmation State
   const [suspendExpireConfirm, setSuspendExpireConfirm] = useState<{
     type: 'suspend' | 'expire';
@@ -458,9 +476,13 @@ function MembershipManagementContent() {
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
         <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-6 h-6 text-primary" />
-            </div>
+            <button
+              onClick={() => router.push('/memberships')}
+              className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 hover:bg-primary/20 transition-colors cursor-pointer"
+              title="Back to Memberships"
+            >
+              <ArrowLeft className="w-6 h-6 text-primary" />
+            </button>
             <div>
               <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
                 Membership Management
@@ -691,21 +713,95 @@ function MembershipManagementContent() {
 
       {/* Content */}
       {activeTab === 'memberships' && (
-        <MembershipsTab
-          memberships={filteredMemberships}
-          paymentStatuses={paymentStatuses}
-          onView={setSelectedMembership}
-          onActivate={(id) => activateMutation.mutate(id)}
-          onSuspend={requestSuspend}
-          onExpire={requestExpire}
-          onRenew={(membership) => {
-            setSelectedMembership(membership);
-            setShowRenewModal(true);
-          }}
-          isProcessing={
-            activateMutation.isPending || suspendMutation.isPending || expireMutation.isPending
-          }
-        />
+        <>
+          <MembershipsTab
+            memberships={paginatedMemberships}
+            paymentStatuses={paymentStatuses}
+            onView={setSelectedMembership}
+            onActivate={(id) => activateMutation.mutate(id)}
+            onSuspend={requestSuspend}
+            onExpire={requestExpire}
+            onRenew={(membership) => {
+              setSelectedMembership(membership);
+              setShowRenewModal(true);
+            }}
+            isProcessing={
+              activateMutation.isPending || suspendMutation.isPending || expireMutation.isPending
+            }
+          />
+
+          {/* Pagination Controls */}
+          {filteredMemberships.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t border-border-light dark:border-border-dark">
+              <div className="flex items-center gap-2 text-sm text-text-light/60 dark:text-text-dark/60">
+                <span>Showing</span>
+                <span className="font-medium text-text-light dark:text-text-dark">
+                  {Math.min(startIndex + 1, filteredMemberships.length)}
+                </span>
+                <span>to</span>
+                <span className="font-medium text-text-light dark:text-text-dark">
+                  {Math.min(endIndex, filteredMemberships.length)}
+                </span>
+                <span>of</span>
+                <span className="font-medium text-text-light dark:text-text-dark">
+                  {filteredMemberships.length}
+                </span>
+                <span>items</span>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-text-light/60 dark:text-text-dark/60">Rows:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="h-8 pl-2 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                  >
+                    {[10, 20, 50, 100].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1 mx-2">
+                    <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                      {currentPage}
+                    </span>
+                    <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                      / {totalPages}
+                    </span>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {activeTab === 'applications' && (
@@ -914,7 +1010,9 @@ function MembershipsTab({
                     ) : (
                       <Button
                         onClick={() => {
-                          const url = `/memberships/payments?search=${membership.membershipNumber || ''}`;
+                          // Use owner name or membership number for search
+                          const searchTerm = membership.salon?.owner?.fullName || membership.membershipNumber || '';
+                          const url = `/memberships/payments?search=${encodeURIComponent(searchTerm)}`;
                           window.location.href = url;
                         }}
                         variant="secondary"
@@ -937,6 +1035,37 @@ function MembershipsTab({
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         Renew
+                      </Button>
+                      {/* Download Certificate Button */}
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const ownerId = membership.salon?.owner?.id;
+                            if (!ownerId) {
+                              alert('Owner not found');
+                              return;
+                            }
+                            const response = await api.get(
+                              `/reports/membership-certificate/${ownerId}`,
+                              { responseType: 'blob' }
+                            );
+                            const url = window.URL.createObjectURL(new Blob([response.data]));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `membership-certificate-${membership.membershipNumber}.pdf`;
+                            link.click();
+                            window.URL.revokeObjectURL(url);
+                          } catch (error) {
+                            alert('Failed to download certificate');
+                          }
+                        }}
+                        variant="secondary"
+                        size="sm"
+                        className="gap-1.5 text-primary hover:bg-primary/10"
+                        title="Download Certificate"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Certificate
                       </Button>
                       <Button
                         onClick={() => onSuspend(membership.id)}

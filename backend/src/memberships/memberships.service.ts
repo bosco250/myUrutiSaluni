@@ -30,6 +30,12 @@ import {
 import { InitiateMembershipPaymentDto } from './dto/initiate-membership-payment.dto';
 import { AirtelMoneyService } from '../payments/services/airtel-money.service';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  MEMBERSHIP_ANNUAL_FEE,
+  MEMBERSHIP_INSTALLMENT_AMOUNT,
+  MEMBERSHIP_MIN_ACTIVATION_AMOUNT,
+  MEMBERSHIP_DURATION,
+} from './membership.config';
 import { PaymentMethod as GenericPaymentMethod } from '../payments/entities/payment.entity';
 
 @Injectable()
@@ -380,8 +386,8 @@ export class MembershipsService {
       .filter((p) => p.status === PaymentStatus.PAID)
       .reduce((sum, p) => sum + Number(p.paidAmount), 0);
 
-    const requiredAmount = 3000; // 3000 RWF per year
-    const partialAmount = 1500; // Minimum for 6 months
+    const requiredAmount = MEMBERSHIP_ANNUAL_FEE;
+    const partialAmount = MEMBERSHIP_MIN_ACTIVATION_AMOUNT;
 
     if (totalPaid < partialAmount) {
       throw new BadRequestException(
@@ -400,10 +406,10 @@ export class MembershipsService {
     
     if (totalPaid >= requiredAmount) {
       // Full year
-      endDate.setFullYear(endDate.getFullYear() + 1);
+      endDate.setMonth(endDate.getMonth() + MEMBERSHIP_DURATION.FULL_YEAR_MONTHS);
     } else {
       // 6 months (Partial)
-      endDate.setMonth(endDate.getMonth() + 6);
+      endDate.setMonth(endDate.getMonth() + MEMBERSHIP_DURATION.HALF_YEAR_MONTHS);
     }
     membership.endDate = endDate;
 
@@ -413,11 +419,13 @@ export class MembershipsService {
   async renewMembership(id: string, endDate: Date): Promise<Membership> {
     const membership = await this.findOneMembership(id);
 
-    if (membership.status === MembershipStatus.EXPIRED) {
+    // Reactivate expired or suspended memberships
+    if (membership.status === MembershipStatus.EXPIRED || 
+        membership.status === MembershipStatus.SUSPENDED ||
+        membership.status === MembershipStatus.PENDING_RENEWAL) {
       membership.status = MembershipStatus.ACTIVE;
-    } else if (membership.status === MembershipStatus.ACTIVE) {
-      membership.status = MembershipStatus.PENDING_RENEWAL;
     }
+    // ACTIVE memberships stay ACTIVE - we just extend the endDate
 
     membership.endDate = endDate;
 
@@ -430,12 +438,14 @@ export class MembershipsService {
     return this.membershipsRepository.save(membership);
   }
 
-  async expireMembership(id: string): Promise<Membership> {
+  async expireMembership(id: string, force: boolean = false): Promise<Membership> {
     const membership = await this.findOneMembership(id);
     
-    // Prevent expiring valid memberships manually
-    if (membership.endDate && new Date(membership.endDate) > new Date()) {
-      throw new BadRequestException('Cannot expire a membership that is still active and valid.');
+    // Warn but allow admin override with force flag
+    if (!force && membership.endDate && new Date(membership.endDate) > new Date()) {
+      throw new BadRequestException(
+        'This membership is still valid. Use force=true to expire it anyway.'
+      );
     }
 
     membership.status = MembershipStatus.EXPIRED;
@@ -536,8 +546,8 @@ export class MembershipsService {
 
     const payment = this.paymentsRepository.create({
       ...createDto,
-      totalAmount: 3000, // Annual amount
-      installmentAmount: 1500, // Per installment
+      totalAmount: MEMBERSHIP_ANNUAL_FEE,
+      installmentAmount: MEMBERSHIP_INSTALLMENT_AMOUNT,
       dueDate,
       status: PaymentStatus.PENDING,
     });
@@ -611,6 +621,32 @@ export class MembershipsService {
     });
   }
 
+  async findAllPayments(filters?: { status?: string; search?: string }): Promise<MembershipPayment[]> {
+    const queryBuilder = this.paymentsRepository
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.member', 'member')
+      .leftJoinAndSelect('payment.membership', 'membership')
+      .leftJoinAndSelect('payment.paidBy', 'paidBy');
+
+    if (filters?.status && filters.status !== 'all') {
+      queryBuilder.andWhere('payment.status = :status', { status: filters.status });
+    }
+
+    if (filters?.search) {
+      const search = `%${filters.search.toLowerCase()}%`;
+      queryBuilder.andWhere(
+        '(LOWER(member.fullName) LIKE :search OR LOWER(member.membershipNumber) LIKE :search OR LOWER(member.email) LIKE :search OR LOWER(membership.membershipNumber) LIKE :search)',
+        { search }
+      );
+    }
+
+    queryBuilder.orderBy('payment.paymentYear', 'DESC')
+      .addOrderBy('payment.memberId', 'ASC')
+      .addOrderBy('payment.installmentNumber', 'ASC');
+
+    return queryBuilder.getMany();
+  }
+
   async getPaymentStatus(
     memberId: string,
     year: number,
@@ -621,8 +657,18 @@ export class MembershipsService {
     isComplete: boolean;
     payments: MembershipPayment[];
   }> {
-    const payments = await this.findPaymentsByMember(memberId, year);
-    const totalRequired = 3000;
+    let payments = await this.findPaymentsByMember(memberId, year);
+    
+    // Auto-initialize payments if none exist for this year
+    if (payments.length === 0) {
+      try {
+        payments = await this.initializeYearlyPayments(memberId, year);
+      } catch (error) {
+        console.warn(`Could not initialize payments for member ${memberId}:`, error);
+      }
+    }
+    
+    const totalRequired = MEMBERSHIP_ANNUAL_FEE;
     const totalPaid = payments
       .filter((p) => p.status === PaymentStatus.PAID)
       .reduce((sum, p) => sum + Number(p.paidAmount), 0);
@@ -654,24 +700,85 @@ export class MembershipsService {
       return existing;
     }
 
+    // Find the member's active membership (for linking)
+    let membershipId: string | undefined;
+    const salons = await this.salonsRepository.find({
+      where: { ownerId: memberId },
+    });
+    if (salons.length > 0) {
+      const salonIds = salons.map(s => s.id);
+      const membership = await this.membershipsRepository
+        .createQueryBuilder('membership')
+        .where('membership.salonId IN (:...salonIds)', { salonIds })
+        .orderBy('membership.createdAt', 'DESC')
+        .getOne();
+      if (membership) {
+        membershipId = membership.id;
+      }
+    }
+
     // Create two installments
     const payments: MembershipPayment[] = [];
 
     for (let installment = 1; installment <= 2; installment++) {
       const dueDate = new Date(year, installment === 1 ? 0 : 6, 1); // Jan 1 or Jul 1
-      const payment = this.paymentsRepository.create({
-        memberId,
-        paymentYear: year,
-        installmentNumber: installment,
-        totalAmount: 3000,
-        installmentAmount: 1500,
-        dueDate,
-        status: PaymentStatus.PENDING,
-      });
-      payments.push(await this.paymentsRepository.save(payment));
+      
+      const newPayment = new MembershipPayment();
+      newPayment.memberId = memberId;
+      newPayment.paymentYear = year;
+      newPayment.installmentNumber = installment;
+      newPayment.totalAmount = MEMBERSHIP_ANNUAL_FEE;
+      newPayment.installmentAmount = MEMBERSHIP_INSTALLMENT_AMOUNT;
+      newPayment.dueDate = dueDate;
+      newPayment.status = PaymentStatus.PENDING;
+      
+      // Link to membership if found
+      if (membershipId) {
+        newPayment.membershipId = membershipId;
+      }
+      
+      const savedPayment = await this.paymentsRepository.save(newPayment);
+      payments.push(savedPayment);
     }
 
     return payments;
+  }
+
+  async initializePaymentsForAllMembers(): Promise<{
+    initialized: number;
+    skipped: number;
+    errors: number;
+  }> {
+    const currentYear = new Date().getFullYear();
+    
+    // Find all salon owners
+    const salonOwners = await this.usersRepository.find({
+      where: { role: UserRole.SALON_OWNER },
+    });
+
+    let initialized = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    for (const owner of salonOwners) {
+      try {
+        const payments = await this.initializeYearlyPayments(owner.id, currentYear);
+        // If we got existing payments back, they were skipped (already exist)
+        const existingCheck = await this.paymentsRepository.count({
+          where: { memberId: owner.id, paymentYear: currentYear },
+        });
+        if (existingCheck <= 2 && payments.length > 0) {
+          initialized++;
+        } else {
+          skipped++;
+        }
+      } catch (error) {
+        console.error(`Failed to initialize payments for ${owner.id}:`, error);
+        errors++;
+      }
+    }
+
+    return { initialized, skipped, errors };
   }
 
   // ========== Self-Service Payment ==========

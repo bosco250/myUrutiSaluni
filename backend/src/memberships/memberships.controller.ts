@@ -258,8 +258,11 @@ export class MembershipsController {
   @Patch(':id/expire')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Expire a membership' })
-  async expireMembership(@Param('id') id: string) {
-    return this.membershipsService.expireMembership(id);
+  async expireMembership(
+    @Param('id') id: string,
+    @Query('force') force?: string,
+  ) {
+    return this.membershipsService.expireMembership(id, force === 'true');
   }
 
   @Delete(':id')
@@ -307,6 +310,16 @@ export class MembershipsController {
     );
   }
 
+  @Get('payments/all')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @ApiOperation({ summary: 'Get all payments across all years' })
+  async getAllPayments(
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.membershipsService.findAllPayments({ status, search });
+  }
+
   @Get('payments/year/:year')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Get all payments for a specific year' })
@@ -344,6 +357,15 @@ export class MembershipsController {
       memberId,
       parseInt(year),
     );
+  }
+
+  @Post('payments/initialize-all-members')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @ApiOperation({
+    summary: 'Initialize yearly payment installments for all active members',
+  })
+  async initializeAllMembersPayments() {
+    return this.membershipsService.initializePaymentsForAllMembers();
   }
 
   @Post('payments/initiate')
