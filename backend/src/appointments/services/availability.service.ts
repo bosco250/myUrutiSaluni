@@ -325,16 +325,29 @@ export class AvailabilityService {
         return h * 60 + (m || 0);
       };
 
-      // Use numeric comparison instead of string comparison to handle format differences
+      // IMPORTANT: Working hours are stored in local Rwanda time (Africa/Kigali, UTC+2)
+      // The scheduledStart/End are in UTC from the frontend's toISOString()
+      // We need to convert to Rwanda local time for comparison
+      // Rwanda is UTC+2, so we add 2 hours to UTC time
+      const RWANDA_OFFSET_MINUTES = 2 * 60; // UTC+2
+
+      // Get UTC hours and minutes, then add Rwanda offset
+      const scheduledStartUTCMinutes =
+        scheduledStart.getUTCHours() * 60 + scheduledStart.getUTCMinutes();
+      const scheduledEndUTCMinutes =
+        scheduledEnd.getUTCHours() * 60 + scheduledEnd.getUTCMinutes();
+
+      // Convert to Rwanda local time
       const scheduledStartMinutes =
-        scheduledStart.getHours() * 60 + scheduledStart.getMinutes();
+        (scheduledStartUTCMinutes + RWANDA_OFFSET_MINUTES) % (24 * 60);
       const scheduledEndMinutes =
-        scheduledEnd.getHours() * 60 + scheduledEnd.getMinutes();
+        (scheduledEndUTCMinutes + RWANDA_OFFSET_MINUTES) % (24 * 60);
+
       const workStartMinutes = timeToMinutes(workingHours.startTime);
       const workEndMinutes = timeToMinutes(workingHours.endTime);
 
       this.logger.debug(
-        `[validateBooking] Time check: scheduled=${scheduledStartMinutes}-${scheduledEndMinutes} min, ` +
+        `[validateBooking] Time check (Rwanda local): scheduled=${scheduledStartMinutes}-${scheduledEndMinutes} min, ` +
           `working=${workStartMinutes}-${workEndMinutes} min (${workingHours.startTime}-${workingHours.endTime})`,
       );
 
