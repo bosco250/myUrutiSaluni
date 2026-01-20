@@ -311,13 +311,36 @@ export class AvailabilityService {
         );
       }
 
-      // Check if time is within working hours
-      const startTime = format(scheduledStart, 'HH:mm');
-      const endTime = format(scheduledEnd, 'HH:mm');
+      // Final fallback - if still no working hours, use default 9AM-6PM
+      if (!workingHours) {
+        this.logger.warn(
+          `[validateBooking] No working hours found for employee ${employeeId} on day ${dayOfWeek}, using default 9:00-18:00`,
+        );
+        workingHours = this.getDefaultWorkingHours(employeeId, dayOfWeek);
+      }
+
+      // Helper to convert "HH:mm" or "H:mm" to minutes since midnight
+      const timeToMinutes = (time: string): number => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + (m || 0);
+      };
+
+      // Use numeric comparison instead of string comparison to handle format differences
+      const scheduledStartMinutes =
+        scheduledStart.getHours() * 60 + scheduledStart.getMinutes();
+      const scheduledEndMinutes =
+        scheduledEnd.getHours() * 60 + scheduledEnd.getMinutes();
+      const workStartMinutes = timeToMinutes(workingHours.startTime);
+      const workEndMinutes = timeToMinutes(workingHours.endTime);
+
+      this.logger.debug(
+        `[validateBooking] Time check: scheduled=${scheduledStartMinutes}-${scheduledEndMinutes} min, ` +
+          `working=${workStartMinutes}-${workEndMinutes} min (${workingHours.startTime}-${workingHours.endTime})`,
+      );
 
       if (
-        startTime < workingHours.startTime ||
-        endTime > workingHours.endTime
+        scheduledStartMinutes < workStartMinutes ||
+        scheduledEndMinutes > workEndMinutes
       ) {
         return {
           valid: false,

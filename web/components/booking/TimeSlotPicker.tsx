@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { format } from 'date-fns';
-import { Clock, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, Loader2, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
 interface TimeSlot {
@@ -56,10 +56,32 @@ export function TimeSlotPicker({
     refetchInterval: 60000, // Refetch every minute
   });
 
-  const timeSlots: TimeSlot[] = data?.data || [];
+  const allSlots: TimeSlot[] = data?.data || [];
   const meta = data?.meta;
 
-  // Group time slots by time period
+  // Only show available slots - filter out past and booked
+  const availableSlots = useMemo(() => {
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    const selectedDateStr = format(date, 'yyyy-MM-dd');
+    const isToday = today === selectedDateStr;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return allSlots.filter(slot => {
+      if (!slot.available) return false;
+      
+      // For today, also filter out slots that are about to start
+      if (isToday) {
+        const [hours, mins] = slot.startTime.split(':').map(Number);
+        const slotMinutes = hours * 60 + mins;
+        if (slotMinutes <= currentMinutes + 15) return false;
+      }
+      
+      return true;
+    });
+  }, [allSlots, date]);
+
+  // Group available slots by time period
   const groupedSlots = useMemo(() => {
     const groups = {
       morning: [] as TimeSlot[],
@@ -67,7 +89,7 @@ export function TimeSlotPicker({
       evening: [] as TimeSlot[]
     };
 
-    timeSlots.forEach(slot => {
+    availableSlots.forEach(slot => {
       const hour = parseInt(slot.startTime.split(':')[0]);
       if (hour < 12) {
         groups.morning.push(slot);
@@ -79,7 +101,7 @@ export function TimeSlotPicker({
     });
 
     return groups;
-  }, [timeSlots]);
+  }, [availableSlots]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
@@ -100,84 +122,46 @@ export function TimeSlotPicker({
   };
 
   const handleSlotClick = (slot: TimeSlot) => {
-    if (slot.available) {
-      onTimeSlotSelect({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        price: slot.price
-      });
-    }
+    onTimeSlotSelect({
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      price: slot.price
+    });
   };
 
-  const getSlotStyles = (slot: TimeSlot) => {
-    const baseClasses = 'p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer text-center min-h-[80px] flex flex-col justify-center';
-    
-    if (!slot.available) {
-      return `${baseClasses} border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20 cursor-not-allowed opacity-60`;
-    }
-    
-    if (isSlotSelected(slot)) {
-      return `${baseClasses} border-primary bg-primary text-white shadow-lg transform scale-105`;
-    }
-    
-    return `${baseClasses} border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 hover:border-green-300 dark:hover:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 hover:shadow-md`;
-  };
-
-  const renderTimeGroup = (title: string, slots: TimeSlot[], icon: React.ReactNode) => {
+  const renderTimeGroup = (title: string, slots: TimeSlot[], emoji: string) => {
     if (slots.length === 0) return null;
 
     return (
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          {icon}
-          <h3 className="text-lg font-semibold text-text-light dark:text-text-dark">
+      <div className="mb-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">{emoji}</span>
+          <h3 className="text-sm font-semibold text-text-light/70 dark:text-text-dark/70 uppercase tracking-wide">
             {title}
           </h3>
-          <span className="text-sm text-text-light/60 dark:text-text-dark/60">
-            ({slots.filter(s => s.available).length} available)
+          <span className="text-xs text-text-light/50 dark:text-text-dark/50">
+            ({slots.length})
           </span>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
           {slots.map((slot, index) => (
-            <div
+            <button
               key={`${slot.startTime}-${index}`}
               onClick={() => handleSlotClick(slot)}
-              className={getSlotStyles(slot)}
+              className={`
+                relative px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200
+                ${isSlotSelected(slot)
+                  ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-[1.02]'
+                  : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:border-primary hover:bg-primary/5'
+                }
+              `}
             >
-              <div className={`font-semibold ${
-                isSlotSelected(slot) 
-                  ? 'text-white' 
-                  : slot.available 
-                  ? 'text-text-light dark:text-text-dark' 
-                  : 'text-text-light/60 dark:text-text-dark/60'
-              }`}>
-                {formatTime(slot.startTime)}
-              </div>
-              <div className={`text-sm ${
-                isSlotSelected(slot) 
-                  ? 'text-white/80' 
-                  : slot.available 
-                  ? 'text-text-light/60 dark:text-text-dark/60' 
-                  : 'text-text-light/40 dark:text-text-dark/40'
-              }`}>
-                {formatTime(slot.endTime)}
-              </div>
-              
-              {slot.price && slot.available && (
-                <div className={`text-xs mt-1 font-medium ${
-                  isSlotSelected(slot) ? 'text-white' : 'text-primary'
-                }`}>
-                  RWF {slot.price.toLocaleString()}
-                </div>
+              {formatTime(slot.startTime)}
+              {isSlotSelected(slot) && (
+                <CheckCircle2 className="absolute -top-1.5 -right-1.5 w-4 h-4 text-white bg-primary rounded-full" />
               )}
-              
-              {!slot.available && slot.reason && (
-                <div className="text-xs text-red-500 dark:text-red-400 mt-1">
-                  {slot.reason}
-                </div>
-              )}
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -187,51 +171,59 @@ export function TimeSlotPicker({
   if (error) {
     return (
       <div className="p-8 text-center">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
-          Unable to Load Time Slots
+        <AlertCircle className="w-10 h-10 text-danger mx-auto mb-3" />
+        <h3 className="text-base font-semibold text-text-light dark:text-text-dark mb-2">
+          Unable to Load Times
         </h3>
-        <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
-          Please try again or contact support if the problem persists.
+        <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+          Please try again
         </p>
-        <Button onClick={handleRefresh} variant="secondary">
+        <Button onClick={handleRefresh} variant="secondary" size="sm">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Try Again
+          Retry
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-light/50 dark:border-border-dark/50">
         <div>
-          <h2 className="text-xl font-semibold text-text-light dark:text-text-dark">
-            Available Times
+          <h2 className="text-base font-semibold text-text-light dark:text-text-dark">
+            {format(date, 'EEEE, MMM d')}
           </h2>
-          <p className="text-text-light/60 dark:text-text-dark/60">
-            {format(date, 'EEEE, MMMM d, yyyy')}
-          </p>
         </div>
         
-        <Button
-          onClick={handleRefresh}
-          variant="secondary"
-          size="sm"
-          disabled={isLoading}
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          {availableSlots.length > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-success/10 rounded-full">
+              <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+              <span className="text-xs font-semibold text-success">
+                {availableSlots.length} available
+              </span>
+            </div>
+          )}
+          
+          <Button
+            onClick={handleRefresh}
+            variant="secondary"
+            size="sm"
+            disabled={isLoading}
+            className="h-8 px-2"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-3 text-text-light/60 dark:text-text-dark/60">
-            Loading time slots...
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="ml-3 text-sm text-text-light/60 dark:text-text-dark/60">
+            Finding available times...
           </span>
         </div>
       )}
@@ -239,105 +231,41 @@ export function TimeSlotPicker({
       {/* Time Slots */}
       {!isLoading && (
         <>
-          {timeSlots.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
-                No Time Slots Available
+          {availableSlots.length === 0 ? (
+            <div className="text-center py-10 bg-warning/5 rounded-xl border border-warning/20">
+              <Clock className="w-10 h-10 text-warning mx-auto mb-3" />
+              <h3 className="text-base font-semibold text-text-light dark:text-text-dark mb-1">
+                No Available Times
               </h3>
-              <p className="text-text-light/60 dark:text-text-dark/60">
-                This employee is not available on the selected date.
+              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                All slots are booked. Try another date.
               </p>
             </div>
           ) : (
-            <>
-              {/* Summary */}
-              <div className="bg-background-light dark:bg-background-dark rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-primary">
-                      {meta?.availableSlots || 0}
-                    </div>
-                    <div className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      Available
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-                      {meta?.totalSlots || 0}
-                    </div>
-                    <div className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      Total Slots
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-text-light dark:text-text-dark">
-                      {meta?.duration || 30}m
-                    </div>
-                    <div className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      Duration
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {meta?.totalSlots > 0 ? Math.round((meta.availableSlots / meta.totalSlots) * 100) : 0}%
-                    </div>
-                    <div className="text-sm text-text-light/60 dark:text-text-dark/60">
-                      Available
-                    </div>
-                  </div>
+            <div className="max-h-[350px] overflow-y-auto pr-1">
+              {renderTimeGroup('Morning', groupedSlots.morning, '🌅')}
+              {renderTimeGroup('Afternoon', groupedSlots.afternoon, '☀️')}
+              {renderTimeGroup('Evening', groupedSlots.evening, '🌙')}
+            </div>
+          )}
+
+          {/* Selected Slot Confirmation */}
+          {selectedTimeSlot && (
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/30 rounded-xl animate-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-sm text-text-light dark:text-text-dark">
+                    {formatTime(selectedTimeSlot.startTime)} - {formatTime(selectedTimeSlot.endTime)}
+                  </span>
                 </div>
+                {selectedTimeSlot.price && (
+                  <span className="text-sm font-medium text-primary">
+                    RWF {selectedTimeSlot.price.toLocaleString()}
+                  </span>
+                )}
               </div>
-
-              {/* Time Groups */}
-              {renderTimeGroup(
-                'Morning',
-                groupedSlots.morning,
-                <Clock className="w-5 h-5 text-yellow-500" />
-              )}
-              
-              {renderTimeGroup(
-                'Afternoon',
-                groupedSlots.afternoon,
-                <Clock className="w-5 h-5 text-orange-500" />
-              )}
-              
-              {renderTimeGroup(
-                'Evening',
-                groupedSlots.evening,
-                <Clock className="w-5 h-5 text-purple-500" />
-              )}
-
-              {/* Selected Slot Info */}
-              {selectedTimeSlot && (
-                <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-text-light dark:text-text-dark">
-                      Selected: {formatTime(selectedTimeSlot.startTime)} - {formatTime(selectedTimeSlot.endTime)}
-                    </span>
-                  </div>
-                  {selectedTimeSlot.price && (
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                      Price: RWF {selectedTimeSlot.price.toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Tips */}
-              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                  💡 Booking Tips
-                </h4>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                  <li>• Time slots are updated in real-time</li>
-                  <li>• Popular times fill up quickly - book early!</li>
-                  <li>• Prices may vary by time of day</li>
-                  <li>• You can change your selection before confirming</li>
-                </ul>
-              </div>
-            </>
+            </div>
           )}
         </>
       )}

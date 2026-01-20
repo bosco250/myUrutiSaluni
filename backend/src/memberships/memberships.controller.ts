@@ -183,16 +183,7 @@ export class MembershipsController {
   ) {
     // Salon owners can only see memberships for their own salons
     if (user?.role === UserRole.SALON_OWNER) {
-      // Get user's salons and filter memberships
-      const salons = await this.salonsRepository.find({
-        where: { ownerId: user.id },
-      });
-      const salonIds = salons.map((s) => s.id);
-      if (salonIds.length === 0) {
-        return [];
-      }
-      const allMemberships = await this.membershipsService.findAllMemberships();
-      return allMemberships.filter((m) => salonIds.includes(m.salonId));
+      return this.membershipsService.findAllMembershipsForOwner(user.id);
     }
     return this.membershipsService.findAllMemberships(salonId);
   }

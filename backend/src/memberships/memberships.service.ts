@@ -338,6 +338,18 @@ export class MembershipsService {
     });
   }
 
+  async findAllMembershipsForOwner(ownerId: string): Promise<Membership[]> {
+    return this.membershipsRepository.find({
+      where: {
+        salon: {
+          ownerId: ownerId,
+        },
+      },
+      relations: ['salon', 'salon.owner'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findOneMembership(id: string): Promise<Membership> {
     const membership = await this.membershipsRepository.findOne({
       where: { id },

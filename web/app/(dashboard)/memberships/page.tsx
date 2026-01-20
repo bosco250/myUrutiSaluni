@@ -23,6 +23,7 @@ import {
   UserPlus,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -1272,6 +1273,38 @@ function MembershipCard({
                         <div className="my-1 border-t border-border-light dark:border-border-dark" />
                       </>
                     )}
+                    
+                    {(membership.status === 'expired' || 
+                      membership.status === 'pending_renewal' || 
+                      membership.status === 'suspended') && (
+                      <>
+                         <button
+                            onClick={() => {
+                              onRenew();
+                              onToggleQuickActions();
+                            }}
+                            disabled={isProcessing}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Renew Membership
+                          </button>
+                          {(membership.status === 'expired' || membership.status === 'suspended') && (
+                             <button
+                                onClick={() => {
+                                  onActivate();
+                                  onToggleQuickActions();
+                                }}
+                                disabled={isProcessing}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Re-Activate
+                              </button>
+                          )}
+                          <div className="my-1 border-t border-border-light dark:border-border-dark" />
+                      </>
+                    )}
                     <button
                       onClick={() => {
                         onView();
@@ -1374,6 +1407,28 @@ function MembershipCard({
                 </div>
              </div>
         )}
+
+        {/* Restore Meta Information (Phone, Reminder, Category) */}
+        <div className="mt-1 pt-2 border-t border-border-light/50 dark:border-border-dark/50 flex flex-wrap gap-x-3 gap-y-1">
+             {membership.category && (
+               <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+                 <Building2 className="w-2.5 h-2.5" />
+                 <span className="capitalize">{membership.category}</span>
+               </div>
+             )}
+             {membership.salon?.phone && (
+              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+                <Phone className="w-2.5 h-2.5" />
+                <span>{membership.salon.phone}</span>
+              </div>
+            )}
+            {membership.lastReminderSent && (
+              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60" title="Last Reminder Sent">
+                <Mail className="w-2.5 h-2.5" />
+                <span>{new Date(membership.lastReminderSent).toLocaleDateString()}</span>
+              </div>
+            )}
+        </div>
       </div>
     </div>
   );
