@@ -163,6 +163,14 @@ export class AvailabilityService {
       );
     }
 
+    // If still no working hours (day is closed), return empty slots
+    if (!workingHours) {
+      this.logger.debug(
+        `No working hours for employee ${employeeId} on day ${dayOfWeek} - day is closed`,
+      );
+      return [];
+    }
+
     // Get availability rules (optional - if none, we skip rule checks)
     let rules: EmployeeAvailabilityRules | null = null;
     try {
@@ -311,12 +319,15 @@ export class AvailabilityService {
         );
       }
 
-      // Final fallback - if still no working hours, use default 9AM-6PM
+      // If still no working hours, salon is closed on this day
       if (!workingHours) {
-        this.logger.warn(
-          `[validateBooking] No working hours found for employee ${employeeId} on day ${dayOfWeek}, using default 9:00-18:00`,
+        this.logger.debug(
+          `[validateBooking] No working hours found for employee ${employeeId} on day ${dayOfWeek} - salon appears to be closed`,
         );
-        workingHours = this.getDefaultWorkingHours(employeeId, dayOfWeek);
+        return {
+          valid: false,
+          reason: 'Salon is closed on this day',
+        };
       }
 
       // Helper to convert "HH:mm" or "H:mm" to minutes since midnight
@@ -478,28 +489,54 @@ export class AvailabilityService {
       where: { id: employee.salonId },
     });
 
-    if (!salon?.settings?.operatingHours) {
+    // Check multiple places for operating hours
+    let operatingHours: any = null;
+    
+    // Check settings.operatingHours
+    if (salon?.settings?.operatingHours) {
+      operatingHours =
+        typeof salon.settings.operatingHours === 'string'
+          ? JSON.parse(salon.settings.operatingHours)
+          : salon.settings.operatingHours;
+    }
+    // Check settings.workingHours (used by mobile app)
+    else if ((salon?.settings as any)?.workingHours) {
+      const workingHours = (salon.settings as any).workingHours;
+      operatingHours =
+        typeof workingHours === 'string'
+          ? JSON.parse(workingHours)
+          : workingHours;
+    }
+    
+    if (!operatingHours) {
       return this.getDefaultWorkingHours(employeeId, dayOfWeek);
     }
 
     try {
-      const operatingHours =
-        typeof salon.settings.operatingHours === 'string'
-          ? JSON.parse(salon.settings.operatingHours)
-          : salon.settings.operatingHours;
-
       const dayName = this.dayNames[dayOfWeek];
       const dayHours = operatingHours[dayName];
 
-      if (dayHours?.isOpen && dayHours.startTime && dayHours.endTime) {
+      // If day is explicitly closed, return null (no working hours = no slots)
+      if (!dayHours || !dayHours.isOpen) {
         this.logger.debug(
-          `Using salon operating hours for employee ${employeeId} on ${dayName}: ${dayHours.startTime}-${dayHours.endTime}`,
+          `Salon is closed on ${dayName} for employee ${employeeId}`,
+        );
+        return null; // Return null instead of default hours for closed days!
+      }
+
+      // Handle different field name formats (open/close, openTime/closeTime, startTime/endTime)
+      const startTime = dayHours.open || dayHours.openTime || dayHours.startTime;
+      const endTime = dayHours.close || dayHours.closeTime || dayHours.endTime;
+
+      if (startTime && endTime) {
+        this.logger.debug(
+          `Using salon operating hours for employee ${employeeId} on ${dayName}: ${startTime}-${endTime}`,
         );
         return {
           employeeId,
           dayOfWeek,
-          startTime: dayHours.startTime,
-          endTime: dayHours.endTime,
+          startTime,
+          endTime,
           breaks: dayHours.breaks || [],
           isActive: true,
         } as EmployeeWorkingHours;
@@ -514,23 +551,18 @@ export class AvailabilityService {
   }
 
   /**
-   * Get default working hours (9:00 - 18:00)
+   * Get default working hours - returns null to indicate day is closed
+   * This should only be called as absolute last resort
    */
   private getDefaultWorkingHours(
     employeeId: string,
     dayOfWeek: number,
-  ): EmployeeWorkingHours {
-    this.logger.debug(
-      `No working hours for employee ${employeeId} on day ${dayOfWeek}, using default 9:00-18:00`,
+  ): EmployeeWorkingHours | null {
+    this.logger.warn(
+      `No working hours configured for employee ${employeeId} on day ${dayOfWeek} - treating as closed`,
     );
-    return {
-      employeeId,
-      dayOfWeek,
-      startTime: '09:00',
-      endTime: '18:00',
-      breaks: [],
-      isActive: true,
-    } as EmployeeWorkingHours;
+    // Return null to indicate closed - don't use hardcoded defaults
+    return null;
   }
 
   /**

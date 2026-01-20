@@ -631,169 +631,162 @@ function SalonDetailsContent() {
             )}
 
             {activeTab === 'services' && (
-              <div className="bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="p-6 border-b border-border-light dark:border-border-dark bg-background-secondary/50 dark:bg-background-dark/50 flex items-center justify-between">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+                    <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
                       Services Menu
                     </h2>
-                    <p className="text-sm text-text-secondary">Select a service to book</p>
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                      Choose a service to book your appointment
+                    </p>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                  <span className="hidden md:inline-flex px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
                     {activeServices.length} Services
                   </span>
                 </div>
 
-                <div className="divide-y divide-border-light dark:divide-border-dark">
-                  {isLoadingServices ? (
-                    <div className="p-12 text-center text-text-secondary">Loading services...</div>
-                  ) : activeServices.length > 0 ? (
-                    activeServices.map((service) => {
-                      const serviceImage = service.images?.[0] || service.imageUrl;
-                      const genderLabel =
-                        service.targetGender === 'men'
-                          ? 'Men'
-                          : service.targetGender === 'women'
-                            ? 'Women'
-                            : service.targetGender === 'kids'
-                              ? 'Kids'
-                              : null;
+                {isLoadingServices ? (
+                  <div className="flex items-center justify-center py-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : activeServices.length > 0 ? (
+                  <div className="space-y-8">
+                    {Object.entries(
+                      activeServices.reduce(
+                        (acc, service) => {
+                          const cat = service.category || 'General Services';
+                          if (!acc[cat]) acc[cat] = [];
+                          acc[cat].push(service);
+                          return acc;
+                        },
+                        {} as Record<string, typeof activeServices>,
+                      ),
+                    ).map(([category, services]) => (
+                      <div key={category} className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b border-border-light dark:border-border-dark">
+                          <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">
+                            {category}
+                          </h3>
+                          <span className="text-xs text-text-light/40 dark:text-text-dark/40 font-semibold">
+                            ({services.length})
+                          </span>
+                        </div>
 
-                      return (
-                        <div
-                          key={service.id}
-                          className="group p-4 md:p-5 hover:bg-background-secondary dark:hover:bg-background-dark transition-all duration-300 cursor-pointer flex gap-4 md:gap-8 items-start border-b border-border-light/50 dark:border-border-dark/50 last:border-0"
-                          onClick={() => {
-                            setSelectedService(service);
-                            setServiceImageIndex(0);
-                            setShowServiceDetail(true);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              setSelectedService(service);
-                              setServiceImageIndex(0);
-                              setShowServiceDetail(true);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          {/* Thumbnail & Multi-Image Gallery */}
-                          <div className="shrink-0 relative w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden bg-background-secondary dark:bg-background-dark border border-border-light dark:border-border-dark shadow-sm group/img">
-                            {serviceImage ? (
-                              <>
-                                <Image
-                                  src={serviceImage}
-                                  alt={service.name}
-                                  fill
-                                  className="object-cover transition-transform duration-700 group-hover/img:scale-110"
-                                />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {services.map((service) => {
+                            const serviceImage =
+                              service.images?.[0] || service.imageUrl;
+                            const genderLabel =
+                              service.targetGender === 'men'
+                                ? 'Men'
+                                : service.targetGender === 'women'
+                                  ? 'Women'
+                                  : service.targetGender === 'kids'
+                                    ? 'Kids'
+                                    : null;
 
-                                {/* Dark Overlay for Button Contrast */}
-                                <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors duration-300" />
-
-                                {/* "See All" Image Counter Badge */}
-                                {service.images && service.images.length > 1 && (
-                                  <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-tighter border border-white/10">
-                                    <ZoomIn className="w-2.5 h-2.5" />
-                                    {service.images.length} Photos
+                            return (
+                              <div
+                                key={service.id}
+                                className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer flex gap-4"
+                                onClick={() => {
+                                  setSelectedService(service);
+                                  setServiceImageIndex(0);
+                                  setShowServiceDetail(true);
+                                }}
+                              >
+                                {/* Thumbnail Image */}
+                                <div className="shrink-0 relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">
+                                  {serviceImage ? (
+                                    <Image
+                                      src={serviceImage}
+                                      alt={service.name}
+                                      fill
+                                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-background-secondary dark:bg-background-dark">
+                                      <Tag className="w-8 h-8 text-text-light/20 dark:text-text-dark/20" />
+                                    </div>
+                                  )}
+                                  
+                                  {/* Mobile Duration Badge */}
+                                   <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm text-[10px] font-semibold text-white flex items-center gap-1 md:hidden">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {service.durationMinutes}m
                                   </div>
-                                )}
-
-                                {/* Overlay Book Button - Visible on Hover or Always on Mobile if centered */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all duration-300 translate-y-2 group-hover/img:translate-y-0">
-                                  <Button
-                                    variant="primary"
-                                    size="sm"
-                                    className="h-8 px-4 rounded-lg font-bold shadow-2xl scale-90 group-hover/img:scale-100"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedService(service);
-                                      setServiceImageIndex(0);
-                                      setShowBookingModal(true);
-                                    }}
-                                  >
-                                    Book Now
-                                  </Button>
                                 </div>
 
-                                {/* Mini Preview Dot Indicators */}
-                                {service.images && service.images.length > 1 && (
-                                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                                    {service.images.slice(0, 5).map((_, i) => (
-                                      <div
-                                        key={i}
-                                        className={`w-1 h-1 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/40'}`}
-                                      />
-                                    ))}
-                                    {service.images.length > 5 && (
-                                      <div className="w-1 h-1 rounded-full bg-white/40" />
+                                {/* Content */}
+                                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                  <div>
+                                    <div className="flex justify-between items-start gap-2 mb-1">
+                                      <h4 className="text-base font-bold text-text-light dark:text-text-dark leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                                        {service.name}
+                                      </h4>
+                                    </div>
+                                    
+                                    <div className="flex items-baseline gap-1 mb-1.5">
+                                      <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60">RWF</span>
+                                      <span className="text-lg font-bold text-primary">
+                                        {service.basePrice.toLocaleString()}
+                                      </span>
+                                    </div>
+
+                                    {service.description && (
+                                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 line-clamp-2 hidden md:block">
+                                        {service.description}
+                                      </p>
                                     )}
                                   </div>
-                                )}
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Tag className="w-8 h-8 text-text-tertiary opacity-30" />
-                              </div>
-                            )}
-                          </div>
 
-                          {/* Content */}
-                          <div className="flex-1 min-w-0 py-1 space-y-3">
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-1">
-                                <h3 className="text-base md:text-xl font-black text-text-light dark:text-text-dark group-hover:text-primary transition-colors line-clamp-1 tracking-tight">
-                                  {service.name}
-                                </h3>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg md:text-2xl font-black text-primary">
-                                    RWF {service.basePrice.toLocaleString()}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">
-                                    Starting
-                                  </span>
+                                  <div className="flex items-center justify-between gap-2 mt-2">
+                                    <div className="flex flex-wrap gap-2">
+                                      <div className="hidden md:flex items-center gap-1 text-[10px] uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 font-medium bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-1.5 py-0.5 rounded">
+                                        <Clock className="w-3 h-3" />
+                                        {service.durationMinutes} MIN
+                                      </div>
+                                      
+                                      {genderLabel && (
+                                         <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 font-medium bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-1.5 py-0.5 rounded">
+                                          <Users className="w-3 h-3" />
+                                          {genderLabel}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <Button
+                                      variant="primary"
+                                      size="sm" // h-7 px-2 text-xs
+                                      className="h-8 px-3 rounded-lg font-semibold shadow-sm group-hover:bg-primary/90 transition-all ml-auto"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedService(service);
+                                        setServiceImageIndex(0);
+                                        setShowBookingModal(true);
+                                      }}
+                                    >
+                                      Book
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-
-                            {service.description && (
-                              <p className="text-sm text-text-secondary line-clamp-2 md:line-clamp-3 leading-relaxed opacity-80">
-                                {service.description}
-                              </p>
-                            )}
-
-                            <div className="flex flex-wrap items-center gap-2 pt-1">
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-background-secondary/80 dark:bg-background-dark border border-border-light/50 dark:border-border-dark text-[10px] font-bold text-text-light dark:text-text-dark uppercase tracking-wider">
-                                <Clock className="w-3 h-3 text-primary" /> {service.durationMinutes}{' '}
-                                min
-                              </div>
-                              {service.category && (
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-info/10 text-[10px] font-bold text-info uppercase tracking-wider">
-                                  <Tag className="w-3 h-3" /> {service.category}
-                                </div>
-                              )}
-                              {genderLabel && (
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/10 text-[10px] font-bold text-secondary uppercase tracking-wider">
-                                  <Users className="w-3 h-3" /> {genderLabel}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Desktop Link Arrow */}
-                          <div className="hidden md:flex self-center p-3 rounded-full bg-background-secondary dark:bg-background-dark text-text-tertiary group-hover:text-primary group-hover:translate-x-1 transition-all">
-                            <ChevronRight className="w-5 h-5" />
-                          </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="p-12 text-center text-text-secondary">
-                      No services available.
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
+                    <Tag className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                      No services available at this time.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

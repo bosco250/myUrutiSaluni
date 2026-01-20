@@ -113,11 +113,40 @@ export default function CustomerBookingModal({
     enabled: isOpen && !!salon.id,
   });
 
-  // Parse operating hours from salon settings
+  // Parse operating hours from salon data (matching salon detail page logic)
   const parseOperatingHours = (): WorkingHours | null => {
+    console.log('[BookingModal] Parsing hours from:', {
+      salonProp: salon,
+      salonDataFromApi: salonData,
+      salonSettings: salonData?.settings,
+    });
+    
+    // Check direct salon properties first (from salon object prop - may exist at runtime)
+    const salonAny = salon as any;
+    if (salonAny?.operatingHours) {
+      console.log('[BookingModal] Found salon.operatingHours:', salonAny.operatingHours);
+      return salonAny.operatingHours as WorkingHours;
+    }
+    if (salonAny?.businessHours) {
+      console.log('[BookingModal] Found salon.businessHours:', salonAny.businessHours);
+      return salonAny.businessHours as WorkingHours;
+    }
+    
+    // Check salonData from API call
+    if (salonData?.operatingHours) {
+      console.log('[BookingModal] Found salonData.operatingHours:', salonData.operatingHours);
+      return salonData.operatingHours as WorkingHours;
+    }
+    if (salonData?.businessHours) {
+      console.log('[BookingModal] Found salonData.businessHours:', salonData.businessHours);
+      return salonData.businessHours as WorkingHours;
+    }
+    
+    // Check settings.workingHours (used by mobile app during salon creation)
     if (salonData?.settings?.workingHours) {
       try {
         const hours = salonData.settings.workingHours;
+        console.log('[BookingModal] Found settings.workingHours:', hours);
         if (typeof hours === 'string') {
           return JSON.parse(hours) as WorkingHours;
         }
@@ -126,9 +155,12 @@ export default function CustomerBookingModal({
         // Fall through
       }
     }
+    
+    // Check settings.operatingHours as final fallback
     if (salonData?.settings?.operatingHours) {
       try {
         const hours = salonData.settings.operatingHours;
+        console.log('[BookingModal] Found settings.operatingHours:', hours);
         if (typeof hours === 'string') {
           return JSON.parse(hours) as WorkingHours;
         }
@@ -137,10 +169,13 @@ export default function CustomerBookingModal({
         return null;
       }
     }
+    
+    console.log('[BookingModal] No working hours found!');
     return null;
   };
 
   const operatingHours = parseOperatingHours();
+  console.log('[BookingModal] Final operatingHours:', operatingHours);
 
   const getDayName = (date: Date): keyof WorkingHours => {
     const day = date.getDay();
@@ -175,6 +210,60 @@ export default function CustomerBookingModal({
     queryKey: ['customer-availability', queryEmployeeId, service.id, operatingHours, isAnyEmployee],
     queryFn: async () => {
       if (isAnyEmployee || !queryEmployeeId) {
+        // For "any employee" mode, fetch availability from backend for each employee
+        // and aggregate - a day is available if ANY employee is available
+        if (employees.length > 0) {
+          const startDate = format(new Date(), 'yyyy-MM-dd');
+          const endDate = format(addDays(new Date(), 30), 'yyyy-MM-dd');
+          
+          // Fetch availability for first employee to get date range structure
+          const firstEmpAvailability = await getEmployeeAvailability(
+            employees[0].id, 
+            startDate, 
+            endDate, 
+            service.id, 
+            service.durationMinutes
+          );
+          
+          // Create a map for aggregation
+          const dateMap = new Map<string, DayAvailability>();
+          firstEmpAvailability.forEach(day => {
+            dateMap.set(day.date, { ...day });
+          });
+          
+          // Fetch for other employees and aggregate (available if ANY employee is available)
+          for (let i = 1; i < Math.min(employees.length, 5); i++) { // Limit to first 5 employees for performance
+            try {
+              const empAvailability = await getEmployeeAvailability(
+                employees[i].id,
+                startDate,
+                endDate,
+                service.id,
+                service.durationMinutes
+              );
+              
+              empAvailability.forEach(day => {
+                const existing = dateMap.get(day.date);
+                if (existing) {
+                  // If any employee has slots, the day is available
+                  if (day.availableSlots > 0) {
+                    existing.availableSlots = Math.max(existing.availableSlots, day.availableSlots);
+                    existing.totalSlots = Math.max(existing.totalSlots, day.totalSlots);
+                    if (existing.status === 'unavailable' || existing.status === 'fully_booked') {
+                      existing.status = day.status;
+                    }
+                  }
+                }
+              });
+            } catch (err) {
+              console.error(`Failed to fetch availability for employee ${employees[i].id}:`, err);
+            }
+          }
+          
+          return Array.from(dateMap.values());
+        }
+        
+        // No employees - use operating hours from salon or show as unavailable
         const days: DayAvailability[] = [];
         for (let i = 0; i < 30; i++) {
           const d = addDays(new Date(), i);
@@ -182,18 +271,32 @@ export default function CustomerBookingModal({
           const dayHours = operatingHours?.[dayName];
 
           if (dayHours?.isOpen) {
-            const [startHour, startMin] = dayHours.startTime.split(':').map(Number);
-            const [endHour, endMin] = dayHours.endTime.split(':').map(Number);
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            const slotCount = Math.floor((endMinutes - startMinutes) / 30);
+            // Handle different field name formats (matching salon page logic)
+            const dh = dayHours as any;
+            const openTime = dh.open || dh.openTime || dh.startTime;
+            const closeTime = dh.close || dh.closeTime || dh.endTime;
+            
+            if (openTime && closeTime) {
+              const [startHour, startMin] = openTime.split(':').map(Number);
+              const [endHour, endMin] = closeTime.split(':').map(Number);
+              const startMinutes = startHour * 60 + (startMin || 0);
+              const endMinutes = endHour * 60 + (endMin || 0);
+              const slotCount = Math.floor((endMinutes - startMinutes) / 30);
 
-            days.push({
-              date: format(d, 'yyyy-MM-dd'),
-              status: 'available' as const,
-              totalSlots: slotCount,
-              availableSlots: slotCount,
-            });
+              days.push({
+                date: format(d, 'yyyy-MM-dd'),
+                status: 'available' as const,
+                totalSlots: slotCount,
+                availableSlots: slotCount,
+              });
+            } else {
+              days.push({
+                date: format(d, 'yyyy-MM-dd'),
+                status: 'unavailable' as const,
+                totalSlots: 0,
+                availableSlots: 0,
+              });
+            }
           } else {
             days.push({
               date: format(d, 'yyyy-MM-dd'),
@@ -289,25 +392,32 @@ export default function CustomerBookingModal({
           const dayName = getDayName(selectedDate);
           const dayHours = operatingHours[dayName];
 
-          if (dayHours.isOpen) {
-            const [startHour, startMin] = dayHours.startTime.split(':').map(Number);
-            const [endHour, endMin] = dayHours.endTime.split(':').map(Number);
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
+          if (dayHours?.isOpen) {
+            // Handle different field name formats (matching salon page logic)
+            const dh = dayHours as any;
+            const openTime = dh.open || dh.openTime || dh.startTime;
+            const closeTime = dh.close || dh.closeTime || dh.endTime;
+            
+            if (openTime && closeTime) {
+              const [startHour, startMin] = openTime.split(':').map(Number);
+              const [endHour, endMin] = closeTime.split(':').map(Number);
+              const startMinutes = startHour * 60 + (startMin || 0);
+              const endMinutes = endHour * 60 + (endMin || 0);
 
-            for (let currentMinutes = startMinutes; currentMinutes + service.durationMinutes <= endMinutes; currentMinutes += 30) {
-              const slotHour = Math.floor(currentMinutes / 60);
-              const slotMin = currentMinutes % 60;
-              const startTime = `${slotHour.toString().padStart(2, '0')}:${slotMin.toString().padStart(2, '0')}`;
+              for (let currentMinutes = startMinutes; currentMinutes + service.durationMinutes <= endMinutes; currentMinutes += 30) {
+                const slotHour = Math.floor(currentMinutes / 60);
+                const slotMin = currentMinutes % 60;
+                const startTime = `${slotHour.toString().padStart(2, '0')}:${slotMin.toString().padStart(2, '0')}`;
 
-              const endMinutesForSlot = currentMinutes + service.durationMinutes;
-              const endSlotHour = Math.floor(endMinutesForSlot / 60);
-              const endSlotMin = endMinutesForSlot % 60;
-              const endTime = `${endSlotHour.toString().padStart(2, '0')}:${endSlotMin.toString().padStart(2, '0')}`;
+                const endMinutesForSlot = currentMinutes + service.durationMinutes;
+                const endSlotHour = Math.floor(endMinutesForSlot / 60);
+                const endSlotMin = endMinutesForSlot % 60;
+                const endTime = `${endSlotHour.toString().padStart(2, '0')}:${endSlotMin.toString().padStart(2, '0')}`;
 
-              if (endMinutesForSlot <= endMinutes) {
-                const isPastSlot = isToday && currentMinutes <= currentMinutesOfDay;
-                slots.push({ startTime, endTime, available: !isPastSlot, reason: isPastSlot ? 'Past time slot' : undefined });
+                if (endMinutesForSlot <= endMinutes) {
+                  const isPastSlot = isToday && currentMinutes <= currentMinutesOfDay;
+                  slots.push({ startTime, endTime, available: !isPastSlot, reason: isPastSlot ? 'Past time slot' : undefined });
+                }
               }
             }
           }

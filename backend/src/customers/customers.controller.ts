@@ -198,11 +198,16 @@ export class CustomersController {
 
       // Fetch full user details to get fullName (JWT payload doesn't include it)
       const userIdToFetch = currentUser.id || currentUser.userId || userId;
-      const user = await this.usersService.findOne(userIdToFetch);
-      if (!user) {
-        console.error('[CUSTOMERS CONTROLLER] User not found:', userIdToFetch);
-        throw new ForbiddenException('User not found');
+      let user;
+      try {
+        user = await this.usersService.findOne(userIdToFetch);
+      } catch (error) {
+        console.error('[CUSTOMERS CONTROLLER] User not found during auto-create:', userIdToFetch);
+        // If user doesn't exist in DB but has a valid token, the token is stale/invalid.
+        // Throw 401 to prevent further errors and potentially trigger frontend logout.
+        throw new ForbiddenException('User account not found. Please log in again.');
       }
+
 
       console.log('[CUSTOMERS CONTROLLER] User details:', {
         id: user.id,

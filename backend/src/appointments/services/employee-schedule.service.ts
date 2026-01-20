@@ -214,44 +214,14 @@ export class EmployeeScheduleService {
   }
 
   /**
-   * Set standard working hours (9 AM - 5 PM, Monday to Friday)
+   * Set standard working hours
+   * NOTE: We return empty array to avoid creating static schedule entries.
+   * This allows AvailabilityService to fall back to the dynamic Salon Operating Hours.
    */
   async setStandardWorkingHours(
     employeeId: string,
   ): Promise<EmployeeWorkingHours[]> {
-    const standardSchedule = [
-      {
-        dayOfWeek: 1,
-        startTime: '09:00',
-        endTime: '17:00',
-        breaks: [{ startTime: '12:00', endTime: '13:00' }],
-      }, // Monday
-      {
-        dayOfWeek: 2,
-        startTime: '09:00',
-        endTime: '17:00',
-        breaks: [{ startTime: '12:00', endTime: '13:00' }],
-      }, // Tuesday
-      {
-        dayOfWeek: 3,
-        startTime: '09:00',
-        endTime: '17:00',
-        breaks: [{ startTime: '12:00', endTime: '13:00' }],
-      }, // Wednesday
-      {
-        dayOfWeek: 4,
-        startTime: '09:00',
-        endTime: '17:00',
-        breaks: [{ startTime: '12:00', endTime: '13:00' }],
-      }, // Thursday
-      {
-        dayOfWeek: 5,
-        startTime: '09:00',
-        endTime: '17:00',
-        breaks: [{ startTime: '12:00', endTime: '13:00' }],
-      }, // Friday
-    ];
-
-    return this.setWeeklySchedule(employeeId, standardSchedule);
+    // Return empty to allow dynamic fallback to salon hours
+    return [];
   }
 }

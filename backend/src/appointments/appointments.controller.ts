@@ -28,6 +28,7 @@ import { SalonsService } from '../salons/salons.service';
 import { CustomersService } from '../customers/customers.service';
 import { EmployeePermissionsService } from '../salons/services/employee-permissions.service';
 import { EmployeePermission } from '../common/enums/employee-permission.enum';
+import { AvailabilityService } from './services/availability.service';
 
 @ApiTags('Appointments')
 @ApiBearerAuth()
@@ -41,6 +42,7 @@ export class AppointmentsController {
     private readonly salonsService: SalonsService,
     private readonly customersService: CustomersService,
     private readonly employeePermissionsService: EmployeePermissionsService,
+    private readonly availabilityService: AvailabilityService,
   ) {}
 
   @Post()
@@ -397,47 +399,33 @@ export class AppointmentsController {
         selectedDate,
       );
 
-    // Generate all possible time slots (9 AM to 6 PM, 30-minute intervals)
-    const allTimeSlots: string[] = [];
-    for (let hour = 9; hour < 18; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        allTimeSlots.push(time);
-      }
-    }
+    // Get actual working hours from availability service
+    const timeSlots = await this.availabilityService.getTimeSlots(
+      employeeId,
+      selectedDate,
+      undefined, // serviceId
+      parseInt(duration, 10) || 30,
+    );
 
     const durationMinutes = parseInt(duration, 10) || 30;
 
-    // Filter out booked time slots
-    const bookedSlots = new Set<string>();
-    appointments.forEach((apt) => {
-      const aptStart = new Date(apt.scheduledStart);
-      const aptEnd = new Date(apt.scheduledEnd);
+    // Extract available and booked slots from the availability service
+    const availableSlots: string[] = [];
+    const bookedSlots: string[] = [];
 
-      // Mark all 30-minute slots that overlap with this appointment as booked
-      allTimeSlots.forEach((slot) => {
-        const [slotHour, slotMinute] = slot.split(':').map(Number);
-        const slotStart = new Date(selectedDate);
-        slotStart.setHours(slotHour, slotMinute, 0, 0);
-        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-
-        // Check if this slot overlaps with the appointment
-        if (slotStart < aptEnd && slotEnd > aptStart) {
-          bookedSlots.add(slot);
-        }
-      });
+    timeSlots.forEach((slot) => {
+      if (slot.available) {
+        availableSlots.push(slot.startTime);
+      } else {
+        bookedSlots.push(slot.startTime);
+      }
     });
-
-    // Return available slots
-    const availableSlots = allTimeSlots.filter(
-      (slot) => !bookedSlots.has(slot),
-    );
 
     return {
       date: date,
       employeeId: employeeId,
       availableSlots: availableSlots,
-      bookedSlots: Array.from(bookedSlots),
+      bookedSlots: bookedSlots,
       appointments: appointments.map((apt) => ({
         id: apt.id,
         start: apt.scheduledStart,
