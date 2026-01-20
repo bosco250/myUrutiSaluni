@@ -11,6 +11,7 @@ import {
   isBefore,
   addDays,
 } from 'date-fns';
+import { toZonedTime, format as formatTz } from 'date-fns-tz';
 import { Appointment } from '../entities/appointment.entity';
 import { EmployeeWorkingHours } from '../entities/employee-working-hours.entity';
 import { EmployeeAvailabilityRules } from '../entities/employee-availability-rules.entity';
@@ -267,9 +268,15 @@ export class AvailabilityService {
       else if (hasConflict) reason = 'Already booked';
       else if (hasBufferConflict) reason = 'Buffer time required';
 
+      // Format time for frontend display in Rwanda Timezone (Africa/Kigali)
+      // This ensures displayed time is always correct regardless of server timezone
+      // We convert the UTC date to Zoned Time before formatting as string
+      const rwandaTimeStart = toZonedTime(currentSlot, 'Africa/Kigali');
+      const rwandaTimeEnd = toZonedTime(slotEnd, 'Africa/Kigali');
+      
       slots.push({
-        startTime: format(currentSlot, 'HH:mm'),
-        endTime: format(slotEnd, 'HH:mm'),
+        startTime: formatTz(rwandaTimeStart, 'HH:mm', { timeZone: 'Africa/Kigali' }),
+        endTime: formatTz(rwandaTimeEnd, 'HH:mm', { timeZone: 'Africa/Kigali' }),
         available,
         reason,
         price: servicePrice,
