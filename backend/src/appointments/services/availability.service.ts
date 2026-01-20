@@ -206,13 +206,17 @@ export class AvailabilityService {
       endOfDay(date),
     );
 
-    // Generate time slots
+    // Generate time slots (Use explicit Rwanda timezone +02:00)
     const slots: TimeSlot[] = [];
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const RWANDA_OFFSET = '+02:00';
+    
+    // Parse times explicitly as Rwanda time (UTC+2) to get correct UTC timestamps
     const startTime = parseISO(
-      `${format(date, 'yyyy-MM-dd')}T${workingHours.startTime}`,
+      `${dateStr}T${workingHours.startTime}:00${RWANDA_OFFSET}`,
     );
     const endTime = parseISO(
-      `${format(date, 'yyyy-MM-dd')}T${workingHours.endTime}`,
+      `${dateStr}T${workingHours.endTime}:00${RWANDA_OFFSET}`,
     );
 
     let currentSlot = startTime;
