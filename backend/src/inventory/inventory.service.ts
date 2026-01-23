@@ -1,16 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
 
 @Injectable()
 export class InventoryService {
+  private readonly logger = new Logger(InventoryService.name);
+
   constructor(
     @InjectRepository(Product)
     private productsRepository: Repository<Product>,
     @InjectRepository(InventoryMovement)
     private movementsRepository: Repository<InventoryMovement>,
+    private dataSource: DataSource,
   ) {}
 
   async createProduct(productData: Partial<Product>): Promise<Product> {
@@ -57,8 +60,73 @@ export class InventoryService {
   async createMovement(
     movementData: Partial<InventoryMovement>,
   ): Promise<InventoryMovement> {
+    // Validate quantity for non-adjustment types
+    if (
+      movementData.movementType !== 'adjustment' &&
+      Number(movementData.quantity) < 0
+    ) {
+      throw new BadRequestException(
+        'Quantity must be positive for purchases, consumptions, and transfers',
+      );
+    }
+
+    // For adjustments, use transactional logic to validation stock and history
+    if (movementData.movementType === 'adjustment') {
+      return this.createAdjustment(movementData);
+    }
+
     const movement = this.movementsRepository.create(movementData);
     return this.movementsRepository.save(movement);
+  }
+
+  private async createAdjustment(
+    data: Partial<InventoryMovement>,
+  ): Promise<InventoryMovement> {
+    return this.dataSource.transaction(async (manager) => {
+      const { productId, quantity, notes } = data;
+
+      if (!productId) {
+        throw new BadRequestException('Product ID is required for adjustment');
+      }
+
+      // LOCK the product to prevent race conditions (serializing access to this product's stock)
+      // This ensures that getStockLevel sees the committed result of any previous transaction
+      const product = await manager.findOne(Product, {
+        where: { id: productId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!product) {
+        throw new BadRequestException('Product not found');
+      }
+
+      // Get current stock within transaction (now safe from race conditions)
+      const currentStock = await this.getStockLevel(productId, manager);
+      const adjustmentQty = Number(quantity);
+
+      // Verify resulting stock is not negative
+      const newStock = currentStock + adjustmentQty;
+      if (newStock < 0) {
+        throw new BadRequestException(
+          `Insufficient stock for adjustment. Current: ${currentStock}, Adjustment: ${adjustmentQty}, Resulting: ${newStock}`,
+        );
+      }
+
+      // Enhanced notes with history
+      const historyNote = `[Stock: ${currentStock} -> ${newStock}]`;
+      const updatedNotes = notes ? `${notes} ${historyNote}` : historyNote;
+
+      const movement = manager.create(InventoryMovement, {
+        ...data,
+        notes: updatedNotes,
+      });
+
+      const saved = await manager.save(movement);
+      this.logger.log(
+        `Created stock adjustment for product ${productId}: ${historyNote}`,
+      );
+      return saved;
+    });
   }
 
   async findAllMovements(
@@ -76,8 +144,15 @@ export class InventoryService {
     });
   }
 
-  async getStockLevel(productId: string): Promise<number> {
-    const result = await this.movementsRepository
+  async getStockLevel(
+    productId: string,
+    manager?: EntityManager,
+  ): Promise<number> {
+    const repository = manager
+      ? manager.getRepository(InventoryMovement)
+      : this.movementsRepository;
+
+    const result = await repository
       .createQueryBuilder('movement')
       .select(
         `COALESCE(SUM(

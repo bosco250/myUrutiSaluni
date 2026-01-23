@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import * as QRCode from 'qrcode';
 
 // Use require for jsreport as it doesn't have proper ES module exports
@@ -16,9 +16,13 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
   private jsreportInitializing: Promise<void> | null = null;
 
   constructor(
+    @Inject(forwardRef(() => SalesService))
     private salesService: SalesService,
+    @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @Inject(forwardRef(() => MembershipsService))
     private membershipsService: MembershipsService,
+    @Inject(forwardRef(() => SalonsService))
     private salonsService: SalonsService,
   ) {}
 
@@ -937,5 +941,175 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       console.error('Error generating membership certificate:', error);
       throw error;
     }
+  }
+  async generatePnlReport(data: any): Promise<Buffer> {
+    await this.ensureJsReportReady();
+    await this.ensurePnlTemplate();
+
+    const report = await this.jsreportInstance.render({
+      template: {
+        name: 'profit-loss',
+      },
+      data: {
+        ...data,
+        generationDate: new Date().toLocaleDateString(),
+        isProfitable: data.netIncomeRaw >= 0,
+      },
+    });
+
+    return report.content;
+  }
+
+  private async ensurePnlTemplate() {
+    try {
+      if (!this.jsreportInstance) return;
+
+      const templates = await this.jsreportInstance.documentStore
+        .collection('templates')
+        .find({ name: 'profit-loss' });
+
+      if (templates.length === 0) {
+        await this.jsreportInstance.documentStore
+          .collection('templates')
+          .insert({
+            name: 'profit-loss',
+            engine: 'handlebars',
+            recipe: 'chrome-pdf',
+            content: this.getPnlTemplate(),
+          });
+      }
+    } catch (error) {
+      console.error('Error ensuring P&L template:', error);
+    }
+  }
+
+  private getPnlTemplate(): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 40px; color: #333; font-size: 14px; }
+    .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+    .header h1 { margin: 0; color: #2c3e50; text-transform: uppercase; font-size: 22px; letter-spacing: 1px; }
+    .header h2 { margin: 5px 0 0; font-size: 16px; color: #7f8c8d; font-weight: normal; }
+    .period { margin-top: 10px; font-size: 12px; color: #95a5a6; font-style: italic; }
+    
+    .section-title { 
+        background: #f8f9fa; 
+        padding: 8px 12px; 
+        font-weight: bold; 
+        border-left: 4px solid #34495e; 
+        margin-top: 25px; 
+        text-transform: uppercase; 
+        font-size: 12px; 
+        color: #2c3e50;
+    }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    td { padding: 10px 12px; border-bottom: 1px solid #ecf0f1; }
+    .amount { text-align: right; font-family: 'Courier New', monospace; font-weight: 600; color: #2c3e50; }
+    
+    .row-indent { padding-left: 25px; color: #555; }
+    
+    .total-row td { 
+        border-top: 2px solid #34495e; 
+        border-bottom: none; 
+        font-weight: bold; 
+        font-size: 14px; 
+        padding-top: 12px; 
+        background-color: #fcfcfc;
+    }
+    
+    .grand-total-table { est margin-top: 30px; border: 2px solid #eee; }
+    .grand-total-row td { 
+        font-size: 16px; 
+        font-weight: bold; 
+        padding: 15px; 
+        border-top: 2px solid #333;
+    }
+    
+    .net-income { color: #27ae60; }
+    .net-loss { color: #c0392b; }
+    
+    .footer { 
+        position: fixed; 
+        bottom: 20px; 
+        left: 40px; 
+        right: 40px; 
+        text-align: center; 
+        font-size: 10px; 
+        color: #bdc3c7; 
+        border-top: 1px solid #ecf0f1; 
+        padding-top: 10px; 
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+      <h1>Profit & Loss Statement</h1>
+      <h2>{{salonName}}</h2>
+      <div class="period">Reporting Period: {{startDate}} — {{endDate}}</div>
+  </div>
+
+  <!-- REVENUE SECTION -->
+  <div class="section-title">Revenue</div>
+  <table>
+      <tr>
+          <td class="row-indent">Sales Revenue (Services & Products)</td>
+          <td class="amount">{{totalRevenue}}</td>
+      </tr>
+      <tr>
+          <td class="row-indent">Other Income</td>
+          <td class="amount">0</td>
+      </tr>
+      <tr class="total-row">
+          <td>Total Operating Income</td>
+          <td class="amount">{{totalRevenue}}</td>
+      </tr>
+  </table>
+
+  <!-- EXPENSES SECTION -->
+  <div class="section-title">Operating Expenses</div>
+  <table>
+      {{#each expensesByCategory}}
+      <tr>
+          <td class="row-indent">{{name}}</td>
+          <td class="amount">{{amount}}</td>
+      </tr>
+      {{/each}}
+      
+      {{#if expensesByCategory.length}}
+      {{else}}
+      <tr>
+          <td class="row-indent" style="font-style:italic; color:#999;">No expenses recorded</td>
+          <td class="amount">0</td>
+      </tr>
+      {{/if}}
+
+      <tr class="total-row">
+          <td>Total Operating Expenses</td>
+          <td class="amount" style="color: #c0392b;">({{totalExpenses}})</td>
+      </tr>
+  </table>
+
+  <!-- NET INCOME SECTION -->
+  <div style="margin-top: 40px;"></div>
+  <table>
+      <tr class="grand-total-row">
+          <td>NET INCOME</td>
+          <td class="amount {{#if isProfitable}}net-income{{else}}net-loss{{/if}}">
+              {{netIncome}}
+          </td>
+      </tr>
+  </table>
+
+  <div class="footer">
+      Generated on {{generationDate}} • Uruti Saluni Management System • Page 1 of 1
+  </div>
+</body>
+</html>
+    `;
   }
 }

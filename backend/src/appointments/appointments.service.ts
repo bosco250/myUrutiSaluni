@@ -10,6 +10,8 @@ import { LoyaltyPointSourceType } from '../customers/entities/loyalty-point-tran
 import { RewardsConfigService } from '../customers/rewards-config.service';
 import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { SalesService } from '../sales/sales.service';
+import { PaymentMethod } from '../sales/entities/sale.entity';
 import { format } from 'date-fns';
 
 @Injectable()
@@ -29,6 +31,8 @@ export class AppointmentsService {
     private rewardsConfigService: RewardsConfigService,
     @Inject(forwardRef(() => NotificationOrchestratorService))
     private notificationOrchestrator: NotificationOrchestratorService,
+    @Inject(forwardRef(() => SalesService))
+    private salesService: SalesService,
   ) {}
 
   /**
@@ -315,12 +319,16 @@ export class AppointmentsService {
 
   async update(id: string, updateData: any): Promise<Appointment> {
     const existingAppointment = await this.findOne(id);
-    const updatePayload: any = { ...updateData };
-    if (updateData.scheduledStart) {
-      updatePayload.scheduledStart = new Date(updateData.scheduledStart);
+    
+    // Extract special flags that shouldn't be saved to DB
+    const { skipSaleCreation, ...payload } = updateData;
+    
+    const updatePayload: any = { ...payload };
+    if (payload.scheduledStart) {
+      updatePayload.scheduledStart = new Date(payload.scheduledStart);
     }
-    if (updateData.scheduledEnd) {
-      updatePayload.scheduledEnd = new Date(updateData.scheduledEnd);
+    if (payload.scheduledEnd) {
+      updatePayload.scheduledEnd = new Date(payload.scheduledEnd);
     }
     await this.appointmentsRepository.update(id, updatePayload);
     // Reload appointment with all relations including metadata
@@ -353,6 +361,7 @@ export class AppointmentsService {
 
     // Record visit and create commission when appointment status changes to completed
     if (
+      !skipSaleCreation &&
       existingAppointment.status !== 'completed' &&
       updateData.status === 'completed' &&
       updatedAppointment.customerId &&
@@ -458,59 +467,90 @@ export class AppointmentsService {
 
         // Log current state for debugging
         this.logger.debug(
-          `Appointment ${updatedAppointment.id} commission check: employeeId=${employeeId}, serviceAmount=${serviceAmount}, serviceId=${updatedAppointment.serviceId}`,
+          `Appointment ${updatedAppointment.id} completion: employeeId=${employeeId}, serviceAmount=${serviceAmount}, serviceId=${updatedAppointment.serviceId}`,
         );
 
-        // Create commission immediately if employee is assigned
-        if (employeeId && serviceAmount > 0) {
+        // CREATE SALE RECORD when appointment is completed
+        // This records the appointment as a sale and handles commission through the sale flow
+        if (serviceAmount > 0) {
           try {
-            this.logger.debug(
-              `Creating commission for appointment ${updatedAppointment.id}: employeeId=${employeeId}, serviceAmount=${serviceAmount}`,
+            this.logger.log(
+              `📦 Creating sale record for completed appointment ${updatedAppointment.id}`,
             );
 
-            const commission = await this.commissionsService.createCommission(
-              employeeId,
-              null, // No sale item ID for appointment-based commissions
-              serviceAmount,
-              {
+            // Get service details for the sale item
+            const service = updatedAppointment.service || 
+              (updatedAppointment.serviceId ? await this.servicesService.findOne(updatedAppointment.serviceId) : null);
+
+            const saleData = {
+              salonId: updatedAppointment.salonId,
+              customerId: updatedAppointment.customerId,
+              totalAmount: serviceAmount,
+              paymentMethod: PaymentMethod.CASH, // Default to cash, can be updated later
+              status: 'completed',
+              metadata: {
                 appointmentId: updatedAppointment.id,
-                source: 'appointment',
-                serviceId: updatedAppointment.serviceId,
+                source: 'appointment_completion',
+                notes: `Sale from completed appointment ${updatedAppointment.id.slice(0, 8)}`,
               },
+            };
+
+            const saleItems = [
+              {
+                serviceId: updatedAppointment.serviceId,
+                salonEmployeeId: employeeId || null, // Employee who performed the service
+                unitPrice: serviceAmount,
+                quantity: 1,
+                discountAmount: 0,
+                lineTotal: serviceAmount,
+              },
+            ];
+
+            const sale = await this.salesService.create(saleData, saleItems);
+            
+            this.logger.log(
+              `✅ Created sale ${sale.id} for completed appointment ${updatedAppointment.id} - Amount: RWF ${serviceAmount}, Service: ${service?.name || 'N/A'}, Employee: ${employeeId || 'None'}`,
             );
 
-            if (commission.amount > 0) {
-              this.logger.log(
-                `✅ Created commission for employee ${employeeId} from completed appointment ${updatedAppointment.id} - Service Amount: RWF ${serviceAmount}, Commission: RWF ${commission.amount} (${commission.commissionRate}%)`,
-              );
-            } else {
-              this.logger.warn(
-                `⚠️ Commission created but amount is 0 for appointment ${updatedAppointment.id} - Employee ${employeeId} has ${commission.commissionRate}% commission rate`,
-              );
-            }
-          } catch (commissionError) {
-            // Log but don't fail appointment update if commission creation fails
+            // Note: Commission is now created through the sale flow in SalesService.processCommissions()
+            // This prevents duplicate commission creation
+          } catch (saleError) {
+            // Log but don't fail appointment update if sale creation fails
             this.logger.error(
-              `❌ Failed to create commission for appointment ${updatedAppointment.id}, employeeId=${employeeId}, serviceAmount=${serviceAmount}: ${commissionError.message}`,
-              commissionError.stack,
+              `❌ Failed to create sale for appointment ${updatedAppointment.id}: ${saleError.message}`,
+              saleError.stack,
             );
+            
+            // Fallback: If sale creation fails, still try to create commission directly
+            // This ensures employees still get paid even if sale recording fails
+            if (employeeId) {
+              try {
+                this.logger.warn(
+                  `⚠️ Attempting fallback commission creation for appointment ${updatedAppointment.id}`,
+                );
+                await this.commissionsService.createCommission(
+                  employeeId,
+                  null,
+                  serviceAmount,
+                  {
+                    appointmentId: updatedAppointment.id,
+                    source: 'appointment_fallback',
+                    serviceId: updatedAppointment.serviceId,
+                  },
+                );
+                this.logger.log(
+                  `✅ Fallback commission created for appointment ${updatedAppointment.id}`,
+                );
+              } catch (commissionError) {
+                this.logger.error(
+                  `❌ Fallback commission also failed: ${commissionError.message}`,
+                );
+              }
+            }
           }
         } else {
-          // Detailed logging for why commission wasn't created
-          const reasons: string[] = [];
-          if (!employeeId) {
-            reasons.push(
-              'no employee assigned (checked salonEmployeeId and metadata.preferredEmployeeId)',
-            );
-          }
-          if (serviceAmount === 0) {
-            reasons.push(
-              `no service amount (serviceId: ${updatedAppointment.serviceId}, service: ${updatedAppointment.service?.name || 'N/A'})`,
-            );
-          }
-
           this.logger.warn(
-            `⚠️ Skipping commission creation for appointment ${updatedAppointment.id}: ${reasons.join(', ')}`,
+            `⚠️ Skipping sale creation for appointment ${updatedAppointment.id}: serviceAmount is ${serviceAmount}`,
           );
         }
 

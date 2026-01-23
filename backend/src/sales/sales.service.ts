@@ -19,6 +19,8 @@ import { LoyaltyPointSourceType } from '../customers/entities/loyalty-point-tran
 import { RewardsConfigService } from '../customers/rewards-config.service';
 import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { AppointmentsService } from '../appointments/appointments.service';
+import { AppointmentStatus } from '../appointments/entities/appointment.entity';
 
 export interface SaleWithDetails extends Sale {
   employees?: { id: string; name: string }[];
@@ -53,6 +55,8 @@ export class SalesService {
     private rewardsConfigService: RewardsConfigService,
     @Inject(forwardRef(() => NotificationOrchestratorService))
     private notificationOrchestrator: NotificationOrchestratorService,
+    @Inject(forwardRef(() => AppointmentsService))
+    private appointmentsService: AppointmentsService,
   ) {}
 
   async create(
@@ -70,6 +74,23 @@ export class SalesService {
       }
 
       await this.createSaleJournalEntry(savedSale, items || []);
+
+      // Update appointment status if this sale is linked to an appointment
+      if ((saleData as any).appointmentId) {
+        try {
+          await this.appointmentsService.update((saleData as any).appointmentId, {
+            status: AppointmentStatus.COMPLETED,
+            skipSaleCreation: true,
+          });
+          this.logger.log(
+            `Updated appointment ${(saleData as any).appointmentId} status to COMPLETED`,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Failed to update appointment status: ${error.message}`,
+          );
+        }
+      }
 
       // Record customer visit if customer is associated
       if (savedSale.customerId && savedSale.salonId) {

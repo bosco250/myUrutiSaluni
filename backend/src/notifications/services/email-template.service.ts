@@ -85,15 +85,26 @@ export class EmailTemplateService {
       template = template.replace('{{saleItemsTable}}', '');
     }
 
+    // Process {{#if variable}}...{{/if}} conditional blocks
+    // This handles Handlebars-style conditionals in templates
+    template = template.replace(
+      /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
+      (match, varName, content) => {
+        const value = variables[varName];
+        // Show content if value is truthy (not undefined, null, '', 0, false)
+        return value ? content : '';
+      }
+    );
+
     // Standard variable replacement
     for (const [key, value] of Object.entries(variables)) {
       if (key === 'saleItems') continue; // Skip already handled complex types
       const regex = new RegExp(`{{${key}}}`, 'g');
-      template = template.replace(regex, String(value || ''));
+      template = template.replace(regex, String(value ?? ''));
     }
 
-    // Remove unused placeholders
-    template = template.replace(/{{[^}]+}}/g, '');
+    // Remove unused placeholders (but preserve structure)
+    template = template.replace(/\{\{[^#/][^}]*\}\}/g, '');
 
     return template;
   }
@@ -138,12 +149,19 @@ export class EmailTemplateService {
       appointment_confirmed: this.getAppointmentConfirmedTemplate(),
       appointment_cancelled: this.getAppointmentCancelledTemplate(),
       appointment_completed: this.getAppointmentCompletedTemplate(),
+      appointment_rescheduled: this.getAppointmentRescheduledTemplate(),
+      appointment_no_show: this.getAppointmentNoShowTemplate(),
       sale_completed: this.getSaleCompletedTemplate(),
       commission_earned: this.getCommissionEarnedTemplate(),
       commission_paid: this.getCommissionPaidTemplate(),
+      commission_updated: this.getCommissionUpdatedTemplate(),
+      payment_received: this.getPaymentReceivedTemplate(),
+      payment_failed: this.getPaymentFailedTemplate(),
       points_earned: this.getPointsEarnedTemplate(),
       low_stock_alert: this.getLowStockAlertTemplate(),
       password_reset: this.getPasswordResetTemplate(),
+      permission_granted: this.getPermissionGrantedTemplate(),
+      permission_revoked: this.getPermissionRevokedTemplate(),
     };
 
     return templates[templateName] || this.getDefaultTemplate();
@@ -493,13 +511,203 @@ export class EmailTemplateService {
     return this.baseTemplate.replace('{{headerTitle}}', 'Notification').replace(
       '{{content}}',
       `
-        <div class="message">{{message}}</div>
+        {{#if customerName}}<div class="greeting">Hello {{customerName}},</div>{{/if}}
+        <div class="message">{{body}}</div>
+        {{#if actionUrl}}
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button">{{#if actionLabel}}{{actionLabel}}{{/if}}View Details</a>
+        </div>
+        {{/if}}
+      `,
+    );
+  }
+
+  // Additional Templates
+  private getAppointmentRescheduledTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Appointment Rescheduled')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello {{customerName}},</div>
+        <div class="message">Your appointment has been rescheduled.</div>
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Salon</span>
+            <span class="info-value">{{salonName}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Service</span>
+            <span class="info-value">{{serviceName}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">New Date</span>
+            <span class="info-value">{{appointmentDate}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">New Time</span>
+            <span class="info-value">{{appointmentTime}}</span>
+          </div>
+        </div>
+        {{#if actionUrl}}
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button">View Appointment</a>
+        </div>
+        {{/if}}
+      `,
+      );
+  }
+
+  private getAppointmentNoShowTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Missed Appointment')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello {{customerName}},</div>
+        <div class="message">We noticed you missed your scheduled appointment.</div>
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Salon</span>
+            <span class="info-value">{{salonName}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Service</span>
+            <span class="info-value">{{serviceName}}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Date</span>
+            <span class="info-value">{{appointmentDate}}</span>
+          </div>
+        </div>
+        <div class="message">If you'd like to reschedule, please contact us or book a new appointment.</div>
+      `,
+      );
+  }
+
+  private getCommissionUpdatedTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Commission Updated')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello,</div>
+        <div class="message">Your commission details have been updated.</div>
+        {{#if commissionAmount}}
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">New Amount</span>
+            <span class="info-value" style="color: #059669; font-weight: 700;">{{commissionAmount}}</span>
+          </div>
+        </div>
+        {{/if}}
+        {{#if actionUrl}}
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button">View Commission</a>
+        </div>
+        {{/if}}
+      `,
+      );
+  }
+
+  private getPaymentReceivedTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Payment Received')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello,</div>
+        <div class="message">Your payment has been successfully received.</div>
+        {{#if amount}}
+        <div class="info-card">
+          <div class="info-row">
+            <span class="info-label">Amount</span>
+            <span class="info-value" style="color: #059669; font-weight: 700;">{{amount}}</span>
+          </div>
+          {{#if paymentMethod}}
+          <div class="info-row">
+            <span class="info-label">Payment Method</span>
+            <span class="info-value">{{paymentMethod}}</span>
+          </div>
+          {{/if}}
+        </div>
+        {{/if}}
         {{#if actionUrl}}
         <div class="button-container">
           <a href="{{actionUrl}}" class="button">View Details</a>
         </div>
         {{/if}}
       `,
-    );
+      );
+  }
+
+  private getPaymentFailedTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Payment Failed')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello,</div>
+        <div class="message" style="color: #dc2626;">Unfortunately, your payment could not be processed.</div>
+        <div class="info-card" style="border-left: 4px solid #dc2626;">
+          {{#if amount}}
+          <div class="info-row">
+            <span class="info-label">Amount</span>
+            <span class="info-value">{{amount}}</span>
+          </div>
+          {{/if}}
+          {{#if errorMessage}}
+          <div class="info-row">
+            <span class="info-label">Reason</span>
+            <span class="info-value">{{errorMessage}}</span>
+          </div>
+          {{/if}}
+        </div>
+        <div class="message">Please try again or contact support if the issue persists.</div>
+        {{#if actionUrl}}
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button">Try Again</a>
+        </div>
+        {{/if}}
+      `,
+      );
+  }
+
+  private getPermissionGrantedTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'New Permissions Granted')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello,</div>
+        <div class="message">You have been granted new permissions at {{salonName}}!</div>
+        <div class="info-card" style="border-left: 4px solid #059669;">
+          <div class="info-row">
+            <span class="info-label">Permissions</span>
+            <span class="info-value">{{permissions}}</span>
+          </div>
+        </div>
+        <div class="message">You can now access additional features in the application.</div>
+      `,
+      );
+  }
+
+  private getPermissionRevokedTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Permissions Updated')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello,</div>
+        <div class="message">Some of your permissions have been updated at {{salonName}}.</div>
+        <div class="info-card" style="border-left: 4px solid #f59e0b;">
+          <div class="info-row">
+            <span class="info-label">Revoked Permissions</span>
+            <span class="info-value">{{permissions}}</span>
+          </div>
+        </div>
+        <div class="message">Some features may no longer be accessible. Contact your administrator if you have questions.</div>
+      `,
+      );
   }
 }

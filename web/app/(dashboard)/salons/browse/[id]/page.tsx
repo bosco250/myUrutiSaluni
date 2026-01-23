@@ -33,6 +33,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import SalonLocationMap from '@/components/maps/SalonLocationMap';
 import CustomerBookingModal from '@/components/appointments/CustomerBookingModal';
+import { useToast } from '@/components/ui/Toast';
 
 // --- Interfaces ---
 
@@ -172,6 +173,7 @@ function SalonDetailsContent() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   // Queries
   const {
@@ -1294,7 +1296,10 @@ function SalonDetailsContent() {
             queryClient.invalidateQueries({ queryKey: ['customer-appointments'] });
             setShowBookingModal(false);
             setSelectedService(null);
-            alert('🎉 Appointment submitted! Waiting for salon confirmation.');
+            toast.success('🎉 Appointment booked successfully!', {
+              title: 'Booking Confirmed',
+              duration: 5000,
+            });
           }}
           salon={{ id: salon.id, name: salon.name, address: salon.address }}
           service={{

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Query,
   UseGuards,
@@ -27,7 +28,7 @@ export class ReportsController {
     private readonly salonsService: SalonsService,
   ) {}
 
-  @Get('receipt/:saleId')
+  @Post('receipt/:saleId')
   @Roles(
     UserRole.SUPER_ADMIN,
     UserRole.ASSOCIATION_ADMIN,

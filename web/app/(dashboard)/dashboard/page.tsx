@@ -48,13 +48,6 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showRefreshPrompt, setShowRefreshPrompt] = useState(false);
 
-  // Redirect customers to salons browse page (safety redirect in case they navigate to /dashboard directly)
-  useEffect(() => {
-    if (user?.role === 'customer') {
-      router.push('/salons/browse');
-    }
-  }, [user?.role, router]);
-
   // Check if user role might be outdated (e.g., after membership approval)
   useEffect(() => {
     // If user has an approved membership but role is still customer, show refresh prompt
@@ -121,10 +114,9 @@ export default function DashboardPage() {
   }
 
   // Render role-specific dashboard
-  // Note: Customers are redirected to /salons/browse, so this won't render for them
-  // This serves as a fallback in case redirect hasn't completed yet
+  // Customers now see their own CustomerDashboard
   if (isCustomer()) {
-    return <DashboardSkeleton />; // Show loading while redirect happens
+    return <CustomerDashboard />;
   }
 
   if (isSalonOwner()) {

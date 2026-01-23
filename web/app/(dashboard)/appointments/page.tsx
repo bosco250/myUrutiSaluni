@@ -27,6 +27,8 @@ import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { useState, useMemo } from 'react';
 import { exportToCSV, formatDateForExport } from '@/lib/export-utils';
 import CalendarBookingModal from '@/components/appointments/CalendarBookingModal';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
 
 interface Appointment {
   id: string;
@@ -66,9 +68,73 @@ interface Appointment {
       fullName: string;
     };
     roleTitle?: string;
-    commissionRate?: number;
   };
 }
+
+const getStatusColor = (status: string) => {
+  const colors: Record<string, { bg: string; text: string; border: string }> = {
+    pending: {
+      bg: 'bg-amber-500/10',
+      text: 'text-amber-600 dark:text-amber-400',
+      border: 'border-amber-500/20',
+    },
+    booked: {
+      bg: 'bg-blue-500/10',
+      text: 'text-blue-600 dark:text-blue-400',
+      border: 'border-blue-500/20',
+    },
+    confirmed: {
+      bg: 'bg-green-500/10',
+      text: 'text-green-600 dark:text-green-400',
+      border: 'border-green-500/20',
+    },
+    in_progress: {
+      bg: 'bg-yellow-500/10',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      border: 'border-yellow-500/20',
+    },
+    completed: {
+      bg: 'bg-gray-500/10',
+      text: 'text-gray-600 dark:text-gray-400',
+      border: 'border-gray-500/20',
+    },
+    cancelled: {
+      bg: 'bg-red-500/10',
+      text: 'text-red-600 dark:text-red-400',
+      border: 'border-red-500/20',
+    },
+    no_show: {
+      bg: 'bg-orange-500/10',
+      text: 'text-orange-600 dark:text-orange-400',
+      border: 'border-orange-500/20',
+    },
+  };
+  return colors[status] || colors.booked;
+};
+
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'Pending',
+    booked: 'Booked',
+    confirmed: 'Confirmed',
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    no_show: 'No Show',
+  };
+  return labels[status] || status;
+};
+
+const formatAppointmentDate = (dateString: string) => {
+  const date = parseISO(dateString);
+  if (isToday(date)) {
+    return `Today, ${format(date, 'h:mm a')}`;
+  }
+  if (isTomorrow(date)) {
+    return `Tomorrow, ${format(date, 'h:mm a')}`;
+  }
+  return format(date, 'EEEE, MMM d, h:mm a');
+};
 
 export default function AppointmentsPage() {
   return (
@@ -104,16 +170,7 @@ function AppointmentsContent() {
     user?.role === UserRole.SALON_OWNER ||
     user?.role === UserRole.SALON_EMPLOYEE;
 
-  // Status update mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: string }) => {
-      const response = await api.patch(`/appointments/${appointmentId}`, { status });
-      return response.data?.data || response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-    },
-  });
+
 
   // Get employee records for current user (if they are an employee)
   const { data: employeeRecords = [] } = useQuery({
@@ -240,70 +297,7 @@ function AppointmentsContent() {
     };
   }, [appointments]);
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, { bg: string; text: string; border: string }> = {
-      pending: {
-        bg: 'bg-amber-500/10',
-        text: 'text-amber-600 dark:text-amber-400',
-        border: 'border-amber-500/20',
-      },
-      booked: {
-        bg: 'bg-blue-500/10',
-        text: 'text-blue-600 dark:text-blue-400',
-        border: 'border-blue-500/20',
-      },
-      confirmed: {
-        bg: 'bg-green-500/10',
-        text: 'text-green-600 dark:text-green-400',
-        border: 'border-green-500/20',
-      },
-      in_progress: {
-        bg: 'bg-yellow-500/10',
-        text: 'text-yellow-600 dark:text-yellow-400',
-        border: 'border-yellow-500/20',
-      },
-      completed: {
-        bg: 'bg-gray-500/10',
-        text: 'text-gray-600 dark:text-gray-400',
-        border: 'border-gray-500/20',
-      },
-      cancelled: {
-        bg: 'bg-red-500/10',
-        text: 'text-red-600 dark:text-red-400',
-        border: 'border-red-500/20',
-      },
-      no_show: {
-        bg: 'bg-orange-500/10',
-        text: 'text-orange-600 dark:text-orange-400',
-        border: 'border-orange-500/20',
-      },
-    };
-    return colors[status] || colors.booked;
-  };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      booked: 'Booked',
-      confirmed: 'Confirmed',
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      no_show: 'No Show',
-    };
-    return labels[status] || status;
-  };
-
-  const formatAppointmentDate = (dateString: string) => {
-    const date = parseISO(dateString);
-    if (isToday(date)) {
-      return `Today, ${format(date, 'h:mm a')}`;
-    }
-    if (isTomorrow(date)) {
-      return `Tomorrow, ${format(date, 'h:mm a')}`;
-    }
-    return format(date, 'EEEE, MMM d, h:mm a');
-  };
 
   if (isLoading) {
     return (
@@ -454,17 +448,17 @@ function AppointmentsContent() {
         </div>
 
         {/* Filters */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search appointments..."
-                className="w-full pl-10 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-9 pr-4 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-text-light/40 dark:placeholder:text-text-dark/40"
               />
             </div>
 
@@ -472,7 +466,7 @@ function AppointmentsContent() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="all">All Status</option>
               <option value="booked">Booked</option>
@@ -487,7 +481,7 @@ function AppointmentsContent() {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="all">All Dates</option>
               <option value="today">Today</option>
@@ -500,7 +494,7 @@ function AppointmentsContent() {
             <select
               value={salonFilter}
               onChange={(e) => setSalonFilter(e.target.value)}
-              className="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="all">All Salons</option>
               {salons.map((salon) => (
@@ -545,7 +539,7 @@ function AppointmentsContent() {
           </div>
         ) : (
           Object.entries(groupedAppointments)
-            .sort((a, b) => a[0].localeCompare(b[0]))
+            .sort((a, b) => b[0].localeCompare(a[0])) // Sort descending (newest dates first)
             .map(([date, dateAppointments]) => (
               <div key={date} className="space-y-3">
                 <div className="flex items-center gap-3 mb-2">
@@ -560,162 +554,19 @@ function AppointmentsContent() {
                   <div className="h-px flex-1 bg-border-light dark:bg-border-dark" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {dateAppointments.map((appointment) => {
-                    const statusColors = getStatusColor(appointment.status);
-                    // Check if current user (employee) is the preferred employee for this appointment
-                    const isMyAppointment = employeeRecords.some(
-                      (emp: { id: string }) => emp.id === appointment.metadata?.preferredEmployeeId
-                    );
-                    const preferredEmployeeName = appointment.metadata?.preferredEmployeeName;
-
-                    return (
-                      <div
+                  {dateAppointments
+                    .sort((a, b) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime())
+                    .map((appointment) => (
+                      <AppointmentCard
                         key={appointment.id}
-                        className={`bg-surface-light dark:bg-surface-dark border rounded-xl p-5 hover:shadow-lg transition-all group ${
-                          isMyAppointment
-                            ? 'border-primary/50 bg-primary/5 dark:bg-primary/10'
-                            : 'border-border-light dark:border-border-dark'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div
-                                className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  isMyAppointment
-                                    ? 'bg-gradient-to-br from-primary to-primary/80'
-                                    : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-                                }`}
-                              >
-                                <Calendar className="w-5 h-5 text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-semibold text-text-light dark:text-text-dark truncate">
-                                    {appointment.service?.name || 'Service'}
-                                  </p>
-                                  {isMyAppointment && (
-                                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-medium rounded-full border border-primary/30">
-                                      Assigned to You
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                                  {formatAppointmentDate(appointment.scheduledStart)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-medium ${statusColors.border} ${statusColors.bg}`}
-                          >
-                            <span className={statusColors.text}>
-                              {getStatusLabel(appointment.status)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2 mb-4">
-                          {appointment.customer && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <User className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                              <span className="text-text-light dark:text-text-dark">
-                                {appointment.customer.fullName}
-                              </span>
-                            </div>
-                          )}
-                          {appointment.salon && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Building2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                              <span className="text-text-light/60 dark:text-text-dark/60 truncate">
-                                {appointment.salon.name}
-                              </span>
-                            </div>
-                          )}
-                          {preferredEmployeeName && !isMyAppointment && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <User className="w-4 h-4 text-primary/60" />
-                              <span className="text-text-light/80 dark:text-text-dark/80">
-                                Preferred: {preferredEmployeeName}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                            <span className="text-text-light/60 dark:text-text-dark/60">
-                              {format(parseISO(appointment.scheduledStart), 'h:mm a')} -{' '}
-                              {format(parseISO(appointment.scheduledEnd), 'h:mm a')}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-4 border-t border-border-light dark:border-border-dark">
-                          {canEdit && appointment.status === 'pending' && (
-                            <Button
-                              onClick={() =>
-                                updateStatusMutation.mutate({
-                                  appointmentId: appointment.id,
-                                  status: 'booked',
-                                })
-                              }
-                              variant="primary"
-                              size="sm"
-                              disabled={updateStatusMutation.isPending}
-                              className="flex-1"
-                            >
-                              <CheckCircle2 className="w-4 h-4 mr-2" />
-                              Confirm
-                            </Button>
-                          )}
-                          {canEdit &&
-                            ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
-                              <Button
-                                onClick={() => {
-                                  if (
-                                    confirm('Are you sure you want to cancel this appointment?')
-                                  ) {
-                                    updateStatusMutation.mutate({
-                                      appointmentId: appointment.id,
-                                      status: 'cancelled',
-                                    });
-                                  }
-                                }}
-                                variant="secondary"
-                                size="sm"
-                                className="text-danger hover:bg-danger/10 px-3"
-                                disabled={updateStatusMutation.isPending}
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </Button>
-                            )}
-                          <Button
-                            onClick={() => router.push(`/appointments/${appointment.id}`)}
-                            variant="secondary"
-                            size="sm"
-                            className={
-                              canEdit && appointment.status === 'pending' ? 'px-3' : 'flex-1'
-                            }
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </Button>
-                          {canEdit && (
-                            <Button
-                              onClick={() => {
-                                setEditingAppointment(appointment);
-                                setShowModal(true);
-                              }}
-                              variant="secondary"
-                              size="sm"
-                              className="px-3"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        appointment={appointment}
+                        employeeRecords={employeeRecords}
+                        canEdit={canEdit}
+                        router={router}
+                        setEditingAppointment={setEditingAppointment}
+                        setShowModal={setShowModal}
+                      />
+                    ))}
                 </div>
               </div>
             ))
@@ -748,6 +599,222 @@ function AppointmentsContent() {
         />
       )}
     </div>
+  );
+}
+
+// Independent Appointment Card Component
+function AppointmentCard({
+  appointment,
+  employeeRecords,
+  canEdit,
+  router,
+  setEditingAppointment,
+  setShowModal,
+}: {
+  appointment: Appointment;
+  employeeRecords: any[];
+  canEdit: boolean;
+  router: any;
+  setEditingAppointment: (appt: Appointment) => void;
+  setShowModal: (show: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    action: () => void;
+    variant: 'danger' | 'warning' | 'primary';
+    confirmLabel: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    action: () => {},
+    variant: 'primary',
+    confirmLabel: 'Confirm',
+  });
+
+  // Local mutation for independent loading state
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ appointmentId, status }: { appointmentId: string; status: string }) => {
+      const response = await api.patch(`/appointments/${appointmentId}`, { status });
+      return response.data?.data || response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment updated successfully');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update appointment');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+    },
+  });
+
+  const handleStatusUpdate = (status: string, confirmMessage: string, variant: 'primary' | 'danger' = 'primary', confirmLabel = 'Confirm') => {
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Update Status',
+      message: confirmMessage,
+      variant,
+      confirmLabel,
+      action: () => updateStatusMutation.mutate({ appointmentId: appointment.id, status }),
+    });
+  };
+
+  const statusColors = getStatusColor(appointment.status);
+  const isMyAppointment = employeeRecords.some(
+    (emp: { id: string }) => emp.id === appointment.metadata?.preferredEmployeeId
+  );
+  const preferredEmployeeName = appointment.metadata?.preferredEmployeeName;
+
+  return (
+    <>
+      <div
+        className={`group bg-surface-light dark:bg-surface-dark border rounded-xl p-4 hover:shadow-lg hover:border-primary/50 transition-all ${
+          isMyAppointment
+            ? 'border-primary/50 bg-primary/5 dark:bg-primary/10'
+            : 'border-border-light dark:border-border-dark'
+        }`}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                isMyAppointment
+                  ? 'bg-gradient-to-br from-primary to-primary/80'
+                  : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+              }`}
+            >
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-text-light dark:text-text-dark text-sm line-clamp-1">
+                  {appointment.service?.name || 'Service'}
+                </h3>
+                {isMyAppointment && (
+                  <span className="px-1.5 py-0.5 bg-primary/20 text-primary text-[10px] font-semibold rounded border border-primary/30 uppercase tracking-wide">
+                    You
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Clock className="w-3 h-3 text-text-light/60 dark:text-text-dark/60" />
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                  {formatAppointmentDate(appointment.scheduledStart)}
+                  {' - '}
+                  {format(parseISO(appointment.scheduledEnd), 'h:mm a')}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+          >
+            {getStatusLabel(appointment.status)}
+          </div>
+        </div>
+
+        <div className="space-y-2 mb-4 pl-[3.25rem]">
+          {appointment.customer && (
+            <div className="flex items-center gap-2 text-xs">
+              <User className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+              <span className="text-text-light/80 dark:text-text-dark/80 font-medium truncate">
+                {appointment.customer.fullName}
+              </span>
+            </div>
+          )}
+          {appointment.salon && (
+            <div className="flex items-center gap-2 text-xs">
+              <Building2 className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+              <span className="text-text-light/60 dark:text-text-dark/60 truncate">
+                {appointment.salon.name}
+              </span>
+            </div>
+          )}
+          {preferredEmployeeName && !isMyAppointment && (
+            <div className="flex items-center gap-2 text-xs">
+              <User className="w-3 h-3 text-primary/60" />
+              <span className="text-text-light/60 dark:text-text-dark/60">
+                with {preferredEmployeeName}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 pt-3 border-t border-border-light dark:border-border-dark overflow-x-auto no-scrollbar">
+          {canEdit && appointment.status === 'pending' && (
+            <Button
+              onClick={() => handleStatusUpdate('booked', 'Are you sure you want to accept this appointment?', 'primary', 'Accept')}
+              variant="primary"
+              size="sm"
+              className="flex-1 h-8 text-xs justify-center gap-1.5"
+              disabled={updateStatusMutation.isPending}
+              loading={updateStatusMutation.isPending}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Accept
+            </Button>
+          )}
+
+          {canEdit && ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
+            <Button
+              onClick={() => handleStatusUpdate('cancelled', 'Are you sure you want to cancel this appointment?', 'danger', 'Cancel Appointment')}
+              variant="secondary"
+              size="sm"
+              className={`h-8 text-xs justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 ${
+                appointment.status === 'pending' ? 'px-2' : 'px-3 gap-1.5 flex-none'
+              }`}
+              disabled={updateStatusMutation.isPending}
+              title="Cancel Appointment"
+            >
+              <XCircle className="w-4 h-4" />
+              {appointment.status !== 'pending' && <span>Cancel</span>}
+            </Button>
+          )}
+
+          <Button
+            onClick={() => router.push(`/appointments/${appointment.id}`)}
+            variant="secondary"
+            size="sm"
+            className="h-8 text-xs justify-center gap-1.5 flex-1"
+            title="View Details"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            View
+          </Button>
+
+          {canEdit && (
+            <Button
+              onClick={() => {
+                setEditingAppointment(appointment);
+                setShowModal(true);
+              }}
+              variant="secondary"
+              size="sm"
+              className="h-8 text-xs justify-center bg-transparent border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-text-light/60 dark:text-text-dark/60 px-2"
+              title="Edit Appointment"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.action}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        variant={confirmationModal.variant}
+        confirmLabel={confirmationModal.confirmLabel}
+        isProcessing={updateStatusMutation.isPending}
+      />
+    </>
   );
 }
 

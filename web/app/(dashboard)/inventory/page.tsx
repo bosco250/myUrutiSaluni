@@ -469,7 +469,6 @@ function InventoryContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2 text-sm font-medium text-text-light dark:text-text-dark">
-                        <DollarSign className="w-4 h-4" />
                         {product.unitPrice ? product.unitPrice.toLocaleString() : '-'} RWF
                       </div>
                     </td>

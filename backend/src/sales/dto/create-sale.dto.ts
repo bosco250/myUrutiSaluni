@@ -70,6 +70,11 @@ export class CreateSaleDto {
   @IsString()
   paymentReference?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsUUID()
+  appointmentId?: string;
+
   @ApiProperty({ type: [CreateSaleItemDto] })
   @IsArray()
   @ValidateNested({ each: true })

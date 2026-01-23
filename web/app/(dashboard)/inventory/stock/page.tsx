@@ -908,7 +908,7 @@ function MovementsTab({
   );
 }
 
-// Adjust Stock Tab (Compacted)
+// Adjust Stock Tab (Improved)
 function AdjustStockTab({
   salons,
   selectedSalonId,
@@ -923,40 +923,48 @@ function AdjustStockTab({
   const [formData, setFormData] = useState({
     salonId: selectedSalonId || salons[0]?.id || '',
     productId: '',
-    quantity: 0,
+    quantity: '', // Changed to string for better input handling
     notes: '',
   });
+  const [adjustmentType, setAdjustmentType] = useState<'increase' | 'decrease'>('decrease');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Fetch products for selected salon
-  interface InventoryProductOption {
+  // Fetch products with stock for selected salon
+  interface ProductOption {
     id: string;
     name: string;
     sku?: string;
     isInventoryItem: boolean;
+    stockLevel: number;
   }
 
-  const { data: products = [] } = useQuery<InventoryProductOption[]>({
-    queryKey: ['products', formData.salonId],
+  const { data: products = [] } = useQuery<ProductOption[]>({
+    queryKey: ['stock-levels', formData.salonId],
     queryFn: async () => {
       if (!formData.salonId) return [];
-      const response = await api.get(`/inventory/products?salonId=${formData.salonId}`);
-      return response.data?.data || response.data || [];
+      const response = await api.get('/inventory/stock-levels', {
+        params: { salonId: formData.salonId },
+      });
+      return response.data || [];
     },
     enabled: !!formData.salonId,
   });
 
   const inventoryProducts = products.filter((p) => p.isInventoryItem);
+  const selectedProduct = inventoryProducts.find((p) => p.id === formData.productId);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const qty = parseFloat(data.quantity);
+      const finalQuantity = adjustmentType === 'increase' ? qty : -qty;
+      
       return api.post('/inventory/movements', {
         salonId: data.salonId,
         productId: data.productId,
         movementType: 'adjustment',
-        quantity: data.quantity,
-        notes: data.notes || 'Stock adjustment',
+        quantity: finalQuantity,
+        notes: data.notes || `Stock ${adjustmentType}`,
       });
     },
     onSuccess: () => {
@@ -964,9 +972,10 @@ function AdjustStockTab({
       setFormData({
         salonId: selectedSalonId || salons[0]?.id || '',
         productId: '',
-        quantity: 0,
+        quantity: '',
         notes: '',
       });
+      setAdjustmentType('decrease');
       setError('');
     },
     onError: (err: unknown) => {
@@ -993,23 +1002,43 @@ function AdjustStockTab({
       return;
     }
 
-    if (formData.quantity === 0) {
-      setError('Quantity cannot be zero');
+    const qty = parseFloat(formData.quantity);
+    if (!qty || qty <= 0) {
+      setError('Please enter a valid positive quantity');
       setLoading(false);
       return;
+    }
+
+    // Client-side validation for negative stock
+    if (selectedProduct && adjustmentType === 'decrease') {
+      if (selectedProduct.stockLevel - qty < 0) {
+        setError(`Cannot remove ${qty}. Current stock is only ${selectedProduct.stockLevel.toFixed(2)}`);
+        setLoading(false);
+        return;
+      }
     }
 
     mutation.mutate(formData);
   };
 
+  const previewNewStock = useMemo(() => {
+     if (!selectedProduct || !formData.quantity) return null;
+     const qty = parseFloat(formData.quantity);
+     if (isNaN(qty)) return null;
+     
+     const current = selectedProduct.stockLevel;
+     const change = adjustmentType === 'increase' ? qty : -qty;
+     return current + change;
+  }, [selectedProduct, formData.quantity, adjustmentType]);
+
   return (
     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 max-w-2xl mx-auto">
       <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-1">Adjust Stock</h2>
       <p className="text-xs text-text-light/50 dark:text-text-dark/50 mb-4">
-        Manually correct stock levels. Use (+) to increase, (-) to decrease.
+        Correct discrepancies like breakage, loss, or found items.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {(salons.length > 1 || canViewAll) ? (
           <div>
             <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
@@ -1018,7 +1047,7 @@ function AdjustStockTab({
             <select
               value={formData.salonId}
               onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
-              className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               required
             >
               <option value="">Select Salon</option>
@@ -1032,48 +1061,92 @@ function AdjustStockTab({
         ) : (
           <div>
             <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">SALON</label>
-            <div className="w-full px-3 py-1.5 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light/60 dark:text-text-dark/60">
+            <div className="w-full px-3 py-2 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light/60 dark:text-text-dark/60">
               {salons[0]?.name || 'Loading...'}
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 sm:col-span-1">
-             <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
-               PRODUCT
-             </label>
-             <select
-               value={formData.productId}
-               onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-               className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-               required
-               disabled={!formData.salonId || inventoryProducts.length === 0}
-             >
-               <option value="">Select Product</option>
-               {inventoryProducts.map((product) => (
-                 <option key={product.id} value={product.id}>
-                   {product.name} {product.sku ? `(${product.sku})` : ''}
-                 </option>
-               ))}
-             </select>
-          </div>
-
-          <div className="col-span-2 sm:col-span-1">
-            <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
-              QUANTITY (+/-)
-            </label>
-            <input
-              type="number"
-              step="0.001"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
-              className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              required
-              placeholder="-5 or 10"
-            />
-          </div>
+        {/* Product Selection */}
+        <div>
+           <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+             PRODUCT
+           </label>
+           <select
+             value={formData.productId}
+             onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+             required
+             disabled={!formData.salonId || inventoryProducts.length === 0}
+           >
+             <option value="">Select Product to Adjust</option>
+             {inventoryProducts.map((product) => (
+               <option key={product.id} value={product.id}>
+                 {product.name} (Stock: {product.stockLevel.toFixed(2)})
+               </option>
+             ))}
+           </select>
         </div>
+
+        {/* Adjustment Type & Quantity */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+           <div>
+              <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+                 ADJUSTMENT ACTION
+              </label>
+              <div className="flex bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-1">
+                 <button
+                    type="button"
+                    onClick={() => setAdjustmentType('increase')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-all ${adjustmentType === 'increase' ? 'bg-emerald-500 text-white shadow-sm' : 'text-text-light/60 hover:bg-surface-accent-light'}`}
+                 >
+                    <ArrowUp className="w-3.5 h-3.5" /> Increase
+                 </button>
+                 <button
+                    type="button"
+                    onClick={() => setAdjustmentType('decrease')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-all ${adjustmentType === 'decrease' ? 'bg-rose-500 text-white shadow-sm' : 'text-text-light/60 hover:bg-surface-accent-light'}`}
+                 >
+                    <ArrowDown className="w-3.5 h-3.5" /> Decrease
+                 </button>
+              </div>
+           </div>
+
+           <div>
+             <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+               QUANTITY
+             </label>
+             <input
+               type="number"
+               step="0.001"
+               min="0"
+               value={formData.quantity}
+               onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+               className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+               required
+               placeholder="e.g. 5"
+             />
+           </div>
+        </div>
+
+        {/* Stock Preview */}
+        {selectedProduct && (
+           <div className="bg-background-light/50 dark:bg-background-dark/50 rounded-lg p-3 border border-border-light dark:border-border-dark flex items-center justify-between">
+              <div className="text-sm">
+                 <span className="text-text-light/60 dark:text-text-dark/60">Current Stock:</span> 
+                 <span className="font-bold text-text-light dark:text-text-dark ml-2">{selectedProduct.stockLevel.toFixed(2)}</span>
+              </div>
+              <div className="text-text-light/40 dark:text-text-dark/40">
+                 <ArrowUp className="w-4 h-4 rotate-90" />
+              </div>
+              <div className="text-sm">
+                 <span className="text-text-light/60 dark:text-text-dark/60">New Stock:</span> 
+                 <span className={`font-bold ml-2 ${previewNewStock !== null && previewNewStock < 0 ? 'text-red-500' : 'text-primary'}`}>
+                    {previewNewStock !== null ? previewNewStock.toFixed(2) : '-'}
+                 </span>
+              </div>
+           </div>
+        )}
 
         <div>
            <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
@@ -1083,21 +1156,21 @@ function AdjustStockTab({
              value={formData.notes}
              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
              rows={2}
-             className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-             placeholder="e.g., 'Broken bottle', 'Found stock'"
+             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+             placeholder={adjustmentType === 'decrease' ? "e.g., 'Broken bottle', 'Expired'" : "e.g., 'Found extra stock'"}
              required
            />
         </div>
 
         {error && (
-          <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-xs text-center">
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 dark:text-red-400 text-xs text-center font-medium">
             {error}
           </div>
         )}
 
         <div className="pt-2">
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Processing...' : 'Adjust Stock'}
+            {loading ? 'Processing...' : `Confirm ${adjustmentType === 'increase' ? 'Increase' : 'Decrease'}`}
           </Button>
         </div>
       </form>

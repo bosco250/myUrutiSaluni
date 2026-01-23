@@ -19,6 +19,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { ServicesModule } from '../services/services.module';
 import { CommissionsModule } from '../commissions/commissions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SalesModule } from '../sales/sales.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ServicesModule,
     CommissionsModule,
     forwardRef(() => NotificationsModule),
+    forwardRef(() => SalesModule), // For creating sales when appointments complete
   ],
   controllers: [
     AppointmentsController,

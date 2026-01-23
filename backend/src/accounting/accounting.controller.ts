@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -159,10 +160,14 @@ export class AccountingController {
   @ApiQuery({ name: 'salonId', required: true })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'type', required: false, enum: ['income', 'expense'] })
+  @ApiQuery({ name: 'categoryId', required: false })
   async getFinancialSummary(
     @Query('salonId') salonId: string,
     @Query('startDate') startDate: string | undefined, // Fixed type
     @Query('endDate') endDate: string | undefined, // Fixed type
+    @Query('type') type: 'income' | 'expense' | undefined,
+    @Query('categoryId') categoryId: string | undefined,
     @Request() req,
   ) {
     const effectiveSalonId =
@@ -174,6 +179,8 @@ export class AccountingController {
       effectiveSalonId,
       startDate,
       endDate,
+      type,
+      categoryId,
     );
   }
 
@@ -198,5 +205,97 @@ export class AccountingController {
   @ApiOperation({ summary: 'Create an invoice' })
   createInvoice(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.accountingService.createInvoice(createInvoiceDto);
+  }
+  @Get('charts/daily')
+  @RequireAnyPermission(
+    EmployeePermission.VIEW_EXPENSE_REPORTS,
+    EmployeePermission.MANAGE_EXPENSES,
+    EmployeePermission.VIEW_SALES_REPORTS,
+  )
+  @ApiOperation({ summary: 'Get daily financial charts data' })
+  @ApiQuery({ name: 'salonId', required: true })
+  @ApiQuery({ name: 'startDate', required: true })
+  @ApiQuery({ name: 'endDate', required: true })
+  async getDailyFinancials(
+    @Query('salonId') salonId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Request() req,
+  ) {
+    const effectiveSalonId =
+      req.user?.role === 'salon_employee' && req.resolvedSalonId
+        ? req.resolvedSalonId
+        : salonId;
+
+    return this.accountingService.getDailyFinancials(
+      effectiveSalonId,
+      startDate,
+      endDate,
+    );
+  }
+
+  @Get('export/csv')
+  @RequireAnyPermission(
+    EmployeePermission.VIEW_EXPENSE_REPORTS,
+    EmployeePermission.VIEW_SALES_REPORTS,
+  )
+  @ApiOperation({ summary: 'Export accounting ledger to CSV' })
+  async exportCsv(
+    @Query('salonId') salonId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Request() req,
+    @Res() res,
+  ) {
+    const effectiveSalonId =
+      req.user?.role === 'salon_employee' && req.resolvedSalonId
+        ? req.resolvedSalonId
+        : salonId;
+
+    const csvData = await this.accountingService.exportAccountingToCsv(
+      effectiveSalonId,
+      startDate,
+      endDate,
+    );
+
+    res.set({
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="accounting_ledger_${startDate}_${endDate}.csv"`,
+    });
+
+    return res.send(csvData);
+  }
+
+  @Get('export/pdf')
+  @RequireAnyPermission(
+    EmployeePermission.VIEW_EXPENSE_REPORTS,
+    EmployeePermission.VIEW_SALES_REPORTS,
+  )
+  @ApiOperation({ summary: 'Export Profit & Loss statement to PDF' })
+  async exportPdf(
+    @Query('salonId') salonId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Request() req,
+    @Res() res,
+  ) {
+    const effectiveSalonId =
+      req.user?.role === 'salon_employee' && req.resolvedSalonId
+        ? req.resolvedSalonId
+        : salonId;
+
+    const pdfBuffer = await this.accountingService.exportAccountingToPdf(
+      effectiveSalonId,
+      startDate,
+      endDate,
+    );
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="pnl_statement_${startDate}_${endDate}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    return res.end(pdfBuffer);
   }
 }

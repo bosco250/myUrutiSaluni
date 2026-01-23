@@ -41,6 +41,13 @@ const nextConfig = {
         port: '4000',
         pathname: '/api/uploads/**',
       },
+      // Added local network IP for testing
+      {
+        protocol: 'http',
+        hostname: '192.168.1.76',
+        port: '4000',
+        pathname: '/api/uploads/**',
+      },
     ],
   },
   

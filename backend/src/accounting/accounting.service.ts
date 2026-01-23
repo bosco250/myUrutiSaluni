@@ -13,6 +13,8 @@ import {
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { QueryExpensesDto } from './dto/query-expenses.dto';
+import { ReportsService } from '../reports/reports.service';
+import { SalonsService } from '../salons/salons.service'; // Needed for salon name fetch
 
 @Injectable()
 export class AccountingService {
@@ -28,6 +30,7 @@ export class AccountingService {
     @InjectRepository(Expense)
     private expensesRepository: Repository<Expense>,
     private dataSource: DataSource,
+    private reportsService: ReportsService,
   ) {}
 
   // ==================== EXPENSE METHODS ====================
@@ -131,6 +134,7 @@ export class AccountingService {
     byCategory: { categoryName: string; total: number }[];
     byPaymentMethod: { method: string; total: number }[];
   }> {
+    // 1. Manual Expenses
     const qb = this.expensesRepository
       .createQueryBuilder('expense')
       .leftJoin('expense.category', 'category')
@@ -152,37 +156,173 @@ export class AccountingService {
       .select(['expense.amount', 'expense.paymentMethod', 'category.name'])
       .getRawMany();
 
-    const totalExpenses = expenses.reduce(
-      (sum, e) => sum + parseFloat(e.expense_amount || 0),
-      0,
-    );
-    const expenseCount = expenses.length;
-
-    // Group by category
+    // Group by category (Manual)
     const categoryMap = new Map<string, number>();
-    expenses.forEach((e) => {
-      const name = e.category_name || 'Uncategorized';
-      categoryMap.set(
-        name,
-        (categoryMap.get(name) || 0) + parseFloat(e.expense_amount || 0),
-      );
-    });
-    const byCategory = Array.from(categoryMap.entries()).map(
-      ([categoryName, total]) => ({ categoryName, total }),
-    );
-
-    // Group by payment method
     const methodMap = new Map<string, number>();
+    let manualExpenseTotal = 0;
+
     expenses.forEach((e) => {
+      const amount = parseFloat(e.expense_amount || 0);
+      manualExpenseTotal += amount;
+      
+      const catName = e.category_name || 'Uncategorized';
+      categoryMap.set(catName, (categoryMap.get(catName) || 0) + amount);
+
       const method = e.expense_paymentMethod || 'other';
-      methodMap.set(
-        method,
-        (methodMap.get(method) || 0) + parseFloat(e.expense_amount || 0),
-      );
+      methodMap.set(method, (methodMap.get(method) || 0) + amount);
     });
-    const byPaymentMethod = Array.from(methodMap.entries()).map(
-      ([method, total]) => ({ method, total }),
-    );
+
+    // 2. Commissions (Automatic Expenses)
+    const commissionTotalQb = this.dataSource
+      .createQueryBuilder()
+      .select('SUM(CAST(comm.amount AS NUMERIC))', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .from('commissions', 'comm')
+      .innerJoin('salon_employees', 'emp', 'emp.id = comm.salon_employee_id')
+      .where('emp.salon_id = :salonId', { salonId });
+
+    if (startDate) {
+      commissionTotalQb.andWhere('comm.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    }
+    if (endDate) {
+      commissionTotalQb.andWhere('comm.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
+    }
+
+    const commissionResult = await commissionTotalQb.getRawOne();
+    const commissionsTotal = parseFloat(commissionResult?.total || '0');
+    const commissionsCount = parseInt(commissionResult?.count || '0', 10);
+
+    if (commissionsTotal > 0) {
+      categoryMap.set(
+        'Commissions',
+        (categoryMap.get('Commissions') || 0) + commissionsTotal,
+      );
+      methodMap.set(
+        'system_accrual',
+        (methodMap.get('system_accrual') || 0) + commissionsTotal,
+      );
+    }
+
+    // 3. Journal Expenses (Other)
+    const journalExpenseQb = this.journalEntryLinesRepository
+      .createQueryBuilder('line')
+      .innerJoin('line.journalEntry', 'entry')
+      .innerJoin('line.account', 'account')
+      .where('entry.salonId = :salonId', { salonId })
+      .andWhere('account.accountType = :type', { type: 'expense' });
+
+    if (startDate) {
+      journalExpenseQb.andWhere('entry.entryDate >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    }
+    if (endDate) {
+      journalExpenseQb.andWhere('entry.entryDate <= :endDate', {
+        endDate: new Date(endDate),
+      });
+    }
+
+    const journalExpenseLines = await journalExpenseQb
+      .select(['line.debitAmount', 'account.name'])
+      .getRawMany();
+
+    const journalTotal = journalExpenseLines.reduce((sum, l) => {
+      const amount = parseFloat(l.line_debitAmount || 0);
+      const catName = l.account_name || 'Journal Adjustment';
+      categoryMap.set(catName, (categoryMap.get(catName) || 0) + amount);
+      methodMap.set(
+        'journal_entry',
+        (methodMap.get('journal_entry') || 0) + amount,
+      );
+      return sum + amount;
+    }, 0);
+
+    // 4. Payroll (Paid)
+    const payrollQb = this.dataSource
+      .createQueryBuilder()
+      .select('SUM(run.total_amount)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .from('payroll_runs', 'run')
+      .where('run.salon_id = :salonId', { salonId })
+      .andWhere("run.status = 'paid'");
+
+    if (startDate) {
+      payrollQb.andWhere('run.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    }
+    if (endDate) {
+      payrollQb.andWhere('run.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
+    }
+
+    const payrollRes = await payrollQb.getRawOne();
+    const payrollTotal = parseFloat(payrollRes?.total || '0');
+    const payrollCount = parseInt(payrollRes?.count || '0', 10);
+
+    if (payrollTotal > 0) {
+      categoryMap.set(
+        'Payroll',
+        (categoryMap.get('Payroll') || 0) + payrollTotal,
+      );
+      methodMap.set(
+        'wage_payment',
+        (methodMap.get('wage_payment') || 0) + payrollTotal,
+      );
+    }
+
+    // 5. Wallet Fees
+    const feeQb = this.dataSource
+      .createQueryBuilder()
+      .select('SUM(tx.amount)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .from('wallet_transactions', 'tx')
+      .innerJoin('wallets', 'w', 'w.id = tx.wallet_id')
+      .where('w.salon_id = :salonId', { salonId })
+      .andWhere("tx.transaction_type = 'fee'");
+
+    if (startDate) {
+      feeQb.andWhere('tx.created_at >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    }
+    if (endDate) {
+      feeQb.andWhere('tx.created_at <= :endDate', {
+        endDate: new Date(endDate),
+      });
+    }
+
+    const feeRes = await feeQb.getRawOne();
+    const feeTotal = parseFloat(feeRes?.total || '0');
+    const feeCount = parseInt(feeRes?.count || '0', 10);
+
+    if (feeTotal > 0) {
+      categoryMap.set(
+        'System Fees',
+        (categoryMap.get('System Fees') || 0) + feeTotal,
+      );
+      methodMap.set(
+        'system_fee',
+        (methodMap.get('system_fee') || 0) + feeTotal,
+      );
+    }
+
+    // Final Totals
+    const totalExpenses = manualExpenseTotal + commissionsTotal + journalTotal + payrollTotal + feeTotal;
+    const expenseCount = expenses.length + commissionsCount + journalExpenseLines.length + payrollCount + feeCount;
+
+    const byCategory = Array.from(categoryMap.entries())
+      .map(([categoryName, total]) => ({ categoryName, total }))
+      .sort((a, b) => b.total - a.total);
+
+    const byPaymentMethod = Array.from(methodMap.entries())
+      .map(([method, total]) => ({ method, total }))
+      .sort((a, b) => b.total - a.total);
 
     return { totalExpenses, expenseCount, byCategory, byPaymentMethod };
   }
@@ -253,65 +393,15 @@ export class AccountingService {
 
     const totalRevenue = totalSalesRevenue + otherRevenue;
 
-    // 3. Get Manual Expenses
+    // 3. Get All Expenses (Manual + Commissions + Journals) via centralized method
+    // This ensures that "Top Expenses" breakdown matches "Total Expenses" figure
     const expenseSummary = await this.getExpenseSummary(
       salonId,
       startDate,
       endDate,
     );
-
-    // 4. Get Commissions from commissions table (Source of Truth for Commissions)
-    // We need to join with employees to filter by salonId
-    const commissionTotalQb = this.dataSource
-      .createQueryBuilder()
-      .select('SUM(CAST(comm.amount AS NUMERIC))', 'total')
-      .from('commissions', 'comm')
-      .innerJoin('salon_employees', 'emp', 'emp.id = comm.salon_employee_id')
-      .where('emp.salon_id = :salonId', { salonId });
-
-    if (startDate) {
-      commissionTotalQb.andWhere('comm.created_at >= :startDate', {
-        startDate: new Date(startDate),
-      });
-    }
-    if (endDate) {
-      commissionTotalQb.andWhere('comm.created_at <= :endDate', {
-        endDate: new Date(endDate),
-      });
-    }
-
-    const commissionResult = await commissionTotalQb.getRawOne();
-    const totalCommissions = parseFloat(commissionResult?.total || '0');
-
-    // 5. Get other expenses from journal entries (e.g. COGS if tracked, tax, etc.)
-    const journalExpenseQb = this.journalEntryLinesRepository
-      .createQueryBuilder('line')
-      .innerJoin('line.journalEntry', 'entry')
-      .innerJoin('line.account', 'account')
-      .where('entry.salonId = :salonId', { salonId })
-      .andWhere('account.accountType = :type', { type: 'expense' });
-
-    if (startDate) {
-      journalExpenseQb.andWhere('entry.entryDate >= :startDate', {
-        startDate: new Date(startDate),
-      });
-    }
-    if (endDate) {
-      journalExpenseQb.andWhere('entry.entryDate <= :endDate', {
-        endDate: new Date(endDate),
-      });
-    }
-
-    const journalExpenseLines = await journalExpenseQb
-      .select('line.debitAmount')
-      .getRawMany();
-    const otherJournalExpenses = journalExpenseLines.reduce(
-      (sum, l) => sum + parseFloat(l.line_debitAmount || 0),
-      0,
-    );
-
-    const totalCalculatedExpenses =
-      expenseSummary.totalExpenses + totalCommissions + otherJournalExpenses;
+    const totalCalculatedExpenses = expenseSummary.totalExpenses;
+    
     const netIncome = totalRevenue - totalCalculatedExpenses;
 
     return {
@@ -459,5 +549,382 @@ export class AccountingService {
     }
 
     return categories;
+  }
+
+  async getDailyFinancials(
+    salonId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<any[]> {
+    // Ensure date range covers the full days (00:00 to 23:59)
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const toDateKey = (date: any) => {
+      if (!date) return null;
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString().split('T')[0];
+    };
+
+    const dailyMap = new Map<
+      string,
+      { date: string; revenue: number; expenses: number; netIncome: number }
+    >();
+
+    const getEntry = (dateKey: string) => {
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          date: dateKey,
+          revenue: 0,
+          expenses: 0,
+          netIncome: 0,
+        });
+      }
+      return dailyMap.get(dateKey);
+    };
+
+    // 1. Revenue (Sales)
+    const sales = await this.dataSource
+      .createQueryBuilder()
+      .select('CAST(sale.total_amount AS NUMERIC)', 'amount')
+      .addSelect('sale.created_at', 'date')
+      .from('sales', 'sale')
+      .where('sale.salon_id = :salonId', { salonId })
+      .andWhere("sale.status = 'completed'")
+      .andWhere('sale.created_at >= :start', { start })
+      .andWhere('sale.created_at <= :end', { end })
+      .getRawMany();
+
+    sales.forEach((s) => {
+      const key = toDateKey(s.date);
+      if (key) getEntry(key).revenue += parseFloat(s.amount || 0);
+    });
+
+    // 2. Other Revenue (Journals)
+    const otherRevenue = await this.journalEntryLinesRepository
+      .createQueryBuilder('line')
+      .innerJoin('line.journalEntry', 'entry')
+      .innerJoin('line.account', 'account')
+      .select('CAST(line.creditAmount AS NUMERIC) - CAST(line.debitAmount AS NUMERIC)', 'amount')
+      .addSelect('entry.entryDate', 'date')
+      .where('entry.salonId = :salonId', { salonId })
+      .andWhere('account.accountType = :type', { type: 'revenue' })
+      .andWhere('line.referenceType != :refType', { refType: 'sale' })
+      .andWhere('entry.entryDate >= :start', { start })
+      .andWhere('entry.entryDate <= :end', { end })
+      .getRawMany();
+
+    otherRevenue.forEach((r) => {
+      const key = toDateKey(r.date);
+      if (key) getEntry(key).revenue += parseFloat(r.amount || 0);
+    });
+
+    // 3. Manual Expenses
+    const manualExpenses = await this.expensesRepository
+      .createQueryBuilder('expense')
+      .select('CAST(expense.amount AS NUMERIC)', 'amount')
+      .addSelect('expense.expenseDate', 'date')
+      .where('expense.salonId = :salonId', { salonId })
+      .andWhere('expense.status = :status', { status: ExpenseStatus.APPROVED })
+      .andWhere('expense.expenseDate >= :start', { start })
+      .andWhere('expense.expenseDate <= :end', { end })
+      .getRawMany();
+
+    manualExpenses.forEach((e) => {
+      const key = toDateKey(e.date);
+      if (key) getEntry(key).expenses += parseFloat(e.amount || 0);
+    });
+
+    // 4. Commissions
+    const commissions = await this.dataSource
+      .createQueryBuilder()
+      .select('CAST(comm.amount AS NUMERIC)', 'amount')
+      .addSelect('comm.created_at', 'date')
+      .from('commissions', 'comm')
+      .innerJoin('salon_employees', 'emp', 'emp.id = comm.salon_employee_id')
+      .where('emp.salon_id = :salonId', { salonId })
+      .andWhere('comm.created_at >= :start', { start })
+      .andWhere('comm.created_at <= :end', { end })
+      .getRawMany();
+
+    commissions.forEach((c) => {
+      const key = toDateKey(c.date);
+      if (key) getEntry(key).expenses += parseFloat(c.amount || 0);
+    });
+
+    // 5. Journal Expenses
+    const journalExpenses = await this.journalEntryLinesRepository
+      .createQueryBuilder('line')
+      .innerJoin('line.journalEntry', 'entry')
+      .innerJoin('line.account', 'account')
+      .select('CAST(line.debitAmount AS NUMERIC)', 'amount')
+      .addSelect('entry.entryDate', 'date')
+      .where('entry.salonId = :salonId', { salonId })
+      .andWhere('account.accountType = :type', { type: 'expense' })
+      .andWhere('entry.entryDate >= :start', { start })
+      .andWhere('entry.entryDate <= :end', { end })
+      .getRawMany();
+
+    journalExpenses.forEach((je) => {
+      const key = toDateKey(je.date);
+      if (key) getEntry(key).expenses += parseFloat(je.amount || 0);
+    });
+
+    // 6. Payroll (Paid)
+    const payrolls = await this.dataSource
+      .createQueryBuilder()
+      .select('CAST(run.total_amount AS NUMERIC)', 'amount')
+      .addSelect('run.created_at', 'date')
+      .from('payroll_runs', 'run')
+      .where('run.salon_id = :salonId', { salonId })
+      .andWhere("run.status = 'paid'")
+      .andWhere('run.created_at >= :start', { start })
+      .andWhere('run.created_at <= :end', { end })
+      .getRawMany();
+
+    payrolls.forEach((p) => {
+      const key = toDateKey(p.date);
+      if (key) getEntry(key).expenses += parseFloat(p.amount || 0);
+    });
+
+    // 7. Wallet Fees
+    const walletFees = await this.dataSource
+      .createQueryBuilder()
+      .select('CAST(tx.amount AS NUMERIC)', 'amount')
+      .addSelect('tx.created_at', 'date')
+      .from('wallet_transactions', 'tx')
+      .innerJoin('wallets', 'w', 'w.id = tx.wallet_id')
+      .where('w.salon_id = :salonId', { salonId })
+      .andWhere("tx.transaction_type = 'fee'")
+      .andWhere('tx.created_at >= :start', { start })
+      .andWhere('tx.created_at <= :end', { end })
+      .getRawMany();
+
+    walletFees.forEach((f) => {
+      const key = toDateKey(f.date);
+      if (key) getEntry(key).expenses += parseFloat(f.amount || 0);
+    });
+
+    // Calculate Net Income
+    dailyMap.forEach((entry) => {
+      entry.netIncome = entry.revenue - entry.expenses;
+    });
+
+    return Array.from(dailyMap.values()).sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+  }
+
+  async getAccountingLedger(
+    salonId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<any[]> {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const ledger: any[] = [];
+
+    // 1. Sales
+    const sales = await this.dataSource
+      .createQueryBuilder()
+      .select('s.id', 'id')
+      .addSelect('s.created_at', 'date')
+      .addSelect('CAST(s.total_amount AS NUMERIC)', 'amount')
+      .from('sales', 's')
+      .where('s.salon_id = :salonId', { salonId })
+      .andWhere("s.status = 'completed'")
+      .andWhere('s.created_at BETWEEN :start AND :end', { start, end })
+      .getRawMany();
+
+    sales.forEach((s) =>
+      ledger.push({
+        date: s.date,
+        type: 'Income',
+        category: 'Sale',
+        description: `Sale #${s.id.slice(0, 8)}`,
+        amount: parseFloat(s.amount || 0),
+        isOutflow: false,
+      }),
+    );
+
+    // 2. Expenses (Manual)
+    const expenses = await this.expensesRepository
+      .createQueryBuilder('e')
+      .leftJoinAndSelect('e.category', 'cat')
+      .where('e.salonId = :salonId', { salonId })
+      .andWhere("e.status = 'approved'")
+      .andWhere('e.expenseDate BETWEEN :start AND :end', { start, end })
+      .getMany();
+
+    expenses.forEach((e) =>
+      ledger.push({
+        date: e.expenseDate,
+        type: 'Expense',
+        category: e.category?.name || 'General',
+        description: e.description || 'Manual Expense',
+        amount: parseFloat(String(e.amount || 0)),
+        isOutflow: true,
+      }),
+    );
+
+    // 3. Commissions
+    const commissions = await this.dataSource
+      .createQueryBuilder()
+      .select('c.id', 'id')
+      .addSelect('c.created_at', 'date')
+      .addSelect('CAST(c.amount AS NUMERIC)', 'amount')
+      .from('commissions', 'c')
+      .innerJoin('salon_employees', 'emp', 'emp.id = c.salon_employee_id')
+      .where('emp.salon_id = :salonId', { salonId })
+      .andWhere('c.created_at BETWEEN :start AND :end', { start, end })
+      .getRawMany();
+
+    commissions.forEach((c) =>
+      ledger.push({
+        date: c.date,
+        type: 'Expense',
+        category: 'Commission',
+        description: `Staff Commission Payout`,
+        amount: parseFloat(c.amount || 0),
+        isOutflow: true,
+      }),
+    );
+
+    // 4. Payroll
+    const payrolls = await this.dataSource
+      .createQueryBuilder()
+      .select('p.id', 'id')
+      .addSelect('p.created_at', 'date')
+      .addSelect('CAST(p.total_amount AS NUMERIC)', 'amount')
+      .from('payroll_runs', 'p')
+      .where('p.salon_id = :salonId', { salonId })
+      .andWhere("p.status = 'paid'")
+      .andWhere('p.created_at BETWEEN :start AND :end', { start, end })
+      .getRawMany();
+
+    payrolls.forEach((p) =>
+      ledger.push({
+        date: p.date,
+        type: 'Expense',
+        category: 'Payroll',
+        description: `Payroll Run Payout`,
+        amount: parseFloat(p.amount || 0),
+        isOutflow: true,
+      }),
+    );
+
+    // 5. Wallet Fees
+    const fees = await this.dataSource
+      .createQueryBuilder()
+      .select('tx.id', 'id')
+      .addSelect('tx.created_at', 'date')
+      .addSelect('CAST(tx.amount AS NUMERIC)', 'amount')
+      .addSelect('tx.description', 'description')
+      .from('wallet_transactions', 'tx')
+      .innerJoin('wallets', 'w', 'w.id = tx.wallet_id')
+      .where('w.salon_id = :salonId', { salonId })
+      .andWhere("tx.transaction_type = 'fee'")
+      .andWhere('tx.created_at BETWEEN :start AND :end', { start, end })
+      .getRawMany();
+
+    fees.forEach((f) =>
+      ledger.push({
+        date: f.date,
+        type: 'Expense',
+        category: 'System Fees',
+        description: f.description || 'Transaction Fee',
+        amount: parseFloat(f.amount || 0),
+        isOutflow: true,
+      }),
+    );
+
+    return ledger.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  }
+
+  async exportAccountingToCsv(
+    salonId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<string> {
+    const ledger = await this.getAccountingLedger(salonId, startDate, endDate);
+
+    const header =
+      'Date,Type,Category,Description,Inflow (RWF),Outflow (RWF),Net (RWF)\n';
+    const rows = ledger
+      .map((item) => {
+        const dateStr = new Date(item.date).toLocaleDateString('en-GB');
+        const inflow = !item.isOutflow ? item.amount : 0;
+        const outflow = item.isOutflow ? item.amount : 0;
+        const net = inflow - outflow;
+        const cleanDesc = (item.description || '').replace(/"/g, '""');
+        return `${dateStr},"${item.type}","${item.category}","${cleanDesc}",${inflow},${outflow},${net}`;
+      })
+      .join('\n');
+
+    return header + rows;
+  }
+
+  async exportAccountingToPdf(
+    salonId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<Buffer> {
+    // 1. Get Salon Name
+    const salonRes = await this.dataSource.query(
+      'SELECT name FROM salons WHERE id = $1',
+      [salonId],
+    );
+    const salonName = salonRes[0]?.name || 'Uruti Salon';
+
+    // 2. Get Data
+    const expenseSummary = await this.getExpenseSummary(
+      salonId,
+      startDate,
+      endDate,
+    );
+    const financialSummary = await this.getFinancialSummary(
+      salonId,
+      startDate,
+      endDate,
+    );
+
+    // 3. Format Data
+    const reportData = {
+      salonName,
+      startDate: new Date(startDate).toLocaleDateString(),
+      endDate: new Date(endDate).toLocaleDateString(),
+      totalRevenue: new Intl.NumberFormat('en-RW', {
+        style: 'currency',
+        currency: 'RWF',
+      }).format(financialSummary.totalRevenue),
+      totalExpenses: new Intl.NumberFormat('en-RW', {
+        style: 'currency',
+        currency: 'RWF',
+      }).format(financialSummary.totalExpenses),
+      netIncome: new Intl.NumberFormat('en-RW', {
+        style: 'currency',
+        currency: 'RWF',
+      }).format(financialSummary.netIncome),
+      netIncomeRaw: financialSummary.netIncome,
+      expensesByCategory: expenseSummary.byCategory.map((c) => ({
+        name: c.categoryName,
+        amount: new Intl.NumberFormat('en-RW', {
+          style: 'currency',
+          currency: 'RWF',
+        }).format(c.total),
+      })),
+    };
+
+    // 4. Generate
+    return this.reportsService.generatePnlReport(reportData);
   }
 }

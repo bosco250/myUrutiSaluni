@@ -2,6 +2,21 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ComposedChart,
+  Line,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 import api from '@/lib/api';
 import {
   DollarSign,
@@ -20,7 +35,8 @@ import {
   ArrowDownRight,
   ChevronDown,
   Briefcase,
-  PieChart,
+  Download,
+  PieChart as PieChartIcon, // Renamed to avoid conflict
   type LucideIcon,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -106,40 +122,66 @@ function StatCard({
   trendValue?: string;
   color?: 'blue' | 'green' | 'red' | 'purple' | 'orange';
 }) {
-  const colorMap = {
-    blue: 'bg-blue-500/10 text-blue-500',
-    green: 'bg-emerald-500/10 text-emerald-500',
-    red: 'bg-rose-500/10 text-rose-500',
-    purple: 'bg-violet-500/10 text-violet-500',
-    orange: 'bg-amber-500/10 text-amber-500',
+  const styles = {
+    blue: {
+      bg: 'from-blue-500/10 to-cyan-500/10',
+      border: 'border-blue-500/20 dark:border-blue-500/30',
+      iconBg: 'from-blue-500 to-cyan-500',
+    },
+    green: {
+      bg: 'from-green-500/10 to-emerald-500/10',
+      border: 'border-green-500/20 dark:border-green-500/30',
+      iconBg: 'from-green-500 to-emerald-500',
+    },
+    red: {
+      bg: 'from-red-500/10 to-rose-500/10',
+      border: 'border-red-500/20 dark:border-red-500/30',
+      iconBg: 'from-red-500 to-rose-500',
+    },
+    purple: {
+      bg: 'from-purple-500/10 to-pink-500/10',
+      border: 'border-purple-500/20 dark:border-purple-500/30',
+      iconBg: 'from-purple-500 to-pink-500',
+    },
+    orange: {
+       bg: 'from-amber-500/10 to-orange-500/10',
+       border: 'border-amber-500/20 dark:border-amber-500/30',
+       iconBg: 'from-amber-500 to-orange-500',
+    }
   };
 
-  const trendBadgeClass =
-    trend === 'up'
-      ? 'bg-emerald-500/10 text-emerald-500'
-      : trend === 'down'
-        ? 'bg-rose-500/10 text-rose-500'
-        : 'bg-gray-100 dark:bg-gray-800 text-text-light/60 dark:text-text-dark/60';
+  const style = styles[color] || styles.blue;
+  
+  const trendColor = trend === 'up' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                   : trend === 'down' ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400' 
+                   : 'bg-gray-100 dark:bg-gray-800 text-gray-500';
+  
   const TrendIcon = trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : null;
 
   return (
-    <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorMap[color]} group-hover:scale-105 transition-transform`}>
-          <Icon className="h-4 w-4" />
-        </div>
-        {trend && TrendIcon && (
-          <div className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${trendBadgeClass}`}>
-            <TrendIcon className="h-3 w-3" />
-            {trendValue}
+    <div className={`group relative flex flex-col justify-between bg-gradient-to-br ${style.bg} border ${style.border} rounded-xl p-3 hover:shadow-lg transition-all`}>
+       <div className="flex items-center justify-between mb-2">
+          {/* Header: Icon + Title */}
+          <div className="flex items-center gap-2">
+             <div className={`p-1.5 rounded-lg bg-gradient-to-br ${style.iconBg} shadow-sm group-hover:scale-110 transition-transform`}>
+                <Icon className="w-3.5 h-3.5 text-white" />
+             </div>
+             <p className="text-xs font-bold text-text-light/70 dark:text-text-dark/70 tracking-wide">{title}</p>
           </div>
-        )}
-      </div>
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60">{title}</p>
-        <h3 className="text-xl font-bold text-text-light dark:text-text-dark">{amount}</h3>
-        {subtext && <p className="text-xs text-text-light/40 dark:text-text-dark/40">{subtext}</p>}
-      </div>
+          
+          {/* Trend Indicator */}
+          {trend && TrendIcon && (
+             <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${trendColor}`}>
+                <TrendIcon className="w-3 h-3" />
+                {trendValue}
+             </div>
+          )}
+       </div>
+       
+       <div>
+         <h3 className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{amount}</h3>
+         {subtext && <p className="text-[10px] font-medium text-text-light/50 dark:text-text-dark/50 mt-0.5">{subtext}</p>}
+       </div>
     </div>
   );
 }
@@ -203,6 +245,8 @@ function CategoryProgress({ name, amount, total, colorClass = 'bg-primary' }: { 
 
 // --- Page Component ---
 
+// --- Page Component ---
+
 export default function AccountingPage() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
@@ -246,18 +290,30 @@ export default function AccountingPage() {
   // Fetch permissions for the selected salon
   const { can, isLoading: isLoadingPermissions } = useEmployeePermissions(salonId);
 
+  // Fetch Financial Summary (Moved up from OverviewTab to be Global)
+  const { data: summary, isLoading: isLoadingSummary } = useQuery<FinancialSummary>({
+    queryKey: ['financial-summary', salonId, dateRange],
+    queryFn: async () => {
+       const res = await api.get('/accounting/financial-summary', { params: { salonId, ...dateRange }});
+       return res.data;
+    },
+    enabled: !!salonId
+  });
+
+  const netIncome = summary?.netIncome || 0;
+  const isProfitable = netIncome >= 0;
+  const margin = summary?.totalRevenue ? ((netIncome / summary.totalRevenue) * 100).toFixed(1) : '0.0';
+
   // Define tabs based on permissions
   const tabs = useMemo(() => {
     const t = [
-      { id: 'overview', name: 'Overview', icon: PieChart },
+      { id: 'overview', name: 'Overview', icon: PieChartIcon },
     ];
 
     if (can(EmployeePermission.VIEW_EXPENSE_REPORTS) || can(EmployeePermission.MANAGE_EXPENSES)) {
       t.push({ id: 'expenses', name: 'Expenses', icon: Receipt });
     }
     
-    // Assuming Accounts/Journals require MANAGE_EXPENSES for now as they are advanced
-    // Adjust permissions as needed for these tabs
     if (can(EmployeePermission.MANAGE_EXPENSES)) {
       t.push({ id: 'accounts', name: 'Accounts', icon: BookOpen });
       t.push({ id: 'journals', name: 'Journals', icon: FileText });
@@ -272,7 +328,6 @@ export default function AccountingPage() {
      }
   }, [tabs, activeTab]);
 
-  // Logic for quick date sets
   const handlePresetDate = (label: string, start: Date, end: Date) => {
     setDateRangeLabel(label);
     setDateRange({
@@ -280,6 +335,61 @@ export default function AccountingPage() {
       endDate: format(end, 'yyyy-MM-dd')
     });
   };
+
+  const handleExportCsv = async () => {
+    if (!salonId) return;
+    try {
+      const response = await api.get('/accounting/export/csv', {
+        params: {
+          salonId,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        },
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `financial_ledger_${dateRange.startDate}_to_${dateRange.endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+       console.error('Export failed:', error);
+       alert('Failed to export CSV. Please try again.');
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!salonId) return;
+    try {
+      const response = await api.get('/accounting/export/pdf', {
+        params: {
+          salonId,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        },
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pnl_statement_${dateRange.startDate}_to_${dateRange.endDate}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+       console.error('PDF Export failed:', error);
+       alert('Failed to export PDF. Please try again.');
+    }
+  };
+
 
   if (isLoadingSalons) {
     return (
@@ -368,15 +478,87 @@ export default function AccountingPage() {
               <Calendar className="h-3.5 w-3.5" />
             </div>
           </div>
+
+          {/* Export Button */}
+          <Button
+             variant="outline"
+             size="sm"
+             onClick={handleExportCsv}
+             className="h-9 px-3 text-xs font-semibold border-border-light dark:border-border-dark hover:bg-primary/5 hover:text-primary transition-all"
+             title="Export all financial records to CSV"
+          >
+             <Download className="mr-2 h-4 w-4" />
+             CSV
+          </Button>
+
+          <Button
+             variant="outline"
+             size="sm"
+             onClick={handleExportPdf}
+             className="h-9 px-3 text-xs font-semibold border-border-light dark:border-border-dark hover:bg-primary/5 hover:text-primary transition-all"
+             title="Export Profit & Loss Statement to PDF"
+          >
+             <FileText className="mr-2 h-4 w-4" />
+             PDF
+          </Button>
         </div>
       </div>
+
+       {/* Global KPI Cards (Placed ABOVE Navigation as requested) */}
+       {isLoadingSummary ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-28 rounded-xl border border-border-light/60 bg-background-light/60 animate-pulse dark:border-border-dark/60 dark:bg-background-dark/40"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard 
+            title="Total Revenue" 
+            amount={formatCurrency(summary?.totalRevenue || 0)} 
+            subtext={`${summary?.salesCount || 0} transactions`}
+            icon={DollarSign}
+            trend="up"
+            trendValue="+12.5%" 
+            color="green"
+          />
+          <StatCard 
+            title="Total Expenses" 
+            amount={formatCurrency(summary?.totalExpenses || 0)} 
+            subtext={`${summary?.expenseCount || 0} records`}
+            icon={TrendingDown}
+            trend="down"
+            trendValue="+4.2%" 
+            color="red"
+          />
+          <StatCard 
+            title="Net Income" 
+            amount={formatCurrency(netIncome)} 
+            subtext={isProfitable ? "Profitable Period" : "Loss Period"}
+            icon={isProfitable ? TrendingUp : AlertCircle}
+            trend={isProfitable ? 'up' : 'down'}
+            color={isProfitable ? 'green' : 'orange'}
+          />
+           <StatCard 
+            title="Profit Margin" 
+            amount={`${margin}%`} 
+            subtext="Net / Revenue"
+            icon={Briefcase}
+            trend="neutral"
+            color="purple"
+          />
+        </div>
+      )}
 
       {/* Navigation */}
       <TabNav tabs={tabs} activeString={activeTab} onChange={setActiveTab} />
 
       {/* Main Content Area */}
       <div className="min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {activeTab === 'overview' && <OverviewTab salonId={salonId} dateRange={dateRange} />}
+        {activeTab === 'overview' && <OverviewTab salonId={salonId} dateRange={dateRange} summary={summary} />}
         {activeTab === 'expenses' && <ExpensesTab salonId={salonId} dateRange={dateRange} />}
         {activeTab === 'accounts' && <AccountsTab salonId={salonId} />}
         {activeTab === 'journals' && <JournalsTab />}
@@ -385,18 +567,136 @@ export default function AccountingPage() {
   );
 }
 
-// --- TAB 1: OVERVIEW ---
+// --- Charts Component ---
 
-function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { startDate: string; endDate: string } }) {
-  const { data: summary, isLoading: isLoadingSummary } = useQuery<FinancialSummary>({
-    queryKey: ['financial-summary', salonId, dateRange],
-    queryFn: async () => {
-       const res = await api.get('/accounting/financial-summary', { params: { salonId, ...dateRange }});
-       return res.data;
-    },
-    enabled: !!salonId
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#f43f5e', '#8b5cf6', '#ec4899'];
+
+function FinancialCharts({ salonId, dateRange }: { salonId: string; dateRange: any }) {
+  const { data: chartData, isLoading } = useQuery({
+     queryKey: ['financial-charts', salonId, dateRange],
+     queryFn: async () => {
+         const res = await api.get('/accounting/charts/daily', { params: { salonId, ...dateRange }});
+         return res.data || [];
+      },
+      enabled: !!salonId
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex h-72 items-center justify-center rounded-xl border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
+         <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+      </div>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+      return (
+        <div className="relative flex h-72 flex-col items-center justify-center overflow-hidden rounded-xl border border-border-light bg-surface-light dark:border-border-dark dark:bg-surface-dark">
+            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" 
+                 style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '16px 16px' }} 
+            />
+            
+            <div className="relative z-10 flex flex-col items-center gap-3 text-center p-6">
+               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background-secondary dark:bg-background-dark border border-border-light dark:border-border-dark shadow-sm">
+                  <TrendingUp className="h-6 w-6 text-text-light/40 dark:text-text-dark/40" /> 
+               </div>
+               <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark">No Financial Activity</h3>
+                  <p className="max-w-[240px] text-xs font-medium text-text-light/50 dark:text-text-dark/50">
+                     There are no approved expenses or completed sales for the selected period.
+                  </p>
+               </div>
+            </div>
+        </div>
+      );
+  }
+
+  return (
+    <div className="rounded-xl border border-border-light bg-surface-light p-4 shadow-sm dark:border-border-dark dark:bg-surface-dark">
+      <div className="mb-6 flex items-center justify-between">
+         <h3 className="text-sm font-bold text-text-light dark:text-text-dark">Income & Expenses</h3>
+         <div className="flex items-center gap-2">
+             <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                <div className="h-2 w-2 rounded-full bg-emerald-500" /> Revenue
+             </div>
+             <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                <div className="h-2 w-2 rounded-full bg-rose-500" /> Expenses
+             </div>
+         </div>
+      </div>
+      
+      <div className="h-72 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+             <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+             </defs>
+             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" strokeOpacity={0.5} />
+             <XAxis 
+                dataKey="date" 
+                tickFormatter={(val) => format(new Date(val), 'd MMM')} 
+                fontSize={10} 
+                tickLine={false} 
+                axisLine={false} 
+                tick={{ fill: '#9CA3AF' }} 
+                minTickGap={30}
+             />
+             <YAxis 
+                 fontSize={10} 
+                 tickLine={false} 
+                 axisLine={false} 
+                 tickFormatter={(val) => new Intl.NumberFormat('en-RW', { notation: 'compact', compactDisplay: 'short' }).format(val)} 
+                 tick={{ fill: '#9CA3AF' }} 
+             />
+             <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '8px 12px' }} 
+                labelStyle={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}
+                labelFormatter={(val) => format(new Date(val), 'EEEE, MMM d, yyyy')}
+                formatter={(val: number, name: string) => [
+                  <span key="val" className="font-semibold text-text-light dark:text-text-dark">
+                    {new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(val)}
+                  </span>, 
+                  name
+                ]}
+             />
+             <Area 
+               type="monotone" 
+               dataKey="revenue" 
+               name="Revenue" 
+               stroke="#10b981" 
+               fillOpacity={1} 
+               fill="url(#colorRevenue)" 
+               strokeWidth={2} 
+             />
+             <Bar 
+               dataKey="expenses" 
+               name="Expenses" 
+               fill="#f43f5e" 
+               radius={[4, 4, 0, 0]} 
+               barSize={12} 
+               maxBarSize={40}
+             />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// --- TAB 1: OVERVIEW ---
+
+function OverviewTab({ 
+  salonId, 
+  dateRange, 
+  summary 
+}: { 
+  salonId: string; 
+  dateRange: { startDate: string; endDate: string };
+  summary?: FinancialSummary;
+}) {
   const { data: expenseSummary } = useQuery({
     queryKey: ['expense-summary', salonId, dateRange],
     queryFn: async () => {
@@ -406,101 +706,71 @@ function OverviewTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
     enabled: !!salonId
   });
 
-  if (isLoadingSummary) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="h-28 rounded-xl border border-border-light/60 bg-background-light/60 animate-pulse dark:border-border-dark/60 dark:bg-background-dark/40"
-          />
-        ))}
-      </div>
-    );
-  }
-
-  const netIncome = summary?.netIncome || 0;
-  const isProfitable = netIncome >= 0;
-  const margin = summary?.totalRevenue ? ((netIncome / summary.totalRevenue) * 100).toFixed(1) : '0.0';
-
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Total Revenue" 
-          amount={formatCurrency(summary?.totalRevenue || 0)} 
-          subtext={`${summary?.salesCount || 0} transactions`}
-          icon={DollarSign}
-          trend="up"
-          trendValue="+12.5%" // Mock trend for now
-          color="blue"
-        />
-        <StatCard 
-          title="Total Expenses" 
-          amount={formatCurrency(summary?.totalExpenses || 0)} 
-          subtext={`${summary?.expenseCount || 0} records`}
-          icon={TrendingDown}
-          trend="down"
-          trendValue="+4.2%" // Mock trend
-          color="red"
-        />
-        <StatCard 
-          title="Net Income" 
-          amount={formatCurrency(netIncome)} 
-          subtext={isProfitable ? "Profitable Period" : "Loss Period"}
-          icon={isProfitable ? TrendingUp : AlertCircle}
-          trend={isProfitable ? 'up' : 'down'}
-          color={isProfitable ? 'green' : 'orange'}
-        />
-         <StatCard 
-          title="Profit Margin" 
-          amount={`${margin}%`} 
-          subtext="Net / Revenue"
-          icon={Briefcase}
-          trend="neutral"
-          color="purple"
-        />
-      </div>
-
-       {/* Breakdown Section */}
+       {/* Charts & Breakdown */}
        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Main Chart Placeholder */}
-          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light p-4 shadow-sm dark:bg-surface-dark lg:col-span-2">
-             <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-text-light dark:text-text-dark">Financial Performance</h3>
-                <Badge variant="default" size="sm" className="text-[10px]">
-                  Coming Soon
-                </Badge>
-             </div>
-             <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-dashed border-border-light/70 bg-background-light/60 text-center dark:border-border-dark/60 dark:bg-background-dark/40">
-                <PieChart className="mb-2 h-8 w-8 text-text-light/30 dark:text-text-dark/30" />
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Visual charts will appear here</p>
-             </div>
+          {/* Main Chart */}
+          <div className="lg:col-span-2">
+             <FinancialCharts salonId={salonId} dateRange={dateRange} />
           </div>
 
           {/* Expense Categories */}
-          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light p-4 shadow-sm dark:bg-surface-dark">
-             <h3 className="mb-3 text-sm font-bold text-text-light dark:text-text-dark">Top Expenses</h3>
-             <div className="space-y-3">
-               {expenseSummary?.byCategory?.length > 0 ? (
-                 (expenseSummary.byCategory as Array<{ categoryName: string; total: number }>).slice(0, 5).map((cat) => (
-                   <CategoryProgress 
-                     key={cat.categoryName} 
-                     name={cat.categoryName} 
-                     amount={cat.total} 
-                     total={summary?.totalExpenses || 1}
-                     colorClass="bg-rose-500"
-                   />
-                 ))
-               ) : (
-                  <div className="rounded-lg border border-dashed border-border-light/70 py-6 text-center text-xs text-text-light/50 dark:border-border-dark/60 dark:text-text-dark/50">No expenses recorded</div>
-               )}
-             </div>
-             {expenseSummary?.byCategory?.length > 5 && (
-                <Button variant="secondary" size="sm" className="mt-3 w-full text-xs font-medium">
-                  View All Categories
-                </Button>
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light p-4 shadow-sm dark:bg-surface-dark flex flex-col">
+             <h3 className="mb-4 text-sm font-bold text-text-light dark:text-text-dark">Expense Breakdown</h3>
+             
+             {expenseSummary?.byCategory?.length > 0 ? (
+                <div className="flex flex-col gap-6 flex-1">
+                   {/* Pie Chart */}
+                   <div className="h-48 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                         <PieChart>
+                            <Pie
+                               data={expenseSummary.byCategory}
+                               dataKey="total"
+                               nameKey="categoryName"
+                               cx="50%"
+                               cy="50%"
+                               innerRadius={50}
+                               outerRadius={70}
+                               paddingAngle={4}
+                               stroke="none"
+                            >
+                               {expenseSummary.byCategory.map((_: any, index: number) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                               ))}
+                            </Pie>
+                            <Tooltip 
+                               formatter={(val: number) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(val)}
+                               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                            />
+                         </PieChart>
+                      </ResponsiveContainer>
+                   </div>
+                   
+                   {/* Legend / List */}
+                   <div className="space-y-3 overflow-y-auto max-h-60 pr-2">
+                     {(expenseSummary.byCategory as Array<{ categoryName: string; total: number }>).map((cat, index) => (
+                       <div key={cat.categoryName} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                             <span className="font-medium text-text-light dark:text-text-dark">{cat.categoryName}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(cat.total)}</span>
+                              <span className="text-text-light/50 dark:text-text-dark/50">
+                                {summary?.totalExpenses ? Math.round((cat.total / summary.totalExpenses) * 100) : 0}%
+                              </span>
+                          </div>
+                       </div>
+                     ))}
+                   </div>
+                </div>
+             ) : (
+                <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border-light/70 py-10 text-center text-xs text-text-light/50 dark:border-border-dark/60 dark:text-text-dark/50">
+                  <PieChartIcon className="h-6 w-6 mb-2 opacity-50" />
+                  No expenses recorded
+                </div>
              )}
           </div>
        </div>
@@ -519,12 +789,25 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  // Reset to page 1 if search/filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategory, dateRange]);
 
   // Queries
   const { data: expensesData, isLoading } = useQuery({
-    queryKey: ['expenses', salonId, dateRange, selectedCategory],
+    queryKey: ['expenses', salonId, dateRange, selectedCategory, page],
     queryFn: async () => {
-      const p = { salonId, ...dateRange, ...(selectedCategory && { categoryId: selectedCategory })};
+      const p = { 
+        salonId, 
+        ...dateRange, 
+        page, 
+        limit,
+        ...(selectedCategory && { categoryId: selectedCategory })
+      };
       const res = await api.get('/accounting/expenses', { params: p });
       return res.data;
     },
@@ -639,7 +922,7 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                         {canDelete && <th className="px-5 py-3 w-16"></th>}
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-border-light/60 dark:divide-border-dark/60">
+                   <tbody className="divide-y divide-border-light/60 dark:divide-border-dark/60">
                      {filtered.map((expense: Expense) => (
                         <tr key={expense.id} className="group transition-colors hover:bg-background-light/60 dark:hover:bg-background-dark/40">
                            <td className="whitespace-nowrap px-5 py-3 text-sm text-text-light dark:text-text-dark">
@@ -683,8 +966,32 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                   </tbody>
                </table>
             </div>
-          )}
-       </div>
+           )}
+
+           {/* Pagination UI */}
+           <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark px-5 py-3">
+              <span className="text-xs text-text-light/50 dark:text-text-dark/50">
+                 Showing {expensesData?.data?.length || 0} of {expensesData?.total || 0} expenses
+              </span>
+              <div className="flex items-center gap-2">
+                 <span className="text-[11px] text-text-light/40 mr-2">Page {page} of {Math.max(1, Math.ceil((expensesData?.total || 0) / limit))}</span>
+                 <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="h-8 px-3 text-xs"
+                 >Previous</Button>
+                 <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page * limit >= (expensesData?.total || 0)}
+                    className="h-8 px-3 text-xs"
+                 >Next</Button>
+              </div>
+           </div>
+        </div>
 
        {/* Add Expense Modal */}
        {canCreate && (

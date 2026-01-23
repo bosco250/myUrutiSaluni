@@ -25,12 +25,14 @@ import {
   Receipt,
   Check,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   ChevronDown,
   Download,
   TrendingUp,
   Calendar,
 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 
 interface Service {
   id: string;
@@ -85,6 +87,7 @@ interface Appointment {
     basePrice: number;
     durationMinutes?: number;
   };
+  status?: string;
 }
 
 interface CartItem {
@@ -125,6 +128,7 @@ function POSInterface() {
   const router = useRouter();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'services' | 'products' | 'appointments'>('services');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -351,6 +355,28 @@ function POSInterface() {
   };
 
   const convertAppointment = (apt: Appointment) => {
+    if (
+      apt.status !== 'confirmed' &&
+      apt.status !== 'in_progress' &&
+      apt.status !== 'booked'
+    ) {
+      toast.error('Please confirm this appointment before adding to cart');
+      return;
+    }
+
+    // Check if cart already has an appointment
+    const existingAppointmentItem = cart.find((item) => item.appointmentId);
+    if (existingAppointmentItem) {
+      if (existingAppointmentItem.appointmentId === apt.id) {
+        toast.error('This appointment is already in the cart');
+      } else {
+        toast.error(
+          'You can only process one appointment at a time. Please clear the cart first.'
+        );
+      }
+      return;
+    }
+
     if (!apt.service) return;
 
     // Set customer
@@ -378,7 +404,6 @@ function POSInterface() {
     );
 
     setConvertedAppointmentId(apt.id);
-    setActiveTab('services');
   };
 
   // Update cart item
@@ -584,6 +609,7 @@ function POSInterface() {
       queryClient.invalidateQueries({ queryKey: ['products', salonId] });
       queryClient.invalidateQueries({ queryKey: ['stock-levels'] });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-appointments'] });
       // Refetch products to show updated stock
       queryClient.refetchQueries({ queryKey: ['products', salonId] });
     },
@@ -597,17 +623,17 @@ function POSInterface() {
         (error as Error)?.message ||
         'Failed to create sale. Please try again.';
 
-      alert(`Failed to create sale: ${errorMessage}`);
+      toast.error(`Failed to create sale: ${errorMessage}`);
     },
   });
 
   const handleCheckout = () => {
     if (cart.length === 0) {
-      alert('Your cart is empty. Please add items before checkout.');
+      toast.error('Your cart is empty. Please add items before checkout.');
       return;
     }
     if (!salonId) {
-      alert('Please select a salon before checkout.');
+      toast.error('Please select a salon before checkout.');
       return;
     }
     setShowPaymentModal(true);
@@ -960,44 +986,63 @@ function POSInterface() {
                     <div className="col-span-full flex items-center justify-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     </div>
-                  ) : appointments.length === 0 ? (
+                  ) : appointments.filter(
+                      (apt) =>
+                        new Date(apt.scheduledStart).toDateString() === new Date().toDateString() &&
+                        apt.status !== 'completed' &&
+                        apt.status !== 'cancelled'
+                    ).length === 0 ? (
                     <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-                      <Calendar className="w-12 h-12 text-text-light/20 mb-4" />
-                      <p className="text-text-light/60 font-medium">No confirmed bookings found</p>
+                      <Calendar className="w-12 h-12 text-text-light/20 dark:text-text-dark/20 mb-4" />
+                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
+                        No confirmed bookings for today
+                      </p>
+                      {appointments.length > 0 && (
+                        <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">
+                          (You have {appointments.length} upcoming bookings on other dates)
+                        </p>
+                      )}
                     </div>
                   ) : (
-                    appointments.map((apt) => (
-                      <button
-                        key={apt.id}
-                        onClick={() => convertAppointment(apt)}
-                        className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:border-primary hover:shadow-md transition-all text-left group"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mb-1.5 group-hover:bg-primary/20 transition">
-                              <Calendar className="w-4 h-4 text-primary" />
+                    appointments
+                      .filter(
+                        (apt) =>
+                          new Date(apt.scheduledStart).toDateString() === new Date().toDateString() &&
+                          apt.status !== 'completed' &&
+                          apt.status !== 'cancelled'
+                      )
+                      .map((apt) => (
+                        <button
+                          key={apt.id}
+                          onClick={() => convertAppointment(apt)}
+                          className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:border-primary hover:shadow-md transition-all text-left group"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mb-1.5 group-hover:bg-primary/20 transition">
+                                <Calendar className="w-4 h-4 text-primary" />
+                              </div>
+                              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition mb-0.5 line-clamp-1">
+                                {apt.service?.name || 'Service'}
+                              </h3>
+                              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 truncate">
+                                {apt.customer?.fullName || 'Walk-in'}
+                              </p>
                             </div>
-                            <h3 className="font-semibold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition mb-0.5 line-clamp-1">
-                              {apt.service?.name || 'Service'}
-                            </h3>
-                            <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 truncate">
-                              {apt.customer?.fullName || 'Walk-in'}
-                            </p>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark">
-                          <span className="text-sm font-bold text-primary">
-                            RWF {apt.service?.basePrice?.toLocaleString() || '0'}
-                          </span>
-                          <span className="text-[9px] text-text-light/40 uppercase font-bold">
-                            {new Date(apt.scheduledStart).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </button>
-                    ))
+                          <div className="flex items-center justify-between pt-2 border-t border-border-light dark:border-border-dark">
+                            <span className="text-sm font-bold text-primary">
+                              RWF {apt.service?.basePrice?.toLocaleString() || '0'}
+                            </span>
+                            <span className="text-[9px] text-text-light/40 uppercase font-bold">
+                              {new Date(apt.scheduledStart).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        </button>
+                      ))
                   )}
                 </div>
               )}
@@ -1660,206 +1705,182 @@ function PaymentModal({
   const paymentMethods = [
     {
       value: 'cash',
-      label: 'Cash Payment',
-      description: 'Pay with physical cash',
+      label: 'Cash',
+      description: 'Physical currency',
       icon: DollarSign,
-      color: 'text-green-600 dark:text-green-400',
+      gradient: 'from-green-500 to-emerald-500',
     },
     {
       value: 'mobile_money',
       label: 'Mobile Money',
-      description: 'MTN, Airtel, or other mobile money',
+      description: 'MTN / Airtel',
       icon: CreditCard,
-      color: 'text-blue-600 dark:text-blue-400',
+      gradient: 'from-blue-500 to-cyan-500',
     },
     {
       value: 'card',
-      label: 'Card Payment',
-      description: 'Credit or debit card',
+      label: 'Card',
+      description: 'Debit / Credit',
       icon: CreditCard,
-      color: 'text-purple-600 dark:text-purple-400',
+      gradient: 'from-purple-500 to-pink-500',
     },
     {
       value: 'bank_transfer',
       label: 'Bank Transfer',
-      description: 'Direct bank transfer',
+      description: 'Direct deposit',
       icon: DollarSign,
-      color: 'text-indigo-600 dark:text-indigo-400',
+      gradient: 'from-orange-500 to-red-500',
     },
   ] as const;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0"
-        onClick={() => {
-          if (!isLoading) onClose();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && !isLoading) onClose();
-        }}
-        role="button"
-        tabIndex={-1}
-        aria-label="Close modal"
+        onClick={() => !isLoading && onClose()}
+        aria-hidden="true"
       />
-      <div
-        className="bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col my-auto relative z-10"
-        onClick={(e) => e.stopPropagation()}
-        role="presentation"
-      >
-        {/* Header - Sticky */}
-        <div className="p-6 border-b-2 border-border-light dark:border-border-dark bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-                <CreditCard className="w-6 h-6 text-primary" />
-                Complete Payment
-              </h2>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                Choose your preferred payment method
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-danger/10 rounded-lg text-danger transition disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isLoading}
-              type="button"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="bg-surface-light dark:bg-surface-dark w-full max-w-3xl rounded-2xl shadow-xl border border-border-light dark:border-border-dark overflow-hidden relative z-10 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark sticky top-0 z-20">
+          <div>
+            <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
+              Checkout
+            </h2>
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-0.5">
+              Complete the payment transaction
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-full transition text-text-light/60 hover:text-text-light dark:text-text-dark/60 dark:hover:text-text-dark"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="p-6 bg-background-light dark:bg-background-dark overflow-y-auto flex-1">
-          {/* Total Amount Display */}
-          <div className="mb-6 text-center bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-2xl p-6 border-2 border-primary/20 shadow-lg">
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-2 font-semibold uppercase tracking-wide">
-              Total Amount
-            </p>
-            <p className="text-5xl font-bold text-primary mb-1">RWF {total.toLocaleString()}</p>
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-2">
-              Please select a payment method below
-            </p>
-          </div>
+        {/* Content */}
+        <div className="p-6 overflow-y-auto custom-scrollbar bg-background-light/50 dark:bg-background-dark/50">
+          <div className="flex flex-col md:flex-row gap-6">
+            
+            {/* Left Column: Summary */}
+            <div className="md:w-1/3 space-y-4">
+               {/* Total Card */}
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5 text-center relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-primary/10 rounded-full blur-xl group-hover:bg-primary/20 transition-all"></div>
+                 <span className="text-xs font-bold uppercase tracking-wider text-primary/80 block mb-1">Total Amount</span>
+                 <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-sm font-semibold text-primary/60">RWF</span>
+                    <span className="text-2xl font-bold text-primary">{total.toLocaleString()}</span>
+                 </div>
+              </div>
 
-          {/* Payment Methods */}
-          <div className="space-y-2 mb-5">
-            {paymentMethods.map((method) => {
-              const Icon = method.icon;
-              const isSelected = selectedMethod === method.value;
-              return (
-                <button
-                  key={method.value}
-                  onClick={() => !isLoading && setSelectedMethod(method.value)}
-                  disabled={isLoading}
-                  className={`w-full p-3.5 border-2 rounded-lg text-left transition-all ${
-                    isSelected
-                      ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
-                      : 'border-border-light dark:border-border-dark hover:border-primary/50 hover:bg-primary/5'
-                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'}`}
-                  type="button"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all shrink-0 ${
-                        isSelected ? 'bg-primary/20' : 'bg-primary/10'
-                      }`}
+               {/* Reference Input */}
+               <div className={`transition-all duration-300 ${selectedMethod && selectedMethod !== 'cash' ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
+                 <label className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5 uppercase tracking-wide">
+                   Transaction Ref <span className="text-danger">*</span>
+                 </label>
+                 <input
+                  type="text"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="ID / Reference"
+                  disabled={isLoading || selectedMethod === 'cash'}
+                  className="w-full px-3 py-2.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-text-light dark:text-text-dark placeholder:text-text-light/40"
+                />
+               </div>
+            </div>
+
+            {/* Right Column: Methods */}
+            <div className="md:w-2/3">
+              <label className="block text-xs font-semibold text-text-light dark:text-text-dark mb-3 uppercase tracking-wide">
+                Payment Method
+              </label>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {paymentMethods.map((method) => {
+                  const Icon = method.icon;
+                  const isSelected = selectedMethod === method.value;
+                  return (
+                    <button
+                      key={method.value}
+                      onClick={() => !isLoading && setSelectedMethod(method.value)}
+                      disabled={isLoading}
+                      className={`
+                        relative p-3 rounded-xl border text-left transition-all duration-200 group flex flex-col gap-3
+                        ${isSelected 
+                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' 
+                          : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50 hover:shadow-sm'
+                        }
+                        ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                      `}
                     >
-                      <Icon className={`w-5 h-5 ${isSelected ? method.color : 'text-primary'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span
-                          className={`font-semibold text-sm ${
-                            isSelected ? 'text-primary' : 'text-text-light dark:text-text-dark'
-                          }`}
-                        >
-                          {method.label}
-                        </span>
+                      <div className="flex justify-between items-start">
+                        <div className={`p-2 bg-gradient-to-br ${method.gradient} rounded-lg shadow-sm group-hover:scale-105 transition-transform`}>
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
                         {isSelected && (
-                          <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center shrink-0">
-                            <Check className="w-2.5 h-2.5 text-white" />
+                          <div className="text-primary animate-in zoom-in spin-in-90 duration-300">
+                             <Check className="w-4 h-4" />
                           </div>
                         )}
                       </div>
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                        {method.description}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+                      
+                      <div>
+                        <div className={`font-bold text-sm leading-tight ${isSelected ? 'text-primary' : 'text-text-light dark:text-text-dark'}`}>
+                          {method.label}
+                        </div>
+                        <div className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-medium mt-0.5">
+                          {method.description}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          {/* Transaction Reference Input */}
-          {selectedMethod && selectedMethod !== 'cash' && (
-            <div className="mb-5 animate-in fade-in slide-in-from-top-2">
-              <label
-                htmlFor="transaction-reference"
-                className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
-              >
-                Transaction Reference <span className="text-danger">*</span>
-              </label>
-              <input
-                id="transaction-reference"
-                type="text"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Enter transaction reference number"
-                disabled={isLoading}
-                className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition disabled:opacity-50"
-              />
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1.5">
-                Enter the transaction ID or reference number from your payment
-              </p>
-            </div>
-          )}
-
-          {/* Error Message */}
+          {/* Error */}
           {error && (
-            <div className="mb-5 p-4 bg-danger/10 border-2 border-danger/30 rounded-xl animate-in fade-in slide-in-from-top-2">
-              <p className="text-sm text-danger flex items-center gap-2 font-medium">
-                <AlertCircle className="w-5 h-5" />
-                {error}
-              </p>
+            <div className="mt-6 p-3 bg-warning/10 border border-warning/20 rounded-xl flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+              <p className="text-xs font-medium text-warning-dark dark:text-warning-light">{error}</p>
             </div>
           )}
+        </div>
 
-          {/* Action Buttons - Sticky Footer */}
-          <div className="flex gap-2.5 pt-4 border-t-2 border-border-light dark:border-border-dark mt-4 shrink-0">
-            <Button
-              onClick={onClose}
-              variant="secondary"
-              className="flex-1 py-3 font-semibold"
-              disabled={isLoading}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => onPay(selectedMethod, reference || undefined)}
-              variant="primary"
-              className="flex-1 py-3 text-base font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
-              disabled={
-                !selectedMethod || isLoading || (selectedMethod !== 'cash' && !reference.trim())
-              }
-              type="button"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Complete Payment
-                </>
-              )}
-            </Button>
-          </div>
+        {/* Footer */}
+        <div className="p-4 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex justify-end gap-3 sticky bottom-0 z-20">
+          <Button
+            onClick={onClose}
+            variant="secondary"
+            className="text-sm font-medium"
+            disabled={isLoading}
+            type="button"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => onPay(selectedMethod, reference || undefined)}
+            variant="primary"
+            className="text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30"
+            disabled={!selectedMethod || isLoading || (selectedMethod !== 'cash' && !reference.trim())}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Confirm Payment
+                <Check className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>
@@ -1867,6 +1888,8 @@ function PaymentModal({
 }
 
 function ReceiptView({ sale, onNewSale }: { sale: unknown; onNewSale: () => void }) {
+  const toast = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
   // Handle items - could be in sale.items or sale.data.items if wrapped
   const saleData = sale as {
     id?: string;
@@ -1907,138 +1930,122 @@ function ReceiptView({ sale, onNewSale }: { sale: unknown; onNewSale: () => void
         : []) || [];
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="max-w-lg w-full bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col my-auto">
-        {/* Header - Sticky */}
-        <div className="p-6 border-b-2 border-border-light dark:border-border-dark bg-gradient-to-r from-success/10 to-success/5 dark:from-success/20 dark:to-success/10 shrink-0">
-          <div className="text-center">
-            <div className="w-20 h-20 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <Check className="w-10 h-10 text-success" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-surface-light dark:bg-surface-dark w-full max-w-lg rounded-2xl shadow-xl border border-border-light dark:border-border-dark overflow-hidden relative z-10 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/20 animate-in zoom-in spin-in-180 duration-500">
+              <Check className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-2">
-              Payment Successful!
-            </h2>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-              Sale completed successfully
-            </p>
+            <div>
+              <h2 className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">
+                Payment Successful!
+              </h2>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                Transaction completed
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="p-6 bg-background-light dark:bg-background-dark overflow-y-auto flex-1 min-h-0">
-          {/* Sale Items */}
-          {items.length > 0 && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 mb-4 border border-border-light dark:border-border-dark">
-              <h3 className="font-bold text-text-light dark:text-text-dark mb-3 flex items-center gap-2 text-sm">
-                <Package className="w-4 h-4 text-primary" />
-                Items ({items.length})
-              </h3>
-              <div className="space-y-2.5 max-h-60 overflow-y-auto">
-                {items.map((item, index) => (
-                  <div
-                    key={item.id || index}
-                    className="flex justify-between items-start pb-2.5 border-b border-border-light dark:border-border-dark last:border-0"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {item.service ? (
-                          <Scissors className="w-3.5 h-3.5 text-primary shrink-0" />
-                        ) : (
-                          <Package className="w-3.5 h-3.5 text-primary shrink-0" />
-                        )}
-                        <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
-                          {item.service?.name || item.product?.name || 'Unknown Item'}
-                        </p>
-                      </div>
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                        {item.quantity} × {item.currency || saleData.currency || 'RWF'}{' '}
-                        {Number(item.unitPrice || 0).toLocaleString()}
-                        {item.discountAmount > 0 && (
-                          <span className="text-success ml-2 font-medium">
-                            - {item.currency || saleData.currency || 'RWF'}{' '}
-                            {Number(item.discountAmount || 0).toLocaleString()} discount
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <span className="text-sm font-bold text-primary ml-3 shrink-0">
-                      {item.currency || saleData.currency || 'RWF'}{' '}
-                      {Number(item.lineTotal || 0).toLocaleString()}
-                    </span>
+        {/* Content */}
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 bg-background-light/50 dark:bg-background-dark/50">
+          <div className="space-y-4">
+            
+            {/* Amount Card */}
+             <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4 text-center">
+                <span className="text-xs font-bold uppercase tracking-wider text-green-600 dark:text-green-400 block mb-1">Total Paid</span>
+                <div className="flex items-center justify-center gap-1.5 text-3xl font-bold text-green-700 dark:text-green-400">
+                  <span className="text-lg font-medium opacity-70">RWF</span>
+                  {Number(saleData?.totalAmount || 0).toLocaleString()}
+                </div>
+                {saleData?.paymentMethod && (
+                   <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-light dark:bg-surface-dark border border-green-500/20 text-[10px] font-semibold text-text-light dark:text-text-dark capitalize">
+                      <CreditCard className="w-3 h-3 text-green-500" />
+                      {saleData.paymentMethod.replace('_', ' ')}
+                   </div>
+                )}
+             </div>
+
+            {/* Details Grid */}
+            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-border-light dark:border-border-dark">
+               <h3 className="text-xs font-bold text-text-light dark:text-text-dark uppercase tracking-wider mb-3 border-b border-border-light dark:border-border-dark pb-2">Transaction Details</h3>
+               <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-sm">
+                  <div>
+                    <span className="block text-text-light/60 dark:text-text-dark/60 text-xs mb-0.5">Sale ID</span>
+                    <span className="font-mono text-text-light dark:text-text-dark bg-background-light dark:bg-background-dark px-1.5 py-0.5 rounded text-xs border border-border-light dark:border-border-dark">{saleData?.id?.slice(0, 8) || 'N/A'}</span>
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <span className="block text-text-light/60 dark:text-text-dark/60 text-xs mb-0.5">Customer</span>
+                    <span className="font-semibold text-text-light dark:text-text-dark truncate block">{saleData?.customer?.fullName || saleData?.customer?.name || 'Walk-in Customer'}</span>
+                  </div>
+                  {saleData?.paymentReference && (
+                    <div className="col-span-2">
+                      <span className="block text-text-light/60 dark:text-text-dark/60 text-xs mb-0.5">Reference</span>
+                      <span className="font-mono text-text-light dark:text-text-dark text-xs">{saleData.paymentReference}</span>
+                    </div>
+                  )}
+               </div>
             </div>
-          )}
 
-          {/* Sale Details */}
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 space-y-3 border border-border-light dark:border-border-dark">
-            <div className="flex justify-between items-center py-1.5">
-              <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
-                Sale ID
-              </span>
-              <span className="text-sm text-text-light dark:text-text-dark font-mono bg-background-light dark:bg-background-dark px-2.5 py-1 rounded-lg border border-border-light dark:border-border-dark">
-                {saleData?.id?.slice(0, 8) || 'N/A'}
-              </span>
-            </div>
-            {saleData?.customer && (
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
-                  Customer
-                </span>
-                <span className="text-sm text-text-light dark:text-text-dark font-semibold">
-                  {saleData.customer.fullName || saleData.customer.name}
-                </span>
+            {/* Items Summary */}
+            {items.length > 0 && (
+              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+                <div className="px-4 py-2 bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-text-light dark:text-text-dark uppercase tracking-wider">Items Purchased</span>
+                  <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 bg-surface-light dark:bg-surface-dark px-1.5 py-0.5 rounded border border-border-light dark:border-border-dark">{items.length}</span>
+                </div>
+                <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
+                   {items.map((item, index) => (
+                      <div key={item.id || index} className="flex justify-between items-center p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors">
+                         <div className="flex items-center gap-2 overflow-hidden">
+                            <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                               {item.service ? <Scissors className="w-3 h-3" /> : <Package className="w-3 h-3" />}
+                            </div>
+                            <div className="min-w-0">
+                               <div className="text-xs font-semibold text-text-light dark:text-text-dark truncate">{item.service?.name || item.product?.name || 'Item'}</div>
+                               <div className="text-[10px] text-text-light/60 dark:text-text-dark/60">Qty: {item.quantity}</div>
+                            </div>
+                         </div>
+                         <div className="font-medium text-xs text-text-light dark:text-text-dark">
+                            {Number(item.lineTotal || 0).toLocaleString()}
+                         </div>
+                      </div>
+                   ))}
+                </div>
               </div>
             )}
-            {saleData?.paymentMethod && (
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
-                  Payment Method
-                </span>
-                <span className="text-sm text-text-light dark:text-text-dark font-semibold capitalize">
-                  {saleData.paymentMethod?.replace('_', ' ')}
-                </span>
-              </div>
-            )}
-            {saleData?.paymentReference && (
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
-                  Reference
-                </span>
-                <span className="text-sm text-text-light dark:text-text-dark font-mono bg-background-light dark:bg-background-dark px-2.5 py-1 rounded-lg border border-border-light dark:border-border-dark">
-                  {saleData.paymentReference}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between items-center py-2 pt-3 mt-2 border-t-2 border-border-light dark:border-border-dark">
-              <span className="text-base text-text-light/60 dark:text-text-dark/60 font-semibold">
-                Total
-              </span>
-              <span className="text-2xl font-bold text-primary">
-                {saleData?.currency || 'RWF'} {Number(saleData?.totalAmount || 0).toLocaleString()}
-              </span>
-            </div>
+          
           </div>
         </div>
 
-        {/* Footer - Sticky */}
-        <div className="p-6 border-t-2 border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shrink-0">
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* Footer */}
+        <div className="p-4 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark sticky bottom-0 z-20">
+          <div className="grid grid-cols-3 gap-3">
             <Button
               onClick={() => window.print()}
-              variant="secondary"
-              className="flex-1 py-3 font-semibold"
+              variant="outline"
+              className="h-10 text-xs font-semibold"
             >
-              <Receipt className="w-4 h-4 mr-2" />
+              <Receipt className="w-3.5 h-3.5 mr-1.5" />
               Print
             </Button>
             <Button
               onClick={async () => {
+                if (isDownloading) return;
+                setIsDownloading(true);
+                toast.info('Generating receipt...', { duration: 2000 });
+
                 try {
-                  const response = await api.get(`/reports/receipt/${saleData.id}`, {
-                    responseType: 'blob',
-                  });
+                  const response = await api.post(
+                    `/reports/receipt/${saleData.id}`,
+                    {},
+                    {
+                      responseType: 'blob',
+                    }
+                  );
                   const blob = new Blob([response.data], { type: 'application/pdf' });
                   const url = window.URL.createObjectURL(blob);
                   const link = document.createElement('a');
@@ -2048,22 +2055,50 @@ function ReceiptView({ sale, onNewSale }: { sale: unknown; onNewSale: () => void
                   link.click();
                   document.body.removeChild(link);
                   window.URL.revokeObjectURL(url);
-                } catch (error) {
-                  alert('Failed to download PDF receipt. Please try again.');
+                  toast.success('Receipt downloaded successfully');
+                } catch (error: any) {
+                  console.error('Download error:', error);
+                  let message = 'Failed to download receipt';
+
+                  if (!error.response) {
+                    toast.error(
+                      'Download failed. Please disable IDM (Internet Download Manager) for this site.',
+                      { duration: 6000 }
+                    );
+                    return;
+                  }
+
+                  if (error.response?.data instanceof Blob) {
+                    try {
+                      const text = await error.response.data.text();
+                      const json = JSON.parse(text);
+                      if (json.message) message = json.message;
+                    } catch (e) {}
+                  } else if (error.response?.data?.message) {
+                    message = error.response.data.message;
+                  }
+                  toast.error(message);
+                } finally {
+                  setIsDownloading(false);
                 }
               }}
-              variant="secondary"
-              className="flex-1 py-3 font-semibold"
+              disabled={isDownloading}
+              variant="outline"
+              className="h-10 text-xs font-semibold"
             >
-              <Download className="w-4 h-4 mr-2" />
+              {isDownloading ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+              )}
               Download
             </Button>
             <Button
               onClick={onNewSale}
               variant="primary"
-              className="flex-1 py-3 font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+              className="h-10 text-xs font-bold shadow-md shadow-primary/20 hover:shadow-primary/30"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               New Sale
             </Button>
           </div>

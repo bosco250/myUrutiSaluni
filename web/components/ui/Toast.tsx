@@ -87,10 +87,10 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   return (
     <div
       className={`
-        transform transition-all duration-300 ease-in-out
+        transform transition-all duration-300 ease-out
         ${isVisible && !isRemoving 
-          ? 'translate-x-0 opacity-100 scale-100' 
-          : 'translate-x-full opacity-0 scale-95'
+          ? 'translate-y-0 opacity-100 scale-100' 
+          : 'translate-y-4 opacity-0 scale-95'
         }
       `}
     >
@@ -146,7 +146,7 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
 
   return createPortal(
     <div
-      className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-md px-4"
       aria-live="polite"
       aria-label="Notifications"
     >

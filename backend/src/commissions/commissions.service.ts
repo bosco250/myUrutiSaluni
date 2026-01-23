@@ -42,6 +42,39 @@ export class CommissionsService {
     saleAmount: number,
     metadata?: Record<string, any>,
   ): Promise<Commission> {
+    // DUPLICATE PREVENTION: Check if commission already exists for this source
+    // This prevents duplicate commissions from race conditions, retries, or double-completion
+    if (saleItemId) {
+      const existingBySaleItem = await this.commissionsRepository.findOne({
+        where: { saleItemId, salonEmployeeId },
+      });
+      if (existingBySaleItem) {
+        this.logger.warn(
+          `⚠️ Commission already exists for saleItemId=${saleItemId}, employeeId=${salonEmployeeId} - Returning existing commission to prevent duplication`,
+        );
+        return existingBySaleItem;
+      }
+    }
+
+    // Check for appointment-based duplicate using metadata
+    if (metadata?.appointmentId) {
+      // Query for existing commission with same appointmentId in metadata
+      const existingCommissions = await this.commissionsRepository
+        .createQueryBuilder('commission')
+        .where('commission.salonEmployeeId = :salonEmployeeId', { salonEmployeeId })
+        .andWhere("commission.metadata->>'appointmentId' = :appointmentId", {
+          appointmentId: metadata.appointmentId,
+        })
+        .getMany();
+
+      if (existingCommissions.length > 0) {
+        this.logger.warn(
+          `⚠️ Commission already exists for appointmentId=${metadata.appointmentId}, employeeId=${salonEmployeeId} - Returning existing commission to prevent duplication`,
+        );
+        return existingCommissions[0];
+      }
+    }
+
     // Get employee to get commission rate
     const employee = await this.salonEmployeesRepository.findOne({
       where: { id: salonEmployeeId },

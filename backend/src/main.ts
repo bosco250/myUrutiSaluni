@@ -48,7 +48,10 @@ async function bootstrap() {
   const allowedOrigins = isDevelopment
     ? true // Allow all origins in development (mobile apps, web, etc.)
     : frontendUrl
-      ? frontendUrl.split(',').map((url) => url.trim())
+      ? [
+          ...frontendUrl.split(',').map((url) => url.trim()),
+          'http://localhost:3001',
+        ]
       : true; // Fallback to allow all if FRONTEND_URL not set in production
 
   app.enableCors({

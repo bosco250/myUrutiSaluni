@@ -9,6 +9,7 @@ import { Invoice } from './entities/invoice.entity';
 import { Expense } from './entities/expense.entity';
 import { SalesModule } from '../sales/sales.module';
 import { SalonsModule } from '../salons/salons.module';
+import { ReportsModule } from '../reports/reports.module';
 
 @Module({
   imports: [
@@ -19,8 +20,9 @@ import { SalonsModule } from '../salons/salons.module';
       Invoice,
       Expense,
     ]),
-    SalonsModule,
+    forwardRef(() => SalonsModule),
     forwardRef(() => SalesModule),
+    forwardRef(() => ReportsModule),
   ],
   controllers: [AccountingController],
   providers: [AccountingService],

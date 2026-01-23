@@ -45,6 +45,23 @@ export class NotificationOrchestratorService {
   ) {}
 
   /**
+   * Safely format a value as RWF currency string
+   * Returns empty string for undefined, null, NaN or invalid values
+   */
+  private formatCurrency(value: any): string {
+    if (value === undefined || value === null || value === '') {
+      return '';
+    }
+    // If already a formatted string like "RWF 1,000", extract the number
+    const strValue = String(value).replace(/[^0-9.-]/g, '');
+    const num = parseFloat(strValue);
+    if (isNaN(num) || !isFinite(num)) {
+      return '';
+    }
+    return `RWF ${num.toLocaleString()}`;
+  }
+
+  /**
    * Main method to send notifications for any event
    */
   async notify(
@@ -164,6 +181,9 @@ export class NotificationOrchestratorService {
     let success = false;
     let errorMessage: string | undefined;
 
+    // Get action URL for email buttons
+    const { actionUrl, actionLabel } = this.getActionUrl(type, context);
+
     try {
       // Send email
       const result = await this.emailService.sendEmailNotification({
@@ -172,6 +192,10 @@ export class NotificationOrchestratorService {
         template: templateName,
         variables: {
           ...data.variables,
+          title: data.title,  // Pass title for default template
+          body: data.message, // Pass message body for default template
+          actionUrl,          // Pass action URL for buttons
+          actionLabel,        // Pass action label for buttons
           unsubscribeUrl: `${process.env.FRONTEND_URL}/settings/notifications`,
         },
       });
@@ -494,41 +518,65 @@ export class NotificationOrchestratorService {
       case NotificationType.APPOINTMENT_REMINDER:
       case NotificationType.APPOINTMENT_CONFIRMED:
       case NotificationType.APPOINTMENT_COMPLETED:
+      case NotificationType.APPOINTMENT_CANCELLED:
+      case NotificationType.APPOINTMENT_RESCHEDULED:
+      case NotificationType.APPOINTMENT_NO_SHOW:
         return {
           actionUrl: context.appointmentId
             ? `${baseUrl}/appointments/${context.appointmentId}`
-            : undefined,
+            : `${baseUrl}/appointments`,
           actionLabel: 'View Appointment',
         };
       case NotificationType.SALE_COMPLETED:
+      case NotificationType.PAYMENT_RECEIVED:
+      case NotificationType.PAYMENT_FAILED:
         return {
           actionUrl: context.saleId
             ? `${baseUrl}/sales/${context.saleId}`
-            : undefined,
+            : `${baseUrl}/sales`,
           actionLabel: 'View Sale',
         };
       case NotificationType.COMMISSION_EARNED:
       case NotificationType.COMMISSION_PAID:
+      case NotificationType.COMMISSION_UPDATED:
         return {
           actionUrl: `${baseUrl}/commissions`,
           actionLabel: 'View Commissions',
         };
       case NotificationType.POINTS_EARNED:
+      case NotificationType.POINTS_REDEEMED:
+      case NotificationType.REWARD_AVAILABLE:
+      case NotificationType.VIP_STATUS_ACHIEVED:
         return {
-          actionUrl: context.customerId
-            ? `${baseUrl}/customers/${context.customerId}`
-            : undefined,
-          actionLabel: 'View Points',
+          actionUrl: `${baseUrl}/membership/status`,
+          actionLabel: 'View Rewards',
         };
       case NotificationType.LOW_STOCK_ALERT:
+      case NotificationType.OUT_OF_STOCK:
+      case NotificationType.STOCK_REPLENISHED:
         return {
           actionUrl: context.productId
             ? `${baseUrl}/inventory/products/${context.productId}`
             : `${baseUrl}/inventory`,
           actionLabel: 'Manage Inventory',
         };
+      case NotificationType.EMPLOYEE_ASSIGNED:
+      case NotificationType.PERMISSION_GRANTED:
+      case NotificationType.PERMISSION_REVOKED:
+        return {
+          actionUrl: `${baseUrl}/settings`,
+          actionLabel: 'View Settings',
+        };
+      case NotificationType.MEMBERSHIP_STATUS:
+        return {
+          actionUrl: `${baseUrl}/memberships`,
+          actionLabel: 'View Membership',
+        };
       default:
-        return {};
+        return {
+          actionUrl: baseUrl,
+          actionLabel: 'Go to Dashboard',
+        };
     }
   }
 
@@ -917,13 +965,12 @@ export class NotificationOrchestratorService {
   }
 
   private async handlePaymentReceived(context: NotificationContext) {
+    const formattedAmount = this.formatCurrency(context.amount);
     return {
       title: 'Payment Received',
-      message: `Payment of ${context.amount} has been received.`,
+      message: formattedAmount ? `Payment of ${formattedAmount} has been received.` : 'Payment has been received.',
       variables: {
-        amount: context.amount
-          ? `RWF ${Number(context.amount).toLocaleString()}`
-          : '',
+        amount: formattedAmount,
         paymentMethod: context.paymentMethod || '',
       },
     };
@@ -934,9 +981,7 @@ export class NotificationOrchestratorService {
       title: 'Payment Failed',
       message: `Payment failed. Please try again.`,
       variables: {
-        amount: context.amount
-          ? `RWF ${Number(context.amount).toLocaleString()}`
-          : '',
+        amount: this.formatCurrency(context.amount),
         errorMessage: context.errorMessage || 'Unknown error',
       },
     };
@@ -944,25 +989,23 @@ export class NotificationOrchestratorService {
 
   // Commission Handlers
   private async handleCommissionEarned(context: NotificationContext) {
+    const formattedAmount = this.formatCurrency(context.commissionAmount);
     return {
       title: 'Commission Earned',
-      message: `You have earned a new commission!`,
+      message: formattedAmount ? `You have earned a commission of ${formattedAmount}!` : 'You have earned a new commission!',
       variables: {
-        commissionAmount: context.commissionAmount
-          ? `RWF ${Number(context.commissionAmount).toLocaleString()}`
-          : '',
+        commissionAmount: formattedAmount,
       },
     };
   }
 
   private async handleCommissionPaid(context: NotificationContext) {
+    const formattedAmount = this.formatCurrency(context.commissionAmount);
     return {
       title: 'Commission Paid',
-      message: `Your commission has been paid!`,
+      message: formattedAmount ? `Your commission of ${formattedAmount} has been paid!` : 'Your commission has been paid!',
       variables: {
-        commissionAmount: context.commissionAmount
-          ? `RWF ${Number(context.commissionAmount).toLocaleString()}`
-          : '',
+        commissionAmount: formattedAmount,
       },
     };
   }
@@ -972,9 +1015,7 @@ export class NotificationOrchestratorService {
       title: 'Commission Updated',
       message: `Your commission has been updated.`,
       variables: {
-        commissionAmount: context.commissionAmount
-          ? `RWF ${Number(context.commissionAmount).toLocaleString()}`
-          : '',
+        commissionAmount: this.formatCurrency(context.commissionAmount),
       },
     };
   }

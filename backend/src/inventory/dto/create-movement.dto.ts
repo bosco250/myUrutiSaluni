@@ -25,7 +25,6 @@ export class CreateMovementDto {
 
   @ApiProperty()
   @IsNumber()
-  @Min(0.001)
   quantity: number;
 
   @ApiProperty({ required: false })

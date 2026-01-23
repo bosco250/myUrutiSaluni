@@ -28,6 +28,9 @@ import {
   Hash,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
+import { useState } from 'react';
 
 interface Appointment {
   id: string;
@@ -97,6 +100,22 @@ function AppointmentDetailContent() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const appointmentId = params.id as string;
+  const toast = useToast();
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    action: () => void;
+    variant: 'danger' | 'warning' | 'primary';
+    confirmLabel: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    action: () => {},
+    variant: 'primary',
+    confirmLabel: 'Confirm',
+  });
 
   const {
     data: appointment,
@@ -118,8 +137,14 @@ function AppointmentDetailContent() {
         channels: ['email', 'sms'],
       });
     },
-    onSuccess: () => alert('Reminder sent successfully!'),
-    onError: () => alert('Failed to send reminder. Please try again.'),
+    onSuccess: () => {
+      toast.success('Reminder sent successfully!');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+    },
+    onError: () => {
+      toast.error('Failed to send reminder. Please try again.');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+    },
   });
 
   const updateStatusMutation = useMutation({
@@ -130,6 +155,12 @@ function AppointmentDetailContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointment', appointmentId] });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment status updated');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update status');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
     },
   });
 
@@ -139,9 +170,31 @@ function AppointmentDetailContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment deleted successfully');
       router.push('/appointments');
     },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete appointment');
+      setConfirmationModal((prev) => ({ ...prev, isOpen: false }));
+    },
   });
+
+  const handleAction = (
+    action: () => void,
+    title: string,
+    message: string,
+    variant: 'danger' | 'warning' | 'primary' = 'primary',
+    confirmLabel = 'Confirm'
+  ) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      action,
+      variant,
+      confirmLabel,
+    });
+  };
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { bg: string; text: string; icon: typeof Clock; label: string }> =
@@ -258,7 +311,15 @@ function AppointmentDetailContent() {
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             {appointment.customer && !['cancelled', 'completed'].includes(appointment.status) && (
               <Button
-                onClick={() => confirm('Send reminder?') && sendReminderMutation.mutate()}
+                onClick={() =>
+                  handleAction(
+                    () => sendReminderMutation.mutate(),
+                    'Send Reminder',
+                    'Are you sure you want to send a reminder to the customer?',
+                    'primary',
+                    'Send Reminder'
+                  )
+                }
                 variant="outline"
                 size="sm"
                 disabled={sendReminderMutation.isPending}
@@ -285,7 +346,15 @@ function AppointmentDetailContent() {
             )}
             {!['completed'].includes(appointment.status) && (
               <Button
-                onClick={() => confirm('Delete appointment?') && deleteMutation.mutate()}
+                onClick={() =>
+                  handleAction(
+                    () => deleteMutation.mutate(),
+                    'Delete Appointment',
+                    'Are you sure you want to delete this appointment? This action cannot be undone.',
+                    'danger',
+                    'Delete'
+                  )
+                }
                 variant="outline"
                 size="sm"
                 className="flex-1 sm:flex-none justify-center text-error border-error/20 hover:bg-error/5"
@@ -315,7 +384,15 @@ function AppointmentDetailContent() {
               <div className="flex flex-wrap gap-2">
                 {appointment.status === 'pending' && (
                   <Button
-                    onClick={() => updateStatusMutation.mutate('booked')}
+                    onClick={() =>
+                      handleAction(
+                        () => updateStatusMutation.mutate('booked'),
+                        'Confirm Booking',
+                        'Are you sure you want to confirm this booking?',
+                        'primary',
+                        'Confirm'
+                      )
+                    }
                     variant="primary"
                     size="sm"
                     disabled={updateStatusMutation.isPending}
@@ -325,7 +402,15 @@ function AppointmentDetailContent() {
                 )}
                 {['booked', 'confirmed'].includes(appointment.status) && (
                   <Button
-                    onClick={() => updateStatusMutation.mutate('in_progress')}
+                    onClick={() =>
+                      handleAction(
+                        () => updateStatusMutation.mutate('in_progress'),
+                        'Start Service',
+                        'Are you sure you want to start the service?',
+                        'primary',
+                        'Start'
+                      )
+                    }
                     variant="primary"
                     size="sm"
                     disabled={updateStatusMutation.isPending}
@@ -335,7 +420,15 @@ function AppointmentDetailContent() {
                 )}
                 {appointment.status === 'in_progress' && (
                   <Button
-                    onClick={() => updateStatusMutation.mutate('completed')}
+                    onClick={() =>
+                      handleAction(
+                        () => updateStatusMutation.mutate('completed'),
+                        'Mark Complete',
+                        'Are you sure you want to mark this appointment as completed?',
+                        'primary',
+                        'Complete'
+                      )
+                    }
                     variant="primary"
                     size="sm"
                     disabled={updateStatusMutation.isPending}
@@ -345,7 +438,15 @@ function AppointmentDetailContent() {
                 )}
                 {['pending', 'booked', 'confirmed'].includes(appointment.status) && (
                   <Button
-                    onClick={() => confirm('Cancel?') && updateStatusMutation.mutate('cancelled')}
+                    onClick={() =>
+                      handleAction(
+                        () => updateStatusMutation.mutate('cancelled'),
+                        'Cancel Appointment',
+                        'Are you sure you want to cancel this appointment?',
+                        'danger',
+                        'Cancel Appointment'
+                      )
+                    }
                     variant="secondary"
                     size="sm"
                     className="text-error hover:bg-error/10 border-error/20"
@@ -534,7 +635,23 @@ function AppointmentDetailContent() {
             </p>
           </div>
         </div>
+
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmationModal.action}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        variant={confirmationModal.variant}
+        confirmLabel={confirmationModal.confirmLabel}
+        isProcessing={
+          updateStatusMutation.isPending ||
+          deleteMutation.isPending ||
+          sendReminderMutation.isPending
+        }
+      />
     </div>
   );
 }

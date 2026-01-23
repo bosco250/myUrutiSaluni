@@ -10,16 +10,18 @@ import { AccountingModule } from '../accounting/accounting.module';
 import { CommissionsModule } from '../commissions/commissions.module';
 import { CustomersModule } from '../customers/customers.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AppointmentsModule } from '../appointments/appointments.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sale, SaleItem]),
-    SalonsModule,
+    forwardRef(() => SalonsModule),
     InventoryModule,
-    AccountingModule,
+    forwardRef(() => AccountingModule),
     CommissionsModule,
-    CustomersModule,
+    forwardRef(() => CustomersModule),
     forwardRef(() => NotificationsModule),
+    forwardRef(() => AppointmentsModule),
   ],
   controllers: [SalesController],
   providers: [SalesService],
