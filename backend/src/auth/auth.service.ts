@@ -135,10 +135,13 @@ export class AuthService {
     });
 
     // Build reset URL
-    const frontendUrl = this.configService.get<string>(
+    const frontendUrls = this.configService.get<string>(
       'FRONTEND_URL',
       'http://localhost:3000',
-    );
+    ).split(',');
+    
+    // Use the first URL (primary) for reset links
+    const frontendUrl = frontendUrls[0].trim();
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     // Send password reset email
