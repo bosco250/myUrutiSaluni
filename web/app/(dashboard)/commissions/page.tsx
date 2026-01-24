@@ -523,7 +523,10 @@ function CommissionsContent() {
                   return (
                     <tr key={commission.id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-text-light dark:text-text-dark">
-                        {new Date(commission.createdAt).toLocaleDateString()}
+                        <div className="flex flex-col">
+                          <span>{new Date(commission.createdAt).toLocaleDateString()}</span>
+                          <span className="text-xs text-text-light/60">{new Date(commission.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-medium">{commission.salonEmployee?.user?.fullName || 'Unknown'}</div>

@@ -37,6 +37,8 @@ import {
   MEMBERSHIP_DURATION,
 } from './membership.config';
 import { PaymentMethod as GenericPaymentMethod } from '../payments/entities/payment.entity';
+import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
+import { NotificationType, NotificationChannel } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class MembershipsService {
@@ -52,6 +54,7 @@ export class MembershipsService {
     @InjectRepository(Salon)
     private salonsRepository: Repository<Salon>,
     private airtelMoneyService: AirtelMoneyService,
+    private notificationService: NotificationOrchestratorService,
   ) {}
 
   async createApplication(
@@ -479,6 +482,55 @@ export class MembershipsService {
     return this.membershipsRepository.save(membership);
   }
 
+  async sendReminder(id: string): Promise<void> {
+    const membership = await this.findOneMembership(id);
+    const owner = membership.salon?.owner;
+
+    if (!owner) {
+      throw new NotFoundException('Salon owner not found for this membership');
+    }
+
+    // Calculate expiry days
+    let message = `This is a reminder regarding your membership for ${membership.salon.name}.`;
+    
+    if (membership.endDate) {
+      const expiry = new Date(membership.endDate);
+      const daysUntil = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      
+      if (daysUntil < 0) {
+        message += ` Your membership expired ${Math.abs(daysUntil)} days ago. Please renew immediately to restore access.`;
+      } else if (daysUntil <= 30) {
+        message += ` Your membership expires in ${daysUntil} days. Please renew to avoid service interruption.`;
+      } else {
+        message += ` Your membership is active and valid until ${expiry.toLocaleDateString()}.`;
+      }
+    } else {
+        message += ` Current status: ${membership.status}.`;
+    }
+
+    // Check payment status just in case
+    const currentYear = new Date().getFullYear();
+    const status = await this.getPaymentStatus(owner.id, currentYear);
+    if (!status.isComplete) {
+       message += ` You have a remaining balance of RWF ${status.remaining.toLocaleString()} for ${currentYear}.`;
+    }
+
+    await this.notificationService.notify(NotificationType.MEMBERSHIP_STATUS, {
+      userId: owner.id,
+      recipientEmail: owner.email,
+      message: message,
+      title: 'Membership Reminder',
+      salonId: membership.salonId,
+      salonName: membership.salon.name,
+      status: membership.status,
+      expiryDate: membership.endDate ? new Date(membership.endDate).toLocaleDateString() : 'N/A',
+      balance: status.isComplete ? undefined : `RWF ${status.remaining.toLocaleString()}`,
+    }, {
+      channels: [NotificationChannel.EMAIL, NotificationChannel.IN_APP, NotificationChannel.PUSH],
+      priority: 'high',
+    });
+  }
+
   async deleteMembership(id: string): Promise<void> {
     const membership = await this.findOneMembership(id);
     await this.membershipsRepository.remove(membership);
@@ -627,6 +679,22 @@ export class MembershipsService {
     }
 
     return this.paymentsRepository.save(payment);
+  }
+
+  async deletePayment(id: string): Promise<void> {
+    const payment = await this.paymentsRepository.findOne({ where: { id } });
+    if (!payment) {
+      throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+
+    if (payment.status === PaymentStatus.PAID) {
+      throw new BadRequestException('Cannot delete a payment that has already been paid and processed.');
+    }
+
+    // Soft delete: Mark as Cancelled
+    payment.status = PaymentStatus.CANCELLED;
+    payment.notes = payment.notes ? `${payment.notes} | Cancelled by admin` : 'Cancelled by admin';
+    await this.paymentsRepository.save(payment);
   }
 
   async findPaymentsByMember(
@@ -837,20 +905,39 @@ export class MembershipsService {
     const amount = dto.amount;
     const year = new Date().getFullYear();
 
-    // 2. Create Pending Payment Record
-    const payment = this.paymentsRepository.create({
-      member: user,
-      memberId: user.id,
-      paymentYear: year,
-      installmentNumber: amount >= 3000 ? 1 : 1, // Default to 1st installment logic roughly
-      totalAmount: 3000,
-      installmentAmount: amount,
-      paidAmount: 0, // Not paid yet
-      dueDate: new Date(),
-      status: PaymentStatus.PENDING,
-      paymentMethod: PaymentMethod.MOBILE_MONEY,
-      transactionReference: uuidv4(), // Internal Ref
+    // 2. Find or Create Pending Payment Record
+    let payment = await this.paymentsRepository.findOne({
+      where: {
+        memberId: user.id,
+        paymentYear: year,
+        status: PaymentStatus.PENDING,
+      },
+      order: { installmentNumber: 'ASC' }, // Prioritize the first unpaid installment
     });
+
+    if (payment) {
+      // Reuse existing pending payment
+      payment.paymentMethod = PaymentMethod.MOBILE_MONEY;
+      payment.transactionReference = uuidv4();
+      payment.installmentAmount = amount; // Update to actual amount being paid
+      // If paying full amount (3000), update total logic if needed, but for now just track what's being paid
+      payment.updatedAt = new Date(); // Ensure polling picks up freshness if needed
+    } else {
+      // Create new if no pending installment exists (e.g. extra payment)
+      payment = this.paymentsRepository.create({
+        member: user,
+        memberId: user.id,
+        paymentYear: year,
+        installmentNumber: amount >= 3000 ? 1 : 1,
+        totalAmount: 3000,
+        installmentAmount: amount,
+        paidAmount: 0,
+        dueDate: new Date(),
+        status: PaymentStatus.PENDING,
+        paymentMethod: PaymentMethod.MOBILE_MONEY,
+        transactionReference: uuidv4(),
+      });
+    }
 
     const savedPayment = await this.paymentsRepository.save(payment);
 

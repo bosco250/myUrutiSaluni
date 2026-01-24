@@ -7,6 +7,8 @@ import { Bell, Check, X, Filter, CheckCheck } from 'lucide-react';
 import api from '@/lib/api';
 import { formatDistanceToNow, format } from 'date-fns';
 import Button from '@/components/ui/Button';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
 
 interface Notification {
   id: string;
@@ -26,8 +28,10 @@ interface Notification {
 export default function NotificationsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { success, error: toastError } = useToast();
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [page, setPage] = useState(1);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const limit = 20;
 
   // Fetch notifications
@@ -134,6 +138,11 @@ export default function NotificationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+      success('Notification deleted');
+      setDeleteId(null);
+    },
+    onError: () => {
+      toastError('Failed to delete notification');
     },
   });
 
@@ -150,7 +159,18 @@ export default function NotificationsPage() {
     }
 
     if (notification.actionUrl) {
-      router.push(notification.actionUrl);
+      try {
+        // Handle absolute URLs (e.g. from email context) by stripping origin for client-side nav
+        if (notification.actionUrl.startsWith('http')) {
+          const url = new URL(notification.actionUrl);
+          router.push(url.pathname + url.search + url.hash);
+        } else {
+          router.push(notification.actionUrl);
+        }
+      } catch (e) {
+        // Fallback
+        router.push(notification.actionUrl);
+      }
     }
   };
 
@@ -161,9 +181,7 @@ export default function NotificationsPage() {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this notification?')) {
-      deleteMutation.mutate(id);
-    }
+    setDeleteId(id);
   };
 
   const getPriorityColor = (priority?: string) => {
@@ -422,6 +440,20 @@ export default function NotificationsPage() {
           )}
         </>
       )}
+      <ConfirmationModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => {
+          if (deleteId) {
+            deleteMutation.mutate(deleteId);
+          }
+        }}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        isProcessing={deleteMutation.isPending}
+      />
     </div>
   );
 }

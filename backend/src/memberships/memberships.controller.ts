@@ -256,6 +256,14 @@ export class MembershipsController {
     return this.membershipsService.expireMembership(id, force === 'true');
   }
 
+  @Post(':id/reminder')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @ApiOperation({ summary: 'Send a reminder to the membership owner' })
+  async sendReminder(@Param('id') id: string) {
+    await this.membershipsService.sendReminder(id);
+    return { message: 'Reminder sent successfully' };
+  }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Delete a membership' })
@@ -281,6 +289,14 @@ export class MembershipsController {
     @CurrentUser() user: any,
   ) {
     return this.membershipsService.recordPayment(recordDto, user.id);
+  }
+
+  @Delete('payments/:id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @ApiOperation({ summary: 'Delete a payment record (Only if Pending)' })
+  async deletePayment(@Param('id') id: string) {
+    await this.membershipsService.deletePayment(id);
+    return { message: 'Payment record deleted successfully' };
   }
 
   @Get('payments/member/:memberId')

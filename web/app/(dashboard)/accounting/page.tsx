@@ -47,6 +47,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { useEmployeePermissions } from '@/hooks/useEmployeePermissions';
 import { EmployeePermission } from '@/lib/employee-permissions';
+import { useToast } from '@/components/ui/Toast';
 
 // --- Types ---
 interface FinancialSummary {
@@ -249,6 +250,7 @@ function CategoryProgress({ name, amount, total, colorClass = 'bg-primary' }: { 
 
 export default function AccountingPage() {
   const { user } = useAuthStore();
+  const { success, error, info } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
 
@@ -394,15 +396,19 @@ export default function AccountingPage() {
 
   const handleExportPdf = async () => {
     if (!salonId) return;
+    
+    info('Generating PDF statement...', { title: 'Export Started', duration: 3000 });
+    
     try {
       const params: any = {
         salonId,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate
       };
-      // Note: PDF backend might not fully support filters yet, but we pass them.
+      
       if (filterType !== 'all') params.type = filterType;
-      if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
+      // Only include category filter if not 'income' (similar to query logic)
+      if (filterType !== 'income' && filterCategoryId !== 'all') params.categoryId = filterCategoryId;
 
       const response = await api.get('/accounting/export/pdf', {
         params,
@@ -418,9 +424,25 @@ export default function AccountingPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-       console.error('PDF Export failed:', error);
-       alert('Failed to export PDF. Please try again.');
+      
+      success('PDF statement downloaded successfully.', { title: 'Export Complete' });
+    } catch (err: any) {
+       console.error('PDF Export failed:', err);
+       
+       let message = 'Failed to export PDF. Please try again.';
+       
+       // Try to parse blob error response to get actual server error
+       if (err.response?.data instanceof Blob) {
+         try {
+           const text = await err.response.data.text();
+           const json = JSON.parse(text);
+           if (json.message) message = json.message;
+         } catch (e) {
+           // Ignore parse error, use default message
+         }
+       }
+       
+       error(message, { title: 'Export Failed' });
     }
   };
 
@@ -556,10 +578,10 @@ export default function AccountingPage() {
 
           {/* Export Button */}
           <Button
-             variant="outline"
+             variant="secondary"
              size="sm"
              onClick={handleExportCsv}
-             className="h-9 px-3 text-xs font-semibold border-border-light dark:border-border-dark hover:bg-primary/5 hover:text-primary transition-all"
+             className="h-9 px-3 text-xs font-semibold"
              title="Export all financial records to CSV"
           >
              <Download className="mr-2 h-4 w-4" />
@@ -567,10 +589,10 @@ export default function AccountingPage() {
           </Button>
 
           <Button
-             variant="outline"
+             variant="secondary"
              size="sm"
              onClick={handleExportPdf}
-             className="h-9 px-3 text-xs font-semibold border-border-light dark:border-border-dark hover:bg-primary/5 hover:text-primary transition-all"
+             className="h-9 px-3 text-xs font-semibold"
              title="Export Profit & Loss Statement to PDF"
           >
              <FileText className="mr-2 h-4 w-4" />

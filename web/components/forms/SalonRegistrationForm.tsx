@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -26,6 +26,7 @@ import {
   Star,
   User,
   Heart,
+  Search,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
@@ -118,6 +119,22 @@ export default function SalonRegistrationForm({
   const [locationError, setLocationError] = useState<string>('');
   const [mapKey, setMapKey] = useState(0);
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Address search state
+  const [addressQuery, setAddressQuery] = useState(salon?.address || '');
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
+    displayName: string;
+    address: string;
+    city: string;
+    district: string;
+    country: string;
+    latitude: number;
+    longitude: number;
+  }>>([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Initialize businessTypes from either array or single value
   const getInitialBusinessTypes = () => {
@@ -348,6 +365,86 @@ export default function SalonRegistrationForm({
       : [...current, typeId];
     updateField('businessTypes', updated);
   };
+
+  // Debounced address search
+  const searchAddressDebounced = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return (query: string) => {
+        clearTimeout(timeoutId);
+        if (query.length < 3) {
+          setAddressSuggestions([]);
+          setShowAddressSuggestions(false);
+          return;
+        }
+        setSearchingAddress(true);
+        timeoutId = setTimeout(async () => {
+          try {
+            const response = await fetch(`/api/geocode/search?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            if (data.suggestions && Array.isArray(data.suggestions)) {
+              setAddressSuggestions(data.suggestions);
+              setShowAddressSuggestions(data.suggestions.length > 0);
+            }
+          } catch (error) {
+            console.error('Address search error:', error);
+            setAddressSuggestions([]);
+          } finally {
+            setSearchingAddress(false);
+          }
+        }, 300);
+      };
+    })(),
+    []
+  );
+
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setAddressQuery(value);
+    updateField('address', value);
+    searchAddressDebounced(value);
+  };
+
+  const selectAddressSuggestion = (suggestion: typeof addressSuggestions[0]) => {
+    // Update all location fields
+    setFormData((prev) => ({
+      ...prev,
+      address: suggestion.address || suggestion.displayName.split(',')[0] || '',
+      city: suggestion.city || prev.city,
+      district: suggestion.district || prev.district,
+      country: suggestion.country || prev.country,
+      latitude: suggestion.latitude.toString(),
+      longitude: suggestion.longitude.toString(),
+    }));
+    setAddressQuery(suggestion.address || suggestion.displayName.split(',')[0] || '');
+    setShowAddressSuggestions(false);
+    setAddressSuggestions([]);
+    setMapKey((prev) => prev + 1); // Refresh map
+    
+    // Clear any errors
+    setErrors((prev) => ({
+      ...prev,
+      address: '',
+      city: '',
+      district: '',
+    }));
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        addressInputRef.current &&
+        !addressInputRef.current.contains(event.target as Node)
+      ) {
+        setShowAddressSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const reverseGeocode = async (
     lat: number,
@@ -773,22 +870,65 @@ export default function SalonRegistrationForm({
                     />
                   </div>
 
-                  {/* Address */}
-                  <div>
+                  {/* Address with Autocomplete */}
+                  <div className="relative">
                     <label className="block text-xs font-medium text-text-light/80 dark:text-text-dark/80 mb-1">
                       Address <span className="text-danger">*</span>
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.address}
-                      onChange={(e) => updateField('address', e.target.value)}
-                      className={`w-full px-3 py-2 text-sm bg-background-light dark:bg-background-dark border ${
-                        errors.address ? 'border-danger' : 'border-border-light dark:border-border-dark'
-                      } rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition`}
-                      placeholder="Street address"
-                    />
+                    <div className="relative">
+                      <input
+                        ref={addressInputRef}
+                        type="text"
+                        required
+                        value={addressQuery}
+                        onChange={handleAddressInputChange}
+                        onFocus={() => {
+                          if (addressSuggestions.length > 0) {
+                            setShowAddressSuggestions(true);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 text-sm bg-background-light dark:bg-background-dark border ${
+                          errors.address ? 'border-danger' : 'border-border-light dark:border-border-dark'
+                        } rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition`}
+                        placeholder="Type address to search..."
+                      />
+                      {searchingAddress && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary" />
+                      )}
+                    </div>
+                    
+                    {/* Address Suggestions Dropdown */}
+                    {showAddressSuggestions && addressSuggestions.length > 0 && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute z-[100] top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden"
+                        style={{ maxHeight: '200px', overflowY: 'auto' }}
+                      >
+                        {addressSuggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => selectAddressSuggestion(suggestion)}
+                            className="w-full px-4 py-3 text-left hover:bg-primary/10 transition-colors flex items-start gap-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          >
+                            <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {suggestion.displayName.split(',').slice(0, 2).join(',')}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {suggestion.displayName.split(',').slice(2, 5).join(',')}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
                     {errors.address && <p className="text-danger text-xs mt-1">{errors.address}</p>}
+                    <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-1">
+                      Start typing to search for addresses, or click on the map above
+                    </p>
                   </div>
 
                   {/* City, District, Country */}

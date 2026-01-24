@@ -157,7 +157,9 @@ export class CommissionsService {
       .leftJoinAndSelect('employee.user', 'user')
       .leftJoinAndSelect('employee.salon', 'salon')
       .leftJoinAndSelect('commission.saleItem', 'saleItem')
-      .leftJoinAndSelect('saleItem.sale', 'sale');
+      .leftJoinAndSelect('saleItem.sale', 'sale')
+      .leftJoinAndSelect('saleItem.service', 'service')
+      .leftJoinAndSelect('saleItem.product', 'product');
 
     // Support multiple employee IDs (for employees working at multiple salons)
     if (filters?.salonEmployeeIds && filters.salonEmployeeIds.length > 0) {
@@ -232,7 +234,9 @@ export class CommissionsService {
       .leftJoinAndSelect('employee.user', 'user')
       .leftJoinAndSelect('employee.salon', 'salon')
       .leftJoinAndSelect('commission.saleItem', 'saleItem')
-      .leftJoinAndSelect('saleItem.sale', 'sale');
+      .leftJoinAndSelect('saleItem.sale', 'sale')
+      .leftJoinAndSelect('saleItem.service', 'service')
+      .leftJoinAndSelect('saleItem.product', 'product');
 
     // Apply same filters as findAll...
     if (filters?.salonEmployeeIds && filters.salonEmployeeIds.length > 0) {

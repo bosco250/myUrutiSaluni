@@ -20,7 +20,10 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Ban,
 } from 'lucide-react';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
 import {
   MEMBERSHIP_INSTALLMENT_AMOUNT,
   PAYMENT_STATUS_CONFIG,
@@ -95,7 +98,7 @@ function MembershipPaymentsContent() {
   // Otherwise default to current year
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<number | 'all'>(initialSearch ? 'all' : new Date().getFullYear());
+  const [yearFilter, setYearFilter] = useState<number | 'all'>('all');
   const [selectedPayment, setSelectedPayment] = useState<MembershipPayment | null>(null);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [recordForm, setRecordForm] = useState<RecordPaymentForm>({
@@ -120,7 +123,7 @@ function MembershipPaymentsContent() {
     },
   });
 
-  // Record payment mutation
+  // Reading file content next
   const recordPaymentMutation = useMutation({
     mutationFn: async (data: { paymentId: string; paymentMethod: string; paymentReference?: string; transactionReference?: string; paidAmount?: number; notes?: string }) => {
       await api.post('/memberships/payments/record', data);
@@ -142,6 +145,26 @@ function MembershipPaymentsContent() {
       });
     },
   });
+
+  const toast = useToast();
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      await api.delete(`/memberships/payments/${paymentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['membership-payments'] });
+      toast.success('Payment record cancelled successfully');
+      setPaymentToDelete(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to cancel payment');
+      setPaymentToDelete(null);
+    },
+  });
+
+
 
   // Initialize payments for all members (admin function)
   const initializePaymentsMutation = useMutation({
@@ -255,22 +278,22 @@ function MembershipPaymentsContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-4">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/memberships')}
-              className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 hover:bg-primary/20 transition-colors cursor-pointer"
-              title="Back to Memberships"
+              className="h-9 w-9 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-primary/5 transition-colors cursor-pointer group"
+              title="Back"
             >
-              <ArrowLeft className="w-6 h-6 text-primary" />
+              <ArrowLeft className="w-5 h-5 text-text-light/60 dark:text-text-dark/60 group-hover:text-primary transition-colors" />
             </button>
-          <div>
-              <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+            <div>
+              <h1 className="text-xl font-bold text-text-light dark:text-text-dark leading-none pb-1">
                 Membership Payments
               </h1>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                Manage annual membership contributions (3000 RWF/year, 2 installments)
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                Manage annual contributions (3000 RWF/year, 2 installments)
               </p>
             </div>
           </div>
@@ -278,348 +301,314 @@ function MembershipPaymentsContent() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Total Required
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
-            RWF {stats.totalRequired.toLocaleString()}
-          </p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
-                {stats.totalPayments} installments
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Total Required */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Required</p>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark">RWF {stats.totalRequired.toLocaleString()}</p>
+            <p className="text-[10px] text-text-light/40 flex items-center gap-1">
+              <span className="h-1 w-1 rounded-full bg-text-light/40" />
+              {stats.totalPayments} installments
+            </p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <DollarSign className="w-4 h-4 text-blue-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Total Paid
-              </p>
-              <p className="text-2xl font-bold text-success mt-2">
-            RWF {stats.totalPaid.toLocaleString()}
-          </p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
-                {stats.paid} paid
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="w-5 h-5" />
-            </div>
+
+        {/* Total Paid */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Paid</p>
+            <p className="text-xl font-bold text-success">RWF {stats.totalPaid.toLocaleString()}</p>
+            <p className="text-[10px] text-success/60 flex items-center gap-1 font-semibold">
+              <span className="h-1 w-1 rounded-full bg-success/60" />
+              {stats.paid} paid
+            </p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <CheckCircle className="w-4 h-4 text-green-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Pending
-              </p>
-              <p className="text-2xl font-bold text-warning mt-2">
-                {stats.pending}
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
+
+        {/* Pending */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Pending</p>
+            <p className="text-xl font-bold text-warning">{stats.pending}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <Clock className="w-4 h-4 text-orange-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Overdue
-              </p>
-              <p className="text-2xl font-bold text-error mt-2">
-                {stats.overdue}
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-error/10 text-error flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-5 h-5" />
-            </div>
+
+        {/* Overdue */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Overdue</p>
+            <p className="text-xl font-bold text-error">{stats.overdue}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-red-500/20 to-rose-600/20 rounded-lg group-hover:scale-110 transition-transform">
+            <AlertCircle className="w-4 h-4 text-red-500" />
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-5">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search Input - Takes more space */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+      {/* Filters Bar */}
+      <div className="bg-surface-light dark:bg-surface-dark  rounded-xl p-3 shadow-sm">
+        <div className="flex flex-col lg:flex-row gap-3 items-center">
+          {/* Search */}
+          <div className="w-full lg:flex-1 relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 group-focus-within:text-primary transition-colors" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by member name, membership number"
-              className="w-full h-12 pl-12 pr-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+              placeholder="Search by member name, ID, or email..."
+              className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
 
-          {/* Status Filter */}
-          <div className="relative lg:w-64">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full h-12 pl-12 pr-10 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition appearance-none cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-
-          {/* Year Filter */}
-          <div className="lg:w-48">
-            <div className="relative">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
+          <div className="flex items-center gap-2 w-full lg:w-auto">
+            {/* Status Filter */}
+            <div className="relative flex-1 lg:w-44 group">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 group-focus-within:text-primary" />
               <select
-                id="membership-payments-year"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full pl-9 pr-8 h-9 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+              </select>
+            </div>
+
+            {/* Year Filter */}
+            <div className="relative flex-1 lg:w-36 group">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 group-focus-within:text-primary" />
+              <select
                 value={yearFilter}
                 onChange={(e) => {
                   const val = e.target.value;
                   setYearFilter(val === 'all' ? 'all' : parseInt(val));
                 }}
-                className="w-full h-12 pl-12 pr-10 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition appearance-none cursor-pointer"
+                className="w-full pl-9 pr-8 h-9 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer"
               >
                 <option value="all">All Years</option>
-                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                <svg className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Payments Table */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Member</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Year</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Installment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Due Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Paid Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {filteredPayments.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <Clock className="w-8 h-8 text-text-light/30 dark:text-text-dark/30" />
-                      <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
-                        {searchQuery ? 'No payments match your search' : 'No payments found'}
-                      </p>
-                      <p className="text-xs text-text-light/40 dark:text-text-dark/40">
-                        {searchQuery 
-                          ? 'Try adjusting your search or changing the year filter to "All Years"'
-                          : yearFilter === 'all' 
-                            ? 'No payment records exist yet. Initialize payments for all members to get started.'
-                            : `No payments for ${yearFilter}. Try selecting "All Years"`
-                        }
-                      </p>
-                      {!searchQuery && payments.length === 0 && (
-                        <Button
-                          onClick={() => initializePaymentsMutation.mutate()}
-                          disabled={initializePaymentsMutation.isPending}
-                          variant="primary"
-                          size="sm"
-                          className="gap-2 mt-2"
-                        >
-                          {initializePaymentsMutation.isPending ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Initializing...
-                            </>
-                          ) : (
-                            <>
-                              <DollarSign className="w-4 h-4" />
-                              Initialize Payments for All Members
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedPayments.map((payment) => {
-                  const config = statusConfig[payment.status];
-                  const Icon = config.icon;
+      {/* Payments List */}
+      <div className="space-y-2">
+        {filteredPayments.length === 0 ? (
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center shadow-sm">
+            <div className="h-16 w-16 rounded-lg bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8" />
+            </div>
+            <p className="text-base font-semibold text-text-light dark:text-text-dark">
+              {searchQuery ? 'No payments match your search' : 'No payments found'}
+            </p>
+            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-2 max-w-sm mx-auto">
+              {searchQuery 
+                ? 'Try adjusting your search or changing the year filter to "All Years"'
+                : 'No payment records exist for the selected criteria.'
+              }
+            </p>
+            {!searchQuery && payments.length === 0 && (
+              <Button
+                onClick={() => initializePaymentsMutation.mutate()}
+                disabled={initializePaymentsMutation.isPending}
+                variant="primary"
+                size="sm"
+                className="gap-2 mt-4"
+              >
+                {initializePaymentsMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Initializing...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="w-4 h-4" />
+                    Initialize All Payments
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        ) : (
+          paginatedPayments.map((payment) => {
+            const config = statusConfig[payment.status];
+            const Icon = config.icon;
 
-                  return (
-                    <tr key={payment.id} className="hover:bg-background-light dark:hover:bg-background-dark transition">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-text-light dark:text-text-dark">
-                            {payment.member?.fullName || 'Unknown'}
-                          </div>
-                          <div className="text-xs text-text-light/60 dark:text-text-dark/60">
-                            {payment.member?.membershipNumber || 'N/A'}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        {payment.paymentYear}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        Installment {payment.installmentNumber} of 2
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        RWF {Number(payment.installmentAmount).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        {new Date(payment.dueDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md ${config.bg} ${config.color} border ${config.border}`}>
-                          <Icon className="w-3 h-3" />
+            return (
+              <div
+                key={payment.id}
+                className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5 hover:shadow-md hover:border-primary/30 transition-all"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`h-8 w-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                      <Icon className={`w-4 h-4 ${config.color}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="text-sm font-bold text-text-light dark:text-text-dark truncate leading-none">
+                          {payment.member?.fullName || 'Unknown Member'}
+                        </h3>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${config.bg} ${config.color} border ${config.border}`}>
                           {config.label}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                        {payment.paidDate ? new Date(payment.paidDate).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {payment.status === 'pending' && (
-                          <Button
-                            onClick={() => {
-                              setSelectedPayment(payment);
-                              setRecordForm({
-                                paymentMethod: 'cash',
-                                paymentReference: '',
-                                transactionReference: '',
-                                paidAmount: payment.installmentAmount.toString(),
-                                notes: '',
-                              });
-                              setShowRecordModal(true);
-                            }}
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            className="gap-2"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                            Record Payment
-                          </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium font-inter">
+                        <span className="text-primary font-bold">{payment.member?.membershipNumber || 'N/A'}</span>
+                        <span className="text-text-light/20">•</span>
+                        <span>Year {payment.paymentYear}</span>
+                        <span className="text-text-light/20">•</span>
+                        <span>Installment {payment.installmentNumber}</span>
+                        <span className="text-text-light/20">•</span>
+                        <span className="font-bold text-text-light dark:text-text-dark">RWF {Number(payment.installmentAmount).toLocaleString()}</span>
+                        <span className="text-text-light/20">•</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-text-light/40" />
+                          Due: {new Date(payment.dueDate).toLocaleDateString()}
+                        </span>
+                        {payment.paidDate && (
+                          <>
+                            <span className="text-text-light/20">•</span>
+                            <span className="text-success font-bold flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Paid: {new Date(payment.paidDate).toLocaleDateString()}
+                            </span>
+                          </>
                         )}
-                        {payment.status === 'paid' && (
-                          <div className="text-xs text-text-light/60 dark:text-text-dark/60">
-                            {payment.paymentMethod && (
-                              <div className="capitalize">{payment.paymentMethod.replace('_', ' ')}</div>
-                            )}
-                            {payment.paidBy && (
-                              <div>By: {payment.paidBy.fullName}</div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Pagination Controls */}
-        {filteredPayments.length > 0 && (
-          <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-text-light/60 dark:text-text-dark/60">
-              <span>Showing</span>
-              <span className="font-medium text-text-light dark:text-text-dark">
-                {Math.min(startIndex + 1, filteredPayments.length)}
-              </span>
-              <span>to</span>
-              <span className="font-medium text-text-light dark:text-text-dark">
-                {Math.min(endIndex, filteredPayments.length)}
-              </span>
-              <span>of</span>
-              <span className="font-medium text-text-light dark:text-text-dark">
-                {filteredPayments.length}
-              </span>
-              <span>items</span>
-            </div>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-text-light/60 dark:text-text-dark/60">Rows:</span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="h-8 pl-2 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
-                >
-                  {[10, 20, 50, 100].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                
-                <div className="flex items-center gap-1 mx-2">
-                  <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                    {currentPage}
-                  </span>
-                  <span className="text-sm text-text-light/60 dark:text-text-dark/60">
-                    / {totalPages}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0 sm:ml-auto">
+                    {payment.status === 'pending' && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          onClick={() => setPaymentToDelete(payment.id)}
+                          disabled={deletePaymentMutation.isPending}
+                          size="sm"
+                          className="h-7 px-2.5 text-[11px] gap-1.5 shadow-sm bg-error/10 border border-error/20 text-error hover:bg-error/20 font-bold"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setRecordForm({
+                              paymentMethod: 'cash',
+                              paymentReference: '',
+                              transactionReference: '',
+                              paidAmount: payment.installmentAmount.toString(),
+                              notes: '',
+                            });
+                            setShowRecordModal(true);
+                          }}
+                          variant="primary"
+                          size="sm"
+                          className="h-7 px-2.5 text-[11px] gap-1.5 shadow-sm"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          Record
+                        </Button>
+                      </div>
+                    )}
+                    {payment.status === 'paid' && (
+                      <div className="text-[10px] bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-2 py-1 rounded-lg text-text-light/60 dark:text-text-dark/60 font-medium">
+                        {payment.paymentMethod?.replace('_', ' ').toUpperCase()} • {payment.paidBy?.fullName}
+                      </div>
+                    )}
+                    {payment.status === 'cancelled' && (
+                       <div className="flex items-center gap-1.5 text-[10px] bg-error/5 border border-error/20 px-2 py-1 rounded-lg text-error/60 font-medium italic">
+                         <Ban className="w-3 h-3" />
+                         Cancelled
+                       </div>
+                    )}
+                  </div>
                 </div>
-
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
               </div>
-            </div>
-          </div>
+            );
+          })
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {filteredPayments.length > 0 && (
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 overflow-hidden">
+          <div className="px-2 flex items-center gap-2 text-[11px] font-bold text-text-light/40 dark:text-text-dark/40 uppercase tracking-wider">
+            <span>Showing {startIndex + 1}-{Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
+              <span className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase">Rows:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-transparent text-[11px] font-bold text-text-light dark:text-text-dark focus:outline-none cursor-pointer"
+              >
+                {[10, 20, 50].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:bg-primary/5 disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              
+              <div className="flex items-center gap-1 px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                <span className="text-[11px] font-bold text-primary">{currentPage}</span>
+                <span className="text-[10px] font-bold text-primary/40">/ {totalPages}</span>
+              </div>
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-7 w-7 flex items-center justify-center rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:bg-primary/5 disabled:opacity-30 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!paymentToDelete}
+        onClose={() => setPaymentToDelete(null)}
+        onConfirm={() => paymentToDelete && deletePaymentMutation.mutate(paymentToDelete)}
+        title="Cancel Payment Record"
+        message="Are you sure you want to cancel this payment record? This status will change to 'Cancelled' record will remain for audit purposes."
+        confirmLabel="Yes, Cancel Record"
+        cancelLabel="No, Keep"
+        variant="danger"
+        isProcessing={deletePaymentMutation.isPending}
+      />
 
       {/* Record Payment Modal */}
       {showRecordModal && selectedPayment && (
@@ -656,218 +645,120 @@ function RecordPaymentModal({
 }) {
   return (
     <>
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-        onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose();
-        }}
-        role="button"
-        tabIndex={-1}
-        aria-label="Close modal"
-      />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
-          role="presentation"
-        >
-          {/* Header */}
-          <div className="px-6 py-5 border-b border-border-light dark:border-border-dark bg-gradient-to-r from-success/5 to-transparent">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-success/10 flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-success" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
-                    Record Payment
-                  </h2>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                    Complete payment details for {payment.member?.fullName}
-                  </p>
-                </div>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-w-xl w-full overflow-hidden pointer-events-auto animate-in fade-in zoom-in duration-200">
+          {/* Header - Increased Padding */}
+          <div className="px-6 py-5 border-b border-border-light dark:border-border-dark bg-gradient-to-r from-success/5 to-transparent flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-success" />
               </div>
-              <button
-                onClick={onClose}
-                className="h-8 w-8 rounded-lg bg-background-light dark:bg-background-dark hover:bg-error/10 hover:text-error flex items-center justify-center transition-colors"
-                aria-label="Close"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
+              <div>
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark leading-none">Record Payment</h2>
+                <p className="text-[11px] text-text-light/60 dark:text-text-dark/60 mt-1">Complete membership installment details</p>
+              </div>
             </div>
+            <button onClick={onClose} className="h-7 w-7 rounded-md hover:bg-error/10 hover:text-error flex items-center justify-center transition-colors text-text-light/30">
+              <XCircle className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Content */}
-          <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-180px)]">
-            <div className="space-y-5">
-              {/* Payment Info Card */}
-              <div className="bg-gradient-to-br from-primary/5 to-success/5 border border-primary/20 rounded-xl p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-                    <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                      Member
-                    </p>
-                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
-                      {payment.member?.fullName}
-                    </p>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                      {payment.member?.membershipNumber}
-                    </p>
-            </div>
-            <div>
-                    <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                      Installment
-                    </p>
-                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
-                      {payment.installmentNumber} of 2
-                    </p>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                      Year {payment.paymentYear}
-                    </p>
-            </div>
-            <div>
-                    <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-                      Amount Due
-                    </p>
-                    <p className="text-xl font-bold text-success">
-                      RWF {Number(payment.installmentAmount).toLocaleString()}
-                    </p>
-                  </div>
+          <div className="p-5 space-y-4">
+            {/* Member & Amount Context - Clearly Visible */}
+            <div className="bg-background-light dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-[10px] font-bold text-text-light/40 uppercase tracking-wider">Member Details</p>
+                <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">{payment.member?.fullName}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">{payment.member?.membershipNumber}</span>
+                  <span className="text-[10px] text-text-light/40 font-semibold uppercase">Year {payment.paymentYear} • Inst #{payment.installmentNumber}</span>
                 </div>
               </div>
-
-              {/* Form Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Payment Method */}
-                <div>
-                  <label
-                    htmlFor={`membership-record-method-${payment.id}`}
-                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
-                  >
-                    Payment Method <span className="text-error">*</span>
-              </label>
-                  <div className="relative">
-              <select
-                      id={`membership-record-method-${payment.id}`}
-                value={form.paymentMethod}
-                      onChange={(e) => onFormChange({ ...form, paymentMethod: e.target.value as 'cash' | 'mobile_money' | 'bank_transfer' | 'card' })}
-                      className="w-full h-11 pl-4 pr-10 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition appearance-none cursor-pointer"
-              >
-                      <option value="cash">💵 Cash</option>
-                      <option value="mobile_money">📱 Mobile Money</option>
-                      <option value="bank_transfer">🏦 Bank Transfer</option>
-                      <option value="card">💳 Card</option>
-              </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <svg className="w-5 h-5 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Paid Amount */}
-                <div>
-                  <label
-                    htmlFor={`membership-record-paidAmount-${payment.id}`}
-                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
-                  >
-                    Paid Amount
-                  </label>
-                  <input
-                    id={`membership-record-paidAmount-${payment.id}`}
-                    type="number"
-                    value={form.paidAmount}
-                    onChange={(e) => onFormChange({ ...form, paidAmount: e.target.value })}
-                    placeholder={payment.installmentAmount.toString()}
-                    className="w-full h-11 px-4 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition"
-                  />
+              <div className="text-right flex-shrink-0 space-y-0.5">
+                <p className="text-[10px] font-bold text-text-light/40 uppercase tracking-wider">Total Due</p>
+                <p className="text-xl font-black text-success">RWF {Number(payment.installmentAmount).toLocaleString()}</p>
+              </div>
             </div>
 
-                {/* Payment Reference */}
-            <div>
-                  <label
-                    htmlFor={`membership-record-paymentRef-${payment.id}`}
-                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
-                  >
-                Payment Reference
-              </label>
-              <input
-                    id={`membership-record-paymentRef-${payment.id}`}
-                type="text"
-                value={form.paymentReference}
-                onChange={(e) => onFormChange({ ...form, paymentReference: e.target.value })}
-                    placeholder="e.g., INV-2024-001"
-                    className="w-full h-11 px-4 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition"
-              />
-            </div>
-
-                {/* Transaction Reference */}
-            <div>
-                  <label
-                    htmlFor={`membership-record-txRef-${payment.id}`}
-                    className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
-                  >
-                Transaction Reference
-              </label>
-              <input
-                    id={`membership-record-txRef-${payment.id}`}
-                type="text"
-                value={form.transactionReference}
-                onChange={(e) => onFormChange({ ...form, transactionReference: e.target.value })}
-                    placeholder="e.g., TXN123456789"
-                    className="w-full h-11 px-4 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm font-medium text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition"
-              />
-            </div>
-            </div>
-
-              {/* Notes */}
-            <div>
-                <label
-                  htmlFor={`membership-record-notes-${payment.id}`}
-                  className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2"
+            {/* 3-Column Fields Section */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-light/50 uppercase px-1">Method</label>
+                <select
+                  value={form.paymentMethod}
+                  onChange={(e) => onFormChange({ ...form, paymentMethod: e.target.value as any })}
+                  className="w-full h-8 px-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-bold focus:ring-1 focus:ring-primary/20 outline-none cursor-pointer"
                 >
-                  Additional Notes
-              </label>
-              <textarea
-                  id={`membership-record-notes-${payment.id}`}
-                value={form.notes}
-                onChange={(e) => onFormChange({ ...form, notes: e.target.value })}
-                  placeholder="Add any additional information about this payment..."
-                rows={3}
-                  className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border-2 border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition resize-none"
-              />
+                  <option value="cash">Cash</option>
+                  <option value="mobile_money">MoMo</option>
+                  <option value="bank_transfer">Bank</option>
+                  <option value="card">Card</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-light/50 uppercase px-1">Amount</label>
+                <input
+                  type="number"
+                  value={form.paidAmount}
+                  onChange={(e) => onFormChange({ ...form, paidAmount: e.target.value })}
+                  className="w-full h-8 px-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-bold focus:ring-1 focus:ring-primary/20 outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-light/50 uppercase px-1">Reference</label>
+                <input
+                  type="text"
+                  value={form.paymentReference}
+                  onChange={(e) => onFormChange({ ...form, paymentReference: e.target.value })}
+                  placeholder="ID#"
+                  className="w-full h-8 px-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs focus:ring-1 focus:ring-primary/20 outline-none"
+                />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-light/50 uppercase px-1">Transaction Link</label>
+                <input
+                  type="text"
+                  value={form.transactionReference}
+                  onChange={(e) => onFormChange({ ...form, transactionReference: e.target.value })}
+                  placeholder="TXN ID"
+                  className="w-full h-8 px-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs focus:ring-1 focus:ring-primary/20 outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-text-light/50 uppercase px-1">Notes (Optional)</label>
+                <input
+                  type="text"
+                  value={form.notes}
+                  onChange={(e) => onFormChange({ ...form, notes: e.target.value })}
+                  placeholder="..."
+                  className="w-full h-8 px-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs focus:ring-1 focus:ring-primary/20 outline-none"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark flex gap-3 justify-end">
-            <Button 
+          {/* Footer - Simplified */}
+          <div className="px-6 py-3 border-t border-border-light dark:border-border-dark bg-background-light/30 dark:bg-background-dark/30 flex items-center justify-end gap-2">
+            <button 
               onClick={onClose} 
-              variant="secondary" 
-              disabled={isProcessing}
-              className="min-w-[100px]"
-            >
-                Cancel
-              </Button>
-            <Button 
-              onClick={onRecord} 
-              variant="primary" 
               disabled={isProcessing} 
-              className="gap-2 min-w-[160px] bg-success hover:bg-success/90"
+              className="px-4 py-1.5 rounded-lg text-xs font-bold text-text-light/60 hover:bg-background-light dark:hover:bg-background-dark transition-colors"
             >
-                {isProcessing ? (
-                  <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                  <CheckCircle className="w-4 h-4" />
-                    Record Payment
-                  </>
-                )}
+              Cancel
+            </button>
+              <Button
+                onClick={onRecord}
+                variant="primary"
+                size="sm"
+                disabled={isProcessing}
+                className="h-7 px-4 bg-success hover:bg-success/90 border-none shadow-sm text-[10px] font-bold"
+              >
+                {isProcessing ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : <CheckCircle className="w-3 h-3 mr-1.5" />}
+                Confirm
               </Button>
           </div>
         </div>

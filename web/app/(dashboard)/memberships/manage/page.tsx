@@ -29,9 +29,14 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  Download,
+  Edit,
+  Calendar,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
 
 interface Membership {
   id: string;
@@ -39,6 +44,8 @@ interface Membership {
   salon: {
     id: string;
     name: string;
+    address?: string;
+    phone?: string;
     owner: {
       id: string;
       fullName: string;
@@ -181,6 +188,7 @@ export default function MembershipManagementPage() {
 function MembershipManagementContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { success, error: toastError, info } = useToast();
   const [activeTab, setActiveTab] = useState<
     'memberships' | 'applications' | 'owners' | 'employees'
   >('memberships');
@@ -356,6 +364,20 @@ function MembershipManagementContent() {
     },
   });
 
+  const sendReminderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.post(`/memberships/${id}/reminder`);
+    },
+    onSuccess: () => {
+      success('Reminder sent successfully');
+    },
+    onError: (error: any) => {
+      toastError(
+        'Failed to send reminder: ' + (error.response?.data?.message || error.message)
+      );
+    },
+  });
+
   // Filter memberships
   const filteredMemberships = useMemo(() => {
     return memberships.filter((membership) => {
@@ -473,32 +495,33 @@ function MembershipManagementContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
-        <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-4">
+      <div className="bg-surface-light dark:bg-surface-dark  rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/memberships')}
-              className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 hover:bg-primary/20 transition-colors cursor-pointer"
-              title="Back to Memberships"
+              className="h-9 w-9 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center hover:bg-primary/5 transition-colors cursor-pointer group"
+              title="Back"
             >
-              <ArrowLeft className="w-6 h-6 text-primary" />
+              <ArrowLeft className="w-5 h-5 text-text-light/60 dark:text-text-dark/60 group-hover:text-primary transition-colors" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+              <h1 className="text-xl font-bold text-text-light dark:text-text-dark leading-none pb-1">
                 Membership Management
               </h1>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                Manage memberships, applications, and membership payments.
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                Manage all salon memberships and association applications.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:flex-shrink-0">
+          <div className="flex items-center gap-2">
             <Button
               onClick={() => router.push('/memberships/payments')}
+              variant="primary"
               size="sm"
-              className="gap-2"
+              className="h-8 gap-2 bg-gradient-to-r from-primary to-primary/80 border-none shadow-sm"
             >
-              <DollarSign className="w-4 h-4" />
+              <DollarSign className="w-3.5 h-3.5" />
               Payments
             </Button>
           </div>
@@ -506,212 +529,192 @@ function MembershipManagementContent() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Total Memberships
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
-                {stats.totalMemberships}
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Building2 className="w-5 h-5" />
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        {/* Total Memberships */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Memberships</p>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark">{stats.totalMemberships}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <Building2 className="w-4 h-4 text-purple-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Active
-              </p>
-              <p className="text-2xl font-bold text-success mt-2">{stats.activeMemberships}</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
-              <CheckCircle className="w-5 h-5" />
-            </div>
+
+        {/* Active */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Active Memberships</p>
+            <p className="text-xl font-bold text-success">{stats.activeMemberships}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <CheckCircle className="w-4 h-4 text-green-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Pending Applications
-              </p>
-              <p className="text-2xl font-bold text-warning mt-2">{stats.pendingApplications}</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
-              <Clock className="w-5 h-5" />
-            </div>
+
+        {/* Pending */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Pending Apps</p>
+            <p className="text-xl font-bold text-warning">{stats.pendingApplications}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <Clock className="w-4 h-4 text-orange-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Salon Owners
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
-                {stats.totalOwners}
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <UserCheck className="w-5 h-5" />
-            </div>
+
+        {/* Owners */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Salon Owners</p>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark">{stats.totalOwners}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-lg group-hover:scale-110 transition-transform">
+            <UserCheck className="w-4 h-4 text-blue-500" />
           </div>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Employees
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
-                {stats.totalEmployees}
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Users className="w-5 h-5" />
-            </div>
+
+        {/* Employees */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3.5 flex items-center justify-between group hover:shadow-md transition-all">
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Employees</p>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark">{stats.totalEmployees}</p>
+          </div>
+          <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/40 rounded-lg group-hover:scale-110 transition-transform">
+            <Users className="w-4 h-4 text-primary" />
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-1">
-        <div className="flex gap-1">
-          {(
-            [
-              { id: 'memberships', label: 'Memberships', icon: Building2 },
-              { id: 'applications', label: 'Applications', icon: Clock },
-              { id: 'owners', label: 'Owners', icon: UserCheck },
-              { id: 'employees', label: 'Employees', icon: Users },
-            ] as Array<{
-              id: 'memberships' | 'applications' | 'owners' | 'employees';
-              label: string;
-              icon: LucideIcon;
-            }>
-          ).map((tab) => {
+      {/* Main Tabs Navigation */}
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-sm p-1.5 overflow-x-auto">
+        <div className="flex gap-1 min-w-max">
+          {[
+            { id: 'memberships' as const, label: 'Memberships', icon: Building2 },
+            { id: 'applications' as const, label: 'Applications', icon: Clock },
+            { id: 'owners' as const, label: 'Owners', icon: UserCheck },
+            { id: 'employees' as const, label: 'Employees', icon: Users },
+          ].map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-text-light/60 dark:text-text-dark/60 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light dark:hover:text-text-dark'
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setStatusFilter('all');
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  isActive
+                    ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:bg-background-light dark:hover:bg-background-dark hover:text-text-light'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'animate-pulse' : ''}`} />
+                {tab.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+      {/* Filters & Actions Bar */}
+      <div className="bg-surface-light dark:bg-surface-dark  border-border-light dark:border-border-dark rounded-xl p-3 shadow-sm">
+        <div className="flex flex-col lg:flex-row gap-3 items-center">
+          {/* Search */}
+          <div className="w-full lg:flex-1 relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 group-focus-within:text-primary transition-colors" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, email, membership number..."
-              className="w-full pl-10 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+              placeholder="Search memberships, names, or ID numbers..."
+              className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
 
-          {/* Status Pill Buttons */}
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <Button
-              type="button"
-              size="sm"
-              variant={statusFilter === 'all' ? 'primary' : 'secondary'}
+          {/* Contextual Status Filters */}
+          <div className="flex items-center gap-1.5 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 font-medium">
+            <button
               onClick={() => setStatusFilter('all')}
-              className="whitespace-nowrap"
+              className={`px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap ${
+                statusFilter === 'all'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:border-primary/50'
+              }`}
             >
               All
-            </Button>
+            </button>
+            
             {activeTab === 'memberships' && (
               <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === 'active' ? 'primary' : 'secondary'}
+                <button
                   onClick={() => setStatusFilter('active')}
-                  className="whitespace-nowrap"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap ${
+                    statusFilter === 'active'
+                      ? 'bg-success text-white shadow-sm'
+                      : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:bg-success/5 hover:text-success'
+                  }`}
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-3 h-3" />
                   Active
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === 'new' ? 'primary' : 'secondary'}
+                </button>
+                <button
                   onClick={() => setStatusFilter('new')}
-                  className="whitespace-nowrap"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap ${
+                    statusFilter === 'new'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:bg-primary/5 hover:text-primary'
+                  }`}
                 >
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-3 h-3" />
                   New
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === 'expired' ? 'primary' : 'secondary'}
+                </button>
+                <button
                   onClick={() => setStatusFilter('expired')}
-                  className="whitespace-nowrap"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap ${
+                    statusFilter === 'expired'
+                      ? 'bg-error text-white shadow-sm'
+                      : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:bg-error/5 hover:text-error'
+                  }`}
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-3 h-3" />
                   Expired
-                </Button>
+                </button>
               </>
             )}
+
             {activeTab === 'applications' && (
               <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === 'pending' ? 'primary' : 'secondary'}
+                <button
                   onClick={() => setStatusFilter('pending')}
-                  className="whitespace-nowrap"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap ${
+                    statusFilter === 'pending'
+                      ? 'bg-warning text-white shadow-sm'
+                      : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:bg-warning/5 hover:text-warning'
+                  }`}
                 >
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-3 h-3" />
                   Pending
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === 'approved' ? 'primary' : 'secondary'}
+                </button>
+                <button
                   onClick={() => setStatusFilter('approved')}
-                  className="whitespace-nowrap"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap ${
+                    statusFilter === 'approved'
+                      ? 'bg-success text-white shadow-sm'
+                      : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:bg-success/5 hover:text-success'
+                  }`}
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-3 h-3" />
                   Approved
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === 'rejected' ? 'primary' : 'secondary'}
-                  onClick={() => setStatusFilter('rejected')}
-                  className="whitespace-nowrap"
-                >
-                  <XCircle className="w-4 h-4" />
-                  Rejected
-                </Button>
+                </button>
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content Section */}
       {activeTab === 'memberships' && (
         <>
           <MembershipsTab
@@ -725,9 +728,16 @@ function MembershipManagementContent() {
               setSelectedMembership(membership);
               setShowRenewModal(true);
             }}
+            onSendReminder={(id) => sendReminderMutation.mutate(id)}
             isProcessing={
-              activateMutation.isPending || suspendMutation.isPending || expireMutation.isPending
+              activateMutation.isPending || 
+              suspendMutation.isPending || 
+              expireMutation.isPending || 
+              sendReminderMutation.isPending
             }
+            success={success}
+            toastError={toastError}
+            info={info}
           />
 
           {/* Pagination Controls */}
@@ -814,7 +824,7 @@ function MembershipManagementContent() {
         />
       )}
 
-      {activeTab === 'owners' && <OwnersTab owners={salonOwners} memberships={memberships} />}
+      {activeTab === 'owners' && <OwnersTab owners={salonOwners} memberships={memberships} success={success} toastError={toastError} info={info} />}
 
       {activeTab === 'employees' && (
         <EmployeesTab employees={salonEmployees} memberships={memberships} />
@@ -841,6 +851,35 @@ function MembershipManagementContent() {
         <MembershipDetailModal
           membership={selectedMembership}
           onClose={() => setSelectedMembership(null)}
+          onDownloadCertificate={async () => {
+            try {
+              const ownerId = selectedMembership.salon?.owner?.id;
+              if (!ownerId) {
+                toastError('Owner not found');
+                return;
+              }
+              info('Generating certificate. Please wait...', { title: 'Downloading' });
+              const response = await api.get(
+                `/reports/membership-certificate/${ownerId}`,
+                { responseType: 'blob' }
+              );
+              const url = window.URL.createObjectURL(new Blob([response.data]));
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `membership-certificate-${selectedMembership.membershipNumber}.pdf`;
+              link.click();
+              window.URL.revokeObjectURL(url);
+              success(`Certificate for ${selectedMembership.salon?.name || 'membership'} downloaded successfully`);
+            } catch (error) {
+              toastError('Failed to download certificate');
+            }
+          }}
+          onSendReminder={() => sendReminderMutation.mutate(selectedMembership.id)}
+          paymentStatus={selectedMembership.salon?.owner?.id ? paymentStatuses[selectedMembership.salon.owner.id] : undefined}
+          isProcessing={sendReminderMutation.isPending}
+          success={success}
+          toastError={toastError}
+          info={info}
         />
       )}
 
@@ -851,6 +890,9 @@ function MembershipManagementContent() {
           onApprove={() => handleApproveApplication(selectedApplication)}
           onReject={() => handleRejectApplication(selectedApplication)}
           isProcessing={reviewApplicationMutation.isPending}
+          success={success}
+          toastError={toastError}
+          info={info}
         />
       )}
 
@@ -907,7 +949,11 @@ function MembershipsTab({
   onSuspend,
   onExpire,
   onRenew,
+  onSendReminder,
   isProcessing,
+  success,
+  toastError,
+  info,
 }: {
   memberships: Membership[];
   paymentStatuses: Record<string, PaymentStatus>;
@@ -916,7 +962,11 @@ function MembershipsTab({
   onSuspend: (id: string) => void;
   onExpire: (id: string) => void;
   onRenew: (m: Membership) => void;
+  onSendReminder: (id: string) => void;
   isProcessing: boolean;
+  success: (message: string, options?: any) => void;
+  toastError: (message: string, options?: any) => void;
+  info: (message: string, options?: any) => void;
 }) {
   if (memberships.length === 0) {
     return (
@@ -935,7 +985,7 @@ function MembershipsTab({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {memberships.map((membership) => {
         const config = statusConfig[membership.status];
         const Icon = config.icon;
@@ -947,168 +997,130 @@ function MembershipsTab({
         return (
           <div
             key={membership.id}
-            className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:shadow-sm transition-shadow overflow-hidden"
+            className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5 hover:shadow-md hover:border-primary/30 transition-all"
           >
-            {/* Left accent rail */}
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bg.replace('/10', '')}`} />
-
-            <div className="p-3 pl-4">
-              <div className="flex items-center justify-between gap-3">
-                {/* Main content */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div
-                    className={`h-8 w-8 rounded ${config.bg} flex items-center justify-center flex-shrink-0`}
-                  >
-                    <Icon className={`w-4 h-4 ${config.color}`} />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className={`h-8 w-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                  <Icon className={`w-4 h-4 ${config.color}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark truncate leading-none">
+                      {membership.salon?.name || 'Unknown Salon'}
+                    </h3>
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${config.bg} ${config.color} border ${config.border.replace('border-', 'border-')}`}>
+                      {config.label}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
-                        {membership.salon?.name || 'Unknown Salon'}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${config.bg} ${config.color} border ${config.border}`}
-                      >
-                        <Icon className="w-3 h-3" />
-                        {config.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
-                      <span>{membership.salon?.owner?.fullName || 'Owner'}</span>
-                      <span>•</span>
-                      <span className="text-primary font-medium">
-                        {membership.membershipNumber || 'N/A'}
-                      </span>
-                      <span>•</span>
-                      <span>{membership.category || 'Standard'}</span>
-                      {paymentStatus && (
-                        <>
-                          <span>•</span>
-                          <span className={`${isPaid ? 'text-success' : 'text-error'} font-medium`}>
-                            {paidAmount.toLocaleString()} / {totalAmount.toLocaleString()} RWF
-                          </span>
-                        </>
-                      )}
-                    </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium font-inter">
+                    <span className="truncate max-w-[120px]">{membership.salon?.owner?.fullName || 'Owner'}</span>
+                    <span className="text-text-light/20">•</span>
+                    <span className="text-primary font-bold">{membership.membershipNumber || 'N/A'}</span>
+                    <span className="text-text-light/20">•</span>
+                    <span className="bg-background-light dark:bg-background-dark px-1 rounded border border-border-light dark:border-border-dark">{membership.category || 'Standard'}</span>
+                    {paymentStatus && (
+                      <>
+                        <span className="text-text-light/20">•</span>
+                        <span className={`${isPaid ? 'text-success' : 'text-error'} font-bold`}>
+                          {paidAmount.toLocaleString()} / {totalAmount.toLocaleString()} RWF
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {membership.status === 'new' && (
-                    (isPaid || paidAmount >= 1500) ? (
-                      <Button
-                        onClick={() => onActivate(membership.id)}
-                        variant="primary"
-                        size="sm"
-                        disabled={isProcessing}
-                        className="gap-1.5"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Activate
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => {
-                          // Use owner name or membership number for search
-                          const searchTerm = membership.salon?.owner?.fullName || membership.membershipNumber || '';
-                          const url = `/memberships/payments?search=${encodeURIComponent(searchTerm)}`;
-                          window.location.href = url;
-                        }}
-                        variant="secondary"
-                        size="sm"
-                        className="gap-1.5 text-error border-1 border-error/50 hover:bg-error/10 hover:border-error"
-                      >
-                        <DollarSign className="w-3.5 h-3.5" />
-                        Record Payment
-                      </Button>
-                    )
-                  )}
-                  {membership.status === 'active' && (
-                    <>
-                      <Button
-                        onClick={() => onRenew(membership)}
-                        variant="secondary"
-                        size="sm"
-                        disabled={isProcessing}
-                        className="gap-1.5"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Renew
-                      </Button>
-                      {/* Download Certificate Button */}
-                      <Button
-                        onClick={async () => {
-                          try {
-                            const ownerId = membership.salon?.owner?.id;
-                            if (!ownerId) {
-                              alert('Owner not found');
-                              return;
-                            }
-                            const response = await api.get(
-                              `/reports/membership-certificate/${ownerId}`,
-                              { responseType: 'blob' }
-                            );
-                            const url = window.URL.createObjectURL(new Blob([response.data]));
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `membership-certificate-${membership.membershipNumber}.pdf`;
-                            link.click();
-                            window.URL.revokeObjectURL(url);
-                          } catch (error) {
-                            alert('Failed to download certificate');
-                          }
-                        }}
-                        variant="secondary"
-                        size="sm"
-                        className="gap-1.5 text-primary hover:bg-primary/10"
-                        title="Download Certificate"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        Certificate
-                      </Button>
-                      <Button
-                        onClick={() => onSuspend(membership.id)}
-                        variant="secondary"
-                        size="sm"
-                        disabled={isProcessing}
-                        className="text-warning hover:bg-warning/10"
-                      >
-                        <Ban className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        onClick={() => onExpire(membership.id)}
-                        variant="secondary"
-                        size="sm"
-                        disabled={isProcessing}
-                        className="text-error hover:bg-error/10"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                      </Button>
-                    </>
-                  )}
-                  {membership.status === 'expired' && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {membership.status === 'new' && (
+                  (isPaid || paidAmount >= 1500) ? (
                     <Button
-                      onClick={() => onRenew(membership)}
+                      onClick={() => onActivate(membership.id)}
                       variant="primary"
                       size="sm"
                       disabled={isProcessing}
-                      className="gap-1.5"
+                      className="h-7 px-2.5 text-[11px] gap-1.5 shadow-sm"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Activate
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        const searchTerm = membership.salon?.owner?.fullName || membership.membershipNumber || '';
+                        window.location.href = `/memberships/payments?search=${encodeURIComponent(searchTerm)}`;
+                      }}
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2.5 text-[11px] gap-1.5 text-error border-error/20 hover:bg-error/5"
+                    >
+                      <DollarSign className="w-3.5 h-3.5" />
+                      Pay
+                    </Button>
+                  )
+                )}
+                
+                {membership.status === 'active' && (
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={() => onRenew(membership)}
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2 text-[11px] gap-1 dark:text-text-dark/80"
+                      title="Renew"
+                    >
+                      <RefreshCw className="w-3 h-3" />
                       Renew
                     </Button>
-                  )}
-                  <Button
-                    onClick={() => onView(membership)}
-                    variant="secondary"
-                    size="sm"
-                    className="gap-1.5"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Details
-                  </Button>
-                </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const ownerId = membership.salon?.owner?.id;
+                          if (!ownerId) return toastError('Owner not found');
+                          info('Generating certificate...', { title: 'Downloading' });
+                          const response = await api.get(`/reports/membership-certificate/${ownerId}`, { responseType: 'blob' });
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `certificate-${membership.membershipNumber}.pdf`;
+                          link.click();
+                          window.URL.revokeObjectURL(url);
+                          success(`Certificate ready`);
+                        } catch (error) {
+                          toastError('Download failed');
+                        }
+                      }}
+                      className="p-1.5 text-text-light/40 dark:text-text-dark/40 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                      title="Certificate"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onSendReminder(membership.id)}
+                      className="p-1.5 text-text-light/40 dark:text-text-dark/40 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                      title="Send Reminder"
+                    >
+                      <Bell className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onSuspend(membership.id)}
+                      className="p-1.5 text-text-light/40 dark:text-text-dark/40 hover:text-warning hover:bg-warning/5 rounded-lg transition-all"
+                      title="Suspend"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => onView(membership)}
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 w-7 p-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="View Details"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
               </div>
             </div>
           </div>
@@ -1148,7 +1160,7 @@ function ApplicationsTab({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {applications.map((application) => {
         const config = statusConfig[application.status];
         const Icon = config.icon;
@@ -1156,88 +1168,76 @@ function ApplicationsTab({
         return (
           <div
             key={application.id}
-            className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg hover:shadow-sm transition-shadow overflow-hidden"
+            className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5 hover:shadow-md hover:border-primary/30 transition-all"
           >
-            {/* Left accent rail */}
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.bg.replace('/10', '')}`} />
-
-            <div className="p-3 pl-4">
-              <div className="flex items-center justify-between gap-3">
-                {/* Main content */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div
-                    className={`h-8 w-8 rounded ${config.bg} flex items-center justify-center flex-shrink-0`}
-                  >
-                    <Icon className={`w-4 h-4 ${config.color}`} />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className={`h-8 w-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                  <Icon className={`w-4 h-4 ${config.color}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark truncate leading-none">
+                      {application.businessName || application.applicant.fullName}
+                    </h3>
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${config.bg} ${config.color} border ${config.border}`}>
+                      {config.label}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
-                        {application.businessName || application.applicant.fullName}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${config.bg} ${config.color} border ${config.border}`}
-                      >
-                        <Icon className="w-3 h-3" />
-                        {config.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
-                      <span>{application.applicant.fullName}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3" />
-                        {application.applicant.email}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        {application.phone || 'N/A'}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {application.city || 'N/A'}
-                      </span>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium">
+                    <span className="truncate max-w-[120px]">{application.applicant.fullName}</span>
+                    <span className="text-text-light/20">•</span>
+                    <span className="flex items-center gap-1 font-inter">
+                      <Mail className="w-3 h-3 text-text-light/40" />
+                      {application.applicant.email}
+                    </span>
+                    <span className="text-text-light/20">•</span>
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-text-light/40" />
+                      {application.phone || 'N/A'}
+                    </span>
+                    <span className="text-text-light/20">•</span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-text-light/40" />
+                      {application.city || 'N/A'}
+                    </span>
                   </div>
                 </div>
+              </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {application.status === 'pending' && (
-                    <>
-                      <Button
-                        onClick={() => onApprove(application)}
-                        variant="primary"
-                        size="sm"
-                        disabled={isProcessing}
-                        className="gap-1.5"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Approve
-                      </Button>
-                      <Button
-                        onClick={() => onReject(application)}
-                        size="sm"
-                        disabled={isProcessing}
-                        className="gap-1.5 bg-error hover:bg-error/90 text-white"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    onClick={() => onView(application)}
-                    variant="secondary"
-                    size="sm"
-                    className="gap-1.5"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    View
-                  </Button>
-                </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {application.status === 'pending' && (
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={() => onApprove(application)}
+                      variant="primary"
+                      size="sm"
+                      disabled={isProcessing}
+                      className="h-7 px-2.5 text-[11px] gap-1.5 shadow-sm"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => onReject(application)}
+                      size="sm"
+                      disabled={isProcessing}
+                      className="h-7 px-2.5 text-[11px] gap-1.5 bg-error/10 hover:bg-error/20 text-error border-none"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  onClick={() => onView(application)}
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 w-7 p-0 flex items-center justify-center"
+                  title="View Application"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
               </div>
             </div>
           </div>
@@ -1247,7 +1247,7 @@ function ApplicationsTab({
   );
 }
 
-function OwnersTab({ owners, memberships }: { owners: OwnerUser[]; memberships: Membership[] }) {
+function OwnersTab({ owners, memberships, success, toastError, info }: { owners: OwnerUser[]; memberships: Membership[]; success: (message: string, options?: any) => void; toastError: (message: string, options?: any) => void; info: (message: string, options?: any) => void }) {
   if (owners.length === 0) {
     return (
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
@@ -1260,101 +1260,95 @@ function OwnersTab({ owners, memberships }: { owners: OwnerUser[]; memberships: 
   }
 
   return (
-    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Membership #
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Name
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Email
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Phone
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Salon Membership Status
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-light dark:divide-border-dark">
-          {owners.map((owner) => {
-            const ownerMemberships = memberships.filter((m) => m.salon?.owner?.id === owner.id);
-            const activeMembership = ownerMemberships.find((m) => m.status === 'active');
+    <div className="space-y-2">
+      {owners.map((owner) => {
+        const ownerMemberships = memberships.filter((m) => m.salon?.owner?.id === owner.id);
+        const activeMembership = ownerMemberships.find((m) => m.status === 'active');
 
-            return (
-              <tr
-                key={owner.id}
-                className="hover:bg-background-light dark:hover:bg-background-dark"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
-                  {owner.membershipNumber || (
-                    <span className="text-text-light/40 dark:text-text-dark/40 italic">
-                      Not assigned
-                    </span>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-light dark:text-text-dark">
-                  {owner.fullName}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                  {owner.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                  {owner.phone || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    {activeMembership ? (
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-success/10 text-success border border-success/20">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-warning/10 text-warning border border-warning/20">
-                        No Active Membership
-                      </span>
-                    )}
+        return (
+          <div
+            key={owner.id}
+            className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5 hover:shadow-md hover:border-primary/30 transition-all"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <UserCheck className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark truncate leading-none">
+                      {owner.fullName}
+                    </h3>
                     {owner.membershipNumber && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            const response = await api.get(
-                              `/reports/membership-certificate/${owner.id}`,
-                              {
-                                responseType: 'blob',
-                              }
-                            );
-                            const url = window.URL.createObjectURL(new Blob([response.data]));
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.setAttribute(
-                              'download',
-                              `membership-certificate-${owner.membershipNumber}.pdf`
-                            );
-                            document.body.appendChild(link);
-                            link.click();
-                            link.remove();
-                          } catch (error) {
-                            alert('Failed to download certificate');
-                          }
-                        }}
-                        className="p-1.5 text-primary hover:bg-primary/10 rounded transition"
-                        title="Download Certificate"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                        {owner.membershipNumber}
+                      </span>
                     )}
                   </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium font-inter">
+                    <span className="flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-text-light/40" />
+                      {owner.email}
+                    </span>
+                    <span className="text-text-light/20">•</span>
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-text-light/40" />
+                      {owner.phone || 'N/A'}
+                    </span>
+                    <span className="text-text-light/20">•</span>
+                    {activeMembership ? (
+                      <span className="text-success font-bold flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Active Salon
+                      </span>
+                    ) : (
+                      <span className="text-warning font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        No Active Salon
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {owner.membershipNumber && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        info('Preparing certificate...', { title: 'Downloading' });
+                        const response = await api.get(`/reports/membership-certificate/${owner.id}`, { responseType: 'blob' });
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `membership-certificate-${owner.membershipNumber}.pdf`;
+                        link.click();
+                        window.URL.revokeObjectURL(url);
+                        success('Certificate ready');
+                      } catch (error) {
+                        toastError('Download failed');
+                      }
+                    }}
+                    className="p-1.5 text-text-light/40 dark:text-text-dark/40 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                    title="Download Certificate"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 w-7 p-0 flex items-center justify-center"
+                  title="View Owner Details"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1378,60 +1372,66 @@ function EmployeesTab({
   }
 
   return (
-    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Name
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Salon
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Role
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase">
-              Salon Membership
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-light dark:divide-border-dark">
-          {employees.map((employee) => {
-            const salonMembership = memberships.find(
-              (m) => m.salonId === employee.salonId && m.status === 'active'
-            );
+    <div className="space-y-2">
+      {employees.map((employee) => {
+        const salonMembership = memberships.find(
+          (m) => m.salonId === employee.salonId && m.status === 'active'
+        );
 
-            return (
-              <tr
-                key={employee.id}
-                className="hover:bg-background-light dark:hover:bg-background-dark"
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-light dark:text-text-dark">
-                  {employee.user?.fullName || employee.roleTitle || 'Unknown'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                  {employee.salonName || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
-                  {employee.roleTitle || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {salonMembership ? (
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-success/10 text-success border border-success/20">
-                      Active
+        return (
+          <div
+            key={employee.id}
+            className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5 hover:shadow-md hover:border-primary/30 transition-all font-inter"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Users className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark truncate leading-none">
+                      {employee.user?.fullName || employee.roleTitle || 'Unknown'}
+                    </h3>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 uppercase">
+                      {employee.roleTitle || 'STAFF'}
                     </span>
-                  ) : (
-                    <span className="px-2.5 py-1 text-xs font-medium rounded-md bg-warning/10 text-warning border border-warning/20">
-                      No Active Membership
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Building2 className="w-3 h-3 text-text-light/40" />
+                      {employee.salonName || 'N/A'}
                     </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    <span className="text-text-light/20">•</span>
+                    {salonMembership ? (
+                      <span className="text-success font-bold flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Active Salon
+                      </span>
+                    ) : (
+                      <span className="text-warning font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Inactive Salon
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-7 w-7 p-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="View Staff Details"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1670,17 +1670,38 @@ function ConfirmReviewModal({
 function MembershipDetailModal({
   membership,
   onClose,
+  onDownloadCertificate,
+  onSendReminder,
+  isProcessing,
+  paymentStatus,
+  success,
+  toastError,
+  info,
 }: {
   membership: Membership;
   onClose: () => void;
+  onDownloadCertificate?: () => void;
+  onSendReminder?: () => void;
+  isProcessing: boolean;
+  paymentStatus?: PaymentStatus;
+  success: (message: string, options?: any) => void;
+  toastError: (message: string, options?: any) => void;
+  info: (message: string, options?: any) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'details' | 'activity'>('overview');
   const config = statusConfig[membership.status];
   const Icon = config.icon;
+
+  const daysUntilExpiry = membership.endDate
+    ? Math.ceil(
+        (new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      )
+    : null;
 
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-in fade-in"
         onClick={onClose}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
@@ -1691,97 +1712,363 @@ function MembershipDetailModal({
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in fade-in slide-in-from-bottom-4 flex flex-col"
           role="presentation"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              Membership Details
-            </h2>
-            <Button
-              type="button"
-              onClick={onClose}
-              variant="secondary"
-              size="sm"
-              className="h-9 w-9 p-0"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
-                Status
-              </h3>
-              <div
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${config.bg} ${config.border}`}
-              >
-                <Icon className={`w-5 h-5 ${config.color}`} />
-                <span className={`font-semibold ${config.color}`}>{config.label}</span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
-                Salon Information
-              </h3>
-              <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4 space-y-2">
-                <div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Salon Name</p>
-                  <p className="text-text-light dark:text-text-dark font-medium">
-                    {membership.salon?.name || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Owner</p>
-                  <p className="text-text-light dark:text-text-dark font-medium">
-                    {membership.salon?.owner?.fullName || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Owner Email</p>
-                  <p className="text-text-light dark:text-text-dark font-medium">
-                    {membership.salon?.owner?.email || 'N/A'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-3">
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
                 Membership Details
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                    Membership Number
-                  </p>
-                  <p className="text-text-light dark:text-text-dark font-medium">
-                    {membership.membershipNumber}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">Category</p>
-                  <p className="text-text-light dark:text-text-dark font-medium">
-                    {membership.category || 'N/A'}
-                  </p>
-                </div>
-                {membership.startDate && (
-                  <div>
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">Start Date</p>
-                    <p className="text-text-light dark:text-text-dark font-medium">
-                      {new Date(membership.startDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-                {membership.endDate && (
-                  <div>
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">End Date</p>
-                    <p className="text-text-light dark:text-text-dark font-medium">
-                      {new Date(membership.endDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-              </div>
+              </h2>
+              <Button
+                type="button"
+                onClick={onClose}
+                variant="secondary"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 -mb-4">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-3 py-2 font-medium text-xs transition-colors relative ${
+                  activeTab === 'overview'
+                    ? 'text-primary'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                }`}
+              >
+                Overview
+                {activeTab === 'overview' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('details')}
+                className={`px-3 py-2 font-medium text-xs transition-colors relative ${
+                  activeTab === 'details'
+                    ? 'text-primary'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                }`}
+              >
+                Details
+                {activeTab === 'details' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('activity')}
+                className={`px-3 py-2 font-medium text-xs transition-colors relative ${
+                  activeTab === 'activity'
+                    ? 'text-primary'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                }`}
+              >
+                Activity
+                {activeTab === 'activity' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeTab === 'overview' && (
+              <div className="space-y-4">
+                {/* Status with Alert */}
+                <div>
+                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                    Membership Status
+                  </h3>
+                  <div
+                    className={`flex items-start gap-3 p-3 rounded-lg border ${
+                      membership.status === 'active'
+                        ? 'bg-success/5 border-success/20'
+                        : membership.status === 'expired'
+                          ? 'bg-error/5 border-error/20'
+                          : 'bg-warning/5 border-warning/20'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 ${config.color} mt-0.5`} />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`font-bold ${config.color} text-sm`}>{config.label}</span>
+                        {daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 30 && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-warning/10 text-warning text-[10px] font-bold border border-warning/20">
+                            <AlertCircle className="w-3 h-3" />
+                            Expires soon
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                        {daysUntilExpiry !== null && daysUntilExpiry > 0
+                          ? `Valid for ${daysUntilExpiry} days.`
+                          : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                            ? `Expired ${Math.abs(daysUntilExpiry)} days ago.`
+                            : 'Currently inactive.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Payment Status Card */}
+                  <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1.5">
+                      Payment Status
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {paymentStatus?.isComplete ? (
+                        <CheckCircle className="w-4 h-4 text-success" />
+                      ) : paymentStatus?.totalPaid && paymentStatus.totalPaid > 0 ? (
+                        <Clock className="w-4 h-4 text-warning" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-error" />
+                      )}
+                      <div className="flex flex-col">
+                        <span
+                          className={`text-sm font-bold leading-none ${
+                            paymentStatus?.isComplete
+                              ? 'text-success'
+                              : paymentStatus?.totalPaid && paymentStatus.totalPaid > 0
+                                ? 'text-warning'
+                                : 'text-error'
+                          }`}
+                        >
+                          {paymentStatus?.isComplete
+                            ? 'Paid'
+                            : paymentStatus?.totalPaid && paymentStatus.totalPaid > 0
+                              ? 'Partial'
+                              : 'Pending'}
+                        </span>
+                        {paymentStatus && !paymentStatus.isComplete && paymentStatus.totalPaid > 0 && (
+                          <span className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                            RWF {paymentStatus.totalPaid.toLocaleString()} paid
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Time Remaining Card */}
+                  <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1.5">
+                      Time Remaining
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                      <span
+                        className={`text-sm font-bold ${
+                          daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
+                            ? 'text-warning'
+                            : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                              ? 'text-error'
+                              : 'text-text-light dark:text-text-dark'
+                        }`}
+                      >
+                        {daysUntilExpiry !== null && daysUntilExpiry > 0
+                          ? `${daysUntilExpiry} days`
+                          : daysUntilExpiry !== null && daysUntilExpiry <= 0
+                            ? 'Expired'
+                            : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Salon Information */}
+                <div>
+                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                    Salon Information
+                  </h3>
+                  <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 space-y-2.5">
+                    <div className="flex items-start gap-3">
+                      <Building2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                          Salon Name
+                        </p>
+                        <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                          {membership.salon?.name || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {membership.salon?.address && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                            Address
+                          </p>
+                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                            {membership.salon.address}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {membership.salon?.phone && (
+                      <div className="flex items-start gap-3">
+                        <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                            Phone
+                          </p>
+                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                            {membership.salon.phone}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-3">
+                      <Users className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                          Owner
+                        </p>
+                        <div className="flex flex-col">
+                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                            {membership.salon?.owner?.fullName || 'N/A'}
+                          </p>
+                          {membership.salon?.owner?.email && (
+                            <p className="text-xs text-text-light/60 dark:text-text-dark/60 truncate">
+                              {membership.salon.owner.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'details' && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                    Membership Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                        Membership Number
+                      </p>
+                      <p className="text-text-light dark:text-text-dark font-mono text-sm">
+                        {membership.membershipNumber}
+                      </p>
+                    </div>
+                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                        Category
+                      </p>
+                      <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                        {membership.category || 'N/A'}
+                      </p>
+                    </div>
+                    {membership.startDate && (
+                      <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                        <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                          Start Date
+                        </p>
+                        <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                          {new Date(membership.startDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                    )}
+                    {membership.endDate && (
+                      <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                        <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                          End Date
+                        </p>
+                        <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                          {new Date(membership.endDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                    Timestamps
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                        Created
+                      </p>
+                      <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                        {new Date(membership.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                        Last Updated
+                      </p>
+                      <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                        {new Date(membership.updatedAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'activity' && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                  Recent Activity
+                </h3>
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg border-dashed">
+                  <div className="w-8 h-8 mb-2 text-text-light/30 dark:text-text-dark/30">
+                    <Clock className="w-full h-full" />
+                  </div>
+                  <p className="text-xs font-bold text-text-light dark:text-text-dark mb-1">
+                    No activity recorded
+                  </p>
+                  <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 max-w-[200px]">
+                    Activity logs will appear here once actions are performed.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="px-5 py-4 border-t border-border-light dark:border-border-dark flex gap-3 justify-end">
+            <Button onClick={onClose} variant="secondary" size="sm">
+              Close
+            </Button>
+            {membership.status === 'active' && onDownloadCertificate && (
+              <Button onClick={onDownloadCertificate} variant="secondary" size="sm" className="flex items-center gap-1.5 text-success border-success/50 hover:bg-success/10 hover:border-success">
+                <Download className="w-3.5 h-3.5" />
+                Download Certificate
+              </Button>
+            )}
+            {onSendReminder && (
+              <Button onClick={onSendReminder} variant="secondary" size="sm" className="flex items-center gap-1.5" disabled={isProcessing}>
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+                Send Reminder
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -1795,12 +2082,18 @@ function ApplicationDetailModal({
   onApprove,
   onReject,
   isProcessing,
+  success,
+  toastError,
+  info,
 }: {
   application: MembershipApplication;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
   isProcessing: boolean;
+  success: (message: string, options?: any) => void;
+  toastError: (message: string, options?: any) => void;
+  info: (message: string, options?: any) => void;
 }) {
   const config = statusConfig[application.status];
   const Icon = config.icon;
@@ -1889,12 +2182,14 @@ function ApplicationDetailModal({
                                 'download',
                                 `membership-certificate-${application.applicant.membershipNumber}.pdf`
                               );
-                              document.body.appendChild(link);
-                              link.click();
-                              link.remove();
-                            } catch (error) {
-                              alert('Failed to download certificate');
-                            }
+                               document.body.appendChild(link);
+                               info('Generating certificate. Please wait...', { title: 'Downloading' });
+                               link.click();
+                               link.remove();
+                               success(`Certificate for ${application.businessName || application.applicant?.fullName || 'member'} downloaded successfully`);
+                             } catch (error) {
+                               toastError('Failed to download certificate');
+                             }
                           }}
                           className="p-1.5 text-primary hover:bg-primary/10 rounded transition"
                           title="Download Certificate"

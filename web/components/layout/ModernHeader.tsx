@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useEffect } from 'react';
 import { Search, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
-import CommandPalette from '@/components/navigation/CommandPalette';
+import GlobalSearch from '@/components/navigation/GlobalSearch';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 function ModernHeaderComponent() {
@@ -13,7 +13,19 @@ function ModernHeaderComponent() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Global keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -22,8 +34,8 @@ function ModernHeaderComponent() {
 
   const closeUserMenu = useCallback(() => setShowUserMenu(false), []);
   const toggleUserMenu = useCallback(() => setShowUserMenu(prev => !prev), []);
-  const openCommandPalette = useCallback(() => setShowCommandPalette(true), []);
-  const closeCommandPalette = useCallback(() => setShowCommandPalette(false), []);
+  const openSearch = useCallback(() => setShowSearch(true), []);
+  const closeSearch = useCallback(() => setShowSearch(false), []);
 
   const handleSettingsClick = useCallback(() => {
     router.push('/settings');
@@ -41,9 +53,10 @@ function ModernHeaderComponent() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-focus-within:text-primary transition" />
                 <input
                   type="text"
-                  placeholder="Search... (⌘K)"
-                  onClick={openCommandPalette}
-                  className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  placeholder="Search everything... (⌘K)"
+                  onClick={openSearch}
+                  readOnly
+                  className="w-full pl-10 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition cursor-pointer"
                 />
                 <kbd className="absolute right-2 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-text-light/40 dark:text-text-dark/40 bg-surface-light dark:bg-surface-dark rounded border border-border-light dark:border-border-dark">
                   <span>⌘</span>
@@ -123,10 +136,8 @@ function ModernHeaderComponent() {
         </div>
       </header>
 
-      {/* Command Palette */}
-      {showCommandPalette && (
-        <CommandPalette isOpen={showCommandPalette} onClose={closeCommandPalette} />
-      )}
+      {/* Global Search */}
+      <GlobalSearch isOpen={showSearch} onClose={closeSearch} />
     </>
   );
 }

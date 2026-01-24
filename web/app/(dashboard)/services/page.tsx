@@ -13,6 +13,9 @@ import {
   DollarSign,
   XCircle,
   Upload,
+  Tag,
+  Users,
+  Check,
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -21,6 +24,8 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { canViewAllSalons } from '@/lib/permissions';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
 
 interface Service {
   id: string;
@@ -33,6 +38,8 @@ interface Service {
   isActive: boolean;
   imageUrl?: string;
   images?: string[];
+  category?: string;
+  targetGender?: string;
   salon?: {
     id: string;
     name: string;
@@ -57,8 +64,10 @@ export default function ServicesPage() {
 function ServicesContent() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const { success, error: toastError } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<Service | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
@@ -142,7 +151,13 @@ function ServicesContent() {
       queryClient.invalidateQueries({ queryKey: servicesQueryKey });
       // Force refetch
       queryClient.refetchQueries({ queryKey: servicesQueryKey });
+      
+      success('Service deleted successfully');
+      setDeleteConfirmation(null);
     },
+    onError: (err: any) => {
+      toastError(err.response?.data?.message || 'Failed to delete service');
+    }
   });
 
   // Filter services
@@ -468,15 +483,7 @@ function ServicesContent() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (
-                              confirm(
-                                'Are you sure you want to delete this service? This action cannot be undone.'
-                              )
-                            ) {
-                              deleteMutation.mutate(service.id);
-                            }
-                          }}
+                          onClick={() => setDeleteConfirmation(service)}
                           className="text-danger hover:text-danger/80 transition"
                           title="Delete service"
                         >
@@ -508,11 +515,29 @@ function ServicesContent() {
             queryClient.invalidateQueries({ queryKey: servicesQueryKey });
             // Force refetch
             queryClient.refetchQueries({ queryKey: servicesQueryKey });
+            
+            success(editingService ? 'Service updated successfully' : 'Service created successfully');
             setShowModal(false);
             setEditingService(null);
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!deleteConfirmation}
+        onClose={() => setDeleteConfirmation(null)}
+        onConfirm={() => {
+          if (deleteConfirmation) {
+            deleteMutation.mutate(deleteConfirmation.id);
+          }
+        }}
+        title="Delete Service"
+        message={`Are you sure you want to delete "${deleteConfirmation?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isProcessing={deleteMutation.isPending}
+      />
     </>
   );
 }
@@ -539,8 +564,10 @@ function ServiceModal({
     name: service?.name || '',
     description: service?.description || '',
     durationMinutes: service?.durationMinutes || 30,
-    basePrice: service?.basePrice || 0,
+    basePrice: service?.basePrice ?? '',
     isActive: service?.isActive ?? true,
+    category: service?.category || '',
+    targetGender: service?.targetGender || 'all',
   });
   const [imageUrls, setImageUrls] = useState<string[]>(initialImages);
   const [error, setError] = useState('');
@@ -636,8 +663,9 @@ function ServiceModal({
       setLoading(false);
       return;
     }
-    if (formData.basePrice < 0) {
-      setError('Base price must be greater than or equal to 0');
+    const priceValue = typeof formData.basePrice === 'string' ? parseFloat(formData.basePrice) : formData.basePrice;
+    if (formData.basePrice === '' || isNaN(priceValue) || priceValue < 0) {
+      setError('Please enter a valid price');
       setLoading(false);
       return;
     }
@@ -650,6 +678,7 @@ function ServiceModal({
     // Prepare submission data with images
     const submitData = {
       ...formData,
+      basePrice: priceValue, // Ensure it's a number
       imageUrl: imageUrls[0] || '', // Primary image
       images: imageUrls, // All images
     };
@@ -788,9 +817,92 @@ function ServiceModal({
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows={3}
-                        placeholder="What’s included? Any notes for staff/customers."
+                        placeholder="What's included? Any notes for staff/customers."
                         className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
                       />
+                    </div>
+
+                    {/* Category Selection - Multi Select */}
+                    <div>
+                      <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase flex items-center gap-1.5">
+                        <Tag className="w-3 h-3" />
+                        Service Categories
+                      </label>
+                      <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mb-2">
+                        Select all that apply
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'haircut', label: 'Haircut & Styling' },
+                          { id: 'coloring', label: 'Hair Coloring' },
+                          { id: 'treatment', label: 'Hair Treatment' },
+                          { id: 'braiding', label: 'Braiding & Weaving' },
+                          { id: 'nails', label: 'Nails & Manicure' },
+                          { id: 'makeup', label: 'Makeup & Beauty' },
+                          { id: 'facial', label: 'Facial & Skincare' },
+                          { id: 'massage', label: 'Massage & Spa' },
+                          { id: 'waxing', label: 'Waxing & Hair Removal' },
+                          { id: 'barber', label: 'Barber Services' },
+                        ].map((cat) => {
+                          const categories = formData.category ? formData.category.split(',') : [];
+                          const isSelected = categories.includes(cat.id);
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                let updated: string[];
+                                if (isSelected) {
+                                  updated = categories.filter((c) => c !== cat.id);
+                                } else {
+                                  updated = [...categories, cat.id];
+                                }
+                                setFormData({ ...formData, category: updated.join(',') });
+                              }}
+                              className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-medium transition ${
+                                isSelected
+                                  ? 'bg-primary/10 border-primary text-primary'
+                                  : 'bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark text-text-light/80 dark:text-text-dark/80 hover:border-primary/50'
+                              }`}
+                            >
+                              <span className="flex-1 text-left">{cat.label}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Target Gender */}
+                    <div>
+                      <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase flex items-center gap-1.5">
+                        <Users className="w-3 h-3" />
+                        Target Gender
+                      </label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'all', label: 'Everyone' },
+                          { value: 'male', label: 'Men' },
+                          { value: 'female', label: 'Women' },
+                        ].map((option) => {
+                          const isSelected = formData.targetGender === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, targetGender: option.value })}
+                              className={`flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-medium transition ${
+                                isSelected
+                                  ? 'bg-primary/10 border-primary text-primary'
+                                  : 'bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark text-text-light/80 dark:text-text-dark/80 hover:border-primary/50'
+                              }`}
+                            >
+                              <span>{option.label}</span>
+                              {isSelected && <Check className="w-3.5 h-3.5" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -810,19 +922,17 @@ function ServiceModal({
                         <label htmlFor="service-price" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
                           Price (RWF) *
                         </label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
-                          <input
-                            id="service-price"
-                            type="number"
-                            required
-                            min="0"
-                            step="100"
-                            value={formData.basePrice}
-                            onChange={(e) => setFormData({ ...formData, basePrice: parseFloat(e.target.value) || 0 })}
-                            className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                          />
-                        </div>
+                        <input
+                          id="service-price"
+                          type="number"
+                          required
+                          min="0"
+                          step="100"
+                          value={formData.basePrice}
+                          onChange={(e) => setFormData({ ...formData, basePrice: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                          placeholder="Enter price"
+                          className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                        />
                       </div>
 
                       {/* Duration */}
