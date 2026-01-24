@@ -78,10 +78,13 @@ export class SalesService {
       // Update appointment status if this sale is linked to an appointment
       if ((saleData as any).appointmentId) {
         try {
-          await this.appointmentsService.update((saleData as any).appointmentId, {
-            status: AppointmentStatus.COMPLETED,
-            skipSaleCreation: true,
-          });
+          await this.appointmentsService.update(
+            (saleData as any).appointmentId,
+            {
+              status: AppointmentStatus.COMPLETED,
+              skipSaleCreation: true,
+            },
+          );
           this.logger.log(
             `Updated appointment ${(saleData as any).appointmentId} status to COMPLETED`,
           );

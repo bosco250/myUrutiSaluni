@@ -1,4 +1,10 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import * as QRCode from 'qrcode';
 
 // Use require for jsreport as it doesn't have proper ES module exports
@@ -361,7 +367,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       await this.ensureJsReportReady();
     } catch (initError) {
       console.error('[RECEIPT] jsreport initialization failed:', initError);
-      throw new Error(`PDF generation service is not available: ${initError.message}`);
+      throw new Error(
+        `PDF generation service is not available: ${initError.message}`,
+      );
     }
 
     const sale = await this.salesService.findOne(saleId);
@@ -512,7 +520,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         throw new Error('jsreport returned empty content');
       }
 
-      console.log(`[RECEIPT] PDF rendered successfully (${report.content.length} bytes)`);
+      console.log(
+        `[RECEIPT] PDF rendered successfully (${report.content.length} bytes)`,
+      );
       return report.content;
     } catch (renderError) {
       console.error('[RECEIPT] PDF rendering failed:', renderError);

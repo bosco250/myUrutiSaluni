@@ -202,12 +202,16 @@ export class CustomersController {
       try {
         user = await this.usersService.findOne(userIdToFetch);
       } catch (error) {
-        console.error('[CUSTOMERS CONTROLLER] User not found during auto-create:', userIdToFetch);
+        console.error(
+          '[CUSTOMERS CONTROLLER] User not found during auto-create:',
+          userIdToFetch,
+        );
         // If user doesn't exist in DB but has a valid token, the token is stale/invalid.
         // Throw 401 to prevent further errors and potentially trigger frontend logout.
-        throw new ForbiddenException('User account not found. Please log in again.');
+        throw new ForbiddenException(
+          'User account not found. Please log in again.',
+        );
       }
-
 
       console.log('[CUSTOMERS CONTROLLER] User details:', {
         id: user.id,

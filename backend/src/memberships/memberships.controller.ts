@@ -372,18 +372,18 @@ export class MembershipsController {
   @Public()
   @ApiOperation({ summary: 'Verify membership by number (Public)' })
   async verifyMembership(@Param('membershipNumber') membershipNumber: string) {
-    const user = await this.membershipsService.findUserByMembershipNumber(
-      membershipNumber,
-    );
+    const user =
+      await this.membershipsService.findUserByMembershipNumber(
+        membershipNumber,
+      );
 
     if (!user) {
       throw new NotFoundException('Membership not found');
     }
 
     // Get active membership to check expiry
-    const membership = await this.membershipsService.findActiveMembershipByOwner(
-      user.id,
-    );
+    const membership =
+      await this.membershipsService.findActiveMembershipByOwner(user.id);
 
     return {
       isValid: true,

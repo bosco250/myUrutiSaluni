@@ -192,10 +192,10 @@ export class NotificationOrchestratorService {
         template: templateName,
         variables: {
           ...data.variables,
-          title: data.title,  // Pass title for default template
+          title: data.title, // Pass title for default template
           body: data.message, // Pass message body for default template
-          actionUrl,          // Pass action URL for buttons
-          actionLabel,        // Pass action label for buttons
+          actionUrl, // Pass action URL for buttons
+          actionLabel, // Pass action label for buttons
           unsubscribeUrl: `${process.env.FRONTEND_URL}/settings/notifications`,
         },
       });
@@ -968,7 +968,9 @@ export class NotificationOrchestratorService {
     const formattedAmount = this.formatCurrency(context.amount);
     return {
       title: 'Payment Received',
-      message: formattedAmount ? `Payment of ${formattedAmount} has been received.` : 'Payment has been received.',
+      message: formattedAmount
+        ? `Payment of ${formattedAmount} has been received.`
+        : 'Payment has been received.',
       variables: {
         amount: formattedAmount,
         paymentMethod: context.paymentMethod || '',
@@ -992,7 +994,9 @@ export class NotificationOrchestratorService {
     const formattedAmount = this.formatCurrency(context.commissionAmount);
     return {
       title: 'Commission Earned',
-      message: formattedAmount ? `You have earned a commission of ${formattedAmount}!` : 'You have earned a new commission!',
+      message: formattedAmount
+        ? `You have earned a commission of ${formattedAmount}!`
+        : 'You have earned a new commission!',
       variables: {
         commissionAmount: formattedAmount,
       },
@@ -1003,7 +1007,9 @@ export class NotificationOrchestratorService {
     const formattedAmount = this.formatCurrency(context.commissionAmount);
     return {
       title: 'Commission Paid',
-      message: formattedAmount ? `Your commission of ${formattedAmount} has been paid!` : 'Your commission has been paid!',
+      message: formattedAmount
+        ? `Your commission of ${formattedAmount} has been paid!`
+        : 'Your commission has been paid!',
       variables: {
         commissionAmount: formattedAmount,
       },

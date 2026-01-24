@@ -167,7 +167,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
     // Add foreign keys for conversations
     const conversationsTable = await queryRunner.getTable('conversations');
     if (conversationsTable) {
-      if (!conversationsTable.foreignKeys.find(fk => fk.columnNames.indexOf('customer_id') !== -1)) {
+      if (
+        !conversationsTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('customer_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'conversations',
           new TableForeignKey({
@@ -179,7 +183,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
         );
       }
 
-      if (!conversationsTable.foreignKeys.find(fk => fk.columnNames.indexOf('employee_id') !== -1)) {
+      if (
+        !conversationsTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('employee_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'conversations',
           new TableForeignKey({
@@ -191,7 +199,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
         );
       }
 
-      if (!conversationsTable.foreignKeys.find(fk => fk.columnNames.indexOf('salon_id') !== -1)) {
+      if (
+        !conversationsTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('salon_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'conversations',
           new TableForeignKey({
@@ -203,7 +215,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
         );
       }
 
-      if (!conversationsTable.foreignKeys.find(fk => fk.columnNames.indexOf('appointment_id') !== -1)) {
+      if (
+        !conversationsTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('appointment_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'conversations',
           new TableForeignKey({
@@ -219,7 +235,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
     // Add foreign keys for messages
     const messagesTable = await queryRunner.getTable('messages');
     if (messagesTable) {
-      if (!messagesTable.foreignKeys.find(fk => fk.columnNames.indexOf('conversation_id') !== -1)) {
+      if (
+        !messagesTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('conversation_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'messages',
           new TableForeignKey({
@@ -231,7 +251,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
         );
       }
 
-      if (!messagesTable.foreignKeys.find(fk => fk.columnNames.indexOf('sender_id') !== -1)) {
+      if (
+        !messagesTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('sender_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'messages',
           new TableForeignKey({
@@ -243,7 +267,11 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
         );
       }
 
-      if (!messagesTable.foreignKeys.find(fk => fk.columnNames.indexOf('customer_sender_id') !== -1)) {
+      if (
+        !messagesTable.foreignKeys.find(
+          (fk) => fk.columnNames.indexOf('customer_sender_id') !== -1,
+        )
+      ) {
         await queryRunner.createForeignKey(
           'messages',
           new TableForeignKey({
@@ -259,18 +287,28 @@ export class CreateChatTables1735000000000 implements MigrationInterface {
     // Create indexes
     // Using IF NOT EXISTS (Postgres) or catching error
     const createIndexIfNotExists = async (query: string) => {
-        try {
-            await queryRunner.query(query);
-        } catch (e) {
-            // Ignore index already exists error
-        }
+      try {
+        await queryRunner.query(query);
+      } catch (e) {
+        // Ignore index already exists error
+      }
     };
 
-    await queryRunner.query('CREATE INDEX IF NOT EXISTS idx_conversations_customer_id ON conversations(customer_id)');
-    await queryRunner.query('CREATE INDEX IF NOT EXISTS idx_conversations_employee_id ON conversations(employee_id)');
-    await queryRunner.query('CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id)');
-    await queryRunner.query('CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)');
-    await queryRunner.query('CREATE INDEX IF NOT EXISTS idx_messages_customer_sender_id ON messages(customer_sender_id)');
+    await queryRunner.query(
+      'CREATE INDEX IF NOT EXISTS idx_conversations_customer_id ON conversations(customer_id)',
+    );
+    await queryRunner.query(
+      'CREATE INDEX IF NOT EXISTS idx_conversations_employee_id ON conversations(employee_id)',
+    );
+    await queryRunner.query(
+      'CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id)',
+    );
+    await queryRunner.query(
+      'CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id)',
+    );
+    await queryRunner.query(
+      'CREATE INDEX IF NOT EXISTS idx_messages_customer_sender_id ON messages(customer_sender_id)',
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

@@ -205,7 +205,9 @@ export class SalonEmployeePermissionsController {
 
   @Get('me')
   @Roles(UserRole.SALON_EMPLOYEE, UserRole.SALON_OWNER, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Get permissions for the current user in this salon' })
+  @ApiOperation({
+    summary: 'Get permissions for the current user in this salon',
+  })
   @ApiParam({ name: 'salonId', description: 'Salon ID' })
   async getMyPermissions(
     @Param('salonId', ParseUUIDPipe) salonId: string,

@@ -244,6 +244,8 @@ export class AccountingController {
     @Query('salonId') salonId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
+    @Query('type') type: 'income' | 'expense' | undefined,
+    @Query('categoryId') categoryId: string | undefined,
     @Request() req,
     @Res() res,
   ) {
@@ -256,6 +258,8 @@ export class AccountingController {
       effectiveSalonId,
       startDate,
       endDate,
+      type,
+      categoryId,
     );
 
     res.set({

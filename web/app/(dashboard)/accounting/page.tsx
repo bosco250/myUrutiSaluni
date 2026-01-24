@@ -251,6 +251,10 @@ export default function AccountingPage() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+
+  // Filter State
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [filterCategoryId, setFilterCategoryId] = useState<string>('all');
   
   // Date Range State
   const [dateRange, setDateRange] = useState({
@@ -290,11 +294,27 @@ export default function AccountingPage() {
   // Fetch permissions for the selected salon
   const { can, isLoading: isLoadingPermissions } = useEmployeePermissions(salonId);
 
+  // Fetch Expense Categories for Filter
+  const { data: categories = [] } = useQuery<ExpenseCategory[]>({
+    queryKey: ['expense-categories', salonId],
+    queryFn: async () => {
+      const res = await api.get('/accounting/expense-categories', {
+        params: { salonId },
+      });
+      return res.data;
+    },
+    enabled: !!salonId,
+  });
+
   // Fetch Financial Summary (Moved up from OverviewTab to be Global)
   const { data: summary, isLoading: isLoadingSummary } = useQuery<FinancialSummary>({
-    queryKey: ['financial-summary', salonId, dateRange],
+    queryKey: ['financial-summary', salonId, dateRange, filterType, filterCategoryId],
     queryFn: async () => {
-       const res = await api.get('/accounting/financial-summary', { params: { salonId, ...dateRange }});
+       const params: any = { salonId, ...dateRange };
+       if (filterType !== 'all') params.type = filterType;
+       if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
+
+       const res = await api.get('/accounting/financial-summary', { params });
        return res.data;
     },
     enabled: !!salonId
@@ -336,15 +356,24 @@ export default function AccountingPage() {
     });
   };
 
+  const handleCustomDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    setDateRangeLabel('Custom');
+    setDateRange(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleExportCsv = async () => {
     if (!salonId) return;
     try {
+      const params: any = {
+        salonId,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      };
+      if (filterType !== 'all') params.type = filterType;
+      if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
+
       const response = await api.get('/accounting/export/csv', {
-        params: {
-          salonId,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate
-        },
+        params,
         responseType: 'blob'
       });
       
@@ -366,12 +395,17 @@ export default function AccountingPage() {
   const handleExportPdf = async () => {
     if (!salonId) return;
     try {
+      const params: any = {
+        salonId,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      };
+      // Note: PDF backend might not fully support filters yet, but we pass them.
+      if (filterType !== 'all') params.type = filterType;
+      if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
+
       const response = await api.get('/accounting/export/pdf', {
-        params: {
-          salonId,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate
-        },
+        params,
         responseType: 'blob'
       });
       
@@ -474,9 +508,50 @@ export default function AccountingPage() {
               Last Month
             </Button>
             <div className="mx-1 h-4 w-px bg-border-light dark:bg-border-dark" />
-            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border-light/60 bg-background-secondary text-text-light/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark/40">
-              <Calendar className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2 px-2">
+               <input 
+                 type="date"
+                 className="h-7 rounded-md border border-border-light bg-transparent px-2 text-xs text-text-light dark:border-border-dark dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                 value={dateRange.startDate}
+                 onChange={(e) => handleCustomDateChange('startDate', e.target.value)}
+               />
+               <span className="text-text-light/40 select-none">-</span>
+               <input 
+                 type="date"
+                 className="h-7 rounded-md border border-border-light bg-transparent px-2 text-xs text-text-light dark:border-border-dark dark:text-text-dark focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                 value={dateRange.endDate}
+                 onChange={(e) => handleCustomDateChange('endDate', e.target.value)}
+               />
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 border-l border-border-light dark:border-border-dark pl-2 ml-1">
+             <select 
+                className="h-9 rounded-md border border-border-light bg-surface-light px-2 text-xs font-medium dark:border-border-dark dark:bg-surface-dark focus:ring-1 focus:ring-primary outline-none"
+                value={filterType}
+                onChange={(e) => {
+                  const val = e.target.value as any;
+                  setFilterType(val);
+                  if (val !== 'expense') setFilterCategoryId('all');
+                }}
+              >
+                <option value="all">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expenses</option>
+             </select>
+
+             {filterType === 'expense' && (
+               <select 
+                  className="h-9 max-w-[150px] rounded-md border border-border-light bg-surface-light px-2 text-xs font-medium dark:border-border-dark dark:bg-surface-dark focus:ring-1 focus:ring-primary outline-none"
+                  value={filterCategoryId}
+                  onChange={(e) => setFilterCategoryId(e.target.value)}
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map((c: ExpenseCategory) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+               </select>
+             )}
           </div>
 
           {/* Export Button */}

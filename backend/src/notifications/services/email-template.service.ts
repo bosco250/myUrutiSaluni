@@ -93,7 +93,7 @@ export class EmailTemplateService {
         const value = variables[varName];
         // Show content if value is truthy (not undefined, null, '', 0, false)
         return value ? content : '';
-      }
+      },
     );
 
     // Standard variable replacement

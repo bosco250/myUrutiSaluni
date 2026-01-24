@@ -50,7 +50,7 @@ export class ReportsController {
         console.error('[RECEIPT] Generated PDF is empty');
         return res.status(500).json({
           message: 'Generated receipt is empty',
-          error: 'PDF generation failed'
+          error: 'PDF generation failed',
         });
       }
 
@@ -80,7 +80,8 @@ export class ReportsController {
       res.status(statusCode).json({
         message: errorMessage,
         error: error.message,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details:
+          process.env.NODE_ENV === 'development' ? error.stack : undefined,
       });
     }
   }

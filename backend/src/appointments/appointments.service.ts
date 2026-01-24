@@ -319,10 +319,10 @@ export class AppointmentsService {
 
   async update(id: string, updateData: any): Promise<Appointment> {
     const existingAppointment = await this.findOne(id);
-    
+
     // Extract special flags that shouldn't be saved to DB
     const { skipSaleCreation, ...payload } = updateData;
-    
+
     const updatePayload: any = { ...payload };
     if (payload.scheduledStart) {
       updatePayload.scheduledStart = new Date(payload.scheduledStart);
@@ -479,8 +479,13 @@ export class AppointmentsService {
             );
 
             // Get service details for the sale item
-            const service = updatedAppointment.service || 
-              (updatedAppointment.serviceId ? await this.servicesService.findOne(updatedAppointment.serviceId) : null);
+            const service =
+              updatedAppointment.service ||
+              (updatedAppointment.serviceId
+                ? await this.servicesService.findOne(
+                    updatedAppointment.serviceId,
+                  )
+                : null);
 
             const saleData = {
               salonId: updatedAppointment.salonId,
@@ -507,7 +512,7 @@ export class AppointmentsService {
             ];
 
             const sale = await this.salesService.create(saleData, saleItems);
-            
+
             this.logger.log(
               `✅ Created sale ${sale.id} for completed appointment ${updatedAppointment.id} - Amount: RWF ${serviceAmount}, Service: ${service?.name || 'N/A'}, Employee: ${employeeId || 'None'}`,
             );
@@ -520,7 +525,7 @@ export class AppointmentsService {
               `❌ Failed to create sale for appointment ${updatedAppointment.id}: ${saleError.message}`,
               saleError.stack,
             );
-            
+
             // Fallback: If sale creation fails, still try to create commission directly
             // This ensures employees still get paid even if sale recording fails
             if (employeeId) {

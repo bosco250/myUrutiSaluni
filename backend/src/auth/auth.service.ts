@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
@@ -113,15 +109,21 @@ export class AuthService {
 
     // Always return success message for security (don't reveal if email exists)
     if (!user) {
-      this.logger.warn(`Password reset requested for non-existent email: ${email}`);
+      this.logger.warn(
+        `Password reset requested for non-existent email: ${email}`,
+      );
       return {
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
       };
     }
 
     // Generate secure random token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
 
     // Token expires in 1 hour
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
@@ -133,15 +135,21 @@ export class AuthService {
     });
 
     // Build reset URL
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     // Send password reset email
     try {
-      const emailHtml = this.emailTemplateService.renderTemplate('password_reset', {
-        customerName: user.fullName || 'User',
-        actionUrl: resetUrl,
-      });
+      const emailHtml = this.emailTemplateService.renderTemplate(
+        'password_reset',
+        {
+          customerName: user.fullName || 'User',
+          actionUrl: resetUrl,
+        },
+      );
 
       await this.emailService.sendEmail(
         user.email,
@@ -151,7 +159,10 @@ export class AuthService {
 
       this.logger.log(`Password reset email sent to: ${user.email}`);
     } catch (error) {
-      this.logger.error(`Failed to send password reset email to ${user.email}:`, error);
+      this.logger.error(
+        `Failed to send password reset email to ${user.email}:`,
+        error,
+      );
       // Still return success for security - don't reveal email sending failures
     }
 
@@ -159,11 +170,15 @@ export class AuthService {
     this.logger.debug(`Password reset token for ${email}: ${resetToken}`);
 
     return {
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
     };
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
     // Hash the token to compare with stored hash
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
@@ -192,7 +207,8 @@ export class AuthService {
     this.logger.log(`Password successfully reset for user: ${user.email}`);
 
     return {
-      message: 'Password has been reset successfully. You can now log in with your new password.',
+      message:
+        'Password has been reset successfully. You can now log in with your new password.',
     };
   }
 }

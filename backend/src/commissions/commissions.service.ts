@@ -61,7 +61,9 @@ export class CommissionsService {
       // Query for existing commission with same appointmentId in metadata
       const existingCommissions = await this.commissionsRepository
         .createQueryBuilder('commission')
-        .where('commission.salonEmployeeId = :salonEmployeeId', { salonEmployeeId })
+        .where('commission.salonEmployeeId = :salonEmployeeId', {
+          salonEmployeeId,
+        })
         .andWhere("commission.metadata->>'appointmentId' = :appointmentId", {
           appointmentId: metadata.appointmentId,
         })
@@ -437,7 +439,8 @@ export class CommissionsService {
 
       // For wallet payments, deduct from owner wallet
       // For mobile_money (Airtel), owner pays externally - no wallet deduction needed
-      const isExternalPayment = paymentDetails?.paymentMethod === 'mobile_money';
+      const isExternalPayment =
+        paymentDetails?.paymentMethod === 'mobile_money';
       let savedOwnerTransaction: WalletTransaction | null = null;
       let ownerBalanceAfter = ownerBalance;
 
@@ -698,7 +701,8 @@ export class CommissionsService {
           : Number(ownerWallet.balance) || 0;
 
       // For mobile_money (Airtel), skip balance check - owner pays externally
-      const isExternalPayment = paymentDetails?.paymentMethod === 'mobile_money';
+      const isExternalPayment =
+        paymentDetails?.paymentMethod === 'mobile_money';
 
       if (!isExternalPayment && ownerBalanceInTx < totalAmount) {
         throw new BadRequestException(
@@ -914,7 +918,10 @@ export class CommissionsService {
     };
   }
 
-  async verifyPayment(commissionId: string, verifiedById: string): Promise<Commission> {
+  async verifyPayment(
+    commissionId: string,
+    verifiedById: string,
+  ): Promise<Commission> {
     const commission = await this.commissionsRepository.findOne({
       where: { id: commissionId },
     });

@@ -133,10 +133,12 @@ export class MembershipsService {
     const reviewer = await this.usersRepository.findOne({
       where: { id: reviewerId },
     });
-    
+
     // If reviewer not found, log warning but continue (may happen with data integrity issues)
     if (!reviewer) {
-      console.warn(`[Membership Review] Reviewer with ID ${reviewerId} not found in database. Proceeding without reviewer relation.`);
+      console.warn(
+        `[Membership Review] Reviewer with ID ${reviewerId} not found in database. Proceeding without reviewer relation.`,
+      );
     }
 
     application.status = reviewDto.status;
@@ -415,13 +417,17 @@ export class MembershipsService {
     // Set expiration based on payment amount
     const startDate = new Date(membership.startDate);
     const endDate = new Date(startDate);
-    
+
     if (totalPaid >= requiredAmount) {
       // Full year
-      endDate.setMonth(endDate.getMonth() + MEMBERSHIP_DURATION.FULL_YEAR_MONTHS);
+      endDate.setMonth(
+        endDate.getMonth() + MEMBERSHIP_DURATION.FULL_YEAR_MONTHS,
+      );
     } else {
       // 6 months (Partial)
-      endDate.setMonth(endDate.getMonth() + MEMBERSHIP_DURATION.HALF_YEAR_MONTHS);
+      endDate.setMonth(
+        endDate.getMonth() + MEMBERSHIP_DURATION.HALF_YEAR_MONTHS,
+      );
     }
     membership.endDate = endDate;
 
@@ -432,9 +438,11 @@ export class MembershipsService {
     const membership = await this.findOneMembership(id);
 
     // Reactivate expired or suspended memberships
-    if (membership.status === MembershipStatus.EXPIRED || 
-        membership.status === MembershipStatus.SUSPENDED ||
-        membership.status === MembershipStatus.PENDING_RENEWAL) {
+    if (
+      membership.status === MembershipStatus.EXPIRED ||
+      membership.status === MembershipStatus.SUSPENDED ||
+      membership.status === MembershipStatus.PENDING_RENEWAL
+    ) {
       membership.status = MembershipStatus.ACTIVE;
     }
     // ACTIVE memberships stay ACTIVE - we just extend the endDate
@@ -450,13 +458,20 @@ export class MembershipsService {
     return this.membershipsRepository.save(membership);
   }
 
-  async expireMembership(id: string, force: boolean = false): Promise<Membership> {
+  async expireMembership(
+    id: string,
+    force: boolean = false,
+  ): Promise<Membership> {
     const membership = await this.findOneMembership(id);
-    
+
     // Warn but allow admin override with force flag
-    if (!force && membership.endDate && new Date(membership.endDate) > new Date()) {
+    if (
+      !force &&
+      membership.endDate &&
+      new Date(membership.endDate) > new Date()
+    ) {
       throw new BadRequestException(
-        'This membership is still valid. Use force=true to expire it anyway.'
+        'This membership is still valid. Use force=true to expire it anyway.',
       );
     }
 
@@ -594,13 +609,17 @@ export class MembershipsService {
     payment.paymentMethod = recordDto.paymentMethod;
     payment.paymentReference = recordDto.paymentReference;
     payment.transactionReference = recordDto.transactionReference;
-    
+
     // Verify if recording user exists to avoid FK violations
-    const recorder = await this.usersRepository.findOne({ where: { id: recordedById } });
+    const recorder = await this.usersRepository.findOne({
+      where: { id: recordedById },
+    });
     if (recorder) {
       payment.paidById = recordedById;
     } else {
-      console.warn(`[Payment Record] Recorder with ID ${recordedById} not found. Proceeding without linking to admin user.`);
+      console.warn(
+        `[Payment Record] Recorder with ID ${recordedById} not found. Proceeding without linking to admin user.`,
+      );
     }
 
     if (recordDto.notes) {
@@ -633,7 +652,10 @@ export class MembershipsService {
     });
   }
 
-  async findAllPayments(filters?: { status?: string; search?: string }): Promise<MembershipPayment[]> {
+  async findAllPayments(filters?: {
+    status?: string;
+    search?: string;
+  }): Promise<MembershipPayment[]> {
     const queryBuilder = this.paymentsRepository
       .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.member', 'member')
@@ -641,18 +663,21 @@ export class MembershipsService {
       .leftJoinAndSelect('payment.paidBy', 'paidBy');
 
     if (filters?.status && filters.status !== 'all') {
-      queryBuilder.andWhere('payment.status = :status', { status: filters.status });
+      queryBuilder.andWhere('payment.status = :status', {
+        status: filters.status,
+      });
     }
 
     if (filters?.search) {
       const search = `%${filters.search.toLowerCase()}%`;
       queryBuilder.andWhere(
         '(LOWER(member.fullName) LIKE :search OR LOWER(member.membershipNumber) LIKE :search OR LOWER(member.email) LIKE :search OR LOWER(membership.membershipNumber) LIKE :search)',
-        { search }
+        { search },
       );
     }
 
-    queryBuilder.orderBy('payment.paymentYear', 'DESC')
+    queryBuilder
+      .orderBy('payment.paymentYear', 'DESC')
       .addOrderBy('payment.memberId', 'ASC')
       .addOrderBy('payment.installmentNumber', 'ASC');
 
@@ -670,16 +695,19 @@ export class MembershipsService {
     payments: MembershipPayment[];
   }> {
     let payments = await this.findPaymentsByMember(memberId, year);
-    
+
     // Auto-initialize payments if none exist for this year
     if (payments.length === 0) {
       try {
         payments = await this.initializeYearlyPayments(memberId, year);
       } catch (error) {
-        console.warn(`Could not initialize payments for member ${memberId}:`, error);
+        console.warn(
+          `Could not initialize payments for member ${memberId}:`,
+          error,
+        );
       }
     }
-    
+
     const totalRequired = MEMBERSHIP_ANNUAL_FEE;
     const totalPaid = payments
       .filter((p) => p.status === PaymentStatus.PAID)
@@ -718,7 +746,7 @@ export class MembershipsService {
       where: { ownerId: memberId },
     });
     if (salons.length > 0) {
-      const salonIds = salons.map(s => s.id);
+      const salonIds = salons.map((s) => s.id);
       const membership = await this.membershipsRepository
         .createQueryBuilder('membership')
         .where('membership.salonId IN (:...salonIds)', { salonIds })
@@ -734,7 +762,7 @@ export class MembershipsService {
 
     for (let installment = 1; installment <= 2; installment++) {
       const dueDate = new Date(year, installment === 1 ? 0 : 6, 1); // Jan 1 or Jul 1
-      
+
       const newPayment = new MembershipPayment();
       newPayment.memberId = memberId;
       newPayment.paymentYear = year;
@@ -743,12 +771,12 @@ export class MembershipsService {
       newPayment.installmentAmount = MEMBERSHIP_INSTALLMENT_AMOUNT;
       newPayment.dueDate = dueDate;
       newPayment.status = PaymentStatus.PENDING;
-      
+
       // Link to membership if found
       if (membershipId) {
         newPayment.membershipId = membershipId;
       }
-      
+
       const savedPayment = await this.paymentsRepository.save(newPayment);
       payments.push(savedPayment);
     }
@@ -762,7 +790,7 @@ export class MembershipsService {
     errors: number;
   }> {
     const currentYear = new Date().getFullYear();
-    
+
     // Find all salon owners
     const salonOwners = await this.usersRepository.find({
       where: { role: UserRole.SALON_OWNER },
@@ -774,7 +802,10 @@ export class MembershipsService {
 
     for (const owner of salonOwners) {
       try {
-        const payments = await this.initializeYearlyPayments(owner.id, currentYear);
+        const payments = await this.initializeYearlyPayments(
+          owner.id,
+          currentYear,
+        );
         // If we got existing payments back, they were skipped (already exist)
         const existingCheck = await this.paymentsRepository.count({
           where: { memberId: owner.id, paymentYear: currentYear },
@@ -863,11 +894,14 @@ export class MembershipsService {
     const poll = async () => {
       attempts++;
       try {
-        const payment = await this.paymentsRepository.findOne({ where: { id: paymentId } });
+        const payment = await this.paymentsRepository.findOne({
+          where: { id: paymentId },
+        });
         if (!payment || payment.status === PaymentStatus.PAID) return;
 
         // Check status
-        const result = await this.airtelMoneyService.checkPaymentStatus(providerRef);
+        const result =
+          await this.airtelMoneyService.checkPaymentStatus(providerRef);
 
         if (result.status === 'SUCCESSFUL') {
           // Update Payment
@@ -900,52 +934,66 @@ export class MembershipsService {
 
   private async autoActivateMember(userId: string) {
     // Find all memberships for this user's salons
-    const salons = await this.salonsRepository.find({ where: { ownerId: userId } });
-    const salonIds = salons.map(s => s.id);
-    
+    const salons = await this.salonsRepository.find({
+      where: { ownerId: userId },
+    });
+    const salonIds = salons.map((s) => s.id);
+
     if (salonIds.length === 0) return;
 
     const memberships = await this.membershipsRepository.find({
-        where: salonIds.map(id => ({ salonId: id }))
+      where: salonIds.map((id) => ({ salonId: id })),
     });
 
     // Try to activate each
     for (const membership of memberships) {
-        try {
-            await this.activateMembership(membership.id);
-            console.log(`Auto-activated membership ${membership.id} for user ${userId}`);
-        } catch (e) {
-            // Might fail if already active or payment still insufficient (though we just paid)
-            console.log(`Could not auto-activate membership ${membership.id}: ${e.message}`);
-        }
+      try {
+        await this.activateMembership(membership.id);
+        console.log(
+          `Auto-activated membership ${membership.id} for user ${userId}`,
+        );
+      } catch (e) {
+        // Might fail if already active or payment still insufficient (though we just paid)
+        console.log(
+          `Could not auto-activate membership ${membership.id}: ${e.message}`,
+        );
+      }
     }
   }
 
-  async findUserByMembershipNumber(membershipNumber: string): Promise<User | null> {
+  async findUserByMembershipNumber(
+    membershipNumber: string,
+  ): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { membershipNumber },
     });
   }
 
-  async findActiveMembershipByOwner(ownerId: string): Promise<Membership | null> {
+  async findActiveMembershipByOwner(
+    ownerId: string,
+  ): Promise<Membership | null> {
     // Find active membership for any of the owner's salons
     const salons = await this.salonsRepository.find({
       where: { ownerId },
     });
-    
+
     if (salons.length === 0) return null;
 
     return this.membershipsRepository.findOne({
       where: [
         // Check for active memberships for these salons
-        ...salons.map(s => ({ salonId: s.id, status: MembershipStatus.ACTIVE })),
+        ...salons.map((s) => ({
+          salonId: s.id,
+          status: MembershipStatus.ACTIVE,
+        })),
         // Also check pending renewal as valid
-        ...salons.map(s => ({ salonId: s.id, status: MembershipStatus.PENDING_RENEWAL })),
+        ...salons.map((s) => ({
+          salonId: s.id,
+          status: MembershipStatus.PENDING_RENEWAL,
+        })),
       ],
       relations: ['salon'],
       order: { endDate: 'DESC' },
     });
   }
 }
-
-

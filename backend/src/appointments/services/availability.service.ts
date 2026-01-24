@@ -211,7 +211,7 @@ export class AvailabilityService {
     const slots: TimeSlot[] = [];
     const dateStr = format(date, 'yyyy-MM-dd');
     const RWANDA_OFFSET = '+02:00';
-    
+
     // Parse times explicitly as Rwanda time (UTC+2) to get correct UTC timestamps
     const startTime = parseISO(
       `${dateStr}T${workingHours.startTime}:00${RWANDA_OFFSET}`,
@@ -273,10 +273,14 @@ export class AvailabilityService {
       // We convert the UTC date to Zoned Time before formatting as string
       const rwandaTimeStart = toZonedTime(currentSlot, 'Africa/Kigali');
       const rwandaTimeEnd = toZonedTime(slotEnd, 'Africa/Kigali');
-      
+
       slots.push({
-        startTime: formatTz(rwandaTimeStart, 'HH:mm', { timeZone: 'Africa/Kigali' }),
-        endTime: formatTz(rwandaTimeEnd, 'HH:mm', { timeZone: 'Africa/Kigali' }),
+        startTime: formatTz(rwandaTimeStart, 'HH:mm', {
+          timeZone: 'Africa/Kigali',
+        }),
+        endTime: formatTz(rwandaTimeEnd, 'HH:mm', {
+          timeZone: 'Africa/Kigali',
+        }),
         available,
         reason,
         price: servicePrice,
@@ -502,7 +506,7 @@ export class AvailabilityService {
 
     // Check multiple places for operating hours
     let operatingHours: any = null;
-    
+
     // Check settings.operatingHours
     if (salon?.settings?.operatingHours) {
       operatingHours =
@@ -518,7 +522,7 @@ export class AvailabilityService {
           ? JSON.parse(workingHours)
           : workingHours;
     }
-    
+
     if (!operatingHours) {
       return this.getDefaultWorkingHours(employeeId, dayOfWeek);
     }
@@ -536,7 +540,8 @@ export class AvailabilityService {
       }
 
       // Handle different field name formats (open/close, openTime/closeTime, startTime/endTime)
-      const startTime = dayHours.open || dayHours.openTime || dayHours.startTime;
+      const startTime =
+        dayHours.open || dayHours.openTime || dayHours.startTime;
       const endTime = dayHours.close || dayHours.closeTime || dayHours.endTime;
 
       if (startTime && endTime) {

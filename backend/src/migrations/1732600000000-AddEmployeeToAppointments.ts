@@ -5,7 +5,10 @@ export class AddEmployeeToAppointments1732600000000
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Check and add salon_employee_id column
-    const hasEmployeeId = await queryRunner.hasColumn('appointments', 'salon_employee_id');
+    const hasEmployeeId = await queryRunner.hasColumn(
+      'appointments',
+      'salon_employee_id',
+    );
     if (!hasEmployeeId) {
       await queryRunner.addColumn(
         'appointments',
@@ -18,7 +21,10 @@ export class AddEmployeeToAppointments1732600000000
     }
 
     // Check and add service_amount column
-    const hasServiceAmount = await queryRunner.hasColumn('appointments', 'service_amount');
+    const hasServiceAmount = await queryRunner.hasColumn(
+      'appointments',
+      'service_amount',
+    );
     if (!hasServiceAmount) {
       await queryRunner.addColumn(
         'appointments',
@@ -34,7 +40,9 @@ export class AddEmployeeToAppointments1732600000000
 
     // Add foreign key constraint if it doesn't exist
     const table = await queryRunner.getTable('appointments');
-    const foreignKey = table?.foreignKeys.find(fk => fk.columnNames.indexOf('salon_employee_id') !== -1);
+    const foreignKey = table?.foreignKeys.find(
+      (fk) => fk.columnNames.indexOf('salon_employee_id') !== -1,
+    );
     if (!foreignKey) {
       await queryRunner.query(`
         ALTER TABLE appointments
