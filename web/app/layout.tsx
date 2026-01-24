@@ -6,7 +6,6 @@ import { ThemeProvider } from '@/providers/ThemeProvider'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { CompactModeProvider } from '@/context/CompactModeContext'
-import { BackendStatusBanner } from '@/components/layout/BackendStatusBanner'
 
 // Optimized font loading with next/font
 const manrope = Manrope({
@@ -66,7 +65,6 @@ export default function RootLayout({
           <ThemeProvider>
             <ToastProvider>
               <QueryProvider>
-                <BackendStatusBanner />
                 <CompactModeProvider>{children}</CompactModeProvider>
               </QueryProvider>
             </ToastProvider>
