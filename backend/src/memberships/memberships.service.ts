@@ -68,11 +68,12 @@ export class MembershipsService {
     });
 
     if (existingApplication) {
+      // If PENDING, allow update
       if (existingApplication.status === ApplicationStatus.PENDING) {
-        throw new BadRequestException(
-          'You already have a pending membership application',
-        );
+        Object.assign(existingApplication, createDto);
+        return this.applicationsRepository.save(existingApplication);
       }
+      
       if (existingApplication.status === ApplicationStatus.APPROVED) {
         throw new BadRequestException('You are already an approved member');
       }
