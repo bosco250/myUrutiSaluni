@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { 
@@ -52,6 +53,7 @@ interface WalletTransaction {
 }
 
 export default function WalletsPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -145,7 +147,7 @@ export default function WalletsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+      <div className="relative overflow-hidden rounded-2xl border bg-surface-light dark:bg-surface-dark">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
         <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -162,6 +164,14 @@ export default function WalletsPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={() => router.push('/external-payments')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <ArrowUpRight className="w-4 h-4" />
+              External Transaction
+            </Button>
             <Button
               onClick={() => setShowTopUpModal(true)}
               variant="outline"

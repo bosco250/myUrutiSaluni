@@ -156,7 +156,7 @@ function ExternalPaymentsContent() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => router.push('/commissions')}
+          onClick={() => router.back()}
           className="h-8"
         >
           <ArrowLeft className="w-4 h-4" />

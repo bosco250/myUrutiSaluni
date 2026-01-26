@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       <ModernHeader />
-      <main className="pb-24 px-6 sm:px-8 lg:px-12">{children}</main>
+      <main className="py-8 pl-4 pr-16 sm:pl-6 sm:pr-20 md:pl-8 md:pr-18 lg:pr-24 transition-all duration-300">{children}</main>
       <FloatingNav />
     </div>
   );
