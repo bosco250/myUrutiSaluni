@@ -305,12 +305,9 @@ export default function CustomerDetailPage() {
 
   if (customerLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading customer details...</p>
-          </div>
+          <div className="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -318,15 +315,15 @@ export default function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">Customer not found</p>
-          <button
-            onClick={() => router.push('/customers')}
-            className="mt-4 text-blue-600 dark:text-blue-400 hover:underline"
-          >
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
+            Customer not found
+          </p>
+          <Button variant="secondary" onClick={() => router.push('/customers')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Customers
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -382,499 +379,344 @@ export default function CustomerDetailPage() {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      <div className="space-y-6">
-        {/* Header (Compacted Hero) */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg">
-          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.18),transparent_60%)]" />
-          <div className="relative p-4 sm:p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => router.push('/customers')}
-                    className="flex-shrink-0"
-                    aria-label="Back to customers"
-                    title="Back"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight truncate">
-                        {customer.fullName}
-                      </h1>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                          customerSegment.color === 'purple'
-                            ? 'bg-purple-500/15 text-white border-purple-300/20'
-                            : customerSegment.color === 'blue'
-                              ? 'bg-blue-500/15 text-white border-blue-300/20'
-                              : customerSegment.color === 'green'
-                                ? 'bg-emerald-500/15 text-white border-emerald-300/20'
-                                : customerSegment.color === 'yellow'
-                                  ? 'bg-amber-500/15 text-white border-amber-300/20'
-                                  : 'bg-white/10 text-white border-white/20'
-                        }`}
-                      >
-                        {customerSegment.label}
-                      </span>
-                    </div>
-                    <p className="text-white/80 text-xs sm:text-sm mt-1">
-                      Customer profile • {customer.phone}
-                      {customer.email ? ` • ${customer.email}` : ''}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => window.open(`tel:${customer.phone}`)}
-                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                    title="Call customer"
-                  >
-                    <Phone className="w-4 h-4" />
-                    <span className="hidden sm:inline">Call</span>
-                  </Button>
-                  {customer.email && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => window.open(`mailto:${customer.email}`)}
-                      className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                      title="Email customer"
-                    >
-                      <Mail className="w-4 h-4" />
-                      <span className="hidden sm:inline">Email</span>
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => router.push(`/sales?customerId=${customerId}`)}
-                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                    title="Create new sale"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                    <span className="hidden sm:inline">New Sale</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => router.push(`/appointments?customerId=${customerId}`)}
-                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                    title="Create new appointment"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span className="hidden sm:inline">Book</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                    title="Edit customer"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Customer Info Card (Compacted) */}
-        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm border border-border-light dark:border-border-dark p-4">
-          <div className="flex flex-col sm:flex-row items-start gap-4">
-            <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20">
-              {customer.fullName.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
-                  <Phone className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wide">Phone</span>
-                </div>
-                <p className="text-text-light dark:text-text-dark font-semibold">
-                  {customer.phone}
-                </p>
-              </div>
-              {customer.email && (
-                <div>
-                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
-                    <Mail className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-wide">Email</span>
-                  </div>
-                  <p className="text-text-light dark:text-text-dark font-semibold truncate">
-                    {customer.email}
-                  </p>
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
-                  <Star className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wide">Points</span>
-                </div>
-                <p className="text-text-light dark:text-text-dark font-semibold">
-                  {customer.loyaltyPoints || 0} pts
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wide">Member Since</span>
-                </div>
-                <p className="text-text-light dark:text-text-dark font-semibold">
-                  {format(parseISO(customer.createdAt), 'MMM d, yyyy')}
-                </p>
-              </div>
-              {statistics?.lastVisitDate && (
-                <div>
-                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-wide">Last Visit</span>
-                  </div>
-                  <p className="text-text-light dark:text-text-dark font-semibold">
-                    {format(parseISO(statistics.lastVisitDate), 'MMM d, yyyy')}
-                  </p>
-                </div>
-              )}
-              {nextAppointment && (
-                <div>
-                  <div className="flex items-center gap-2 text-text-light/60 dark:text-text-dark/60 mb-1">
-                    <Bell className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-wide">Next Appt</span>
-                  </div>
-                  <p className="text-text-light dark:text-text-dark font-semibold">
-                    {format(parseISO(nextAppointment.scheduledStart), 'MMM d, h:mm a')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tags */}
-          {customerTags.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Tag className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                {customerTags.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[11px] font-bold"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Next Appointment Reminder */}
-        {nextAppointment && (
-          <div className="bg-surface-light dark:bg-surface-dark border border-primary/20 dark:border-primary/30 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div className="flex-1">
-                <p className="font-black text-text-light dark:text-text-dark text-sm">
-                  Upcoming Appointment
-                </p>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                  {nextAppointment.service?.name || 'Service'} at{' '}
-                  {nextAppointment.salon?.name || 'Salon'} on{' '}
-                  {format(parseISO(nextAppointment.scheduledStart), 'EEEE, MMM d, yyyy at h:mm a')}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => router.push(`/appointments/${nextAppointment.id}`)}
-                variant="secondary"
-                size="sm"
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-4">
+      {/* Sticky Header Component */}
+      <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light dark:border-border-dark mb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col gap-2 py-1.5">
+            {/* Top Row: Navigation & Actions */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Left: Back Button */}
+              <button
+                onClick={() => router.push('/customers')}
+                className="group flex items-center gap-2 text-sm font-semibold text-text-light/80 dark:text-text-dark/80 hover:text-primary transition-colors"
               >
-                View Details
-              </Button>
-            </div>
-          </div>
-        )}
+                <div className="h-7 w-7 rounded-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center group-hover:border-primary/50 group-hover:text-primary transition-all shadow-sm">
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </div>
+                <span>Back</span>
+              </button>
 
-        {/* Statistics Cards */}
-        {statistics && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                    Total Spent
-                  </p>
-                  <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                    RWF {statistics.totalSpent.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
-                  <DollarSign className="w-4 h-4 text-white" />
-                </div>
+              {/* Right: Actions */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (customer.email) window.open(`mailto:${customer.email}`);
+                    else alert('No email address available for this customer');
+                  }}
+                  className="bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark h-8 px-3"
+                >
+                  <Mail className="w-3.5 h-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline text-xs">Email</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router.push(`/appointments?customerId=${customerId}`)}
+                  className="shadow-sm h-8 px-3"
+                >
+                  <Calendar className="w-3.5 h-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline text-xs">Book</span>
+                </Button>
               </div>
             </div>
 
-            <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                    Total Visits
-                  </p>
-                  <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                    {statistics.totalVisits}
-                  </p>
-                </div>
-                <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
-                  <ShoppingBag className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="group relative bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                    Avg Order
-                  </p>
-                  <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                    RWF {Math.round(statistics.averageOrderValue).toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg">
-                  <TrendingUp className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                    Favorite Salon
-                  </p>
-                  <p className="text-sm font-black text-text-light dark:text-text-dark mt-1 truncate">
-                    {statistics.favoriteSalon?.name || 'N/A'}
-                  </p>
-                  {statistics.favoriteSalon && (
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                      {statistics.favoriteSalon.visits} visits
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
-                  <Building2 className="w-4 h-4 text-white" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
-          <div className="p-2 border-b border-border-light dark:border-border-dark">
-            <div className="flex flex-wrap gap-2">
+            {/* Bottom Row: Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar -mb-[1px]">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
                 return (
-                  <Button
+                  <button
                     key={tab.id}
                     type="button"
-                    size="sm"
-                    variant={isActive ? 'primary' : 'secondary'}
                     onClick={() => setActiveTab(tab.id)}
-                    className="gap-2"
+                    className={`group relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
+                      isActive
+                        ? 'text-primary'
+                        : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                    }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="font-black tracking-tight">{tab.label}</span>
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+                    <span>{tab.label}</span>
                     {tab.count !== undefined && (
                       <span
-                        className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        className={`ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] ${
                           isActive
-                            ? 'bg-white/20 text-white'
-                            : 'bg-background-secondary dark:bg-background-dark text-text-light/60'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-border-light dark:bg-border-dark text-text-light/60 dark:text-text-dark/60'
                         }`}
                       >
                         {tab.count}
                       </span>
                     )}
-                  </Button>
+                    {/* Active Tab Indicator Line */}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                    )}
+                  </button>
                 );
               })}
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="p-4">
+      {/* Main Content Area */}
+      <div className="bg-transparent">
+
+        <div className="p-4">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <div className="space-y-6">
-                {/* Customer Notes */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
-                      Internal Notes
-                    </h3>
+              <div className="space-y-4">
+                {/* Customer Profile Hero */}
+                {/* Customer Profile Card (Redesigned) */}
+                <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
+                  {/* Decorative Cover */}
+                  <div className="h-20 bg-primary/5 relative">
+
+                  </div>
+
+                  <div className="px-5 pb-5 relative">
+                    {/* Avatar & Main Info */}
+                    <div className="flex flex-col md:flex-row gap-5 items-start -mt-9">
+                      <div className="relative">
+                        <div className="h-20 w-20 rounded-2xl bg-surface-light dark:bg-surface-dark p-1 shadow-xl ring-1 ring-black/5 dark:ring-white/5 z-10 relative">
+                          <div className="h-full w-full rounded-xl bg-primary flex items-center justify-center text-white font-black text-2xl">
+                            {customer.fullName.charAt(0).toUpperCase()}
+                          </div>
+                        </div>
+                        {/* Status Indicator */}
+                        <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 h-4 w-4 rounded-full border-[2px] border-surface-light dark:border-surface-dark z-20" title="Active Customer" />
+                      </div>
+
+                      <div className="flex-1 pt-1 md:pt-11 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h2 className="text-xl font-black text-text-light dark:text-text-dark tracking-tight">
+                                {customer.fullName}
+                              </h2>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                                customerSegment.color === 'purple' ? 'bg-purple-500/10 text-purple-600 border-purple-200/50' :
+                                customerSegment.color === 'blue' ? 'bg-blue-500/10 text-blue-600 border-blue-200/50' :
+                                customerSegment.color === 'green' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50' :
+                                'bg-gray-100 text-gray-600 border-gray-200'
+                              }`}>
+                                {customerSegment.label}
+                              </span>
+                            </div>
+                            <p className="text-text-light/50 dark:text-text-dark/50 text-[10px] font-mono ml-0.5">
+                              ID: {customer.id.substring(0, 8)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Contact & Info Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group hover:border-primary/30 transition-colors">
+                            <div className="p-1.5 bg-primary/10 text-primary rounded-md group-hover:bg-primary group-hover:text-white transition-colors">
+                              <Phone className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-bold uppercase text-text-light/40 dark:text-text-dark/40 tracking-wider mb-0.5">Phone</p>
+                              <p className="font-bold text-xs text-text-light dark:text-text-dark truncate">
+                                {customer.phone}
+                              </p>
+                            </div>
+                          </div>
+
+                          {customer.email && (
+                            <div className="flex items-center gap-2.5 p-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group hover:border-blue-500/30 transition-colors">
+                              <div className="p-1.5 bg-blue-500/10 text-blue-600 rounded-md group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                <Mail className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-[9px] font-bold uppercase text-text-light/40 dark:text-text-dark/40 tracking-wider mb-0.5">Email</p>
+                                <p className="font-bold text-xs text-text-light dark:text-text-dark truncate">
+                                  {customer.email}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group hover:border-purple-500/30 transition-colors">
+                            <div className="p-1.5 bg-purple-500/10 text-purple-600 rounded-md group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                              <Calendar className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-bold uppercase text-text-light/40 dark:text-text-dark/40 tracking-wider mb-0.5">Member Since</p>
+                              <p className="font-bold text-xs text-text-light dark:text-text-dark truncate">
+                                {format(parseISO(customer.createdAt), 'MMM yyyy')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tags */}
+                        {customerTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                             {customerTags.map((tag, idx) => (
+                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded bg-transparent border border-border-light dark:border-border-dark text-[10px] font-bold text-text-light/60 dark:text-text-dark/60">
+                                  <Tag className="w-2.5 h-2.5 mr-1 opacity-50" />
+                                  {tag}
+                                </span>
+                             ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Statistics Bar */}
+                    {statistics && (
+                      <div className="mt-5 pt-4 border-t border-border-light dark:border-border-dark grid grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-2">
+                         {/* Total Spent */}
+                         <div className="relative pl-3 border-l-[3px] border-primary/20">
+                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Lifetime Spent</p>
+                            <div className="flex items-baseline gap-1">
+                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
+                                 {Math.round(statistics.totalSpent).toLocaleString()}
+                               </span>
+                               <span className="text-[10px] font-bold text-text-light/40">RWF</span>
+                            </div>
+                         </div>
+
+                         {/* Visits */}
+                         <div className="relative pl-3 border-l-[3px] border-blue-500/20">
+                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Total Visits</p>
+                            <div className="flex items-baseline gap-1">
+                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
+                                 {statistics.totalVisits}
+                               </span>
+                               <span className="text-[10px] font-bold text-text-light/40">Visits</span>
+                            </div>
+                         </div>
+
+                         {/* Avg Order */}
+                         <div className="relative pl-3 border-l-[3px] border-purple-500/20">
+                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Avg. Order</p>
+                            <div className="flex items-baseline gap-1">
+                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
+                                 {Math.round(statistics.averageOrderValue).toLocaleString()}
+                               </span>
+                               <span className="text-[10px] font-bold text-text-light/40">RWF</span>
+                            </div>
+                         </div>
+
+                         {/* Loyalty */}
+                         <div className="relative pl-3 border-l-[3px] border-amber-500/20">
+                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Loyalty Points</p>
+                            <div className="flex items-baseline gap-1">
+                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
+                                 {customer.loyaltyPoints || 0}
+                               </span>
+                               <span className="text-[10px] font-bold text-text-light/40">Pts</span>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Next Appointment Banner */}
+                {nextAppointment && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-text-light dark:text-text-dark">
+                          Next Appointment
+                        </p>
+                        <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                          {format(parseISO(nextAppointment.scheduledStart), 'EEEE, MMM d @ h:mm a')} • {nextAppointment.service?.name}
+                        </p>
+                      </div>
+                    </div>
                     <Button
-                      type="button"
                       size="sm"
-                      variant="outline"
-                      onClick={() => setShowNotesModal(true)}
+                      variant="primary"
+                      onClick={() => router.push(`/appointments/${nextAppointment.id}`)}
                     >
-                      {customerNotes ? 'Edit Notes' : 'Add Notes'}
+                      View
                     </Button>
                   </div>
-                  {customerNotes ? (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {customerNotes}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-center">
-                      <p className="text-gray-500 dark:text-gray-400">No notes added yet</p>
-                    </div>
-                  )}
-                </div>
+                )}
 
                 {/* Preferred Services */}
                 {preferredServices.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                      <Heart className="w-5 h-5" />
+                  <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-primary" />
                       Preferred Services
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="space-y-2">
                       {preferredServices.map((service, idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              {service.name}
-                            </span>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              {service.count}x
-                            </span>
-                          </div>
+                        <div key={idx} className="flex items-center justify-between">
+                          <span className="text-sm text-text-light dark:text-text-dark">
+                            {service.name}
+                          </span>
+                          <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60">
+                            {service.count} times
+                          </span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* Recent Activity */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Recent Activity
-                  </h3>
-                  <div className="space-y-3">
-                    {activities.slice(0, 5).map((activity, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
-                      >
-                        <div className="flex-shrink-0">
-                          {activity.type === 'sale' ? (
-                            <ShoppingBag className="w-5 h-5 text-green-600 dark:text-green-400" />
-                          ) : (
-                            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {activity.title}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            {format(parseISO(activity.date), 'MMM d, yyyy h:mm a')}
-                          </p>
-                        </div>
-                        <div>
-                          <span
-                            className={`px-2 py-1 text-xs font-medium rounded ${
-                              activity.status === 'completed'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                : activity.status === 'cancelled'
-                                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                            }`}
-                          >
-                            {activity.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                    {activities.length === 0 && (
-                      <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                        No recent activity
-                      </p>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
 
             {/* Purchases Tab */}
             {activeTab === 'purchases' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {salesLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading purchases...</p>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : sales.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-500 dark:text-gray-400">No purchases found</p>
+                  <div className="text-center py-8">
+                    <ShoppingBag className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                      No purchases found
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {sales.map((sale) => (
                       <div
                         key={sale.id}
-                        className="p-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition"
+                        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all"
                       >
-                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start justify-between mb-3">
                           <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Building2 className="w-4 h-4 text-gray-400" />
-                              <span className="font-semibold text-gray-900 dark:text-white">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="p-1.5 bg-purple-500/10 rounded-lg">
+                                <Building2 className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                              </div>
+                              <span className="text-sm font-bold text-text-light dark:text-text-dark">
                                 {sale.salon?.name || 'Salon'}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                               {format(parseISO(sale.createdAt), 'MMM d, yyyy h:mm a')}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">
+                            <p className="text-xl font-bold text-text-light dark:text-text-dark">
                               {sale.currency} {sale.totalAmount.toLocaleString()}
                             </p>
                             <span
-                              className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded ${
+                              className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${
                                 sale.status === 'completed'
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                  ? 'bg-success/10 text-success'
+                                  : 'bg-warning/10 text-warning'
                               }`}
                             >
                               {sale.status}
@@ -882,9 +724,9 @@ export default function CustomerDetailPage() {
                           </div>
                         </div>
                         {sale.items && sale.items.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Items:
+                          <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+                            <p className="text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-2">
+                              Items
                             </p>
                             <div className="space-y-2">
                               {sale.items.map((item, idx) => (
@@ -892,10 +734,10 @@ export default function CustomerDetailPage() {
                                   key={idx}
                                   className="flex items-center justify-between text-sm"
                                 >
-                                  <span className="text-gray-600 dark:text-gray-400">
+                                  <span className="text-text-light/60 dark:text-text-dark/60">
                                     {item.service?.name || item.product?.name} × {item.quantity}
                                   </span>
-                                  <span className="font-medium text-gray-900 dark:text-white">
+                                  <span className="font-bold text-text-light dark:text-text-dark">
                                     {sale.currency} {item.lineTotal.toLocaleString()}
                                   </span>
                                 </div>
@@ -912,19 +754,20 @@ export default function CustomerDetailPage() {
 
             {/* Appointments Tab */}
             {activeTab === 'appointments' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {appointmentsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading appointments...</p>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : !appointments || appointments.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-500 dark:text-gray-400">No appointments found</p>
+                  <div className="text-center py-8">
+                    <Calendar className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                      No appointments found
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {appointments.map((appointment) => {
                       const aptDate = parseISO(appointment.scheduledStart);
                       const isPastApt = isPast(aptDate);
@@ -934,59 +777,61 @@ export default function CustomerDetailPage() {
                       return (
                         <div
                           key={appointment.id}
-                          className="p-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition"
+                          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all"
                         >
-                          <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Package className="w-4 h-4 text-gray-400" />
-                                <span className="font-semibold text-gray-900 dark:text-white">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="p-1.5 bg-blue-500/10 rounded-lg">
+                                  <Package className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <span className="text-sm font-bold text-text-light dark:text-text-dark">
                                   {appointment.service?.name || 'Service'}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-light/60 dark:text-text-dark/60">
                                 <div className="flex items-center gap-1">
-                                  <Building2 className="w-4 h-4" />
+                                  <Building2 className="w-3 h-3" />
                                   {appointment.salon?.name || 'Salon'}
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <Clock className="w-4 h-4" />
+                                  <Clock className="w-3 h-3" />
                                   {format(aptDate, 'MMM d, yyyy h:mm a')}
                                 </div>
                               </div>
                               {appointment.notes && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
                                   {appointment.notes}
                                 </p>
                               )}
                             </div>
-                            <div className="flex flex-col items-end gap-2">
+                            <div className="flex flex-col items-end gap-1.5">
                               <span
-                                className={`px-3 py-1 text-xs font-medium rounded ${
+                                className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${
                                   appointment.status === 'completed'
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                    ? 'bg-success/10 text-success'
                                     : appointment.status === 'cancelled' ||
                                         appointment.status === 'no_show'
-                                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                      ? 'bg-red-500/10 text-red-600 dark:text-red-400'
                                       : appointment.status === 'confirmed'
-                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                        ? 'bg-primary/10 text-primary'
+                                        : 'bg-warning/10 text-warning'
                                 }`}
                               >
                                 {appointment.status}
                               </span>
                               {isTodayApt && (
-                                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary rounded-full">
                                   Today
                                 </span>
                               )}
                               {isFutureApt && (
-                                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded">
+                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-success/10 text-success rounded-full">
                                   Upcoming
                                 </span>
                               )}
                               {isPastApt && appointment.status !== 'completed' && (
-                                <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded">
+                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-text-light/10 text-text-light/60 dark:text-text-dark/60 rounded-full">
                                   Past
                                 </span>
                               )}
@@ -1002,54 +847,60 @@ export default function CustomerDetailPage() {
 
             {/* Style References Tab */}
             {activeTab === 'references' && (
-              <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
                       Styling References
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Visual history of looks the customer loves. Share with stylists for consistent
-                      results.
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                      Visual history of looks the customer loves
                     </p>
                   </div>
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => {
                       setEditingReference(null);
                       setShowReferenceModal(true);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    className="gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     Add Reference
-                  </button>
+                  </Button>
                 </div>
 
                 {referencesLoading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Loading styling references...
-                    </p>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : styleReferences.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-                    <ImageIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-500 dark:text-gray-400 mb-2">
+                  <div className="text-center py-8">
+                    <ImageIcon className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
                       No styling references yet
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Save inspiration photos or past looks to guide future services.
-                    </p>
+                    <Button
+                      variant="primary"
+                      className="gap-2 mx-auto"
+                      onClick={() => {
+                        setEditingReference(null);
+                        setShowReferenceModal(true);
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Reference
+                    </Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {styleReferences.map((reference) => (
                       <div
                         key={reference.id}
-                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition"
+                        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden hover:shadow-lg transition-all"
                       >
-                        <div className="relative h-56 bg-gray-100 dark:bg-gray-800">
+                        <div className="relative h-48 bg-surface-light dark:bg-surface-dark">
                           <Image
                             src={reference.imageUrl}
                             alt={reference.title}
@@ -1058,21 +909,21 @@ export default function CustomerDetailPage() {
                             className="object-cover"
                             unoptimized
                           />
-                          <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold bg-black/70 text-white">
-                            {reference.sharedWithEmployees ? 'Shared with team' : 'Private'}
+                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/70 text-white">
+                            {reference.sharedWithEmployees ? 'Shared' : 'Private'}
                           </div>
                         </div>
-                        <div className="p-5 space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <div className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-bold text-text-light dark:text-text-dark">
                                 {reference.title}
                               </h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Saved {format(parseISO(reference.createdAt), 'MMM d, yyyy')}
+                              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60">
+                                {format(parseISO(reference.createdAt), 'MMM d, yyyy')}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                               <button
                                 onClick={() =>
                                   toggleShareMutation.mutate({
@@ -1080,11 +931,11 @@ export default function CustomerDetailPage() {
                                     shared: !reference.sharedWithEmployees,
                                   })
                                 }
-                                className={`p-2 rounded-full border ${
+                                className={`p-1.5 rounded-lg border transition-all ${
                                   reference.sharedWithEmployees
-                                    ? 'border-green-200 text-green-600 dark:border-green-800 dark:text-green-300'
-                                    : 'border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-400'
-                                } hover:shadow`}
+                                    ? 'border-success/20 bg-success/10 text-success'
+                                    : 'border-border-light dark:border-border-dark text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark'
+                                }`}
                                 title={
                                   reference.sharedWithEmployees
                                     ? 'Hide from salon team'
@@ -1092,9 +943,9 @@ export default function CustomerDetailPage() {
                                 }
                               >
                                 {reference.sharedWithEmployees ? (
-                                  <ShieldCheck className="w-4 h-4" />
+                                  <ShieldCheck className="w-3.5 h-3.5" />
                                 ) : (
-                                  <ShieldOff className="w-4 h-4" />
+                                  <ShieldOff className="w-3.5 h-3.5" />
                                 )}
                               </button>
                               <button
@@ -1102,10 +953,10 @@ export default function CustomerDetailPage() {
                                   setEditingReference(reference);
                                   setShowReferenceModal(true);
                                 }}
-                                className="p-2 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:shadow"
+                                className="p-1.5 rounded-lg border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-all"
                                 title="Edit reference"
                               >
-                                <Edit className="w-4 h-4" />
+                                <Edit className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => {
@@ -1115,24 +966,24 @@ export default function CustomerDetailPage() {
                                     deleteReferenceMutation.mutate(reference.id);
                                   }
                                 }}
-                                className="p-2 rounded-full border border-gray-200 dark:border-gray-700 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                className="p-1.5 rounded-lg border border-border-light dark:border-border-dark text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all"
                                 title="Delete reference"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
                           {reference.description && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
                               {reference.description}
                             </p>
                           )}
                           {reference.tags && reference.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1.5">
                               {reference.tags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded-full text-xs font-medium"
+                                  className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-semibold"
                                 >
                                   #{tag}
                                 </span>
@@ -1140,10 +991,9 @@ export default function CustomerDetailPage() {
                             </div>
                           )}
                           {reference.appointment && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 border-t border-dashed border-gray-200 dark:border-gray-700 pt-3">
-                              Captured during{' '}
-                              {reference.appointment.service?.name || 'an appointment'} at{' '}
-                              {reference.appointment.salon?.name || 'the salon'}
+                            <div className="text-[10px] text-text-light/60 dark:text-text-dark/60 border-t border-border-light dark:border-border-dark pt-2">
+                              From {reference.appointment.service?.name || 'appointment'} at{' '}
+                              {reference.appointment.salon?.name || 'salon'}
                             </div>
                           )}
                         </div>
@@ -1156,47 +1006,49 @@ export default function CustomerDetailPage() {
 
             {/* Activity Tab */}
             {activeTab === 'activity' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {activities.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Activity className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-500 dark:text-gray-400">No activity found</p>
+                  <div className="text-center py-8">
+                    <Activity className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                      No activity found
+                    </p>
                   </div>
                 ) : (
                   <div className="relative">
-                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                    <div className="space-y-6">
+                    <div className="absolute left-3.5 top-0 bottom-0 w-0.5 bg-border-light dark:bg-border-dark"></div>
+                    <div className="space-y-4">
                       {activities.map((activity, idx) => (
-                        <div key={idx} className="relative flex gap-4">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center z-10">
+                        <div key={idx} className="relative flex gap-3">
+                          <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center z-10">
                             {activity.type === 'sale' ? (
-                              <ShoppingBag className="w-4 h-4 text-green-600 dark:text-green-400" />
+                              <ShoppingBag className="w-3.5 h-3.5 text-primary" />
                             ) : (
-                              <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <Calendar className="w-3.5 h-3.5 text-primary" />
                             )}
                           </div>
-                          <div className="flex-1 pb-6">
-                            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className="font-medium text-gray-900 dark:text-white">
+                          <div className="flex-1 pb-4">
+                            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-text-light dark:text-text-dark">
                                     {activity.title}
                                   </p>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
                                     {activity.description}
                                   </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                                  <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 mt-1.5">
                                     {format(parseISO(activity.date), 'MMM d, yyyy h:mm a')}
                                   </p>
                                 </div>
                                 <span
-                                  className={`px-2 py-1 text-xs font-medium rounded ${
+                                  className={`px-2 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${
                                     activity.status === 'completed'
-                                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                      ? 'bg-success/10 text-success'
                                       : activity.status === 'cancelled' ||
                                           activity.status === 'no_show'
-                                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                        ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                        : 'bg-warning/10 text-warning'
                                   }`}
                                 >
                                   {activity.status}
@@ -1213,7 +1065,7 @@ export default function CustomerDetailPage() {
             )}
           </div>
         </div>
-      </div>
+
       {showReferenceModal && (
         <StyleReferenceModal
           onClose={() => {
@@ -1266,13 +1118,13 @@ function NotesModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-xl w-full max-w-2xl overflow-hidden border border-border-light dark:border-border-dark">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-light dark:border-border-dark">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
               Customer Notes & Tags
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
               Internal notes visible only to salon staff
             </p>
           </div>
@@ -1283,14 +1135,14 @@ function NotesModal({
             onClick={onClose}
             className="h-8 w-8 p-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </Button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <label
               htmlFor="customer-notes"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
             >
               Notes
             </label>
@@ -1299,14 +1151,14 @@ function NotesModal({
               rows={6}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
               placeholder="Add internal notes about this customer..."
             />
           </div>
           <div>
             <label
               htmlFor="customer-tags"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
             >
               Tags (separate with commas)
             </label>
@@ -1316,14 +1168,14 @@ function NotesModal({
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="VIP, Regular, Preferred, etc."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
             />
           </div>
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" loading={loading} loadingText="Saving...">
+            <Button type="submit" variant="primary" size="sm" loading={loading} loadingText="Saving...">
               Save Notes
             </Button>
           </div>
@@ -1384,14 +1236,14 @@ function StyleReferenceModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-xl w-full max-w-2xl overflow-hidden border border-border-light dark:border-border-dark">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-light dark:border-border-dark">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
               {reference ? 'Edit Styling Reference' : 'Add Styling Reference'}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Upload inspiration photos or finished looks for future visits.
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+              Upload inspiration photos or finished looks
             </p>
           </div>
           <Button
@@ -1401,15 +1253,15 @@ function StyleReferenceModal({
             onClick={onClose}
             className="h-8 w-8 p-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </Button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="space-y-4">
             <div>
               <label
                 htmlFor="style-ref-title"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
               >
                 Title *
               </label>
@@ -1419,11 +1271,11 @@ function StyleReferenceModal({
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
               />
             </div>
-            <div className="md:col-span-2">
-              <p className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div>
+              <p className="block text-sm font-bold text-text-light dark:text-text-dark mb-2">
                 Image *
               </p>
               <div className="flex gap-2 mb-2">
@@ -1451,7 +1303,7 @@ function StyleReferenceModal({
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                   />
                   {previewUrl && (
                     <div className="mt-3">
@@ -1460,7 +1312,7 @@ function StyleReferenceModal({
                         alt="Preview"
                         width={900}
                         height={360}
-                        className="max-w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-700"
+                        className="max-w-full h-48 object-cover rounded-lg border border-border-light dark:border-border-dark"
                         unoptimized
                       />
                     </div>
@@ -1477,7 +1329,7 @@ function StyleReferenceModal({
                     setPreviewUrl(e.target.value);
                   }}
                   placeholder="https://example.com/photo.jpg"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
                 />
               )}
             </div>
@@ -1485,7 +1337,7 @@ function StyleReferenceModal({
           <div>
             <label
               htmlFor="style-ref-description"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
             >
               Description
             </label>
@@ -1494,13 +1346,13 @@ function StyleReferenceModal({
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
             />
           </div>
           <div>
             <label
               htmlFor="style-ref-tags"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
             >
               Tags (separate with commas)
             </label>
@@ -1510,35 +1362,35 @@ function StyleReferenceModal({
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               placeholder="braids, balayage, formal"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
             />
           </div>
-          <div className="flex items-start gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-start gap-3 p-3 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark">
             <input
               id="style-ref-shared"
               type="checkbox"
               checked={formData.sharedWithEmployees}
               onChange={(e) => setFormData({ ...formData, sharedWithEmployees: e.target.checked })}
-              className="mt-0.5 h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary/50"
+              className="mt-0.5 h-4 w-4 text-primary rounded border-border-light dark:border-border-dark focus:ring-primary/50"
             />
             <div className="min-w-0">
               <label
                 htmlFor="style-ref-shared"
-                className="text-sm font-medium text-gray-900 dark:text-white"
+                className="text-sm font-bold text-text-light dark:text-text-dark"
               >
                 Share with salon team
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Allow stylists to view this reference before and during services.
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                Allow stylists to view this reference
               </p>
             </div>
           </div>
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" loading={loading} loadingText="Saving...">
-              {reference ? 'Update Reference' : 'Save Reference'}
+            <Button type="submit" variant="primary" size="sm" loading={loading} loadingText="Saving...">
+              {reference ? 'Update' : 'Save'}
             </Button>
           </div>
         </form>

@@ -153,7 +153,14 @@ const DAYS_ORDER: (keyof WorkingHours)[] = [
 
 export default function SalonDetailsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.CUSTOMER,
+        UserRole.SALON_EMPLOYEE,
+        UserRole.SALON_OWNER,
+        UserRole.SUPER_ADMIN,
+      ]}
+    >
       <SalonDetailsContent />
     </ProtectedRoute>
   );
@@ -197,7 +204,7 @@ function SalonDetailsContent() {
   const { data: services, isLoading: isLoadingServices } = useQuery<Service[]>({
     queryKey: ['salon-services', salonId],
     queryFn: async () => {
-      const response = await api.get(`/services?salonId=${salonId}`);
+      const response = await api.get(`/services?salonId=${salonId}&browse=true`);
       const servicesData = response.data?.data || response.data;
       return Array.isArray(servicesData) ? servicesData : [];
     },

@@ -49,4 +49,34 @@ export class CustomersService {
   async remove(id: string): Promise<void> {
     await this.customersRepository.delete(id);
   }
+
+  /**
+   * Get or create customer profile for any user
+   * This allows salon owners/employees to book appointments as customers
+   */
+  async getOrCreateCustomerForUser(user: any): Promise<Customer> {
+    // Check if customer profile already exists
+    let customer = await this.findByUserId(user.id);
+
+    if (!customer) {
+      // Auto-create customer profile for this user
+      // Handle different possible field names and provide fallbacks
+      const fullName = user.fullName || user.full_name || user.name || user.email || 'Guest User';
+
+      customer = await this.customersRepository.save({
+        userId: user.id,
+        fullName: fullName,
+        email: user.email || null,
+        phone: user.phone || null,
+        metadata: {
+          autoCreated: true,
+          userRole: user.role,
+          createdForSelfBooking: true,
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }
+
+    return customer;
+  }
 }

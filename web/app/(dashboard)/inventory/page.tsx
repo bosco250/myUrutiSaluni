@@ -572,7 +572,7 @@ function ProductModal({
     name: product?.name || '',
     sku: product?.sku || '',
     description: product?.description || '',
-    unitPrice: product?.unitPrice || 0,
+    unitPrice: product?.unitPrice ?? '',
     taxRate: product?.taxRate || 0,
     isInventoryItem: product?.isInventoryItem ?? true,
   });
@@ -614,7 +614,8 @@ function ProductModal({
       setLoading(false);
       return;
     }
-    if (formData.unitPrice < 0) {
+    const price = Number(formData.unitPrice);
+    if (price < 0) {
       setError('Unit price must be greater than or equal to 0');
       setLoading(false);
       return;
@@ -625,7 +626,7 @@ function ProductModal({
       return;
     }
 
-    mutation.mutate(formData, {
+    mutation.mutate({ ...formData, unitPrice: price }, {
       onSettled: () => setLoading(false),
     });
   };
@@ -738,7 +739,7 @@ function ProductModal({
                   step="0.01"
                   value={formData.unitPrice}
                   onChange={(e) =>
-                    setFormData({ ...formData, unitPrice: parseFloat(e.target.value) || 0 })
+                    setFormData({ ...formData, unitPrice: e.target.value })
                   }
                   className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                 />

@@ -178,6 +178,109 @@ export class AuthService {
     };
   }
 
+  async requestEmailChange(userId: string): Promise<{ message: string }> {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Generate secure random token
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutes
+
+    // Store in metadata
+    await this.usersService.update(userId, {
+      metadata: {
+        ...user.metadata,
+        emailChangeToken: hashedToken,
+        emailChangeExpires: expiresAt,
+      },
+    });
+    
+    // Generate Frontend URL
+    const frontendUrls = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    ).split(',');
+    const frontendUrl = frontendUrls[0].trim();
+    const actionUrl = `${frontendUrl}/change-email?token=${token}`;
+
+    // Send email
+    try {
+      const emailHtml = this.emailTemplateService.renderTemplate(
+        'email_change_verification',
+        {
+          customerName: user.fullName || 'User',
+          actionUrl: actionUrl,
+        },
+      );
+
+      await this.emailService.sendEmail(
+        user.email,
+        'Update Email Address - Uruti Saluni',
+        emailHtml,
+      );
+      
+      this.logger.log(`Email change link sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send email change link:`, error);
+      throw new BadRequestException('Failed to send verification email');
+    }
+
+    return { message: 'Verification link sent to your email' };
+  }
+  
+  async changeEmail(token: string, newEmail: string): Promise<{ message: string }> {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    // Ideally we should query by the metadata field, but simple-json querying can be specific to DB driver.
+    // For now, iterate or use a query builder if possible. 
+    // Since we are using TypeORM repository find, and metadata is json, strict query might be hard without custom query.
+    // We will fetch all users who requested change (not efficient for millions, but fine for now) or better:
+    // If we assume we don't have the user ID from the token, we have to search.
+    // Wait, the link is just token. We need to find the user BY token.
+    
+    // Optimization: Since we don't have a column for this token, we have to scan.
+    // OR we pass userId in the query param too? But that's less secure if not signed.
+    // The previous implementation used `resetPasswordToken` column which is indexed.
+    // Here we are using `metadata.emailChangeToken`.
+    // Valid approach: Fetch all users where `metadata` is not null (if possible) or just fetch all active users and filter in memory (bad for scale).
+    // BETTER: For now, I will use `resetPasswordToken` column for this purpose as well (or add a column properly, but I can't migrate DB now easily).
+    // OR: I'll accept `userId` in the frontend URL query param too. `?token=...&id=...`.
+    // BUT user said "when click on that token", implying just token.
+    
+    // Let's iterate users for now.
+    const users = await this.usersService.findAll();
+    const user = users.find(u => 
+        u.metadata?.emailChangeToken === hashedToken && 
+        u.metadata?.emailChangeExpires && 
+        new Date(u.metadata.emailChangeExpires) > new Date()
+    );
+
+    if (!user) {
+        throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    // Check if new email is taken
+    const existingUser = await this.usersService.findByEmail(newEmail);
+    if (existingUser && existingUser.id !== user.id) {
+        throw new BadRequestException('Email is already in use');
+    }
+
+    // Update email
+    const updatedMetadata = { ...user.metadata };
+    delete updatedMetadata.emailChangeToken;
+    delete updatedMetadata.emailChangeExpires;
+
+    await this.usersService.update(user.id, {
+        email: newEmail,
+        metadata: updatedMetadata
+    });
+
+    return { message: 'Email updated successfully' };
+  }
+
   async resetPassword(
     token: string,
     newPassword: string,

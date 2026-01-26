@@ -21,6 +21,8 @@ import {
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Button from '@/components/ui/Button';
@@ -57,6 +59,7 @@ export default function WalletsPage() {
   const queryClient = useQueryClient();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [showBalance, setShowBalance] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -167,26 +170,29 @@ export default function WalletsPage() {
             <Button
               onClick={() => router.push('/external-payments')}
               variant="outline"
-              className="flex items-center gap-2"
+              size="sm"
+              className="flex items-center gap-2 text-xs"
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowUpRight className="w-3.5 h-3.5" />
               External Transaction
             </Button>
             <Button
               onClick={() => setShowTopUpModal(true)}
               variant="outline"
-              className="flex items-center gap-2"
+              size="sm"
+              className="flex items-center gap-2 text-xs"
             >
-              <ArrowDown className="w-4 h-4" />
+              <ArrowDown className="w-3.5 h-3.5" />
               Top Up
             </Button>
             <Button
               onClick={() => setShowWithdrawModal(true)}
               variant="primary"
+              size="sm"
               disabled={balance < 1000}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-xs"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
               Withdraw
             </Button>
           </div>
@@ -194,22 +200,35 @@ export default function WalletsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Balance Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
           <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
           <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
           <div className="relative text-white">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/75">
-                Current Balance
-              </p>
-              <div className="h-9 w-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center">
-                <WalletIcon className="w-4 h-4" />
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/75">
+                  Current Balance
+                </p>
+                <button 
+                  onClick={() => setShowBalance(!showBalance)}
+                  className="p-1 hover:bg-white/10 rounded-md transition-colors"
+                  title={showBalance ? "Hide Balance" : "Show Balance"}
+                >
+                  {showBalance ? (
+                    <EyeOff className="w-3 h-3 text-white/70" />
+                  ) : (
+                    <Eye className="w-3 h-3 text-white/70" />
+                  )}
+                </button>
+              </div>
+              <div className="h-8 w-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center">
+                <WalletIcon className="w-3.5 h-3.5" />
               </div>
             </div>
-            <p className="text-2xl font-black mt-3">
-              {wallet?.currency || 'RWF'} {balance.toLocaleString()}
+            <p className="text-xl font-black mt-2 transition-all duration-300">
+              {wallet?.currency || 'RWF'} {showBalance ? balance.toLocaleString() : '••••••'}
             </p>
             {balance < 1000 && (
               <p className="text-[10px] text-white/60 mt-1">Min withdrawal: 1,000 RWF</p>
@@ -218,56 +237,56 @@ export default function WalletsPage() {
         </div>
 
         {/* Total Received */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
           <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
           <div className="relative flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                 Total Received
               </p>
-              <p className="text-xl font-black text-success mt-2">
-                +{deposits.toLocaleString()} <span className="text-sm font-normal">RWF</span>
+              <p className="text-lg font-black text-success mt-1.5">
+                +{deposits.toLocaleString()} <span className="text-xs font-normal">RWF</span>
               </p>
               <p className="text-[10px] text-text-light/50 mt-1">
                 Commissions & deposits
               </p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
-              <ArrowDown className="w-4 h-4" />
+            <div className="h-8 w-8 rounded-xl bg-success/10 text-success flex items-center justify-center">
+              <ArrowDown className="w-3.5 h-3.5" />
             </div>
           </div>
         </div>
 
         {/* Total Withdrawn */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
           <div className="absolute inset-0 bg-gradient-to-br from-danger/10 via-transparent to-danger/5" />
           <div className="relative flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                 Total Withdrawn
               </p>
-              <p className="text-xl font-black text-danger mt-2">
-                -{withdrawals.toLocaleString()} <span className="text-sm font-normal">RWF</span>
+              <p className="text-lg font-black text-danger mt-1.5">
+                -{withdrawals.toLocaleString()} <span className="text-xs font-normal">RWF</span>
               </p>
               <p className="text-[10px] text-text-light/50 mt-1">
                 Payments & transfers
               </p>
             </div>
-            <div className="h-9 w-9 rounded-xl bg-danger/10 text-danger flex items-center justify-center">
-              <ArrowUp className="w-4 h-4" />
+            <div className="h-8 w-8 rounded-xl bg-danger/10 text-danger flex items-center justify-center">
+              <ArrowUp className="w-3.5 h-3.5" />
             </div>
           </div>
         </div>
 
         {/* Transactions Count */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4">
+        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
           <div className="relative flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
                 Transactions
               </p>
-              <p className="text-xl font-black text-text-light dark:text-text-dark mt-2">
+              <p className="text-lg font-black text-text-light dark:text-text-dark mt-1.5">
                 {transactions.length}
               </p>
               {pendingCount > 0 && (
@@ -276,8 +295,8 @@ export default function WalletsPage() {
                 </p>
               )}
             </div>
-            <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Receipt className="w-4 h-4" />
+            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Receipt className="w-3.5 h-3.5" />
             </div>
           </div>
         </div>
@@ -371,7 +390,7 @@ export default function WalletsPage() {
                       {toNumber(tx.amount).toLocaleString()} RWF
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-text-light/70 dark:text-text-dark/70">
-                      {toNumber(tx.balanceAfter).toLocaleString()} RWF
+                      {showBalance ? `${toNumber(tx.balanceAfter).toLocaleString()} RWF` : '••••••'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
@@ -423,6 +442,7 @@ export default function WalletsPage() {
       {showWithdrawModal && (
         <WithdrawModal
           wallet={wallet}
+          showBalance={showBalance}
           onClose={() => setShowWithdrawModal(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['wallet'] });
@@ -450,10 +470,12 @@ export default function WalletsPage() {
 
 function WithdrawModal({
   wallet,
+  showBalance,
   onClose,
   onSuccess,
 }: {
   wallet: WalletData | undefined;
+  showBalance: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -573,7 +595,7 @@ function WithdrawModal({
           <div className="bg-background-light dark:bg-background-dark rounded-xl p-4 text-center border border-border-light dark:border-border-dark">
             <span className="text-xs font-semibold text-text-light/60 uppercase">Available Balance</span>
             <p className="text-2xl font-bold text-primary mt-1">
-              {wallet?.currency || 'RWF'} {balance.toLocaleString()}
+              {wallet?.currency || 'RWF'} {showBalance ? balance.toLocaleString() : '••••••'}
             </p>
           </div>
 

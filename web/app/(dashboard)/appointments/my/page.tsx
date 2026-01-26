@@ -66,7 +66,14 @@ type TabFilter = 'upcoming' | 'past' | 'all';
 
 export default function MyAppointmentsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.CUSTOMER,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+        UserRole.SUPER_ADMIN,
+      ]}
+    >
       <MyAppointmentsContent />
     </ProtectedRoute>
   );
@@ -181,10 +188,10 @@ function MyAppointmentsContent() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg">
               <CalendarDays className="w-5 h-5 text-white" />
             </div>
-            My Appointments
+            My Personal Bookings
           </h1>
           <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-            Manage and track all your bookings
+            Appointments you booked for yourself at other salons
           </p>
         </div>
         <Button

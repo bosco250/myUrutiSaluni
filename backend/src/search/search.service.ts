@@ -454,7 +454,7 @@ export class SearchService {
         .leftJoinAndSelect('sale.customer', 'customer')
         .leftJoinAndSelect('sale.salon', 'salon')
         .where('customer.fullName ILIKE :query', { query: `%${query}%` })
-        .orWhere('sale.id ILIKE :query', { query: `%${query}%` })
+        .orWhere('sale.id::text ILIKE :query', { query: `%${query}%` })
         .orderBy('sale.createdAt', 'DESC')
         .take(5);
 

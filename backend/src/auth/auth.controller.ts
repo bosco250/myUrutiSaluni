@@ -97,6 +97,23 @@ export class AuthController {
     );
   }
 
+  @Post('request-email-change')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Request email change verification code' })
+  @ApiResponse({ status: 200, description: 'Verification code sent' })
+  async requestEmailChange(@CurrentUser() user: any) {
+    return this.authService.requestEmailChange(user.id);
+  }
+  
+  @Post('change-email')
+  @Public() // Can be public since token verifies identity
+  @ApiOperation({ summary: 'Change email using verification token' })
+  @ApiResponse({ status: 200, description: 'Email updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token or email in use' })
+  async changeEmail(@Body() body: { token: string; newEmail: string }) {
+    return this.authService.changeEmail(body.token, body.newEmail);
+  }
+  
   @Get('profile')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user profile' })

@@ -228,10 +228,43 @@ export class EmailTemplateService {
       permission_granted: this.getPermissionGrantedTemplate(),
       permission_revoked: this.getPermissionRevokedTemplate(),
       membership_status: this.getMembershipStatusTemplate(),
+      email_change_verification: this.getEmailChangeVerificationTemplate(),
     };
 
     return templates[templateName] || this.getDefaultTemplate();
   }
+
+  private getEmailChangeVerificationTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Update Email Address')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello {{customerName}},</div>
+        <div class="message">You have requested to change your email address. Please click the button below to proceed to the email update page:</div>
+        
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button">Update Email Address</a>
+        </div>
+
+        <div class="alert-box alert-box-warning">
+          <div class="alert-title">🔒 Security Notice</div>
+          <div class="alert-content">
+            This link will expire in 15 minutes. If you did not request this change, please ignore this email.
+          </div>
+        </div>
+        
+        <div class="divider"></div>
+
+        <div class="message" style="font-size: 12px; color: #9ca3af;">
+          <strong>Button not working?</strong> Copy and paste this link into your browser:<br>
+          <span class="url-break">{{actionUrl}}</span>
+        </div>
+      `,
+      );
+  }
+
+
 
   private getAppointmentBookedTemplate(): string {
     return this.baseTemplate

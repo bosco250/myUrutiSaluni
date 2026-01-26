@@ -440,14 +440,14 @@ function MembershipsPageContent() {
         </div>
 
         {/* Stats Skeletons */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-4"
+              className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3"
             >
-              <Skeleton variant="text" width={80} height={16} className="mb-2" />
-              <Skeleton variant="text" width={60} height={32} />
+              <Skeleton variant="text" width={60} height={12} className="mb-1" />
+              <Skeleton variant="text" width={40} height={24} />
             </div>
           ))}
         </div>
@@ -521,25 +521,15 @@ function MembershipsPageContent() {
       )}
 
       {/* Hero */}
-      <div className="border-b border-border-light dark:border-border-dark pb-6">
+      <div className="pb-4">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-7 h-7 text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
-                  Memberships
-                </h1>
-                <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark">
-                  {filteredMemberships.length} total
-                </span>
-              </div>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1.5">
-                Manage salon memberships, monitor status, and track renewal schedules
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-text-light dark:text-text-dark">
+              Memberships
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60">
+              {filteredMemberships.length}
+            </span>
           </div>
 
           {canManageUsers() && (
@@ -595,9 +585,110 @@ function MembershipsPageContent() {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Total
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                {stats?.total || 0}
+              </p>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">
+                {stats?.activePercentage || 0}% active
+              </p>
+            </div>
+            <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+              <Building2 className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Active
+              </p>
+              <p className="text-xl font-bold text-success mt-1">{stats?.active || 0}</p>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">
+                In good standing
+              </p>
+            </div>
+            <div className="h-8 w-8 rounded-md bg-success/10 text-success flex items-center justify-center">
+              <CheckCircle className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                New
+              </p>
+              <p className="text-xl font-bold text-primary mt-1">{stats?.new || 0}</p>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Pending</p>
+            </div>
+            <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Renewal
+              </p>
+              <p className="text-xl font-bold text-warning mt-1">{stats?.pendingRenewal || 0}</p>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Follow-up</p>
+            </div>
+            <div className="h-8 w-8 rounded-md bg-warning/10 text-warning flex items-center justify-center">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Expired
+              </p>
+              <p className="text-xl font-bold text-error mt-1">{stats?.expired || 0}</p>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Needs action</p>
+            </div>
+            <div className="h-8 w-8 rounded-md bg-error/10 text-error flex items-center justify-center">
+              <XCircle className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                Suspended
+              </p>
+              <p className="text-xl font-bold text-text-light/60 dark:text-text-dark/60 mt-1">
+                {stats?.suspended || 0}
+              </p>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">On hold</p>
+            </div>
+            <div className="h-8 w-8 rounded-md bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 flex items-center justify-center">
+              <Ban className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Search + Status Pills */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
             <input
@@ -690,106 +781,7 @@ function MembershipsPageContent() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Total
-              </p>
-              <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
-                {stats?.total || 0}
-              </p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
-                {stats?.activePercentage || 0}% active
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Building2 className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Active
-              </p>
-              <p className="text-2xl font-bold text-success mt-2">{stats?.active || 0}</p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
-                In good standing
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
-              <CheckCircle className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                New
-              </p>
-              <p className="text-2xl font-bold text-primary mt-2">{stats?.new || 0}</p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">Pending</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Clock className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Renewal
-              </p>
-              <p className="text-2xl font-bold text-warning mt-2">{stats?.pendingRenewal || 0}</p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">Follow-up</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Expired
-              </p>
-              <p className="text-2xl font-bold text-error mt-2">{stats?.expired || 0}</p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">Needs action</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-error/10 text-error flex items-center justify-center">
-              <XCircle className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
-                Suspended
-              </p>
-              <p className="text-2xl font-bold text-text-light/60 dark:text-text-dark/60 mt-2">
-                {stats?.suspended || 0}
-              </p>
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">On hold</p>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 flex items-center justify-center">
-              <Ban className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Alert for expiring memberships */}
       {(stats?.expiringSoon || 0) > 0 && (
@@ -874,9 +866,9 @@ function MembershipsPageContent() {
           className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl"
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Queue */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-black text-text-light dark:text-text-dark">
@@ -892,8 +884,8 @@ function MembershipsPageContent() {
             </div>
 
             {needsAttentionMemberships.length === 0 ? (
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-8 text-center">
-                <div className="h-10 w-10 rounded-2xl bg-success/10 text-success flex items-center justify-center mx-auto mb-3">
+              <div className="rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 text-center">
+                <div className="h-10 w-10 rounded-xl bg-success/10 text-success flex items-center justify-center mx-auto mb-3">
                   <CheckCircle className="w-5 h-5" />
                 </div>
                 <p className="text-sm font-semibold text-text-light dark:text-text-dark">
@@ -904,7 +896,7 @@ function MembershipsPageContent() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {needsAttentionMemberships.map((membership) => (
                   <MembershipCard
                     key={membership.id}
@@ -954,7 +946,7 @@ function MembershipsPageContent() {
           </div>
 
           {/* Archive */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-black text-text-light dark:text-text-dark">All others</p>
@@ -968,8 +960,8 @@ function MembershipsPageContent() {
             </div>
 
             {otherMemberships.length === 0 ? (
-              <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-8 text-center">
-                <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
+              <div className="rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 text-center">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <p className="text-sm font-semibold text-text-light dark:text-text-dark">
@@ -980,7 +972,7 @@ function MembershipsPageContent() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {otherMemberships.map((membership) => (
                   <MembershipCard
                     key={membership.id}

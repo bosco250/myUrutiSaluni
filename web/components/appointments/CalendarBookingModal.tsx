@@ -63,6 +63,7 @@ export default function CalendarBookingModal({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string>('');
   const [validationResult, setValidationResult] = useState<any>(null);
+  const [bookForSelf, setBookForSelf] = useState<boolean>(false);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -271,11 +272,12 @@ export default function CalendarBookingModal({
       salonId: selectedSalonId,
       serviceId: selectedServiceId,
       salonEmployeeId: selectedEmployeeId,
-      customerId: customerId || undefined,
+      customerId: bookForSelf ? undefined : (customerId || undefined),
       scheduledStart: scheduledStart.toISOString(),
       scheduledEnd: scheduledEnd.toISOString(),
       status: 'booked',
       notes,
+      bookForSelf, // New parameter for self-booking
     });
   };
 
@@ -571,24 +573,38 @@ export default function CalendarBookingModal({
               </div>
             </div>
 
-            {/* Customer Selection */}
-            <div>
-              <label className="block text-xs md:text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                Customer (Optional)
-              </label>
-              <select
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                className="w-full px-3 md:px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="">Walk-in customer</option>
-                {customers.map((customer: any) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.fullName} - {customer.phone}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Customer Selection - Only show when NOT booking for self */}
+            {!bookForSelf && (
+              <div>
+                <label className="block text-xs md:text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                  Customer (Optional)
+                </label>
+                <select
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  className="w-full px-3 md:px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="">Walk-in customer</option>
+                  {customers.map((customer: any) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.fullName} - {customer.phone}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Self-Booking Notice */}
+            {bookForSelf && (
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                <p className="text-sm text-text-light dark:text-text-dark font-medium">
+                  This appointment will be booked under your own customer profile.
+                </p>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                  You cannot book at your own salon as a customer.
+                </p>
+              </div>
+            )}
 
             {/* Notes */}
             <div>
@@ -648,6 +664,36 @@ export default function CalendarBookingModal({
             >
               <X className="w-4 h-4 md:w-5 md:h-5 text-text-light/60 dark:text-text-dark/60" />
             </button>
+          </div>
+
+          {/* Book for Myself Toggle */}
+          <div className="mb-4 p-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <label htmlFor="book-for-self" className="text-sm font-bold text-text-light dark:text-text-dark cursor-pointer">
+                  Book for Myself
+                </label>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                  {bookForSelf
+                    ? "You're booking an appointment for yourself at another salon"
+                    : "You're booking for a customer at your salon"}
+                </p>
+              </div>
+              <button
+                id="book-for-self"
+                type="button"
+                onClick={() => setBookForSelf(!bookForSelf)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                  bookForSelf ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    bookForSelf ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Step indicators */}

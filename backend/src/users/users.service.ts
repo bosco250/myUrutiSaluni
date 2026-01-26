@@ -70,7 +70,13 @@ export class UsersService {
     }));
   }
 
-  async update(id: string, updateData: Partial<User>): Promise<User> {
+  async update(id: string, updateData: any): Promise<User> {
+    // Map avatar to avatarUrl if present (fix for DTO mismatch)
+    if (updateData.avatar) {
+      updateData.avatarUrl = updateData.avatar;
+      delete updateData.avatar;
+    }
+    
     await this.usersRepository.update(id, updateData);
     return this.findOne(id);
   }

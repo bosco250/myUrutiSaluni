@@ -37,6 +37,11 @@ export class CreateUserDto {
   @IsString()
   avatarUrl?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
   @ApiProperty({ enum: UserRole, default: UserRole.CUSTOMER })
   @IsOptional()
   @IsEnum(UserRole)

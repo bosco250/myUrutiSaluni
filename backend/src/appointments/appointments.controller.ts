@@ -59,35 +59,65 @@ export class AppointmentsController {
     @Body() createAppointmentDto: CreateAppointmentDto,
     @CurrentUser() user: any,
   ) {
-    // Customers can only create appointments for themselves
-    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
-      // Get customer record for this user
-      const customer = await this.customersService.findByUserId(
-        user.id || user.userId,
-      );
-      if (!customer) {
-        throw new ForbiddenException(
-          'Customer record not found. Please contact support.',
-        );
-      }
-      // Ensure customer is booking for themselves
+    // Handle self-booking for ALL users (including staff booking themselves)
+    if (
+      createAppointmentDto.bookForSelf ||
+      user.role === UserRole.CUSTOMER ||
+      user.role === 'customer'
+    ) {
+      // Get or create customer profile for this user
+      const customer =
+        await this.customersService.getOrCreateCustomerForUser(user);
+
+      // For staff members booking themselves, prevent booking at their own salon
       if (
-        createAppointmentDto.customerId &&
-        createAppointmentDto.customerId !== customer.id
+        createAppointmentDto.bookForSelf &&
+        (user.role === UserRole.SALON_OWNER ||
+          user.role === UserRole.SALON_EMPLOYEE) &&
+        createAppointmentDto.salonId
       ) {
-        throw new ForbiddenException(
-          'You can only book appointments for yourself',
+        // Check if this is their own salon
+        const salon = await this.salonsService.findOne(
+          createAppointmentDto.salonId,
         );
+        const isOwnSalon =
+          salon.ownerId === user.id ||
+          (await this.salonsService.isUserEmployeeOfSalon(
+            user.id,
+            createAppointmentDto.salonId,
+          ));
+
+        if (isOwnSalon) {
+          throw new ForbiddenException(
+            'You cannot book appointments at your own salon as a customer. Please use the staff booking system.',
+          );
+        }
       }
-      // Auto-set customer ID
+
+      // Auto-set customer ID for self-booking
       createAppointmentDto.customerId = customer.id;
     }
+    // Staff creating appointments for customers at their own salon
+    else if (
+      (user.role === UserRole.SALON_OWNER ||
+        user.role === UserRole.SALON_EMPLOYEE) &&
+      !createAppointmentDto.bookForSelf
+    ) {
+      // This is the existing logic for staff booking customers at their salon
+      // Ensure they have a customerId for the appointment
+      if (!createAppointmentDto.customerId) {
+        throw new BadRequestException(
+          'Customer ID is required when booking for customers',
+        );
+      }
+    }
 
-    // Salon owners and employees can only create appointments for their salon
+    // Salon owners and employees creating appointments for THEIR salon (not self-booking)
     if (
       (user.role === UserRole.SALON_OWNER ||
         user.role === UserRole.SALON_EMPLOYEE) &&
-      createAppointmentDto.salonId
+      createAppointmentDto.salonId &&
+      !createAppointmentDto.bookForSelf
     ) {
       const salon = await this.salonsService.findOne(
         createAppointmentDto.salonId,
@@ -361,6 +391,25 @@ export class AppointmentsController {
         }
       }
 
+      // Also include appointments where staff member is the customer (self-bookings)
+      const customer = await this.customersService.findByUserId(user.id);
+      if (customer) {
+        const personalBookings =
+          await this.appointmentsService.findByCustomerId(customer.id);
+
+        // Merge personal bookings, avoiding duplicates
+        const allAppointmentIds = new Set(salonAppointments.map((a) => a.id));
+        personalBookings.forEach((apt) => {
+          if (!allAppointmentIds.has(apt.id)) {
+            salonAppointments.push(apt);
+          }
+        });
+
+        this.logger.log(
+          `[AppointmentsController] Added ${personalBookings.length} personal booking(s) for user ${user.id}`,
+        );
+      }
+
       return salonAppointments;
     }
     // Admins can see all or filter by salonId
@@ -462,12 +511,18 @@ export class AppointmentsController {
       }
     }
 
-    // Salon owners can only access appointments for their salon
+    // Salon owners can access appointments for their salon OR appointments they booked for themselves
     if (user.role === UserRole.SALON_OWNER) {
       const salon = await this.salonsService.findOne(appointment.salonId);
-      if (salon.ownerId !== user.id) {
+      const isOwnSalon = salon.ownerId === user.id;
+
+      // Check if they are the customer (self-booking)
+      const customer = await this.customersService.findByUserId(user.id);
+      const isCustomer = customer && appointment.customerId === customer.id;
+
+      if (!isOwnSalon && !isCustomer) {
         throw new ForbiddenException(
-          'You can only access appointments for your own salon',
+          'You can only access appointments for your own salon or your own bookings',
         );
       }
     }
@@ -541,10 +596,14 @@ export class AppointmentsController {
         }
       }
 
-      // Allow access if user is preferred employee
-      if (!isPreferredEmployee) {
+      // Check if they are the customer (self-booking)
+      const customer = await this.customersService.findByUserId(user.id);
+      const isCustomer = customer && appointment.customerId === customer.id;
+
+      // Allow access if user is preferred employee OR if they are the customer (self-booking)
+      if (!isPreferredEmployee && !isCustomer) {
         throw new ForbiddenException(
-          'You can only access appointments for your salon or appointments assigned to you',
+          'You can only access appointments for your salon, appointments assigned to you, or your own bookings',
         );
       }
     }

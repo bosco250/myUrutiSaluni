@@ -9,6 +9,7 @@ import {
   UseGuards,
   ForbiddenException,
   Query,
+  Put,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -73,6 +74,25 @@ export class UsersController {
   async getCurrentUser(@CurrentUser() user: any) {
     return this.usersService.findOne(user.id);
   }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current user profile' })
+  async updateCurrentUser(
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.update(user.id, updateUserDto, user);
+  }
+
+  @Put('me')
+  @ApiOperation({ summary: 'Update current user profile (PUT)' })
+  async updateCurrentUserPut(
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.update(user.id, updateUserDto, user);
+  }
+
 
   @Post('names')
   @ApiOperation({

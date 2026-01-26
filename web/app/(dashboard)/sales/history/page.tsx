@@ -15,7 +15,6 @@ import {
   Eye,
   DollarSign,
   CreditCard,
-  Building2,
   Loader2,
   ArrowLeft,
   Receipt,
@@ -380,6 +379,53 @@ function SalesHistoryContent() {
     }
   };
 
+  const handleDownloadCSV = () => {
+    if (!filteredSales.length) return;
+
+    const headers = [
+      'Date',
+      'ID',
+      'Customer',
+      'Phone',
+      'Items',
+      'Total Amount',
+      'Status',
+      'Payment Method',
+      'Salon'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...filteredSales.map(sale => {
+        const items = sale.items?.map(i => i.service?.name || i.product?.name).join('; ') || '';
+        // Escape quotes in strings
+        const escape = (str: string) => str.replace(/"/g, '""');
+        
+        const row = [
+          `"${new Date(sale.createdAt).toLocaleString()}"`,
+          `"${sale.id}"`,
+          `"${escape(sale.customer?.fullName || 'Walk-in')}"`,
+          `"${escape(sale.customer?.phone || '')}"`,
+          `"${escape(items)}"`,
+          sale.totalAmount,
+          sale.status,
+          sale.paymentMethod,
+          `"${escape(sale.salon?.name || '')}"`
+        ];
+        return row.join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `sales_history_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Loading State
   if (isLoading) {
     return (
@@ -449,8 +495,17 @@ function SalesHistoryContent() {
         </div>
         
         <div className="flex items-center gap-2">
-           {user?.role !== UserRole.CUSTOMER && (
+           {user?.role !== UserRole.CUSTOMER ? (
             <>
+              <Button
+                onClick={handleDownloadCSV}
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
               <Button
                 onClick={() => router.push('/sales/analytics')}
                 variant="secondary"
@@ -468,80 +523,89 @@ function SalesHistoryContent() {
                 New Sale
               </Button>
             </>
+          ) : (
+            <Button
+                onClick={handleDownloadCSV}
+                variant="outline"
+                size="sm"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
           )}
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total Revenue */}
-        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Revenue</span>
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Revenue</span>
+            <div className="p-1.5 bg-green-500/20 rounded-lg">
+              <DollarSign className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
             RWF {stats.totalRevenue.toLocaleString()}
           </p>
         </div>
 
         {/* Total Sales */}
-        <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Transactions</span>
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Transactions</span>
+            <div className="p-1.5 bg-blue-500/20 rounded-lg">
+              <Receipt className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
             {stats.totalSales}
           </p>
         </div>
 
         {/* Average Sale */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20 rounded-xl p-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Average Value</span>
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <TrendingUp className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Average Value</span>
+            <div className="p-1.5 bg-purple-500/20 rounded-lg">
+              <TrendingUp className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark mt-2">
+          <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
             RWF {stats.averageSale.toFixed(0)}
           </p>
         </div>
 
         {/* Breakdown */}
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-4">
+        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Breakdown</span>
-            <div className="p-2 bg-orange-500/20 rounded-lg">
-              <BarChart3 className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Breakdown</span>
+            <div className="p-1.5 bg-orange-500/20 rounded-lg">
+              <BarChart3 className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
-          <div className="flex gap-3 mt-3">
+          <div className="flex gap-3 mt-1.5">
              <div className="flex items-center gap-1.5">
-               <div className="w-2 h-2 rounded-full bg-green-500" />
-               <span className="text-xs font-medium text-text-light dark:text-text-dark">{stats.cashSales}</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+               <span className="text-[10px] font-medium text-text-light dark:text-text-dark">{stats.cashSales}</span>
              </div>
              <div className="flex items-center gap-1.5">
-               <div className="w-2 h-2 rounded-full bg-blue-500" />
-               <span className="text-xs font-medium text-text-light dark:text-text-dark">{stats.cardSales}</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+               <span className="text-[10px] font-medium text-text-light dark:text-text-dark">{stats.cardSales}</span>
              </div>
              <div className="flex items-center gap-1.5">
-               <div className="w-2 h-2 rounded-full bg-orange-500" />
-               <span className="text-xs font-medium text-text-light dark:text-text-dark">{stats.mobileMoneySales}</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+               <span className="text-[10px] font-medium text-text-light dark:text-text-dark">{stats.mobileMoneySales}</span>
              </div>
           </div>
         </div>
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-hide">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+        <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
+          <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto scrollbar-hide">
             {quickFilters.map((f) => (
               <button
                 key={f.key}
@@ -563,7 +627,7 @@ function SalesHistoryContent() {
               className={showFilters ? 'bg-primary/10 border-primary text-primary' : ''}
             >
               <Filter className="w-3.5 h-3.5 mr-2" />
-              More Filters
+              Filters
             </Button>
           </div>
 
@@ -577,20 +641,20 @@ function SalesHistoryContent() {
                 handleFilterChange();
               }}
               placeholder="Search sales..."
-              className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-9 pr-4 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border-light dark:border-border-dark animate-in slide-in-from-top-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-3 pt-3 border-t border-border-light dark:border-border-dark animate-in slide-in-from-top-2">
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 handleFilterChange();
               }}
-              className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
+              className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
             >
               <option value="all">All Status</option>
               <option value="completed">Completed</option>
@@ -604,7 +668,7 @@ function SalesHistoryContent() {
                 setPaymentMethodFilter(e.target.value);
                 handleFilterChange();
               }}
-              className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
+              className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
             >
               <option value="all">All Methods</option>
               <option value="cash">Cash</option>
@@ -622,7 +686,7 @@ function SalesHistoryContent() {
                   handleFilterChange();
                   await refetch();
                 }}
-                className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
+                className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs w-full"
               />
               <input
                 type="date"
@@ -633,19 +697,19 @@ function SalesHistoryContent() {
                    handleFilterChange();
                    await refetch();
                 }}
-                className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
+                className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs w-full"
               />
             </div>
             
              {salons.length > 0 && user?.role !== UserRole.CUSTOMER && (
-               <div className="col-span-4 md:col-span-2">
+               <div className="col-span-2">
                 <select
                   value={salonFilter}
                   onChange={(e) => {
                     setSalonFilter(e.target.value);
                     handleFilterChange();
                   }}
-                  className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
+                  className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
                 >
                   <option value="all">All Salons</option>
                   {salons.map((salon) => (

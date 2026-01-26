@@ -18,12 +18,16 @@ import {
   LogOut,
   TrendingUp,
   Sparkles,
+  Search,
+  CalendarCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 
 const menuItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Browse Salons', href: '/salons/browse', icon: Search, highlight: true },
+  { name: 'My Bookings', href: '/appointments/my', icon: CalendarCheck, highlight: true },
   { name: 'Salons', href: '/salons', icon: Scissors },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Memberships', href: '/memberships', icon: Users },
@@ -62,7 +66,8 @@ export default function Sidebar() {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-          
+          const isHighlighted = item.highlight;
+
           return (
             <Link
               key={item.href}
@@ -70,11 +75,13 @@ export default function Sidebar() {
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
                 isActive
                   ? 'bg-primary text-text-inverse'
-                  : 'text-text-secondary hover:bg-surface-dark hover:text-text-inverse'
+                  : isHighlighted
+                    ? 'text-primary bg-primary/10 hover:bg-primary/20 border border-primary/30'
+                    : 'text-text-secondary hover:bg-surface-dark hover:text-text-inverse'
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span>{item.name}</span>
+              <span className={isHighlighted ? 'font-semibold' : ''}>{item.name}</span>
             </Link>
           );
         })}

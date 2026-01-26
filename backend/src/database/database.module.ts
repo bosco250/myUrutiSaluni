@@ -49,6 +49,7 @@ import { Message } from '../chat/entities/message.entity';
 import { Review } from '../reviews/entities/review.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { CustomerFavorite } from '../customers/entities/customer-favorite.entity';
+import { WaitlistEntry } from '../waitlist/entities/waitlist-entry.entity';
 
 @Global()
 @Module({
@@ -109,6 +110,7 @@ import { CustomerFavorite } from '../customers/entities/customer-favorite.entity
           Payment,
           CustomerFavorite,
           Expense,
+          WaitlistEntry,
         ];
 
         // Use PostgreSQL by default, SQLite only if explicitly set

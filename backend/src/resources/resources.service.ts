@@ -62,9 +62,11 @@ export class ResourcesService {
 
     // Access control - check if user role has access
     if (userRole) {
+      // Using LIKE for simple-json array matching as commonly used in this codebase
+      // This matches "role" inside the JSON string array ["role", "other"]
       query.andWhere(
-        '(resource.isPublic = true OR :role = ANY(resource.accessRoles) OR resource.accessRoles = :emptyArray)',
-        { role: userRole, emptyArray: [] },
+        '(resource.isPublic = true OR resource.accessRoles LIKE :rolePattern)',
+        { rolePattern: `%"${userRole}"%` },
       );
     } else {
       query.andWhere('resource.isPublic = true');

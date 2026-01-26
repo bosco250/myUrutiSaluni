@@ -60,6 +60,7 @@ interface Appointment {
     address?: string;
     phone?: string;
     email?: string;
+    ownerId?: string;
   };
   salonEmployee?: {
     id: string;
@@ -227,11 +228,17 @@ function AppointmentDetailContent() {
 
   const formatTime = (dateString: string) => format(new Date(dateString), 'h:mm a');
 
-  const canEdit =
-    user?.role === UserRole.SUPER_ADMIN ||
-    user?.role === UserRole.ASSOCIATION_ADMIN ||
-    user?.role === UserRole.SALON_OWNER ||
-    user?.role === UserRole.SALON_EMPLOYEE;
+  // Permission Logic
+  const isOwnerOfSalon = user?.id === appointment?.salon?.ownerId;
+  const isSuperUser = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.ASSOCIATION_ADMIN;
+  const isCustomer = appointment?.customer?.email === user?.email || appointment?.customer?.phone === user?.phone || user?.role === UserRole.CUSTOMER;
+  
+  const canManage = isSuperUser || (
+      (user?.role === UserRole.SALON_OWNER && isOwnerOfSalon) ||
+      (user?.role === UserRole.SALON_EMPLOYEE && !isCustomer)
+  );
+  
+  const canCancel = canManage || (isCustomer && ['pending', 'booked'].includes(appointment?.status || ''));
 
   if (isLoading) {
     return (
@@ -307,82 +314,80 @@ function AppointmentDetailContent() {
         </div>
 
         {/* Action Buttons */}
-        {canEdit && (
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            {appointment.customer && !['cancelled', 'completed'].includes(appointment.status) && (
-              <Button
-                onClick={() =>
-                  handleAction(
-                    () => sendReminderMutation.mutate(),
-                    'Send Reminder',
-                    'Are you sure you want to send a reminder to the customer?',
-                    'primary',
-                    'Send Reminder'
-                  )
-                }
-                variant="outline"
-                size="sm"
-                disabled={sendReminderMutation.isPending}
-                className="flex-1 sm:flex-none justify-center"
-              >
-                {sendReminderMutation.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                ) : (
-                  <Bell className="w-3.5 h-3.5 mr-1.5" />
-                )}
-                Remind
-              </Button>
-            )}
-            {!['completed'].includes(appointment.status) && (
-              <Button
-                onClick={() => router.push(`/appointments/${appointmentId}/edit`)}
-                variant="outline"
-                size="sm"
-                className="flex-1 sm:flex-none justify-center"
-              >
-                <Edit className="w-3.5 h-3.5 mr-1.5" />
-                Edit
-              </Button>
-            )}
-            {!['completed'].includes(appointment.status) && (
-              <Button
-                onClick={() =>
-                  handleAction(
-                    () => deleteMutation.mutate(),
-                    'Delete Appointment',
-                    'Are you sure you want to delete this appointment? This action cannot be undone.',
-                    'danger',
-                    'Delete'
-                  )
-                }
-                variant="outline"
-                size="sm"
-                className="flex-1 sm:flex-none justify-center text-error border-error/20 hover:bg-error/5"
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                ) : (
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                )}
-                Delete
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {canManage && appointment.customer && !['cancelled', 'completed'].includes(appointment.status) && (
+            <Button
+              onClick={() =>
+                handleAction(
+                  () => sendReminderMutation.mutate(),
+                  'Send Reminder',
+                  'Are you sure you want to send a reminder to the customer?',
+                  'primary',
+                  'Send Reminder'
+                )
+              }
+              variant="outline"
+              size="sm"
+              disabled={sendReminderMutation.isPending}
+              className="flex-1 sm:flex-none justify-center"
+            >
+              {sendReminderMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Bell className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              Remind
+            </Button>
+          )}
+          {canManage && !['completed'].includes(appointment.status) && (
+            <Button
+              onClick={() => router.push(`/appointments/${appointmentId}/edit`)}
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none justify-center"
+            >
+              <Edit className="w-3.5 h-3.5 mr-1.5" />
+              Edit
+            </Button>
+          )}
+          {canManage && !['completed'].includes(appointment.status) && (
+            <Button
+              onClick={() =>
+                handleAction(
+                  () => deleteMutation.mutate(),
+                  'Delete Appointment',
+                  'Are you sure you want to delete this appointment? This action cannot be undone.',
+                  'danger',
+                  'Delete'
+                )
+              }
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none justify-center text-error border-error/20 hover:bg-error/5"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main Content - Left Column */}
         <div className="md:col-span-2 space-y-6">
           {/* Main Status Actions - Prominent */}
-          {canEdit && !isPast && !['completed', 'cancelled'].includes(appointment.status) && (
+          {(canManage || canCancel) && !isPast && !['completed', 'cancelled'].includes(appointment.status) && (
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
               <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
                 Update Status
               </h3>
               <div className="flex flex-wrap gap-2">
-                {appointment.status === 'pending' && (
+                {canManage && appointment.status === 'pending' && (
                   <Button
                     onClick={() =>
                       handleAction(
@@ -400,7 +405,7 @@ function AppointmentDetailContent() {
                     <CheckCircle2 className="w-4 h-4 mr-1.5" /> Confirm Booking
                   </Button>
                 )}
-                {['booked', 'confirmed'].includes(appointment.status) && (
+                {canManage && ['booked', 'confirmed'].includes(appointment.status) && (
                   <Button
                     onClick={() =>
                       handleAction(
@@ -418,7 +423,7 @@ function AppointmentDetailContent() {
                     Start Service
                   </Button>
                 )}
-                {appointment.status === 'in_progress' && (
+                {canManage && appointment.status === 'in_progress' && (
                   <Button
                     onClick={() =>
                       handleAction(
@@ -436,7 +441,7 @@ function AppointmentDetailContent() {
                     <CheckCircle2 className="w-4 h-4 mr-1.5" /> Mark Complete
                   </Button>
                 )}
-                {['pending', 'booked', 'confirmed'].includes(appointment.status) && (
+                {canCancel && ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
                   <Button
                     onClick={() =>
                       handleAction(
@@ -459,9 +464,9 @@ function AppointmentDetailContent() {
             </div>
           )}
 
-          {/* Service Info Card */}
+            {/* Service Info Card */}
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
-            <div className="h-2 bg-gradient-to-r from-primary to-primary/60" />
+            <div className="h-2 bg-aprimary" />
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -534,7 +539,7 @@ function AppointmentDetailContent() {
                 <User className="w-3.5 h-3.5" /> Customer
               </h3>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
                   {appointment.customer.fullName.charAt(0)}
                 </div>
                 <div>
@@ -574,7 +579,7 @@ function AppointmentDetailContent() {
                 <Building2 className="w-3.5 h-3.5" /> Salon
               </h3>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>

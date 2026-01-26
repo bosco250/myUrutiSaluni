@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   MapPin,
@@ -67,7 +68,14 @@ type ViewMode = 'grid' | 'list';
 
 export default function BrowseSalonsPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.CUSTOMER,
+        UserRole.SALON_EMPLOYEE,
+        UserRole.SALON_OWNER,
+        UserRole.SUPER_ADMIN,
+      ]}
+    >
       <BrowseSalonsContent />
     </ProtectedRoute>
   );
@@ -82,6 +90,8 @@ function BrowseSalonsContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const itemsPerPage = viewMode === 'grid' ? 12 : 8;
 
   const {
@@ -232,7 +242,7 @@ function BrowseSalonsContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background-light via-background-light to-primary/5 dark:from-background-dark dark:via-background-dark dark:to-primary/10 pb-16">
       {/* HERO SECTION WITH PREMIUM SEARCH */}
-      <div className="relative overflow-hidden py-6 md:py-8 px-4 sm:px-6">
+      <div className="relative overflow-hidden py-4 md:py-6 px-4 sm:px-6">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
@@ -240,70 +250,137 @@ function BrowseSalonsContent() {
         </div>
 
         <div className="relative max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary">Find Your Perfect Salon</span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark mb-2">
-              Discover Beauty Excellence
-            </h1>
-            <p className="text-sm text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
-              Handpicked salons and stylists nearby — book a look you'll love.
-            </p>
-          </div>
+          {/* Animated Header Info */}
+          <AnimatePresence>
+            {isHeaderExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                animate={{ height: 'auto', opacity: 1, marginBottom: 16 }}
+                exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="overflow-hidden text-center relative"
+              >
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[10px] font-semibold text-primary">Find Your Perfect Salon</span>
+                </div>
+                <h1 className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+                  Discover Beauty Excellence
+                </h1>
+                <p className="text-xs text-text-light/70 dark:text-text-dark/70 max-w-xl mx-auto mb-4">
+                  Handpicked salons and stylists nearby — book a look you'll love.
+                </p>
+                <button
+                  onClick={() => setIsHeaderExpanded(false)}
+                  className="text-primary hover:text-primary-dark text-[10px] font-bold underline decoration-dotted underline-offset-4"
+                >
+                  Hide description
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Premium Search Bar */}
-          <div className="max-w-3xl mx-auto mb-6">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative bg-surface-light dark:bg-surface-dark border-2 border-border-light dark:border-border-dark rounded-2xl px-4 py-3 flex items-center gap-3 group-focus-within:border-primary transition-colors">
-                <Search className="w-5 h-5 text-text-light/40 dark:text-text-dark/40" />
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder-text-light/40 dark:placeholder-text-dark/40 focus:outline-none text-sm"
-                  placeholder="Search salons, services, or stylists..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
+          {/* Unified Toolbar: Toggle + Search + Filters */}
+          <div className="flex items-center gap-3 w-full overflow-x-auto no-scrollbar pb-1">
+            {/* Header info toggle button when collapsed */}
+            {!isHeaderExpanded && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => setIsHeaderExpanded(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white transition-all text-[10px] font-bold shadow-sm active:scale-95 whitespace-nowrap h-[42px]"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Explore</span>
+              </motion.button>
+            )}
+
+            {/* Compact Animated Search Bar */}
+            <motion.div 
+              layout
+              className={`relative group flex items-center transition-all duration-300 ${isSearchExpanded || searchQuery ? 'flex-1 min-w-[200px]' : 'w-auto'}`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-xl blur-xl transition-opacity duration-300 ${isSearchExpanded || searchQuery ? 'opacity-100' : 'opacity-0'}`}></div>
+              <motion.div 
+                layout
+                className={`relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl flex items-center transition-all bg-white dark:bg-black/20 h-[42px] overflow-hidden ${isSearchExpanded || searchQuery ? 'w-full px-3 gap-2 border-primary/50' : 'w-[42px] justify-center border-transparent bg-transparent hover:bg-surface-light dark:hover:bg-surface-dark'}`}
+              >
+                <div onClick={() => setIsSearchExpanded(true)} className="cursor-pointer">
+                  <Search className={`w-4 h-4 shrink-0 transition-colors ${isSearchExpanded || searchQuery ? 'text-text-light/40 dark:text-text-dark/40' : 'text-text-light dark:text-text-dark'}`} />
+                </div>
+                
+                <AnimatePresence>
+                  {(isSearchExpanded || searchQuery) && (
+                    <motion.input
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: '100%', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      autoFocus
+                      type="text"
+                      className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder-text-light/40 dark:placeholder-text-dark/40 focus:outline-none text-xs min-w-0"
+                      placeholder="Search salons..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      onBlur={() => {
+                        if (!searchQuery) setIsSearchExpanded(false);
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+                
+                <AnimatePresence>
+                  {searchQuery && (
+                    <motion.button
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      onClick={() => {
+                        setSearchQuery('');
+                        setIsSearchExpanded(false);
+                        setCurrentPage(1);
+                      }}
+                      className="text-text-light/40 hover:text-text-light dark:hover:text-text-dark transition-colors shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+
+                {(isSearchExpanded || searchQuery) && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                  >
+                    <Zap className="w-4 h-4 text-primary shrink-0" />
+                  </motion.div>
+                )}
+              </motion.div>
+            </motion.div>
+
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              {categories.map((category) => (
+                <button
+                  key={category.value}
+                  onClick={() => {
+                    setSelectedCategory(category.value);
                     setCurrentPage(1);
                   }}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setCurrentPage(1);
-                    }}
-                    className="text-text-light/40 hover:text-text-light dark:hover:text-text-dark transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-                <Zap className="w-5 h-5 text-primary" />
-              </div>
+                  className={`px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 h-[42px] whitespace-nowrap border ${
+                    selectedCategory === category.value
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border-border-light dark:border-border-dark hover:border-primary/30 hover:bg-primary/5'
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
             </div>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap justify-center gap-2">
-            {categories.map((category) => (
-              <button
-                key={category.value}
-                onClick={() => {
-                  setSelectedCategory(category.value);
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  selectedCategory === category.value
-                    ? 'bg-primary text-white shadow-lg'
-                    : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:border-primary/30 hover:bg-primary/5'
-                }`}
-              >
-                {category.label}
-              </button>
-            ))}
           </div>
         </div>
       </div>
@@ -311,39 +388,8 @@ function BrowseSalonsContent() {
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* TOP STATS & CONTROLS */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border-light dark:border-border-dark">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Results Count */}
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60">Total Results</p>
-                <p className="text-lg font-bold text-text-light dark:text-text-dark">
-                  {filteredAndSortedSalons.length}
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 pb-4 border-b border-border-light dark:border-border-dark">
 
-            {/* Average Rating */}
-            {filteredAndSortedSalons.length > 0 && (
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                  <Star className="w-5 h-5 text-warning fill-warning" />
-                </div>
-                <div>
-                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">Avg. Rating</p>
-                  <p className="text-lg font-bold text-text-light dark:text-text-dark">
-                    {(
-                      filteredAndSortedSalons.reduce((sum, s) => sum + (s.rating || 0), 0) /
-                      filteredAndSortedSalons.length
-                    ).toFixed(1)}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* View & Sort Controls */}
           <div className="flex items-center gap-2">
@@ -351,13 +397,13 @@ function BrowseSalonsContent() {
             <div className="flex gap-1 bg-surface-light dark:bg-surface-dark p-1 rounded-lg border border-border-light dark:border-border-dark">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded transition-all ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
+                className={`p-1.5 rounded transition-all ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
               >
                 <Grid3x3 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded transition-all ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
+                className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -367,7 +413,7 @@ function BrowseSalonsContent() {
             <div className="relative">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark hover:border-primary/30 transition-colors"
+                className="flex items-center gap-2 px-2.5 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark hover:border-primary/30 transition-colors"
               >
                 <SortAsc className="w-4 h-4" />
                 <span className="capitalize hidden sm:inline">

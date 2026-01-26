@@ -22,6 +22,7 @@ import {
 import Button from '@/components/ui/Button';
 import api from '@/lib/api';
 import { useRef } from 'react';
+import { useToast } from '@/components/ui/Toast';
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -32,7 +33,6 @@ export default function SettingsPage() {
     { id: 'profile', name: 'Profile', icon: User, description: 'Manage your personal information' },
     { id: 'notifications', name: 'Notifications', icon: Bell, description: 'Configure how you receive alerts' },
     { id: 'security', name: 'Security', icon: Shield, description: 'Update password and security settings' },
-    { id: 'api', name: 'API Keys', icon: Key, description: 'Manage developer access keys' },
   ];
 
   return (
@@ -85,7 +85,6 @@ export default function SettingsPage() {
             {activeTab === 'profile' && <ProfileSettings user={user} isLoading={isLoading} setIsLoading={setIsLoading} />}
             {activeTab === 'notifications' && <NotificationSettings isLoading={isLoading} setIsLoading={setIsLoading} />}
             {activeTab === 'security' && <SecuritySettings isLoading={isLoading} setIsLoading={setIsLoading} />}
-            {activeTab === 'api' && <ApiSettings />}
           </div>
         </div>
       </div>
@@ -95,14 +94,51 @@ export default function SettingsPage() {
 
 function ProfileSettings({ user, isLoading, setIsLoading }: any) {
   const { refreshUser } = useAuthStore();
+  const { success, error: toastError } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => setIsLoading(false), 1000);
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const newEmail = formData.get('email') as string;
+      const currentEmail = user?.email;
+
+      const payload: any = {
+        fullName: formData.get('fullName'),
+        phone: formData.get('phone'),
+      };
+
+      // Only include email if it hasn't changed, or implement verification logic here
+      let emailChanged = false;
+      if (newEmail && newEmail !== currentEmail) {
+        emailChanged = true;
+        // For now, we skip updating email if it changed, pending verification logic
+        // payload.email = newEmail; // Commented out to prevent direct update
+      } else {
+        payload.email = newEmail;
+      }
+
+      await api.put('/users/me', payload);
+      await refreshUser();
+      
+      if (emailChanged) {
+        success('Profile updated (Email update requires verification - skipped for now)');
+        // TODO: Trigger email verification flow here
+      } else {
+        success('Profile updated successfully');
+      }
+
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile';
+      toastError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,13 +147,13 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      toastError('Please select an image file');
       return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert('File size must be less than 2MB');
+      toastError('File size must be less than 2MB');
       return;
     }
 
@@ -133,7 +169,11 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
         },
       });
 
-      const avatarUrl = uploadResponse.data.url;
+      const avatarUrl = uploadResponse.data?.url || uploadResponse.data?.path || uploadResponse.data?.secure_url;
+      
+      if (!avatarUrl) {
+          throw new Error('Upload successful but no image URL returned');
+      }
 
       // Update user profile
       // Use /users/me endpoint since /users/:id might be admin-only or non-existent
@@ -143,16 +183,32 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
 
       // Refresh local user state
       await refreshUser();
+      success('Avatar updated successfully');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to upload avatar:', error);
-      alert('Failed to upload avatar. Please try again.');
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to upload avatar. Please try again.';
+      toastError(errorMessage);
     } finally {
       setIsUploading(false);
       // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleEmailUpdate = async () => {
+    setIsLoading(true);
+    try {
+        await api.post('/auth/request-email-change');
+        success('A verification code has been sent to your email address.');
+    } catch (error: any) {
+        console.error('Failed to request email change:', error);
+        const message = error?.response?.data?.message || 'Failed to send verification code. Please try again.';
+        toastError(message);
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -172,9 +228,9 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="flex items-center gap-6">
           <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-            <div className="w-20 h-20 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-background-light dark:border-background-dark shadow-xl overflow-hidden relative">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+            <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-background-light dark:border-background-dark shadow-xl overflow-hidden relative">
+              {user?.avatar || user?.avatarUrl ? (
+                <img src={user.avatar || user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
               ) : (
                 user?.fullName?.charAt(0) || 'U'
               )}
@@ -225,6 +281,7 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
               <input
                 type="text"
+                name="fullName"
                 defaultValue={user?.fullName}
                 className="w-full pl-9 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               />
@@ -232,15 +289,26 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
           </div>
           
           <div>
-            <label className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5 uppercase tracking-wide">
-              Email Address
-            </label>
+            <div className="flex flex-row justify-between items-center mb-1.5">
+                <label className="block text-xs font-semibold text-text-light dark:text-text-dark uppercase tracking-wide">
+                  Email Address
+                </label>
+                <button
+                  type="button"
+                  onClick={handleEmailUpdate}
+                  className="text-xs text-primary hover:text-primary-dark font-medium hover:underline transition-colors"
+                >
+                  Update Email
+                </button>
+            </div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
               <input
                 type="email"
+                name="email"
                 defaultValue={user?.email}
-                className="w-full pl-9 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                disabled
+                className="w-full pl-9 pr-4 py-2.5 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light/60 cursor-not-allowed"
               />
             </div>
           </div>
@@ -253,6 +321,7 @@ function ProfileSettings({ user, isLoading, setIsLoading }: any) {
               <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
               <input
                 type="tel"
+                name="phone"
                 defaultValue={user?.phone}
                 className="w-full pl-9 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               />
@@ -436,28 +505,4 @@ function SecuritySettings({ isLoading, setIsLoading }: any) {
   );
 }
 
-function ApiSettings() {
-  return (
-    <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-6">
-        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">API Keys</h2>
-        <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-          Manage your API credentials for external integrations
-        </p>
-      </div>
 
-      <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-8 text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Key className="w-8 h-8 text-indigo-500" />
-        </div>
-        <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">Developer API Access</h3>
-        <p className="text-text-light/60 dark:text-text-dark/60 max-w-sm mx-auto mb-6">
-          Generate API keys to authenticate your requests when integrating with our external API endpoints.
-        </p>
-        <Button variant="primary" disabled>
-          Generate New Key
-        </Button>
-      </div>
-    </div>
-  );
-}

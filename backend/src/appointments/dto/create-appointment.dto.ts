@@ -5,6 +5,7 @@ import {
   IsString,
   IsEnum,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { AppointmentStatus } from '../entities/appointment.entity';
@@ -61,4 +62,14 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Set to true when booking for yourself (allows staff to book as customers)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  bookForSelf?: boolean;
 }

@@ -123,6 +123,11 @@ export class SalonsController {
       return this.salonsService.findAll(); // Return all salons for customers to browse
     }
 
+    // Salon owners can browse all salons when in browse mode (for booking themselves at other salons)
+    if (user.role === UserRole.SALON_OWNER && isBrowseMode) {
+      return this.salonsService.findAll(); // Return all salons for owners to browse
+    }
+
     // Salon employees can browse all salons when in browse mode
     if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
       return this.salonsService.findAll(); // Return all salons for employees to browse
@@ -226,6 +231,12 @@ export class SalonsController {
       // Customers can view employees for booking purposes (public browsing)
       if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
         // Return only active employees for customers
+        const allEmployees = await this.salonsService.getSalonEmployees(id);
+        return allEmployees.filter((emp: any) => emp.isActive !== false);
+      }
+
+      // Salon owners can view employees of any salon when browsing (for booking themselves)
+      if (user.role === UserRole.SALON_OWNER && isBrowseMode) {
         const allEmployees = await this.salonsService.getSalonEmployees(id);
         return allEmployees.filter((emp: any) => emp.isActive !== false);
       }
@@ -642,6 +653,14 @@ export class SalonsController {
     // Customers can view any salon (public browsing)
     if (userRole === UserRole.CUSTOMER || userRole === 'customer') {
       return salon; // Allow customers to view salon details
+    }
+
+    // Salon owners can view any salon when browsing (for booking themselves at other salons)
+    if (
+      (userRole === UserRole.SALON_OWNER || userRole === 'salon_owner') &&
+      isBrowseMode
+    ) {
+      return salon; // Allow salon owners to browse other salons
     }
 
     // Salon employees can view any salon when browsing (similar to customers)

@@ -28,6 +28,8 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
+import { useAuthStore } from '@/store/auth-store';
+import { UserRole } from '@/lib/permissions';
 
 interface DayHours {
   isOpen: boolean;
@@ -80,6 +82,7 @@ export default function CustomerBookingModal({
   customerId,
 }: CustomerBookingModalProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
   // State
   const [currentStep, setCurrentStep] = useState<BookingStep>('employee');
@@ -564,6 +567,15 @@ export default function CustomerBookingModal({
       status: 'pending',
       notes: notes || undefined,
     };
+
+    // If user is staff (salon owner/employee) and no customerId is provided, they're booking for themselves
+    if (
+      !customerId &&
+      user &&
+      (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE)
+    ) {
+      appointmentData.bookForSelf = true;
+    }
 
     if (selectedEmployeeId !== 'any') {
       appointmentData.salonEmployeeId = selectedEmployeeId;

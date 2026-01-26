@@ -115,6 +115,11 @@ export class ServicesController {
       return this.servicesService.findAll(salonId);
     }
 
+    // Salon owners can browse all services when in browse mode (for booking themselves)
+    if (user.role === UserRole.SALON_OWNER && isBrowseMode) {
+      return this.servicesService.findAll(salonId);
+    }
+
     // Salon employees can browse all services when in browse mode
     if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
       return this.servicesService.findAll(salonId);

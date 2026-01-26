@@ -149,7 +149,7 @@ function SalesAnalyticsContent() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <Button
-            onClick={() => router.push('/sales')}
+            onClick={() => router.back()}
             variant="secondary"
             size="sm"
             className="p-2"
@@ -158,9 +158,6 @@ function SalesAnalyticsContent() {
           </Button>
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
               Sales Analytics
             </h1>
             <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
@@ -171,13 +168,65 @@ function SalesAnalyticsContent() {
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-3 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                Total Revenue
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                RWF {analytics.summary.totalRevenue.toLocaleString()}
+              </p>
+            </div>
+            <div className="p-1.5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
+              <DollarSign className="w-3.5 h-3.5 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-3 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                Total Sales
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                {analytics.summary.totalSales}
+              </p>
+            </div>
+            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+              <ShoppingCart className="w-3.5 h-3.5 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-3 hover:shadow-lg transition-all">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
+                Average Sale
+              </p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+                RWF {analytics.summary.averageSale.toFixed(0)}
+              </p>
+            </div>
+            <div className="p-1.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+              <TrendingUp className="w-3.5 h-3.5 text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {salons.length > 0 && (
             <div>
               <label
                 htmlFor="salon-select"
-                className="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1"
+                className="block text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 mb-0.5"
               >
                 Salon
               </label>
@@ -185,7 +234,7 @@ function SalesAnalyticsContent() {
                 id="salon-select"
                 value={salonFilter}
                 onChange={(e) => setSalonFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-2.5 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="all">All Salons</option>
                 {salons.map((salon) => (
@@ -199,7 +248,7 @@ function SalesAnalyticsContent() {
           <div>
             <label
               htmlFor="start-date"
-              className="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1"
+              className="block text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 mb-0.5"
             >
               Start Date
             </label>
@@ -208,13 +257,13 @@ function SalesAnalyticsContent() {
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-2.5 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div>
             <label
               htmlFor="end-date"
-              className="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1"
+              className="block text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 mb-0.5"
             >
               End Date
             </label>
@@ -223,59 +272,8 @@ function SalesAnalyticsContent() {
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-2.5 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Total Revenue
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                RWF {analytics.summary.totalRevenue.toLocaleString()}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
-              <DollarSign className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Total Sales
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                {analytics.summary.totalSales}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-              <ShoppingCart className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Average Sale
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                RWF {analytics.summary.averageSale.toFixed(0)}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <TrendingUp className="w-4 h-4 text-white" />
-            </div>
           </div>
         </div>
       </div>
@@ -293,13 +291,13 @@ function SalesAnalyticsContent() {
               <XAxis
                 dataKey="month"
                 stroke="currentColor"
-                className="text-xs"
-                tick={{ fill: 'currentColor', fontSize: 12 }}
+                className="text-[10px]"
+                tick={{ fill: 'currentColor', fontSize: 10 }}
               />
               <YAxis
                 stroke="currentColor"
-                className="text-xs"
-                tick={{ fill: 'currentColor', fontSize: 12 }}
+                className="text-[10px]"
+                tick={{ fill: 'currentColor', fontSize: 10 }}
                 tickFormatter={(value) => `RWF ${(value / 1000).toFixed(0)}k`}
               />
               <Tooltip
@@ -307,10 +305,11 @@ function SalesAnalyticsContent() {
                   backgroundColor: 'var(--surface-light)',
                   border: '1px solid var(--border-light)',
                   borderRadius: '8px',
+                  fontSize: '12px',
                 }}
                 formatter={(value: number) => [`RWF ${value.toLocaleString()}`, 'Revenue']}
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '10px' }} />
               <Line
                 type="monotone"
                 dataKey="revenue"
@@ -334,16 +333,16 @@ function SalesAnalyticsContent() {
               <XAxis
                 dataKey="date"
                 stroke="currentColor"
-                className="text-xs"
-                tick={{ fill: 'currentColor', fontSize: 10 }}
+                className="text-[10px]"
+                tick={{ fill: 'currentColor', fontSize: 9 }}
                 angle={-45}
                 textAnchor="end"
                 height={60}
               />
               <YAxis
                 stroke="currentColor"
-                className="text-xs"
-                tick={{ fill: 'currentColor', fontSize: 12 }}
+                className="text-[10px]"
+                tick={{ fill: 'currentColor', fontSize: 10 }}
                 tickFormatter={(value) => `RWF ${(value / 1000).toFixed(0)}k`}
               />
               <Tooltip
@@ -351,10 +350,11 @@ function SalesAnalyticsContent() {
                   backgroundColor: 'var(--surface-light)',
                   border: '1px solid var(--border-light)',
                   borderRadius: '8px',
+                  fontSize: '12px',
                 }}
                 formatter={(value: number) => [`RWF ${value.toLocaleString()}`, 'Revenue']}
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '10px' }} />
               <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
             </BarChart>
           </ResponsiveContainer>
@@ -380,6 +380,7 @@ function SalesAnalyticsContent() {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  style={{ fontSize: '10px' }}
                 >
                   {paymentMethodData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -390,6 +391,7 @@ function SalesAnalyticsContent() {
                     backgroundColor: 'var(--surface-light)',
                     border: '1px solid var(--border-light)',
                     borderRadius: '8px',
+                    fontSize: '12px',
                   }}
                   formatter={(value: number) => `RWF ${value.toLocaleString()}`}
                 />
@@ -414,27 +416,28 @@ function SalesAnalyticsContent() {
                 <XAxis
                   type="number"
                   stroke="currentColor"
-                  className="text-xs"
-                  tick={{ fill: 'currentColor', fontSize: 12 }}
+                  className="text-[10px]"
+                  tick={{ fill: 'currentColor', fontSize: 10 }}
                   tickFormatter={(value) => `RWF ${(value / 1000).toFixed(0)}k`}
                 />
                 <YAxis
                   type="category"
                   dataKey="name"
                   stroke="currentColor"
-                  className="text-xs"
-                  tick={{ fill: 'currentColor', fontSize: 11 }}
-                  width={100}
+                  className="text-[10px]"
+                  tick={{ fill: 'currentColor', fontSize: 10 }}
+                  width={90}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--surface-light)',
                     border: '1px solid var(--border-light)',
                     borderRadius: '8px',
+                    fontSize: '12px',
                   }}
                   formatter={(value: number) => [`RWF ${value.toLocaleString()}`, 'Revenue']}
                 />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '10px' }} />
                 <Bar dataKey="revenue" fill="#8b5cf6" name="Revenue" />
               </BarChart>
             </ResponsiveContainer>
