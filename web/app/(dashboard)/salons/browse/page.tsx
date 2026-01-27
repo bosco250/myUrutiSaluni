@@ -179,6 +179,13 @@ function BrowseSalonsContent() {
     }
 
     const sorted = [...filtered].sort((a, b) => {
+      // Priority 1: Favorites
+      const isFavA = favorites.includes(a.id);
+      const isFavB = favorites.includes(b.id);
+      if (isFavA && !isFavB) return -1;
+      if (!isFavA && isFavB) return 1;
+
+      // Priority 2: Selected Sort Option
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
@@ -201,7 +208,7 @@ function BrowseSalonsContent() {
     });
 
     return sorted;
-  }, [salonsWithServices, searchQuery, selectedCategory, sortBy]);
+  }, [salonsWithServices, searchQuery, selectedCategory, sortBy, favorites]);
 
   const totalPages = Math.ceil(filteredAndSortedSalons.length / itemsPerPage);
   const paginatedSalons = useMemo(() => {
@@ -242,14 +249,14 @@ function BrowseSalonsContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background-light via-background-light to-primary/5 dark:from-background-dark dark:via-background-dark dark:to-primary/10 pb-16">
       {/* HERO SECTION WITH PREMIUM SEARCH */}
-      <div className="relative overflow-hidden py-4 md:py-6 px-4 sm:px-6">
+      <div className="relative py-4 md:py-6 px-4 sm:px-6">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative max-w-7xl mx-auto space-y-4">
           {/* Animated Header Info */}
           <AnimatePresence>
             {isHeaderExpanded && (
@@ -260,22 +267,26 @@ function BrowseSalonsContent() {
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="overflow-hidden text-center relative"
               >
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-semibold text-primary">Find Your Perfect Salon</span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 mb-2" role="status">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+                  <span className="text-[10px] font-bold text-primary tracking-wide">Find Your Perfect Salon</span>
                 </div>
-                <h1 className="text-xl md:text-2xl font-bold text-text-light dark:text-text-dark mb-1">
+                <h1 className="text-lg md:text-xl font-bold text-text-light dark:text-text-dark mb-0.5">
                   Discover Beauty Excellence
                 </h1>
-                <p className="text-xs text-text-light/70 dark:text-text-dark/70 max-w-xl mx-auto mb-4">
+                <p className="text-[10px] text-text-light/70 dark:text-text-dark/70 max-w-xl mx-auto mb-2">
                   Handpicked salons and stylists nearby — book a look you'll love.
                 </p>
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsHeaderExpanded(false)}
-                  className="text-primary hover:text-primary-dark text-[10px] font-bold underline decoration-dotted underline-offset-4"
+                  className="border-none hover:bg-transparent text-primary hover:text-primary-dark hover:underline decoration-dotted underline-offset-4 shadow-none p-0 h-auto"
+                  aria-expanded={isHeaderExpanded}
+                  aria-label="Hide header description"
                 >
                   Hide description
-                </button>
+                </Button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -288,9 +299,11 @@ function BrowseSalonsContent() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => setIsHeaderExpanded(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white transition-all text-[10px] font-bold shadow-sm active:scale-95 whitespace-nowrap h-[42px]"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold shadow-sm active:scale-95 whitespace-nowrap h-[36px] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary"
+                aria-expanded={isHeaderExpanded}
+                aria-label="Show header description"
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">Explore</span>
               </motion.button>
             )}
@@ -300,14 +313,18 @@ function BrowseSalonsContent() {
               layout
               className={`relative group flex items-center transition-all duration-300 ${isSearchExpanded || searchQuery ? 'flex-1 min-w-[200px]' : 'w-auto'}`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-xl blur-xl transition-opacity duration-300 ${isSearchExpanded || searchQuery ? 'opacity-100' : 'opacity-0'}`}></div>
+              <div className={`absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-xl blur-xl transition-opacity duration-300 pointer-events-none ${isSearchExpanded || searchQuery ? 'opacity-100' : 'opacity-0'}`}></div>
               <motion.div 
                 layout
-                className={`relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl flex items-center transition-all bg-white dark:bg-black/20 h-[42px] overflow-hidden ${isSearchExpanded || searchQuery ? 'w-full px-3 gap-2 border-primary/50' : 'w-[42px] justify-center border-transparent bg-transparent hover:bg-surface-light dark:hover:bg-surface-dark'}`}
+                className={`relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg flex items-center transition-all bg-white dark:bg-black/20 h-[36px] overflow-hidden ${isSearchExpanded || searchQuery ? 'w-full px-2 gap-2 border-primary/50 ring-2 ring-primary/10' : 'w-[36px] justify-center border-transparent bg-transparent hover:bg-surface-light dark:hover:bg-surface-dark'}`}
               >
-                <div onClick={() => setIsSearchExpanded(true)} className="cursor-pointer">
-                  <Search className={`w-4 h-4 shrink-0 transition-colors ${isSearchExpanded || searchQuery ? 'text-text-light/40 dark:text-text-dark/40' : 'text-text-light dark:text-text-dark'}`} />
-                </div>
+                <button 
+                  onClick={() => setIsSearchExpanded(true)} 
+                  className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary rounded-md p-1"
+                  aria-label="Expand search"
+                >
+                  <Search className={`w-4 h-4 shrink-0 transition-colors ${isSearchExpanded || searchQuery ? 'text-primary' : 'text-text-light dark:text-text-dark'}`} aria-hidden="true" />
+                </button>
                 
                 <AnimatePresence>
                   {(isSearchExpanded || searchQuery) && (
@@ -318,7 +335,7 @@ function BrowseSalonsContent() {
                       transition={{ duration: 0.2 }}
                       autoFocus
                       type="text"
-                      className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder-text-light/40 dark:placeholder-text-dark/40 focus:outline-none text-xs min-w-0"
+                      className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder-text-light/50 dark:placeholder-text-dark/50 focus:outline-none text-xs min-w-0 font-medium"
                       placeholder="Search salons..."
                       value={searchQuery}
                       onChange={(e) => {
@@ -328,6 +345,7 @@ function BrowseSalonsContent() {
                       onBlur={() => {
                         if (!searchQuery) setIsSearchExpanded(false);
                       }}
+                      aria-label="Search salons"
                     />
                   )}
                 </AnimatePresence>
@@ -343,7 +361,8 @@ function BrowseSalonsContent() {
                         setIsSearchExpanded(false);
                         setCurrentPage(1);
                       }}
-                      className="text-text-light/40 hover:text-text-light dark:hover:text-text-dark transition-colors shrink-0"
+                      className="text-text-light/40 hover:text-text-light dark:hover:text-text-dark transition-colors shrink-0 p-1 focus:outline-none focus:ring-2 focus:ring-primary rounded-full"
+                      aria-label="Clear search"
                     >
                       <X className="w-4 h-4" />
                     </motion.button>
@@ -355,8 +374,9 @@ function BrowseSalonsContent() {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
+                    className="ml-1"
                   >
-                    <Zap className="w-4 h-4 text-primary shrink-0" />
+                    <Zap className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
                   </motion.div>
                 )}
               </motion.div>
@@ -371,56 +391,30 @@ function BrowseSalonsContent() {
                     setSelectedCategory(category.value);
                     setCurrentPage(1);
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 h-[42px] whitespace-nowrap border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 h-[36px] whitespace-nowrap border focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
                     selectedCategory === category.value
-                      ? 'bg-primary text-white border-primary shadow-sm'
-                      : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border-border-light dark:border-border-dark hover:border-primary/30 hover:bg-primary/5'
+                      ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                      : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border-border-light dark:border-border-dark hover:border-primary/50 hover:bg-primary/5'
                   }`}
+                  aria-pressed={selectedCategory === category.value}
                 >
                   {category.label}
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* TOP STATS & CONTROLS */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 pb-4 border-b border-border-light dark:border-border-dark">
-
-
-          {/* View & Sort Controls */}
-          <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex gap-1 bg-surface-light dark:bg-surface-dark p-1 rounded-lg border border-border-light dark:border-border-dark">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded transition-all ${viewMode === 'grid' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
-              >
-                <Grid3x3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-primary/20 text-primary' : 'text-text-light/60 dark:text-text-dark/60'}`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="relative">
+            {/* Sort Dropdown (Moved from below) */}
+            <div className="relative shrink-0 border-l border-primary/20 pl-3 ml-1">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-2.5 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark hover:border-primary/30 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-medium text-text-light dark:text-text-dark hover:border-primary/30 transition-colors h-[36px]"
               >
                 <SortAsc className="w-4 h-4" />
                 <span className="capitalize hidden sm:inline">
                   {sortBy === 'trending_today' ? 'Trending' : sortBy}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+                  className={`w-3.5 h-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`}
                 />
               </button>
 
@@ -469,6 +463,12 @@ function BrowseSalonsContent() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* TOP STATS & CONTROLS */}
+
 
         {/* SALONS GRID/LIST */}
         {paginatedSalons.length > 0 ? (
@@ -703,61 +703,38 @@ function SalonCard({
   return (
     <div
       onClick={onViewDetails}
-      className="group bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark hover:border-primary/50 hover:shadow-2xl transition-all cursor-pointer overflow-hidden flex flex-col h-full"
+      className="group bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full ring-1 ring-black/5 dark:ring-white/5"
     >
-      {/* Image Section with Overlays */}
-      <div className="relative h-44 overflow-hidden bg-background-light dark:bg-background-dark">
+      {/* Image Section */}
+      <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-gray-800">
         {imageUrl ? (
           <Image
             src={imageUrl}
             alt={salon.name}
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-300"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Scissors className="w-8 h-8 text-primary/60" />
-              </div>
-              <span className="text-xs text-text-light/40 dark:text-text-dark/40 font-medium">
-                No Image
-              </span>
+          <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-white/5">
+            <div className="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500">
+              <Scissors className="w-8 h-8" />
+              <span className="text-xs font-medium uppercase tracking-wider">No Image</span>
             </div>
           </div>
         )}
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-        {/* Status Badge */}
-        <div className="absolute top-3 right-3">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
-              salon.status === 'active'
-                ? 'bg-success/20 text-success'
-                : 'bg-gray-200/20 text-text-secondary'
-            }`}
-            aria-label={salon.status === 'active' ? 'Open' : 'Closed'}
-          >
-            {salon.status === 'active' ? 'Open' : 'Closed'}
-          </span>
-        </div>
-
-        {/* Badges (visible on card hover) */}
-        <div className="absolute top-3 left-3 flex gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
-          {isTrending && (
-            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-warning/20 text-warning">
-              Trending
-            </span>
-          )}
-          {isTopRated && (
-            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-success/20 text-success">
+        {/* Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+        
+        {/* Top Badges */}
+        <div className="absolute top-3 left-3 flex gap-2">
+           {isTopRated && (
+            <span className="px-2 py-1 rounded-md text-[10px] uppercase font-bold bg-white/90 text-black shadow-sm tracking-wide">
               Top Rated
             </span>
           )}
           {isNew && (
-            <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/20 text-primary">
+            <span className="px-2 py-1 rounded-md text-[10px] uppercase font-bold bg-primary text-white shadow-sm tracking-wide">
               New
             </span>
           )}
@@ -769,81 +746,89 @@ function SalonCard({
             e.stopPropagation();
             onToggleFavorite?.(salon.id);
           }}
-          className="absolute bottom-3 right-3 p-2 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white transition-all transform hover:scale-110 opacity-0 group-hover:opacity-100"
+          className="absolute top-3 right-3 p-2 rounded-full bg-white/20 backdrop-blur-md hover:bg-white transition-all text-white hover:text-red-500 shadow-sm group/btn"
         >
           <Heart
-            className={`w-5 h-5 transition-colors ${isFavorited ? 'fill-error text-error' : 'text-text-light/40'}`}
+            className={`w-4 h-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`}
           />
         </button>
-      </div>
 
-      {/* Content */}
-      <div className="p-4 flex-1 flex flex-col">
-        {/* Title & Rating */}
-        <div className="mb-2">
-          <h3 className="font-bold text-sm text-text-light dark:text-text-dark group-hover:text-primary transition-colors line-clamp-1">
-            {salon.name}
-          </h3>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 text-warning fill-warning" />
-              <span className="font-bold text-sm text-text-light dark:text-text-dark">
-                {salon.rating?.toFixed(1)}
-              </span>
-              <span className="text-xs text-text-light/40 dark:text-text-dark/40">
-                ({salon.reviewCount} reviews)
-              </span>
+        {/* Image Text Overlay (Name & Rating) */}
+        <div className="absolute bottom-3 left-3 right-3 text-white">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <h3 className="text-lg font-bold leading-tight mb-1 text-white shadow-sm">{salon.name}</h3>
+                <div className="flex items-center gap-1.5 text-xs text-white/90">
+                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate max-w-[150px] font-medium">{location}</span>
+                </div>
+            </div>
+            <div className="flex flex-col items-end">
+               <div className="flex items-center gap-1 bg-white/20 backdrop-blur-md px-2 py-1 rounded-lg">
+                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                <span className="font-bold text-sm">{salon.rating?.toFixed(1)}</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Description */}
-        {salon.description && (
-          <p className="text-xs text-text-light/70 dark:text-text-dark/70 line-clamp-2 mb-3">
+      {/* Content Body */}
+      <div className="p-4 flex-1 flex flex-col space-y-3">
+         {/* Description */}
+        {salon.description ? (
+          <p className="text-xs text-text-light/70 dark:text-text-dark/70 line-clamp-2 leading-relaxed min-h-[2.5em]">
             {salon.description}
+          </p>
+        ) : (
+           <p className="text-xs text-text-light/40 dark:text-text-dark/40 italic min-h-[2.5em] flex items-center">
+            No description provided.
           </p>
         )}
 
-        {/* Location & Contact */}
-        <div className="space-y-1.5 mt-auto mb-4 text-xs text-text-light/60 dark:text-text-dark/60">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="truncate">{location}</span>
-          </div>
-
-          {salon.phone && (
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-primary flex-shrink-0" />
-              <span className="truncate">{salon.phone}</span>
-            </div>
-          )}
-
-          {salon.website && (
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-primary flex-shrink-0" />
-              <span className="truncate text-primary hover:underline">
-                {salon.website.replace(/^https?:\/\//, '')}
-              </span>
-            </div>
+        {/* Quick Info Grid */}
+        {/* Services Pills */}
+        <div className="flex flex-wrap gap-1.5 py-1">
+          {salon.services && salon.services.length > 0 ? (
+            <>
+              {salon.services.slice(0, 3).map((service, idx) => (
+                <span 
+                  key={idx} 
+                  className="inline-flex items-center px-2 py-1 rounded-md bg-background-light dark:bg-white/5 border border-border-light dark:border-white/10 text-[10px] font-medium text-text-light/80 dark:text-text-dark/80 truncate max-w-[100px]"
+                >
+                  {service.name}
+                </span>
+              ))}
+              {salon.services.length > 3 && (
+                <span className="inline-flex items-center px-1.5 py-1 rounded-md bg-primary/5 text-[10px] font-medium text-primary">
+                  +{salon.services.length - 3}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[10px] text-text-light/40 dark:text-text-dark/40">No services listed</span>
           )}
         </div>
 
-        {/* Services */}
-        <div className="pt-3 border-t border-border-light dark:border-border-dark">
-          <div className="flex items-center justify-between">
-            {salon.services && salon.services.length > 0 ? (
-              <span className="text-xs font-semibold bg-primary/20 text-primary px-3 py-1.5 rounded-full">
-                {salon.services.length} Services
-              </span>
-            ) : (
-              <span className="text-xs text-text-light/40 dark:text-text-dark/40">
-                No services listed
-              </span>
-            )}
-            <div className="flex items-center gap-1 text-xs font-bold text-primary opacity-0 -translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-              View <ArrowRight className="w-3.5 h-3.5" />
-            </div>
-          </div>
+        {/* Footer Action */}
+        <div className="pt-3 mt-auto flex items-center justify-between border-t border-gray-100 dark:border-white/5">
+          {salon.phone ? (
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                 <Phone className="w-3 h-3" />
+                 <span>{salon.phone}</span>
+              </div>
+           ) : <div />}
+          
+          <Button
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetails();
+            }}
+            className="shadow-none group-hover:shadow-md transition-all font-semibold px-4 text-xs h-8"
+          >
+            Explore & Book
+          </Button>
         </div>
       </div>
     </div>
