@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -25,6 +26,7 @@ import {
   Building2,
   TrendingUp,
   Sparkles,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -223,12 +225,24 @@ const allNavItems: NavItem[] = [
       UserRole.SALON_OWNER,
     ],
   },
+  {
+    name: 'Inspections',
+    href: '/inspections',
+    icon: ClipboardCheck,
+    requiredRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ASSOCIATION_ADMIN,
+      UserRole.DISTRICT_LEADER,
+      UserRole.SALON_OWNER,
+    ],
+  },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 function FloatingNavComponent() {
   const { hasAnyRole } = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const pathname = usePathname();
 
   // Filter nav items based on user role
@@ -261,35 +275,58 @@ function FloatingNavComponent() {
               const isActive = isMatch && !isExcluded && !isOpen;
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="group relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11"
-                >
-                  {/* Hover/Active Background Pill */}
-                  <div
-                    className={`absolute inset-0 rounded-xl transition-all duration-300 ${
-                      isActive
-                        ? 'bg-primary opacity-100 shadow-md'
-                        : 'bg-background-secondary/50 dark:bg-white/5 opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
-                    }`}
-                  />
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onMouseEnter={() => setHoveredId(item.href)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    className="group relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11"
+                  >
+                    {/* Hover/Active Background Pill */}
+                    <div
+                      className={`absolute inset-0 rounded-xl transition-all duration-300 ${
+                        isActive
+                          ? 'bg-primary opacity-100 shadow-md'
+                          : 'bg-background-secondary/50 dark:bg-white/5 opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                      }`}
+                    />
 
-                  {/* Icon */}
-                  <Icon
-                    className={`relative z-10 w-5 h-5 transition-colors duration-300 ${
-                      isActive
-                        ? 'text-white'
-                        : 'text-text-secondary group-hover:text-text-primary'
-                    }`}
-                  />
+                    {/* Icon */}
+                    <Icon
+                      className={`relative z-10 w-5 h-5 transition-colors duration-300 ${
+                        isActive
+                          ? 'text-white'
+                          : 'text-text-secondary group-hover:text-text-primary'
+                      }`}
+                    />
 
-                  {/* Tooltip (Left on Desktop, Hidden on Mobile) */}
-                  <div className="hidden md:flex absolute right-full mr-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0 items-center">
-                    <div className="bg-surface-dark dark:bg-surface-light text-text-inverse dark:text-text-primary text-[10px] md:text-xs font-bold px-2 py-1 rounded-md shadow-xl whitespace-nowrap backdrop-blur-sm">
-                      {item.name}
-                    </div>
-                  </div>
+                    {/* Premium Label Interaction (Desktop Only) */}
+                    <AnimatePresence mode="wait">
+                      {hoveredId === item.href && (
+                        <motion.div
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: "auto", opacity: 1 }}
+                          exit={{ width: 0, opacity: 0 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 35,
+                            mass: 0.8
+                          }} // Snappy but controlled
+                          className="hidden md:flex absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 items-center justify-end pointer-events-none overflow-hidden"
+                        >
+                          <motion.div
+                            initial={{ x: 10, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 5, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="bg-surface-dark dark:bg-surface-light text-text-inverse dark:text-text-primary text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap backdrop-blur-md"
+                          >
+                            {item.name}
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                   {/* Active Indicator Dot (Only showing for clarity on active) */}
                   {isActive && (
@@ -305,6 +342,8 @@ function FloatingNavComponent() {
             {/* More Button */}
             <button
               onClick={toggleMenu}
+              onMouseEnter={() => setHoveredId('more')}
+              onMouseLeave={() => setHoveredId(null)}
               className={`group relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-full transition-all duration-300 ${
                 isOpen ? 'bg-primary text-white shadow-lg' : 'text-text-secondary hover:text-text-primary'
               }`}
@@ -318,13 +357,32 @@ function FloatingNavComponent() {
               </div>
 
                {/* Tooltip (Desktop Only) */}
-               {!isOpen && (
-                <div className="hidden md:flex absolute right-full mr-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0 items-center">
-                    <div className="bg-surface-dark dark:bg-surface-light text-text-inverse dark:text-text-primary text-[10px] md:text-xs font-bold px-2 py-1 rounded-md shadow-xl whitespace-nowrap">
+               <AnimatePresence mode="wait">
+                 {!isOpen && hoveredId === 'more' && (
+                  <motion.div
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: "auto", opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 35,
+                        mass: 0.8
+                      }}
+                      className="hidden md:flex absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 items-center justify-end pointer-events-none overflow-hidden"
+                    >
+                    <motion.div
+                       initial={{ x: 10, opacity: 0 }}
+                       animate={{ x: 0, opacity: 1 }}
+                       exit={{ x: 5, opacity: 0 }}
+                       transition={{ duration: 0.2 }}
+                       className="bg-surface-dark dark:bg-surface-light text-text-inverse dark:text-text-primary text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap backdrop-blur-md"
+                    >
                       More Apps
-                    </div>
-                </div>
-               )}
+                    </motion.div>
+                  </motion.div>
+                 )}
+               </AnimatePresence>
             </button>
           </div>
         </nav>

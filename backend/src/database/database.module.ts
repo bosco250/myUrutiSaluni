@@ -13,6 +13,7 @@ import { Service } from '../services/entities/service.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { EmployeeWorkingHours } from '../appointments/entities/employee-working-hours.entity';
 import { EmployeeAvailabilityRules } from '../appointments/entities/employee-availability-rules.entity';
+import { ServicePackage } from '../service-packages/entities/service-package.entity';
 import { Sale } from '../sales/entities/sale.entity';
 import { SaleItem } from '../sales/entities/sale-item.entity';
 import { Product } from '../inventory/entities/product.entity';
@@ -74,6 +75,7 @@ import { WaitlistEntry } from '../waitlist/entities/waitlist-entry.entity';
           Appointment,
           EmployeeWorkingHours,
           EmployeeAvailabilityRules,
+          ServicePackage,
           Sale,
           SaleItem,
           Product,

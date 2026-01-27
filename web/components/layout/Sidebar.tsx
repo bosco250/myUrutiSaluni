@@ -20,6 +20,7 @@ import {
   Sparkles,
   Search,
   CalendarCheck,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
@@ -41,6 +42,7 @@ const menuItems = [
   { name: 'Loans', href: '/loans', icon: CreditCard },
   { name: 'Wallets', href: '/wallets', icon: Wallet },
   { name: 'Airtel', href: '/airtel', icon: Phone },
+  { name: 'Inspections', href: '/inspections', icon: ClipboardCheck },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

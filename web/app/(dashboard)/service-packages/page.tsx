@@ -11,17 +11,24 @@ import {
   Plus,
   Edit,
   Trash2,
-  DollarSign,
   Clock,
   Scissors,
-  Tag,
-  X,
   CheckCircle2,
   XCircle,
   Sparkles,
+  Calendar,
+  Layers,
+  Percent,
+  Search,
+  Filter,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
+import Button from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useToast } from '@/components/ui/Toast';
 
 interface Service {
   id: string;
@@ -50,18 +57,27 @@ interface ServicePackage {
 
 export default function ServicePackagesPage() {
   return (
-    <ProtectedRoute requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE]}>
+    <ProtectedRoute
+      requiredRoles={[
+        UserRole.SUPER_ADMIN,
+        UserRole.ASSOCIATION_ADMIN,
+        UserRole.SALON_OWNER,
+        UserRole.SALON_EMPLOYEE,
+      ]}
+    >
       <ServicePackagesContent />
     </ProtectedRoute>
   );
 }
 
 function ServicePackagesContent() {
-  const router = useRouter();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const { success, error: toastError } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState<ServicePackage | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<ServicePackage | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch salons
   const { data: salons = [] } = useQuery({
@@ -96,160 +112,209 @@ function ServicePackagesContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['service-packages'] });
+      success('Package deleted successfully');
+      setDeleteConfirmation(null);
+    },
+    onError: () => {
+      toastError('Failed to delete package');
     },
   });
 
+  const filteredPackages = useMemo(() => {
+    if (!searchQuery) return packages;
+    return packages.filter(
+      (pkg) =>
+        pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        pkg.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [packages, searchQuery]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center">
+            <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-text-light/50 dark:text-text-dark/50 mt-4">
+              Loading packages...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Service Packages</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+            Service Packages
+          </h1>
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
             Create bundled service offers with discounts
           </p>
         </div>
-        <button
+        <Button
           onClick={() => {
             setEditingPackage(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Create Package
-        </button>
+        </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading packages...</p>
-          </div>
+      {/* Search Filter */}
+      {packages.length > 0 && (
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+          <input
+            type="text"
+            placeholder="Search packages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+          />
         </div>
-      ) : packages.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <Package className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Service Packages</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Create bundled service offers to increase sales and customer value
-          </p>
-          <button
-            onClick={() => {
-              setEditingPackage(null);
-              setShowModal(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Create Your First Package
-          </button>
+      )}
+
+      {/* Content */}
+      {filteredPackages.length === 0 ? (
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-8">
+          <EmptyState
+            icon={<Layers className="w-16 h-16" />}
+            title={packages.length === 0 ? 'No Service Packages' : 'No packages found'}
+            description={
+              packages.length === 0
+                ? 'Create bundled service offers to increase sales and customer value.'
+                : 'Try adjusting your search criteria.'
+            }
+            action={
+              packages.length === 0 ? (
+                <Button
+                  onClick={() => {
+                    setEditingPackage(null);
+                    setShowModal(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Package
+                </Button>
+              ) : null
+            }
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {packages.map((pkg) => (
+          {filteredPackages.map((pkg) => (
             <div
               key={pkg.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition"
+              className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all duration-300"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{pkg.name}</h3>
-                    {!pkg.isActive && (
-                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
-                        Inactive
-                      </span>
-                    )}
+              <div className="p-5">
+                {/* Card Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg shadow-sm">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-text-light dark:text-text-dark line-clamp-1">
+                        {pkg.name}
+                      </h3>
+                      {!pkg.isActive && (
+                        <div className="inline-flex items-center mt-1">
+                           <Badge variant="warning" size="sm">Inactive</Badge>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {pkg.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{pkg.description}</p>
-                  )}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingPackage(pkg);
+                        setShowModal(true);
+                      }}
+                      className="p-1.5 text-text-light/40 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmation(pkg)}
+                      className="p-1.5 text-text-light/40 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingPackage(pkg);
-                      setShowModal(true);
-                    }}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm('Delete this package?')) {
-                        deleteMutation.mutate(pkg.id);
-                      }
-                    }}
-                    className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
 
-              {/* Services */}
-              <div className="mb-4">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Includes:</p>
-                <div className="space-y-1">
+                {pkg.description && (
+                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4 line-clamp-2 min-h-[2.5em]">
+                    {pkg.description}
+                  </p>
+                )}
+
+                {/* Services List */}
+                <div className="space-y-2 mb-5 bg-background-light/50 dark:bg-white/5 rounded-lg p-3">
+                  <p className="text-[10px] uppercase tracking-wide font-semibold text-text-light/40 dark:text-text-dark/40 mb-1">
+                    Includes
+                  </p>
                   {pkg.services.slice(0, 3).map((service) => (
-                    <div key={service.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                      <Scissors className="w-3 h-3" />
-                      <span>{service.name}</span>
+                    <div
+                      key={service.id}
+                      className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                      <span className="truncate">{service.name}</span>
                     </div>
                   ))}
                   {pkg.services.length > 3 && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-text-light/50 dark:text-text-dark/50 pl-5.5">
                       +{pkg.services.length - 3} more services
                     </p>
                   )}
                 </div>
-              </div>
 
-              {/* Pricing */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Package Price</span>
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">
-                    RWF {pkg.packagePrice.toLocaleString()}
-                  </span>
-                </div>
-                {pkg.originalPrice && pkg.originalPrice > pkg.packagePrice && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 line-through">
-                      RWF {pkg.originalPrice.toLocaleString()}
-                    </span>
+                {/* Pricing & Footer */}
+                <div className="border-t border-border-light dark:border-border-dark pt-4">
+                  <div className="flex items-end justify-between mb-1">
+                    <div>
+                      <p className="text-[10px] uppercase font-semibold text-text-light/40 dark:text-text-dark/40">
+                        Package Price
+                      </p>
+                      <p className="text-xl font-bold text-text-light dark:text-text-dark">
+                        {pkg.packagePrice.toLocaleString()} <span className="text-xs font-normal text-text-light/50">RWF</span>
+                      </p>
+                    </div>
                     {pkg.discountPercentage && (
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                        Save {pkg.discountPercentage.toFixed(0)}%
-                      </span>
+                        <div className="text-right">
+                            <span className="text-xs line-through text-text-light/40 dark:text-text-dark/40 block">
+                                {pkg.originalPrice?.toLocaleString()} RWF
+                            </span>
+                            <Badge variant="success" size="sm" className="mt-1">
+                                Save {pkg.discountPercentage.toFixed(0)}%
+                            </Badge>
+                        </div>
                     )}
                   </div>
-                )}
-                <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{pkg.durationMinutes} min</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Scissors className="w-3 h-3" />
-                    <span>{pkg.services.length} services</span>
-                  </div>
                 </div>
               </div>
-
-              {/* Validity */}
-              {(pkg.validFrom || pkg.validTo) && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {pkg.validFrom && `Valid from: ${format(new Date(pkg.validFrom), 'MMM d, yyyy')}`}
-                    {pkg.validFrom && pkg.validTo && ' • '}
-                    {pkg.validTo && `Until: ${format(new Date(pkg.validTo), 'MMM d, yyyy')}`}
-                  </p>
-                </div>
-              )}
+              
+               {/* Footer Info Strip */}
+               <div className="bg-surface-accent-light dark:bg-surface-accent-dark px-5 py-2.5 flex items-center justify-between text-xs text-text-light/60 dark:text-text-dark/60 border-t border-border-light dark:border-border-dark">
+                   <div className="flex items-center gap-1.5">
+                     <Clock className="w-3.5 h-3.5" />
+                     {pkg.durationMinutes} min
+                   </div>
+                   <div className="flex items-center gap-1.5">
+                      <Scissors className="w-3.5 h-3.5" />
+                      {pkg.services.length} items
+                   </div>
+               </div>
             </div>
           ))}
         </div>
@@ -268,6 +333,7 @@ function ServicePackagesContent() {
               await api.post('/service-packages', data);
             }
             queryClient.invalidateQueries({ queryKey: ['service-packages'] });
+            success(editingPackage ? 'Package updated' : 'Package created');
             setShowModal(false);
             setEditingPackage(null);
           }}
@@ -276,6 +342,20 @@ function ServicePackagesContent() {
           services={services}
         />
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmationModal
+        isOpen={!!deleteConfirmation}
+        onClose={() => setDeleteConfirmation(null)}
+        onConfirm={() => {
+          if (deleteConfirmation) deleteMutation.mutate(deleteConfirmation.id);
+        }}
+        title="Delete Package"
+        message={`Are you sure you want to delete "${deleteConfirmation?.name}"?`}
+        variant="danger"
+        confirmLabel="Delete"
+        isProcessing={deleteMutation.isPending}
+      />
     </div>
   );
 }
@@ -335,236 +415,274 @@ function ServicePackageModal({
         validTo: formData.validTo ? new Date(formData.validTo).toISOString() : undefined,
       });
     } catch (error) {
-      alert('Failed to save package. Please try again.');
+       // Error handled in parent
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {pkg ? 'Edit Service Package' : 'Create Service Package'}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Bundle multiple services together with special pricing
-            </p>
+    <div className="fixed inset-0 bg-black/55 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div 
+        className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-border-light dark:border-border-dark"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+          <div className="flex items-center gap-3">
+             <div className="p-2 bg-primary/10 rounded-lg">
+                <Package className="w-5 h-5 text-primary" />
+             </div>
+             <div>
+                <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+                  {pkg ? 'Edit Package' : 'Create Package'}
+                </h2>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+                   Bundle services for special offers
+                </p>
+             </div>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
-            <X className="w-5 h-5" />
+          <button 
+             onClick={onClose} 
+             className="text-text-light/40 hover:text-text-light dark:text-text-dark/40 dark:hover:text-text-dark transition-colors"
+          >
+            <XCircle className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Basic Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Salon *
-              </label>
-              <select
-                required
-                value={formData.salonId}
-                onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="">Select Salon</option>
-                {salons.map((salon) => (
-                  <option key={salon.id} value={salon.id}>
-                    {salon.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Package Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="e.g., Complete Beauty Package"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Description
-            </label>
-            <textarea
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              placeholder="Describe what's included in this package..."
-            />
-          </div>
-
-          {/* Services Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select Services * ({formData.serviceIds.length} selected)
-            </label>
-            <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
-              {services.length === 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No services available</p>
-              ) : (
-                <div className="space-y-2">
-                  {services.map((service) => (
-                    <label
-                      key={service.id}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.serviceIds.includes(service.id)}
-                        onChange={() => handleServiceToggle(service.id)}
-                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">{service.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          RWF {service.basePrice.toLocaleString()} • {service.durationMinutes} min
-                        </p>
-                      </div>
-                    </label>
-                  ))}
+        {/* Modal Body */}
+        <div className="overflow-y-auto p-6">
+            <form id="package-form" onSubmit={handleSubmit} className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Salon *
+                  </label>
+                  <select
+                    required
+                    value={formData.salonId}
+                    onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  >
+                    <option value="">Select Salon</option>
+                    {salons.map((salon) => (
+                      <option key={salon.id} value={salon.id}>
+                        {salon.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
-            </div>
-            {selectedServices.length > 0 && (
-              <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Original Price: <strong>RWF {calculatedOriginalPrice.toLocaleString()}</strong> • Total Duration:{' '}
-                  <strong>{calculatedDuration} minutes</strong>
-                </p>
+
+                <div>
+                  <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Package Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    placeholder="e.g., Summer Glow Package"
+                  />
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Pricing */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Package Price *
-              </label>
-              <input
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={formData.packagePrice}
-                onChange={(e) => setFormData({ ...formData, packagePrice: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                  placeholder="Describe the benefits of this package..."
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Original Price
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.originalPrice || calculatedOriginalPrice}
-                onChange={(e) =>
-                  setFormData({ ...formData, originalPrice: parseFloat(e.target.value) || undefined })
-                }
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              />
-            </div>
+              {/* Services Selection */}
+              <div>
+                <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase">
+                  Select Services * <span className="text-primary normal-case">({formData.serviceIds.length} selected)</span>
+                </label>
+                
+                <div className="border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+                    <div className="bg-background-secondary dark:bg-background-dark p-2 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+                         <span className="text-xs font-medium text-text-light/60 dark:text-text-dark/60">Available Services</span>
+                         {selectedServices.length > 0 && (
+                            <span className="text-xs font-bold text-primary">
+                                Orig: {calculatedOriginalPrice.toLocaleString()} RWF
+                            </span>
+                         )}
+                    </div>
+                    <div className="max-h-56 overflow-y-auto p-2 bg-background-light dark:bg-background-dark/50">
+                      {services.length === 0 ? (
+                        <p className="text-sm text-text-light/50 dark:text-text-dark/50 p-4 text-center">No services available</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {services.map((service) => (
+                            <label
+                              key={service.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                                formData.serviceIds.includes(service.id)
+                                    ? 'bg-primary/5 border-primary/30'
+                                    : 'bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark hover:border-primary/30'
+                              }`}
+                            >
+                              <div className="mt-0.5">
+                                 <input
+                                    type="checkbox"
+                                    checked={formData.serviceIds.includes(service.id)}
+                                    onChange={() => handleServiceToggle(service.id)}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                 />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium truncate ${formData.serviceIds.includes(service.id) ? 'text-primary' : 'text-text-light dark:text-text-dark'}`}>{service.name}</p>
+                                <div className="flex items-center gap-2 mt-0.5 text-xs text-text-light/50 dark:text-text-dark/50">
+                                   <span>{service.basePrice.toLocaleString()} RWF</span>
+                                   <span>•</span>
+                                   <span>{service.durationMinutes}m</span>
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Discount %
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={
-                  formData.discountPercentage ||
-                  (formData.originalPrice && formData.packagePrice
-                    ? ((formData.originalPrice - formData.packagePrice) / formData.originalPrice) * 100
-                    : 0)
-                }
-                readOnly
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-              />
-            </div>
-          </div>
+              {/* Pricing */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Package Price *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">RWF</span>
+                    <input
+                        type="number"
+                        required
+                        min="0"
+                        value={formData.packagePrice}
+                        onChange={(e) => setFormData({ ...formData, packagePrice: parseFloat(e.target.value) || 0 })}
+                        className="w-full pl-10 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition font-mono"
+                    />
+                  </div>
+                </div>
 
-          {/* Validity Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Valid From
-              </label>
-              <input
-                type="date"
-                value={formData.validFrom}
-                onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              />
-            </div>
+                <div>
+                   <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Original Price
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">RWF</span>
+                    <input
+                        type="number"
+                        min="0"
+                        value={formData.originalPrice || calculatedOriginalPrice}
+                        onChange={(e) =>
+                        setFormData({ ...formData, originalPrice: parseFloat(e.target.value) || undefined })
+                        }
+                        className="w-full pl-10 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition font-mono"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Valid To
-              </label>
-              <input
-                type="date"
-                value={formData.validTo}
-                onChange={(e) => setFormData({ ...formData, validTo: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              />
-            </div>
-          </div>
+                <div>
+                   <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Discount %
+                  </label>
+                  <div className="relative">
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">%</span>
+                    <input
+                        type="number"
+                        value={
+                        formData.discountPercentage ||
+                        (formData.originalPrice && formData.packagePrice
+                            ? ((formData.originalPrice - formData.packagePrice) / formData.originalPrice) * 100
+                            : 0)
+                        }
+                        readOnly
+                        className="w-full pl-3 pr-8 py-2.5 bg-background-secondary dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark opacity-70 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
 
-          {/* Active Status */}
-          <label className="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-            <input
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Active Package</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Active packages are visible to customers and can be booked
-              </p>
-            </div>
-          </label>
+              {/* Validity Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Valid From
+                  </label>
+                  <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                      <input
+                        type="date"
+                        value={formData.validFrom}
+                        onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
+                        className="w-full pl-10 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                      />
+                  </div>
+                </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
+                <div>
+                  <label className="block text-xs font-bold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
+                    Valid To
+                  </label>
+                  <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                      <input
+                        type="date"
+                        value={formData.validTo}
+                        onChange={(e) => setFormData({ ...formData, validTo: e.target.value })}
+                        className="w-full pl-10 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                      />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Toggle */}
+              <div className="flex items-center gap-3 p-4 border border-border-light dark:border-border-dark rounded-xl bg-background-secondary/30 dark:bg-background-dark/30">
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        id="isActive" 
+                        className="sr-only peer"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    />
+                    <div className="w-11 h-6 bg-border-light dark:bg-border-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </div>
+                  <label htmlFor="isActive" className="cursor-pointer">
+                      <p className="text-sm font-bold text-text-light dark:text-text-dark">Active Package</p>
+                      <p className="text-xs text-text-light/60 dark:text-text-dark/60">Visible to customers and staff</p>
+                  </label>
+              </div>
+            </form>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex items-center justify-end gap-3 rounded-b-2xl">
+            <Button
+              variant="outline"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              form="package-form"
               type="submit"
               disabled={isSubmitting || formData.serviceIds.length === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              loading={isSubmitting}
             >
-              {isSubmitting ? 'Saving...' : pkg ? 'Update Package' : 'Create Package'}
-            </button>
-          </div>
-        </form>
+              {pkg ? 'Update Package' : 'Create Package'}
+            </Button>
+        </div>
       </div>
     </div>
   );

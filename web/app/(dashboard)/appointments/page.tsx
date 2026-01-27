@@ -301,11 +301,11 @@ function AppointmentsContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-text-light/60 dark:text-text-dark/60">Loading appointments...</p>
+            <Loader2 className="w-5 h-5 animate-spin text-text-light/40 dark:text-text-dark/40 mx-auto mb-3" />
+            <p className="text-sm text-text-light/50 dark:text-text-dark/50">Loading appointments...</p>
           </div>
         </div>
       </div>
@@ -313,209 +313,186 @@ function AppointmentsContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Appointments</h1>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              Manage and track customer appointments
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => {
-                const exportData = filteredAppointments.map((apt) => ({
-                  Date: formatDateForExport(apt.scheduledStart, 'yyyy-MM-dd'),
-                  Time: `${format(parseISO(apt.scheduledStart), 'HH:mm')} - ${format(parseISO(apt.scheduledEnd), 'HH:mm')}`,
-                  Customer: apt.customer?.fullName || 'Walk-in',
-                  Phone: apt.customer?.phone || 'N/A',
-                  Service: apt.service?.name || 'N/A',
-                  Salon: apt.salon?.name || 'N/A',
-                  Status: apt.status,
-                  Notes: apt.notes || '',
-                }));
-                exportToCSV(exportData, { filename: 'appointments' });
-              }}
-              variant="secondary"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-            <Button
-              onClick={() => router.push('/appointments/calendar')}
-              variant="secondary"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Calendar className="w-5 h-5" />
-              Calendar View
-            </Button>
-            <Button
-              onClick={() => setShowNewBookingModal(true)}
-              variant="primary"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              New Appointment
-            </Button>
-          </div>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-lg font-semibold text-text-light dark:text-text-dark">Appointments</h1>
+          <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5">
+            Manage and track customer appointments
+          </p>
         </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Total
-                </p>
-                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.total}
-                </p>
-              </div>
-              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
-                <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Today
-                </p>
-                <p className="text-2xl font-black text-primary mt-1">{stats.today}</p>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
-                <Clock className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Upcoming
-                </p>
-                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                  {stats.upcoming}
-                </p>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 dark:border-gray-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Completed
-                </p>
-                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.completed}
-                </p>
-              </div>
-              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
-                <CheckCircle2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Confirmed
-                </p>
-                <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
-                  {stats.confirmed}
-                </p>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search appointments..."
-                className="w-full pl-9 pr-4 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-text-light/40 dark:placeholder:text-text-dark/40"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              <option value="all">All Status</option>
-              <option value="booked">Booked</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="no_show">No Show</option>
-            </select>
-
-            {/* Date Filter */}
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full px-3 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              <option value="all">All Dates</option>
-              <option value="today">Today</option>
-              <option value="tomorrow">Tomorrow</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="past">Past</option>
-            </select>
-
-            {/* Salon Filter */}
-            <select
-              value={salonFilter}
-              onChange={(e) => setSalonFilter(e.target.value)}
-              className="w-full px-3 h-10 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              <option value="all">All Salons</option>
-              {salons.map((salon) => (
-                <option key={salon.id} value={salon.id}>
-                  {salon.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              const exportData = filteredAppointments.map((apt) => ({
+                Date: formatDateForExport(apt.scheduledStart, 'yyyy-MM-dd'),
+                Time: `${format(parseISO(apt.scheduledStart), 'HH:mm')} - ${format(parseISO(apt.scheduledEnd), 'HH:mm')}`,
+                Customer: apt.customer?.fullName || 'Walk-in',
+                Phone: apt.customer?.phone || 'N/A',
+                Service: apt.service?.name || 'N/A',
+                Salon: apt.salon?.name || 'N/A',
+                Status: apt.status,
+                Notes: apt.notes || '',
+              }));
+              exportToCSV(exportData, { filename: 'appointments' });
+            }}
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </Button>
+          <Button
+            onClick={() => router.push('/appointments/calendar')}
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            Calendar
+          </Button>
+          <Button
+            onClick={() => setShowNewBookingModal(true)}
+            variant="primary"
+            size="sm"
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New Appointment
+          </Button>
         </div>
       </div>
 
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+        {[
+          {
+            label: 'Total',
+            value: stats.total,
+            icon: Calendar,
+            gradient: 'from-blue-500 to-cyan-500',
+            border: 'hover:border-blue-500/50',
+          },
+          {
+            label: 'Today',
+            value: stats.today,
+            icon: Clock,
+            gradient: 'from-amber-500 to-orange-500',
+            border: 'hover:border-amber-500/50',
+            badge: stats.today > 0 ? { label: 'Action', class: 'text-amber-500 bg-amber-500/10' } : null,
+          },
+          {
+            label: 'Upcoming',
+            value: stats.upcoming,
+            icon: Calendar,
+            gradient: 'from-violet-500 to-purple-500',
+            border: 'hover:border-violet-500/50',
+          },
+          {
+            label: 'Confirmed',
+            value: stats.confirmed,
+            icon: CheckCircle2,
+            gradient: 'from-blue-500 to-indigo-500',
+            border: 'hover:border-indigo-500/50',
+          },
+          {
+            label: 'Completed',
+            value: stats.completed,
+            icon: CheckCircle2,
+            gradient: 'from-green-500 to-emerald-500',
+            border: 'hover:border-emerald-500/50',
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className={`group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-lg transition-all ${stat.border}`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 bg-gradient-to-br ${stat.gradient} rounded-lg`}>
+                <stat.icon className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[10px] uppercase tracking-wide font-semibold text-text-light/60 dark:text-text-dark/60">
+                {stat.label}
+              </span>
+            </div>
+            <div className="flex items-end justify-between">
+              <span className="text-2xl font-bold text-text-light dark:text-text-dark leading-none">
+                {stat.value}
+              </span>
+              {stat.badge && (
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${stat.badge.class}`}>
+                  {stat.badge.label}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-5">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search appointments..."
+            className="w-full pl-8 pr-3 h-9 text-xs bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-text-light/40 dark:placeholder:text-text-dark/40"
+          />
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="w-full px-2.5 h-9 text-xs bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
+        >
+          <option value="all">All Status</option>
+          <option value="booked">Booked</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="no_show">No Show</option>
+        </select>
+
+        <select
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          className="w-full px-2.5 h-9 text-xs bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
+        >
+          <option value="all">All Dates</option>
+          <option value="today">Today</option>
+          <option value="tomorrow">Tomorrow</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Past</option>
+        </select>
+
+        <select
+          value={salonFilter}
+          onChange={(e) => setSalonFilter(e.target.value)}
+          className="w-full px-2.5 h-9 text-xs bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
+        >
+          <option value="all">All Salons</option>
+          {salons.map((salon) => (
+            <option key={salon.id} value={salon.id}>
+              {salon.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Appointments List */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         {Object.keys(groupedAppointments).length === 0 ? (
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
-            <Calendar className="w-16 h-16 text-text-light/20 dark:text-text-dark/20 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
+          <div className="border border-border-light dark:border-border-dark border-dashed rounded-lg py-16 text-center">
+            <Calendar className="w-8 h-8 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+            <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
               No appointments found
-            </h3>
-            <p className="text-text-light/60 dark:text-text-dark/60 mb-4">
+            </p>
+            <p className="text-xs text-text-light/40 dark:text-text-dark/40 mb-4">
               {searchQuery ||
               statusFilter !== 'all' ||
               dateFilter !== 'all' ||
@@ -530,34 +507,40 @@ function AppointmentsContent() {
                 <Button
                   onClick={() => setShowNewBookingModal(true)}
                   variant="primary"
-                  className="flex items-center gap-2 mx-auto"
+                  size="sm"
+                  className="flex items-center gap-1.5 mx-auto text-xs"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                   Create Appointment
                 </Button>
               )}
           </div>
         ) : (
           Object.entries(groupedAppointments)
-            .sort((a, b) => b[0].localeCompare(a[0])) // Sort descending (newest dates first)
+            .sort((a, b) => b[0].localeCompare(a[0]))
             .map(([date, dateAppointments]) => (
-              <div key={date} className="space-y-3">
+              <div key={date}>
+                {/* Date Group Header */}
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="h-px flex-1 bg-border-light dark:bg-border-dark" />
-                  <h2 className="text-lg font-semibold text-text-light dark:text-text-dark px-3">
+                  <h2 className="text-xs font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide whitespace-nowrap">
                     {isToday(parseISO(date))
                       ? 'Today'
                       : isTomorrow(parseISO(date))
                         ? 'Tomorrow'
-                        : format(parseISO(date), 'EEEE, MMMM d, yyyy')}
+                        : format(parseISO(date), 'EEEE, MMM d, yyyy')}
                   </h2>
                   <div className="h-px flex-1 bg-border-light dark:bg-border-dark" />
+                  <span className="text-[10px] text-text-light/40 dark:text-text-dark/40 tabular-nums">
+                    {dateAppointments.length} appt{dateAppointments.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                {/* Appointment Rows */}
+                <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
                   {dateAppointments
                     .sort((a, b) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime())
                     .map((appointment) => (
-                      <AppointmentCard
+                      <AppointmentRow
                         key={appointment.id}
                         appointment={appointment}
                         employeeRecords={employeeRecords}
@@ -602,8 +585,8 @@ function AppointmentsContent() {
   );
 }
 
-// Independent Appointment Card Component
-function AppointmentCard({
+// Appointment Row Component (replaces card grid with scannable rows)
+function AppointmentRow({
   appointment,
   employeeRecords,
   canEdit,
@@ -673,134 +656,102 @@ function AppointmentCard({
   return (
     <>
       <div
-        className={`group bg-surface-light dark:bg-surface-dark border rounded-xl p-4 hover:shadow-lg hover:border-primary/50 transition-all ${
-          isMyAppointment
-            ? 'border-primary/50 bg-primary/5 dark:bg-primary/10'
-            : 'border-border-light dark:border-border-dark'
+        className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-background-light dark:hover:bg-background-dark ${
+          isMyAppointment ? 'bg-primary/[0.03] dark:bg-primary/[0.06]' : ''
         }`}
       >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                isMyAppointment
-                  ? 'bg-gradient-to-br from-primary to-primary/80'
-                  : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-              }`}
-            >
-              <Calendar className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-text-light dark:text-text-dark text-sm line-clamp-1">
-                  {appointment.service?.name || 'Service'}
-                </h3>
-                {isMyAppointment && (
-                  <span className="px-1.5 py-0.5 bg-primary/20 text-primary text-[10px] font-semibold rounded border border-primary/30 uppercase tracking-wide">
-                    You
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3 h-3 text-text-light/60 dark:text-text-dark/60" />
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                  {formatAppointmentDate(appointment.scheduledStart)}
-                  {' - '}
-                  {format(parseISO(appointment.scheduledEnd), 'h:mm a')}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div
-            className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
-          >
-            {getStatusLabel(appointment.status)}
-          </div>
+        {/* Time column */}
+        <div className="w-[100px] flex-shrink-0">
+          <p className="text-xs font-medium text-text-light dark:text-text-dark tabular-nums leading-tight">
+            {format(parseISO(appointment.scheduledStart), 'h:mm a')}
+          </p>
+          <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 tabular-nums leading-tight mt-0.5">
+            {format(parseISO(appointment.scheduledEnd), 'h:mm a')}
+          </p>
         </div>
 
-        <div className="space-y-2 mb-4 pl-[3.25rem]">
-          {appointment.customer && (
-            <div className="flex items-center gap-2 text-xs">
-              <User className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-              <span className="text-text-light/80 dark:text-text-dark/80 font-medium truncate">
+        {/* Service + Customer column */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-medium text-text-light dark:text-text-dark truncate">
+              {appointment.service?.name || 'Service'}
+            </p>
+            {isMyAppointment && (
+              <span className="px-1 py-px bg-primary/10 text-primary text-[9px] font-semibold rounded uppercase tracking-wide flex-shrink-0">
+                You
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            {appointment.customer && (
+              <span className="text-[11px] text-text-light/60 dark:text-text-dark/60 truncate">
                 {appointment.customer.fullName}
               </span>
-            </div>
-          )}
-          {appointment.salon && (
-            <div className="flex items-center gap-2 text-xs">
-              <Building2 className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-              <span className="text-text-light/60 dark:text-text-dark/60 truncate">
+            )}
+            {appointment.customer && appointment.salon && (
+              <span className="text-text-light/20 dark:text-text-dark/20 text-[10px]">/</span>
+            )}
+            {appointment.salon && (
+              <span className="text-[11px] text-text-light/40 dark:text-text-dark/40 truncate">
                 {appointment.salon.name}
               </span>
-            </div>
-          )}
-          {preferredEmployeeName && !isMyAppointment && (
-            <div className="flex items-center gap-2 text-xs">
-              <User className="w-3 h-3 text-primary/60" />
-              <span className="text-text-light/60 dark:text-text-dark/60">
-                with {preferredEmployeeName}
-              </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 pt-3 border-t border-border-light dark:border-border-dark overflow-x-auto no-scrollbar">
+        {/* Employee (if applicable) */}
+        {preferredEmployeeName && !isMyAppointment && (
+          <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
+            <User className="w-3 h-3 text-text-light/30 dark:text-text-dark/30" />
+            <span className="text-[11px] text-text-light/50 dark:text-text-dark/50">
+              {preferredEmployeeName}
+            </span>
+          </div>
+        )}
+
+        {/* Status badge */}
+        <div
+          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide border flex-shrink-0 ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+        >
+          {getStatusLabel(appointment.status)}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           {canEdit && appointment.status === 'pending' && (
             <Button
               onClick={() => handleStatusUpdate('booked', 'Are you sure you want to accept this appointment?', 'primary', 'Accept')}
               variant="primary"
               size="sm"
-              className="flex-1 h-8 text-xs justify-center gap-1.5"
+              className="h-7 px-2 text-[11px] gap-1"
               disabled={updateStatusMutation.isPending}
               loading={updateStatusMutation.isPending}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 className="w-3 h-3" />
               Accept
             </Button>
           )}
 
           {canEdit && ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
-            <Button
+            <button
               onClick={() => handleStatusUpdate('cancelled', 'Are you sure you want to cancel this appointment?', 'danger', 'Cancel Appointment')}
-              variant="secondary"
-              size="sm"
-              className={`h-8 text-xs justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 ${
-                appointment.status === 'pending' ? 'px-2' : 'px-3 gap-1.5 flex-none'
-              }`}
+              className="p-1.5 rounded-md text-text-light/40 dark:text-text-dark/40 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors"
               disabled={updateStatusMutation.isPending}
               title="Cancel Appointment"
             >
-              <XCircle className="w-4 h-4" />
-              {appointment.status !== 'pending' && <span>Cancel</span>}
-            </Button>
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
           )}
 
-          <Button
+          <button
             onClick={() => router.push(`/appointments/${appointment.id}`)}
-            variant="secondary"
-            size="sm"
-            className="h-8 text-xs justify-center gap-1.5 flex-1"
+            className="p-1.5 rounded-md text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
             title="View Details"
           >
             <Eye className="w-3.5 h-3.5" />
-            View
-          </Button>
+          </button>
 
-          {canEdit && (
-            <Button
-              onClick={() => {
-                setEditingAppointment(appointment);
-                setShowModal(true);
-              }}
-              variant="secondary"
-              size="sm"
-              className="h-8 text-xs justify-center bg-transparent border-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-text-light/60 dark:text-text-dark/60 px-2"
-              title="Edit Appointment"
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-          )}
+
         </div>
       </div>
 
@@ -910,45 +861,43 @@ function AppointmentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-border-light dark:border-border-dark">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-              {appointment ? 'Edit Appointment' : 'Create New Appointment'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition"
-            >
-              <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-light dark:border-border-dark">
+          <h2 className="text-sm font-semibold text-text-light dark:text-text-dark">
+            {appointment ? 'Edit Appointment' : 'Create New Appointment'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+          >
+            <X className="w-4 h-4 text-text-light/50 dark:text-text-dark/50" />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {error && (
-            <div className="mb-4 p-4 bg-danger/10 border border-danger/20 rounded-lg">
-              <div className="flex items-center gap-2 text-danger">
-                <AlertCircle className="w-5 h-5" />
+            <div className="mb-3 px-3 py-2 bg-danger/10 border border-danger/20 rounded-md">
+              <div className="flex items-center gap-2 text-danger text-xs">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 <p>{error}</p>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="customer-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="customer-select" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                   Customer
                 </label>
                 <select
                   id="customer-select"
                   value={formData.customerId}
                   onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
                 >
                   <option value="">Select customer (optional)</option>
                   {customers?.map((customer) => (
@@ -960,14 +909,14 @@ function AppointmentModal({
               </div>
 
               <div>
-                <label htmlFor="service-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="service-select" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                   Service
                 </label>
                 <select
                   id="service-select"
                   value={formData.serviceId}
                   onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
-                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
                 >
                   <option value="">Select service (optional)</option>
                   {services?.map((service) => (
@@ -981,7 +930,7 @@ function AppointmentModal({
             </div>
 
             <div>
-              <label htmlFor="salon-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label htmlFor="salon-select" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                 Salon <span className="text-danger">*</span>
               </label>
               <select
@@ -991,7 +940,7 @@ function AppointmentModal({
                 onChange={(e) =>
                   setFormData({ ...formData, salonId: e.target.value, salonEmployeeId: '' })
                 }
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
               >
                 <option value="">Select salon</option>
                 {salons?.map((salon) => (
@@ -1004,14 +953,14 @@ function AppointmentModal({
 
             {formData.salonId && (
               <div>
-                <label htmlFor="employee-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Assign Employee (for commission tracking)
+                <label htmlFor="employee-select" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
+                  Assign Employee
                 </label>
                 <select
                   id="employee-select"
                   value={formData.salonEmployeeId}
                   onChange={(e) => setFormData({ ...formData, salonEmployeeId: e.target.value })}
-                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
                 >
                   <option value="">No employee assigned (optional)</option>
                   {employees
@@ -1026,7 +975,7 @@ function AppointmentModal({
                       </option>
                     ))}
                 </select>
-                <p className="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">
+                <p className="mt-1 text-[10px] text-text-light/40 dark:text-text-dark/40">
                   {formData.salonEmployeeId
                     ? 'Commission will be created automatically when appointment is marked as completed'
                     : 'Assign an employee to track commissions for this appointment'}
@@ -1034,9 +983,9 @@ function AppointmentModal({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="start-time" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="start-time" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                   Start Time <span className="text-danger">*</span>
                 </label>
                 <input
@@ -1045,12 +994,12 @@ function AppointmentModal({
                   required
                   value={formData.scheduledStart}
                   onChange={(e) => setFormData({ ...formData, scheduledStart: e.target.value })}
-                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
                 />
               </div>
 
               <div>
-                <label htmlFor="end-time" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                <label htmlFor="end-time" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                   End Time <span className="text-danger">*</span>
                 </label>
                 <input
@@ -1059,20 +1008,20 @@ function AppointmentModal({
                   required
                   value={formData.scheduledEnd}
                   onChange={(e) => setFormData({ ...formData, scheduledEnd: e.target.value })}
-                  className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="status-select" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label htmlFor="status-select" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                 Status <span className="text-danger">*</span>
               </label>
               <select
                 id="status-select"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-2.5 h-9 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40"
               >
                 <option value="booked">Booked</option>
                 <option value="confirmed">Confirmed</option>
@@ -1084,27 +1033,27 @@ function AppointmentModal({
             </div>
 
             <div>
-              <label htmlFor="notes-area" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              <label htmlFor="notes-area" className="block text-xs font-medium text-text-light/70 dark:text-text-dark/70 mb-1">
                 Notes
               </label>
               <textarea
                 id="notes-area"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-                className="w-full px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                rows={2}
+                className="w-full px-2.5 py-2 text-xs bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none"
                 placeholder="Add any additional notes..."
               />
             </div>
 
-            <div className="flex gap-3 pt-4 border-t border-border-light dark:border-border-dark">
-              <Button type="button" onClick={onClose} variant="secondary" className="flex-1">
+            <div className="flex gap-2 pt-3 border-t border-border-light dark:border-border-dark">
+              <Button type="button" onClick={onClose} variant="secondary" size="sm" className="flex-1 text-xs">
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
+              <Button type="submit" variant="primary" size="sm" className="flex-1 text-xs" disabled={loading}>
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                     Saving...
                   </>
                 ) : appointment ? (

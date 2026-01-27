@@ -166,11 +166,11 @@ function MyAppointmentsContent() {
   // Loading State
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center">
-            <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-4">
+            <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-3">
               Loading your appointments...
             </p>
           </div>
@@ -180,136 +180,125 @@ function MyAppointmentsContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg">
-              <CalendarDays className="w-5 h-5 text-white" />
-            </div>
-            My Personal Bookings
+          <h1 className="text-lg font-semibold text-text-light dark:text-text-dark">
+            My Bookings
           </h1>
-          <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+          <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5">
             Appointments you booked for yourself at other salons
           </p>
         </div>
         <Button
           onClick={() => router.push('/salons/browse')}
           variant="primary"
-          size="md"
-          className="flex items-center gap-2"
+          size="sm"
+          className="flex items-center gap-1.5 text-xs"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           Book New
         </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Upcoming Card */}
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Upcoming
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                {upcomingCount}
-              </p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        {[
+          {
+            label: 'Upcoming',
+            value: upcomingCount,
+            icon: Clock,
+            gradient: 'from-amber-500 to-orange-500',
+            border: 'hover:border-amber-500/50',
+            badge: upcomingCount > 0 ? { label: 'Action', class: 'text-amber-500 bg-amber-500/10' } : null,
+          },
+          {
+            label: 'Past',
+            value: pastCount,
+            icon: History,
+            gradient: 'from-blue-500 to-cyan-500',
+            border: 'hover:border-blue-500/50',
+          },
+          {
+            label: 'Completed',
+            value: completedCount,
+            icon: CheckCircle2,
+            gradient: 'from-green-500 to-emerald-500',
+            border: 'hover:border-emerald-500/50',
+          },
+          {
+            label: 'Total',
+            value: appointments?.length || 0,
+            icon: CalendarDays,
+            gradient: 'from-violet-500 to-purple-500',
+            border: 'hover:border-violet-500/50',
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className={`group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-lg transition-all ${stat.border}`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 bg-gradient-to-br ${stat.gradient} rounded-lg`}>
+                <stat.icon className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[10px] uppercase tracking-wide font-semibold text-text-light/60 dark:text-text-dark/60">
+                {stat.label}
+              </span>
             </div>
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-              <CalendarCheck className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-
-        {/* Past Card */}
-        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Past
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                {pastCount}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <History className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-
-        {/* Completed Card */}
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Completed
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                {completedCount}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
-              <CheckCircle2 className="w-4 h-4 text-white" />
-            </div>
-          </div>
-        </div>
-
-        {/* Total Card */}
-        <div className="group relative bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 dark:border-orange-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Total
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                {appointments?.length || 0}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
-              <Calendar className="w-4 h-4 text-white" />
+            <div className="flex items-end justify-between">
+              <span className="text-2xl font-bold text-text-light dark:text-text-dark leading-none">
+                {stat.value}
+              </span>
+              {stat.badge && (
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${stat.badge.class}`}>
+                  {stat.badge.label}
+                </span>
+              )}
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-background-secondary dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-fit">
+      <div className="flex items-center gap-0 border-b border-border-light dark:border-border-dark">
         {[
-          { key: 'upcoming', label: 'Upcoming', count: upcomingCount, icon: CalendarCheck },
-          { key: 'past', label: 'Past', count: pastCount, icon: History },
-          { key: 'all', label: 'All', count: appointments?.length || 0, icon: Calendar },
+          { key: 'upcoming', label: 'Upcoming', count: upcomingCount },
+          { key: 'past', label: 'Past', count: pastCount },
+          { key: 'all', label: 'All', count: appointments?.length || 0 },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setSelectedTab(tab.key as TabFilter)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 text-xs font-medium transition-colors relative ${
               selectedTab === tab.key
-                ? 'bg-surface-light dark:bg-background-dark text-primary shadow-sm'
-                : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                ? 'text-primary'
+                : 'text-text-light/50 dark:text-text-dark/50 hover:text-text-light dark:hover:text-text-dark'
             }`}
           >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                selectedTab === tab.key
-                  ? 'bg-primary/10 text-primary'
-                  : 'bg-border-light dark:bg-border-dark text-text-light/40 dark:text-text-dark/40'
-              }`}
-            >
-              {tab.count}
+            <span className="flex items-center gap-1.5">
+              {tab.label}
+              <span
+                className={`px-1.5 py-px rounded text-[10px] font-medium ${
+                  selectedTab === tab.key
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-border-light dark:bg-border-dark text-text-light/40 dark:text-text-dark/40'
+                }`}
+              >
+                {tab.count}
+              </span>
             </span>
+            {selectedTab === tab.key && (
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary" />
+            )}
           </button>
         ))}
       </div>
 
       {/* Appointments List */}
       {filteredAppointments.length > 0 ? (
-        <div className="space-y-3">
+        <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
           {filteredAppointments.map((appointment) => {
             const statusConfig = getStatusConfig(appointment.status);
             const StatusIcon = statusConfig.icon;
@@ -330,85 +319,93 @@ function MyAppointmentsContent() {
                 }}
                 role="button"
                 tabIndex={0}
-                className={`block p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl hover:border-primary/50 hover:shadow-md transition-all group cursor-pointer ${
-                  isUpcoming ? 'ring-1 ring-primary/10' : ''
+                className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors hover:bg-background-light dark:hover:bg-background-dark ${
+                  isUpcoming ? 'bg-primary/[0.02] dark:bg-primary/[0.04]' : ''
                 }`}
               >
-                <div className="flex items-start gap-4">
-                  {/* Date Badge */}
-                  <div
-                    className={`flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center ${
-                      isUpcoming
-                        ? 'bg-gradient-to-br from-primary to-primary/80 text-white shadow-md'
-                        : 'bg-background-secondary dark:bg-surface-dark text-text-light/60 dark:text-text-dark/60'
-                    }`}
-                  >
-                    <span className="text-xl font-bold leading-none">{format(startDate, 'd')}</span>
-                    <span className="text-[10px] uppercase tracking-wide font-semibold">
-                      {format(startDate, 'MMM')}
-                    </span>
+                {/* Date cell */}
+                <div className="w-10 flex-shrink-0 text-center">
+                  <p className={`text-sm font-semibold leading-none ${
+                    isUpcoming ? 'text-primary' : 'text-text-light/50 dark:text-text-dark/50'
+                  }`}>
+                    {format(startDate, 'd')}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wide text-text-light/40 dark:text-text-dark/40 mt-0.5">
+                    {format(startDate, 'MMM')}
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className={`w-px h-8 flex-shrink-0 ${
+                  isUpcoming ? 'bg-primary/20' : 'bg-border-light dark:bg-border-dark'
+                }`} />
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-medium text-text-light dark:text-text-dark truncate">
+                      {appointment.service?.name || 'Appointment'}
+                    </p>
                   </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-bold text-text-light dark:text-text-dark group-hover:text-primary transition-colors">
-                          {appointment.service?.name || 'Appointment'}
-                        </h3>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <Building2 className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60 truncate">
-                            {appointment.salon?.name}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConfig.bg} ${statusConfig.text}`}
-                      >
-                        <StatusIcon className="w-3 h-3" />
-                        {statusConfig.label}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {appointment.salon && (
+                      <span className="text-[11px] text-text-light/50 dark:text-text-dark/50 truncate">
+                        {appointment.salon.name}
                       </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 mt-3">
-                      <span className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
-                        <Clock className="w-3 h-3" />
-                        {format(startDate, 'h:mm a')}
-                      </span>
-                      {appointment.salonEmployee?.user?.fullName && (
-                        <span className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
-                          <User className="w-3 h-3" />
+                    )}
+                    {appointment.salonEmployee?.user?.fullName && (
+                      <>
+                        <span className="text-text-light/20 dark:text-text-dark/20 text-[10px]">/</span>
+                        <span className="text-[11px] text-text-light/40 dark:text-text-dark/40 truncate">
                           {appointment.salonEmployee.user.fullName}
                         </span>
-                      )}
-                      {appointment.service?.basePrice && (
-                        <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
-                          RWF {Number(appointment.service.basePrice).toLocaleString()}
-                        </span>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
-
-                  {/* Arrow */}
-                  <ChevronRight className="w-5 h-5 text-text-light/20 dark:text-text-dark/20 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 self-center" />
                 </div>
+
+                {/* Time */}
+                <div className="hidden sm:block flex-shrink-0">
+                  <p className="text-[11px] text-text-light/50 dark:text-text-dark/50 tabular-nums">
+                    {format(startDate, 'h:mm a')}
+                  </p>
+                </div>
+
+                {/* Price */}
+                {appointment.service?.basePrice && (
+                  <div className="hidden md:block flex-shrink-0">
+                    <p className="text-[11px] font-medium text-primary tabular-nums">
+                      RWF {Number(appointment.service.basePrice).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Status */}
+                <span
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${statusConfig.bg} ${statusConfig.text}`}
+                >
+                  <StatusIcon className="w-2.5 h-2.5" />
+                  {statusConfig.label}
+                </span>
+
+                {/* Chevron */}
+                <ChevronRight className="w-3.5 h-3.5 text-text-light/20 dark:text-text-dark/20 flex-shrink-0" />
               </div>
             );
           })}
         </div>
       ) : (
         /* Empty State */
-        <div className="text-center py-8 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
-          <Calendar className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+        <div className="border border-border-light dark:border-border-dark border-dashed rounded-lg py-12 text-center">
+          <Calendar className="w-8 h-8 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
+          <p className="text-sm font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
             {selectedTab === 'upcoming'
               ? 'No Upcoming Appointments'
               : selectedTab === 'past'
                 ? 'No Past Appointments'
                 : 'No Appointments Yet'}
-          </h3>
-          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4 max-w-md mx-auto">
+          </p>
+          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mb-4 max-w-sm mx-auto">
             {selectedTab === 'upcoming'
               ? 'Ready for a fresh look? Browse our partner salons and book your next appointment!'
               : 'Start by browsing salons and booking your first appointment'}
@@ -416,10 +413,10 @@ function MyAppointmentsContent() {
           <Button
             onClick={() => router.push('/salons/browse')}
             variant="primary"
-            size="md"
-            className="flex items-center gap-2 mx-auto"
+            size="sm"
+            className="flex items-center gap-1.5 mx-auto text-xs"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             Find a Salon
           </Button>
         </div>

@@ -16,6 +16,8 @@ import {
   Tag,
   Users,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -71,6 +73,10 @@ function ServicesContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Fetch salons
   const { data: salons = [], isLoading: salonsLoading } = useQuery<Salon[]>({
@@ -178,6 +184,18 @@ function ServicesContent() {
     });
   }, [services, searchQuery, statusFilter]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, selectedSalonId]);
+
+  // Pagination Logic
+  const totalItems = filteredServices.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+  const currentServices = filteredServices.slice(startIndex, endIndex);
+
   // Stats
   const stats = useMemo(() => {
     const total = services.length;
@@ -262,71 +280,57 @@ function ServicesContent() {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Total
-                </p>
-                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.total}
-                </p>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          {[
+            {
+              label: 'Total',
+              value: stats.total,
+              icon: Scissors,
+              gradient: 'from-blue-500 to-cyan-500',
+              border: 'hover:border-blue-500/50',
+            },
+            {
+              label: 'Active',
+              value: stats.active,
+              icon: Scissors,
+              gradient: 'from-emerald-500 to-green-600',
+              border: 'hover:border-emerald-500/50',
+            },
+            {
+              label: 'Avg Price',
+              value: `RWF ${Math.round(stats.avgPrice).toLocaleString()}`,
+              icon: DollarSign,
+              gradient: 'from-violet-500 to-purple-500',
+              border: 'hover:border-violet-500/50',
+            },
+            {
+              label: 'Avg Duration',
+              value: `${Math.round(stats.avgDuration)} min`,
+              icon: Clock,
+              gradient: 'from-amber-500 to-orange-600',
+              border: 'hover:border-amber-500/50',
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className={`group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-lg transition-all ${stat.border}`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className={`p-2 bg-gradient-to-br ${stat.gradient} rounded-lg`}>
+                  <stat.icon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-[10px] uppercase tracking-wide font-semibold text-text-light/60 dark:text-text-dark/60">
+                  {stat.label}
+                </span>
               </div>
-              <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
-                <Scissors className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Active
-                </p>
-                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                  {stats.active}
-                </p>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
-                <Scissors className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Avg Price
-                </p>
-                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                  RWF {Math.round(stats.avgPrice).toLocaleString()}
-                </p>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
-                <DollarSign className="w-4 h-4 text-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Avg Duration
-                </p>
-                <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                  {Math.round(stats.avgDuration)} min
-                </p>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
-                <Clock className="w-4 h-4 text-white" />
+              <div className="flex items-end justify-between">
+                <span className="text-2xl font-bold text-text-light dark:text-text-dark leading-none">
+                  {stat.value}
+                </span>
               </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* Search and Filters */}
@@ -372,7 +376,7 @@ function ServicesContent() {
         </div>
       </div>
 
-      {/* Services List */}
+      {/* Services List - Compact & Visual */}
       {filteredServices.length === 0 ? (
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl">
           <EmptyState
@@ -399,95 +403,130 @@ function ServicesContent() {
           />
         </div>
       ) : (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-light dark:divide-border-dark">
+            <table className="min-w-full divide-y divide-border-light dark:divide-border-dark text-sm">
               <thead className="bg-surface-accent-light dark:bg-surface-accent-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                    Service
+                  </th>
+                   <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
                     Code
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
-                    Service Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
                     Duration
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
                     Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
                     Status
                   </th>
                   {(salons.length > 1 || canViewAll) && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
                       Salon
                     </th>
                   )}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
-                {filteredServices.map((service) => (
+              <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                {currentServices.map((service) => (
                   <tr
                     key={service.id}
-                    className="hover:bg-surface-accent-light dark:hover:bg-surface-accent-dark transition"
+                    className="group hover:bg-background-secondary/50 dark:hover:bg-white/5 transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-light dark:text-text-dark">
-                      {service.code || '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-text-light dark:text-text-dark">
-                        {service.name}
-                      </div>
-                      {service.description && (
-                        <div className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                          {service.description}
+                    {/* Service Name & Image */}
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-surface-accent-light dark:bg-surface-accent-dark border border-border-light dark:border-border-dark flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                          {service.imageUrl ? (
+                             // eslint-disable-next-line @next/next/no-img-element
+                            <img 
+                              src={service.imageUrl} 
+                              alt={service.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Scissors className="w-4 h-4 text-text-light/30 dark:text-text-dark/30" />
+                          )}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
-                        <Clock className="w-4 h-4" />
-                        {service.durationMinutes} min
+                        <div className="min-w-0">
+                          <div className="font-semibold text-text-light dark:text-text-dark truncate">
+                            {service.name}
+                          </div>
+                          {service.description && (
+                            <div className="text-[11px] text-text-light/50 dark:text-text-dark/50 truncate max-w-[200px]">
+                              {service.description}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-sm font-medium text-text-light dark:text-text-dark">
-                        <DollarSign className="w-4 h-4" />
-                        {service.basePrice.toLocaleString()} RWF
+
+                    {/* Code */}
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                       <span className="font-mono text-[11px] text-text-light/60 dark:text-text-dark/60 bg-surface-accent-light dark:bg-surface-accent-dark px-1.5 py-0.5 rounded border border-border-light dark:border-border-dark">
+                         {service.code || '—'}
+                       </span>
+                    </td>
+
+                    {/* Duration */}
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-text-light/80 dark:text-text-dark/80">
+                        <Clock className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+                        <span className="text-xs font-medium tabular-nums">{service.durationMinutes} m</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={service.isActive ? 'success' : 'default'} size="sm" dot>
-                        {service.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
+
+                    {/* Price */}
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="text-sm font-bold text-text-light dark:text-text-dark tabular-nums">
+                        {service.basePrice.toLocaleString()} <span className="text-[10px] font-normal text-text-light/50 dark:text-text-dark/50">RWF</span>
+                      </div>
                     </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                       <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
+                          service.isActive 
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-text-light/5 border-text-light/10 text-text-light/50 dark:bg-text-dark/5 dark:border-text-dark/10 dark:text-text-dark/50'
+                       }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${service.isActive ? 'bg-emerald-500' : 'bg-text-light/40 dark:bg-text-dark/40'}`} />
+                          {service.isActive ? 'Active' : 'Inactive'}
+                       </div>
+                    </td>
+
+                    {/* Salon (If multiple) */}
                     {(salons.length > 1 || canViewAll) && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light/60 dark:text-text-dark/60">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-xs text-text-light/50 dark:text-text-dark/50">
                         {service.salon?.name || '-'}
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-3">
+
+                    {/* Actions */}
+                    <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => {
                             setEditingService(service);
                             setShowModal(true);
                           }}
-                          className="text-primary hover:text-primary/80 transition"
-                          title="Edit service"
+                          className="p-1.5 text-text-light/40 hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                          title="Edit"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setDeleteConfirmation(service)}
-                          className="text-danger hover:text-danger/80 transition"
-                          title="Delete service"
+                          className="p-1.5 text-text-light/40 hover:text-danger hover:bg-danger/10 rounded transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -496,6 +535,39 @@ function ServicesContent() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Footer */}
+          {totalItems > 0 && (
+            <div className="px-4 py-3 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex items-center justify-between">
+              <div className="text-xs text-text-light/50 dark:text-text-dark/50">
+                Showing <span className="font-medium text-text-light dark:text-text-dark">{startIndex + 1}</span> to{' '}
+                <span className="font-medium text-text-light dark:text-text-dark">{endIndex}</span> of{' '}
+                <span className="font-medium text-text-light dark:text-text-dark">{totalItems}</span> results
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:text-primary hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-text-light/60 disabled:hover:border-border-light transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                
+                 <div className="text-xs font-medium text-text-light dark:text-text-dark">
+                    Page {currentPage} of {totalPages}
+                 </div>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:text-primary hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-text-light/60 disabled:hover:border-border-light transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
