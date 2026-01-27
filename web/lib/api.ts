@@ -66,9 +66,13 @@ api.interceptors.response.use(
 
     // Log error using logger
     if (error.response) {
-      logger.logAPIError(error.config?.url || 'unknown', error);
+      if (!(error.config as any)?.suppressErrorLog) {
+        logger.logAPIError(error.config?.url || 'unknown', error);
+      }
     } else if (error.request) {
-      logger.error('No response received from server', { url: error.config?.url });
+      if (!(error.config as any)?.suppressErrorLog) {
+        logger.error('No response received from server', { url: error.config?.url });
+      }
     } else {
       logger.error('Error setting up request', { message: error.message });
     }

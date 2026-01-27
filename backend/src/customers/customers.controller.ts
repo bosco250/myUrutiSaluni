@@ -712,12 +712,36 @@ export class CustomersController {
     return this.customerFavoritesService.findByCustomerId(customerId);
   }
 
+  @Get(':customerId/favorites/salons')
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+    UserRole.CUSTOMER,
+  )
+  @ApiOperation({ summary: 'Get customer favorite salons' })
+  async getFavoriteSalons(
+    @Param('customerId') customerId: string,
+    @CurrentUser() user: any,
+  ) {
+    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      const customer = await this.customersService.findByUserId(
+        user.id || user.userId,
+      );
+      if (!customer || customer.id !== customerId) {
+        throw new ForbiddenException('You can only view your own favorites');
+      }
+    }
+    return this.customerFavoritesService.findSalonFavoritesByCustomerId(customerId);
+  }
+
   @Post(':customerId/favorites')
   @Roles(UserRole.CUSTOMER)
-  @ApiOperation({ summary: 'Add employee to favorites' })
+  @ApiOperation({ summary: 'Add salon or employee to favorites' })
   async addFavorite(
     @Param('customerId') customerId: string,
-    @Body() body: { salonEmployeeId: string },
+    @Body() body: { salonEmployeeId?: string; salonId?: string; type?: string },
     @CurrentUser() user: any,
   ) {
     const customer = await this.customersService.findByUserId(
@@ -726,9 +750,12 @@ export class CustomersController {
     if (!customer || customer.id !== customerId) {
       throw new ForbiddenException('You can only manage your own favorites');
     }
+    const type = body.type || (body.salonId ? 'salon' : 'employee');
     return this.customerFavoritesService.addFavorite(
       customerId,
       body.salonEmployeeId,
+      body.salonId,
+      type,
     );
   }
 

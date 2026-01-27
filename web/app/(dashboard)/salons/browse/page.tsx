@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/auth-store';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -24,6 +25,7 @@ import {
   Award,
   Grid3x3,
   List,
+  Navigation,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -59,6 +61,7 @@ interface Service {
   id: string;
   name: string;
   category?: string;
+  description?: string;
   salonId?: string;
 }
 
@@ -82,17 +85,139 @@ export default function BrowseSalonsPage() {
 }
 
 function BrowseSalonsContent() {
+  const { user } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('all');
   const [sortBy, setSortBy] = useState<SortOption>('trending');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const itemsPerPage = viewMode === 'grid' ? 12 : 8;
+
+
+
+  // 0. Get User Location
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('Location access denied or error:', error);
+        }
+      );
+    }
+  }, []);
+
+  // 1. Get Customer ID (if logged in)
+  const { data: customer } = useQuery({
+    queryKey: ['customer-profile', user?.id],
+    queryFn: async () => {
+      const response = await api.get(`/customers/by-user/${user?.id}`);
+      return response.data?.data || response.data || null;
+    },
+    enabled: !!user?.id,
+    retry: false,
+  });
+
+  const customerId = customer?.id;
+
+  // 2. Fetch Favorite Salons from Backend
+  const { data: favoriteSalons = [], isFetched: isFavoritesFetched } = useQuery<Salon[]>({
+    queryKey: ['customer-favorites', customerId],
+    queryFn: async () => {
+      const response = await api.get(`/customers/${customerId}/favorites/salons`);
+      const data = response.data;
+      return Array.isArray(data) ? data : data?.data || [];
+    },
+    enabled: !!customerId,
+  });
+
+  // Derived state for favorite IDs
+  const favorites = favoriteSalons.map((s) => s.id);
+
+  // Stable favorites for sorting to preventing jumping
+  const [stableFavIds, setStableFavIds] = useState<string[]>([]);
+  const favoritesInitialized = useRef(false);
+
+  useEffect(() => {
+    if (isFavoritesFetched && !favoritesInitialized.current) {
+      setStableFavIds(favoriteSalons.map((s) => s.id));
+      favoritesInitialized.current = true;
+    }
+  }, [isFavoritesFetched, favoriteSalons]);
+
+  // 3. Toggle Favorite Mutation
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async ({ salonId, isFavorited }: { salonId: string; isFavorited: boolean }) => {
+      if (!customerId) throw new Error('Customer profile not found');
+      
+      try {
+        if (isFavorited) {
+          // Remove
+          await api.delete(`/customers/${customerId}/favorites/${salonId}`, {
+            // @ts-ignore - custom config property
+            suppressErrorLog: true,
+          });
+        } else {
+          // Add
+          // We are explicitly sending salonId. If the backend error says "employee", it might be a generic message 
+          // or a shared endpoint. We ensure we send the 'type' if applicable, but for now we stick to salonId.
+          await api.post(`/customers/${customerId}/favorites`, { salonId, type: 'salon' }, {
+            // @ts-ignore - custom config property
+            suppressErrorLog: true,
+          } as any); // Cast to any to avoid TS error
+        }
+      } catch (error: any) {
+        // If 409 Conflict on Add, it means already favorited -> Success
+        // If 404 Not Found on Delete, it means already removed -> Success
+        if (
+          (error.response?.status === 409 && !isFavorited) || 
+          (error.response?.status === 404 && isFavorited)
+        ) {
+          return;
+        }
+        throw error;
+      }
+    },
+    onMutate: async ({ salonId, isFavorited }) => {
+      // Optimistic Update
+      await queryClient.cancelQueries({ queryKey: ['customer-favorites', customerId] });
+      const previousFavorites = queryClient.getQueryData(['customer-favorites', customerId]);
+
+      queryClient.setQueryData(['customer-favorites', customerId], (old: Salon[] | undefined) => {
+        const list = old || [];
+        if (isFavorited) {
+           // Optimistically Remove
+           return list.filter(s => s.id !== salonId);
+        } else {
+           // Optimistically Add (Need placeholder or real salon object)
+           const salonToAdd = salons?.find(s => s.id === salonId) || paginatedSalons.find(s => s.id === salonId);
+           // If we can't find the full object, we can't add it to the list properly for display, 
+           // but the ID check relies on favorites which derives from this list.
+           // We'll proceed with what we have.
+           return salonToAdd ? [...list, salonToAdd] : list;
+        }
+      });
+      return { previousFavorites };
+    },
+    onError: (err, newTodo, context) => {
+      queryClient.setQueryData(['customer-favorites', customerId], context?.previousFavorites);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-favorites', customerId] });
+    },
+  });
 
   const {
     data: salons,
@@ -162,17 +287,22 @@ function BrowseSalonsContent() {
     if (searchQuery?.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter((salon) => {
+        // Collect all searchable fields
         const searchFields = [
           salon.name,
-          salon.address,
           salon.description,
-          salon.phone,
+          salon.address,
           salon.city,
           salon.district,
-          ...(salon.services?.map((s) => s.name) || []),
+          salon.country,
+          salon.phone,
+          salon.email,
+          salon.website,
+          // Add services to search scope
+          ...(salon.services?.flatMap((s) => [s.name, s.description, s.category]) || []),
         ]
-          .filter(Boolean)
-          .map((field) => field?.toLowerCase() || '');
+          .filter(Boolean) // Remove null/undefined
+          .map((field) => String(field).toLowerCase()); // Convert to lowercase string
 
         return searchFields.some((field) => field.includes(query));
       });
@@ -180,8 +310,8 @@ function BrowseSalonsContent() {
 
     const sorted = [...filtered].sort((a, b) => {
       // Priority 1: Favorites
-      const isFavA = favorites.includes(a.id);
-      const isFavB = favorites.includes(b.id);
+      const isFavA = stableFavIds.includes(a.id);
+      const isFavB = stableFavIds.includes(b.id);
       if (isFavA && !isFavB) return -1;
       if (!isFavA && isFavB) return 1;
 
@@ -208,7 +338,7 @@ function BrowseSalonsContent() {
     });
 
     return sorted;
-  }, [salonsWithServices, searchQuery, selectedCategory, sortBy, favorites]);
+  }, [salonsWithServices, searchQuery, selectedCategory, sortBy, stableFavIds]);
 
   const totalPages = Math.ceil(filteredAndSortedSalons.length / itemsPerPage);
   const paginatedSalons = useMemo(() => {
@@ -316,7 +446,7 @@ function BrowseSalonsContent() {
               <div className={`absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 rounded-xl blur-xl transition-opacity duration-300 pointer-events-none ${isSearchExpanded || searchQuery ? 'opacity-100' : 'opacity-0'}`}></div>
               <motion.div 
                 layout
-                className={`relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg flex items-center transition-all bg-white dark:bg-black/20 h-[36px] overflow-hidden ${isSearchExpanded || searchQuery ? 'w-full px-2 gap-2 border-primary/50 ring-2 ring-primary/10' : 'w-[36px] justify-center border-transparent bg-transparent hover:bg-surface-light dark:hover:bg-surface-dark'}`}
+                className={`relative  dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg flex items-center transition-all bg-white dark:bg-black/20 h-[36px] overflow-hidden ${isSearchExpanded || searchQuery ? 'w-full px-2 gap-2 border-primary/50 ring-2 ring-primary/10' : 'w-[36px] justify-center border-transparent bg-transparent hover:bg-surface-light dark:hover:bg-surface-dark'}`}
               >
                 <button 
                   onClick={() => setIsSearchExpanded(true)} 
@@ -391,7 +521,7 @@ function BrowseSalonsContent() {
                     setSelectedCategory(category.value);
                     setCurrentPage(1);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 h-[36px] whitespace-nowrap border focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 h-[32px] whitespace-nowrap border focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary ${
                     selectedCategory === category.value
                       ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border-border-light dark:border-border-dark hover:border-primary/50 hover:bg-primary/5'
@@ -407,7 +537,7 @@ function BrowseSalonsContent() {
             <div className="relative shrink-0 border-l border-primary/20 pl-3 ml-1">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-medium text-text-light dark:text-text-dark hover:border-primary/30 transition-colors h-[36px]"
+                className="flex items-center gap-2 px-3 py-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-medium text-text-light dark:text-text-dark hover:border-primary/30 transition-colors h-[32px]"
               >
                 <SortAsc className="w-4 h-4" />
                 <span className="capitalize hidden sm:inline">
@@ -476,7 +606,7 @@ function BrowseSalonsContent() {
             <div
               className={
                 viewMode === 'grid'
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
                   : 'space-y-4'
               }
             >
@@ -486,12 +616,19 @@ function BrowseSalonsContent() {
                   salon={salon}
                   isFavorited={favorites.includes(salon.id)}
                   onToggleFavorite={(id) => {
-                    setFavorites((prev) =>
-                      prev.includes(id) ? prev.filter((fid) => fid !== id) : [...prev, id]
-                    );
+                    if (!user) {
+                      // Redirect to login or show auth modal
+                      router.push('/login');
+                      return;
+                    }
+                    toggleFavoriteMutation.mutate({ 
+                      salonId: id, 
+                      isFavorited: favorites.includes(id) 
+                    });
                   }}
                   onViewDetails={() => router.push(`/salons/browse/${salon.id}`)}
                   viewMode={viewMode}
+                  userLocation={userLocation}
                 />
               ))}
             </div>
@@ -546,25 +683,30 @@ function BrowseSalonsContent() {
             )}
           </>
         ) : (
-          <div className="py-16 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-              <Search className="w-8 h-8 text-primary/60" />
+          <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-dashed border-border-light dark:border-border-dark">
+            <div className="p-3 bg-primary/5 rounded-full mb-3">
+              <Search className="w-5 h-5 text-primary/60" />
             </div>
-            <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
-              No salons found
+            
+            <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">
+              {searchQuery ? 'No matches found' : 'No salons found'}
             </h3>
-            <p className="text-text-light/60 dark:text-text-dark/60 mb-6">
-              {searchQuery ? `No results for "${searchQuery}"` : 'No salons match your filters'}
+            
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50 text-center max-w-xs mb-4">
+              {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Try adjusting your filters'}
             </p>
+
             <Button
-              variant="primary"
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
                 setCurrentPage(1);
               }}
+              className="h-8 text-xs border-dashed"
             >
-              Clear filters & try again
+              Clear filters
             </Button>
           </div>
         )}
@@ -579,12 +721,14 @@ function SalonCard({
   onToggleFavorite,
   onViewDetails,
   viewMode = 'grid',
+  userLocation,
 }: {
   salon: Salon;
   isFavorited?: boolean;
   onToggleFavorite?: (id: string) => void;
   onViewDetails: () => void;
   viewMode?: ViewMode;
+  userLocation?: { lat: number; lng: number } | null;
 }) {
   const hasImage = salon.images && salon.images.length > 0 && salon.images[0];
   const imageUrl = hasImage ? salon.images![0] : null;
@@ -592,6 +736,23 @@ function SalonCard({
     [salon.district, salon.city].filter(Boolean).join(', ') ||
     salon.address ||
     'Location not available';
+
+  // Calculate distance if both locations exist
+  const distance = useMemo(() => {
+    if (!userLocation || !salon.latitude || !salon.longitude) return null;
+    
+    const R = 6371; // Radius of the earth in km
+    const dLat = (salon.latitude - userLocation.lat) * (Math.PI / 180);
+    const dLon = (salon.longitude - userLocation.lng) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(userLocation.lat * (Math.PI / 180)) *
+        Math.cos(salon.latitude * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+  }, [userLocation, salon.latitude, salon.longitude]);
 
   // Determine badges
   const isTrending = (salon.reviewCount || 0) > 50;
@@ -670,6 +831,12 @@ function SalonCard({
                 <MapPin className="w-3 h-3 flex-shrink-0" />
                 <span>{location}</span>
               </div>
+              {distance !== null && (
+                <div className="flex items-center gap-2 text-primary">
+                  <Navigation className="w-3 h-3 flex-shrink-0" />
+                  <span className="font-medium">{distance.toFixed(1)} km away</span>
+                </div>
+              )}
               {salon.phone && (
                 <div className="flex items-center gap-2">
                   <Phone className="w-3 h-3 flex-shrink-0" />
@@ -706,7 +873,7 @@ function SalonCard({
       className="group bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full ring-1 ring-black/5 dark:ring-white/5"
     >
       {/* Image Section */}
-      <div className="relative h-48 overflow-hidden bg-gray-100 dark:bg-gray-800">
+      <div className="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-800">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -757,10 +924,15 @@ function SalonCard({
         <div className="absolute bottom-3 left-3 right-3 text-white">
           <div className="flex items-end justify-between gap-2">
             <div>
-              <h3 className="text-lg font-bold leading-tight mb-1 text-white shadow-sm">{salon.name}</h3>
+              <h3 className="text-base font-bold leading-tight mb-1 text-white shadow-sm">{salon.name}</h3>
                 <div className="flex items-center gap-1.5 text-xs text-white/90">
                   <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="truncate max-w-[150px] font-medium">{location}</span>
+                  {distance !== null && (
+                    <span className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-white/30 text-white font-semibold">
+                       <Navigation className="w-3 h-3" /> {distance < 1 ? '<1' : distance.toFixed(1)}km
+                    </span>
+                  )}
                 </div>
             </div>
             <div className="flex flex-col items-end">
@@ -774,7 +946,7 @@ function SalonCard({
       </div>
 
       {/* Content Body */}
-      <div className="p-4 flex-1 flex flex-col space-y-3">
+      <div className="p-3 flex-1 flex flex-col space-y-3">
          {/* Description */}
         {salon.description ? (
           <p className="text-xs text-text-light/70 dark:text-text-dark/70 line-clamp-2 leading-relaxed min-h-[2.5em]">
@@ -791,7 +963,7 @@ function SalonCard({
         <div className="flex flex-wrap gap-1.5 py-1">
           {salon.services && salon.services.length > 0 ? (
             <>
-              {salon.services.slice(0, 3).map((service, idx) => (
+              {salon.services.slice(0, 2).map((service, idx) => (
                 <span 
                   key={idx} 
                   className="inline-flex items-center px-2 py-1 rounded-md bg-background-light dark:bg-white/5 border border-border-light dark:border-white/10 text-[10px] font-medium text-text-light/80 dark:text-text-dark/80 truncate max-w-[100px]"
@@ -799,9 +971,9 @@ function SalonCard({
                   {service.name}
                 </span>
               ))}
-              {salon.services.length > 3 && (
+              {salon.services.length > 2 && (
                 <span className="inline-flex items-center px-1.5 py-1 rounded-md bg-primary/5 text-[10px] font-medium text-primary">
-                  +{salon.services.length - 3}
+                  +{salon.services.length - 2}
                 </span>
               )}
             </>

@@ -16,8 +16,14 @@ export class CustomerFavorite {
   @Column({ type: 'uuid' })
   customerId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   salonEmployeeId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  salonId: string;
+
+  @Column({ type: 'varchar', default: 'employee' })
+  type: string; // 'salon' or 'employee'
 
   @CreateDateColumn()
   createdAt: Date;
