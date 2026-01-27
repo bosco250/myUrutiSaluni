@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { SalonDocument } from './entities/salon-document.entity';
+import { CreateDocumentDto } from './dto/create-document.dto';
 import { Salon } from './entities/salon.entity';
 import { SalonEmployee } from './entities/salon-employee.entity';
 import { MembershipsService } from '../memberships/memberships.service';
@@ -21,11 +23,33 @@ export class SalonsService {
     private salonsRepository: Repository<Salon>,
     @InjectRepository(SalonEmployee)
     private salonEmployeesRepository: Repository<SalonEmployee>,
+    @InjectRepository(SalonDocument)
+    private salonDocumentsRepository: Repository<SalonDocument>,
     @Inject(forwardRef(() => MembershipsService))
     private membershipsService: MembershipsService,
     @Inject(forwardRef(() => NotificationOrchestratorService))
     private notificationOrchestrator: NotificationOrchestratorService,
   ) {}
+
+  // ... existing methods ...
+
+  async createDocument(
+    salonId: string,
+    dto: CreateDocumentDto,
+  ): Promise<SalonDocument> {
+    const doc = this.salonDocumentsRepository.create({
+      ...dto,
+      salonId,
+    });
+    return this.salonDocumentsRepository.save(doc);
+  }
+
+  async getDocuments(salonId: string): Promise<SalonDocument[]> {
+    return this.salonDocumentsRepository.find({
+      where: { salonId },
+      order: { createdAt: 'DESC' },
+    });
+  }
 
   async create(salonData: Partial<Salon>): Promise<Salon> {
     const salon = this.salonsRepository.create(salonData);

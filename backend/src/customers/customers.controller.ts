@@ -733,7 +733,9 @@ export class CustomersController {
         throw new ForbiddenException('You can only view your own favorites');
       }
     }
-    return this.customerFavoritesService.findSalonFavoritesByCustomerId(customerId);
+    return this.customerFavoritesService.findSalonFavoritesByCustomerId(
+      customerId,
+    );
   }
 
   @Post(':customerId/favorites')

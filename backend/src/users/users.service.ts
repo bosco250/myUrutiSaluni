@@ -76,7 +76,7 @@ export class UsersService {
       updateData.avatarUrl = updateData.avatar;
       delete updateData.avatar;
     }
-    
+
     await this.usersRepository.update(id, updateData);
     return this.findOne(id);
   }

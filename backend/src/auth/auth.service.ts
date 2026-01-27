@@ -135,11 +135,10 @@ export class AuthService {
     });
 
     // Build reset URL
-    const frontendUrls = this.configService.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3000',
-    ).split(',');
-    
+    const frontendUrls = this.configService
+      .get<string>('FRONTEND_URL', 'http://localhost:3000')
+      .split(',');
+
     // Use the first URL (primary) for reset links
     const frontendUrl = frontendUrls[0].trim();
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
@@ -197,12 +196,11 @@ export class AuthService {
         emailChangeExpires: expiresAt,
       },
     });
-    
+
     // Generate Frontend URL
-    const frontendUrls = this.configService.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3000',
-    ).split(',');
+    const frontendUrls = this.configService
+      .get<string>('FRONTEND_URL', 'http://localhost:3000')
+      .split(',');
     const frontendUrl = frontendUrls[0].trim();
     const actionUrl = `${frontendUrl}/change-email?token=${token}`;
 
@@ -221,7 +219,7 @@ export class AuthService {
         'Update Email Address - Uruti Saluni',
         emailHtml,
       );
-      
+
       this.logger.log(`Email change link sent to ${user.email}`);
     } catch (error) {
       this.logger.error(`Failed to send email change link:`, error);
@@ -230,17 +228,20 @@ export class AuthService {
 
     return { message: 'Verification link sent to your email' };
   }
-  
-  async changeEmail(token: string, newEmail: string): Promise<{ message: string }> {
+
+  async changeEmail(
+    token: string,
+    newEmail: string,
+  ): Promise<{ message: string }> {
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    
+
     // Ideally we should query by the metadata field, but simple-json querying can be specific to DB driver.
-    // For now, iterate or use a query builder if possible. 
+    // For now, iterate or use a query builder if possible.
     // Since we are using TypeORM repository find, and metadata is json, strict query might be hard without custom query.
     // We will fetch all users who requested change (not efficient for millions, but fine for now) or better:
     // If we assume we don't have the user ID from the token, we have to search.
     // Wait, the link is just token. We need to find the user BY token.
-    
+
     // Optimization: Since we don't have a column for this token, we have to scan.
     // OR we pass userId in the query param too? But that's less secure if not signed.
     // The previous implementation used `resetPasswordToken` column which is indexed.
@@ -249,23 +250,24 @@ export class AuthService {
     // BETTER: For now, I will use `resetPasswordToken` column for this purpose as well (or add a column properly, but I can't migrate DB now easily).
     // OR: I'll accept `userId` in the frontend URL query param too. `?token=...&id=...`.
     // BUT user said "when click on that token", implying just token.
-    
+
     // Let's iterate users for now.
     const users = await this.usersService.findAll();
-    const user = users.find(u => 
-        u.metadata?.emailChangeToken === hashedToken && 
-        u.metadata?.emailChangeExpires && 
-        new Date(u.metadata.emailChangeExpires) > new Date()
+    const user = users.find(
+      (u) =>
+        u.metadata?.emailChangeToken === hashedToken &&
+        u.metadata?.emailChangeExpires &&
+        new Date(u.metadata.emailChangeExpires) > new Date(),
     );
 
     if (!user) {
-        throw new BadRequestException('Invalid or expired verification token');
+      throw new BadRequestException('Invalid or expired verification token');
     }
 
     // Check if new email is taken
     const existingUser = await this.usersService.findByEmail(newEmail);
     if (existingUser && existingUser.id !== user.id) {
-        throw new BadRequestException('Email is already in use');
+      throw new BadRequestException('Email is already in use');
     }
 
     // Update email
@@ -274,8 +276,8 @@ export class AuthService {
     delete updatedMetadata.emailChangeExpires;
 
     await this.usersService.update(user.id, {
-        email: newEmail,
-        metadata: updatedMetadata
+      email: newEmail,
+      metadata: updatedMetadata,
     });
 
     return { message: 'Email updated successfully' };

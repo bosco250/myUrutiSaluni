@@ -38,7 +38,10 @@ import {
 } from './membership.config';
 import { PaymentMethod as GenericPaymentMethod } from '../payments/entities/payment.entity';
 import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
-import { NotificationType, NotificationChannel } from '../notifications/entities/notification.entity';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class MembershipsService {
@@ -73,7 +76,7 @@ export class MembershipsService {
         Object.assign(existingApplication, createDto);
         return this.applicationsRepository.save(existingApplication);
       }
-      
+
       if (existingApplication.status === ApplicationStatus.APPROVED) {
         throw new BadRequestException('You are already an approved member');
       }
@@ -493,11 +496,13 @@ export class MembershipsService {
 
     // Calculate expiry days
     let message = `This is a reminder regarding your membership for ${membership.salon.name}.`;
-    
+
     if (membership.endDate) {
       const expiry = new Date(membership.endDate);
-      const daysUntil = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      
+      const daysUntil = Math.ceil(
+        (expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      );
+
       if (daysUntil < 0) {
         message += ` Your membership expired ${Math.abs(daysUntil)} days ago. Please renew immediately to restore access.`;
       } else if (daysUntil <= 30) {
@@ -506,30 +511,42 @@ export class MembershipsService {
         message += ` Your membership is active and valid until ${expiry.toLocaleDateString()}.`;
       }
     } else {
-        message += ` Current status: ${membership.status}.`;
+      message += ` Current status: ${membership.status}.`;
     }
 
     // Check payment status just in case
     const currentYear = new Date().getFullYear();
     const status = await this.getPaymentStatus(owner.id, currentYear);
     if (!status.isComplete) {
-       message += ` You have a remaining balance of RWF ${status.remaining.toLocaleString()} for ${currentYear}.`;
+      message += ` You have a remaining balance of RWF ${status.remaining.toLocaleString()} for ${currentYear}.`;
     }
 
-    await this.notificationService.notify(NotificationType.MEMBERSHIP_STATUS, {
-      userId: owner.id,
-      recipientEmail: owner.email,
-      message: message,
-      title: 'Membership Reminder',
-      salonId: membership.salonId,
-      salonName: membership.salon.name,
-      status: membership.status,
-      expiryDate: membership.endDate ? new Date(membership.endDate).toLocaleDateString() : 'N/A',
-      balance: status.isComplete ? undefined : `RWF ${status.remaining.toLocaleString()}`,
-    }, {
-      channels: [NotificationChannel.EMAIL, NotificationChannel.IN_APP, NotificationChannel.PUSH],
-      priority: 'high',
-    });
+    await this.notificationService.notify(
+      NotificationType.MEMBERSHIP_STATUS,
+      {
+        userId: owner.id,
+        recipientEmail: owner.email,
+        message: message,
+        title: 'Membership Reminder',
+        salonId: membership.salonId,
+        salonName: membership.salon.name,
+        status: membership.status,
+        expiryDate: membership.endDate
+          ? new Date(membership.endDate).toLocaleDateString()
+          : 'N/A',
+        balance: status.isComplete
+          ? undefined
+          : `RWF ${status.remaining.toLocaleString()}`,
+      },
+      {
+        channels: [
+          NotificationChannel.EMAIL,
+          NotificationChannel.IN_APP,
+          NotificationChannel.PUSH,
+        ],
+        priority: 'high',
+      },
+    );
   }
 
   async deleteMembership(id: string): Promise<void> {
@@ -689,12 +706,16 @@ export class MembershipsService {
     }
 
     if (payment.status === PaymentStatus.PAID) {
-      throw new BadRequestException('Cannot delete a payment that has already been paid and processed.');
+      throw new BadRequestException(
+        'Cannot delete a payment that has already been paid and processed.',
+      );
     }
 
     // Soft delete: Mark as Cancelled
     payment.status = PaymentStatus.CANCELLED;
-    payment.notes = payment.notes ? `${payment.notes} | Cancelled by admin` : 'Cancelled by admin';
+    payment.notes = payment.notes
+      ? `${payment.notes} | Cancelled by admin`
+      : 'Cancelled by admin';
     await this.paymentsRepository.save(payment);
   }
 

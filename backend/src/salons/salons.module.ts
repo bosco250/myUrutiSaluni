@@ -7,6 +7,7 @@ import { SalonsController } from './salons.controller';
 import { Salon } from './entities/salon.entity';
 import { SalonEmployee } from './entities/salon-employee.entity';
 import { EmployeePermissionEntity } from './entities/employee-permission.entity';
+import { SalonDocument } from './entities/salon-document.entity';
 import { EmployeePermissionsService } from './services/employee-permissions.service';
 import {
   EmployeePermissionsController,
@@ -20,7 +21,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Salon, SalonEmployee, EmployeePermissionEntity]),
+    TypeOrmModule.forFeature([
+      Salon,
+      SalonEmployee,
+      EmployeePermissionEntity,
+      SalonDocument,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

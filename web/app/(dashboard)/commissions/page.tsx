@@ -307,213 +307,176 @@ function CommissionsContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex justify-center items-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center">
+            <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-3">Loading commissions...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">
+          <h1 className="text-lg font-semibold text-text-light dark:text-text-dark">
             {user?.role === UserRole.SALON_EMPLOYEE ? 'My Commissions' : 'Commissions'}
           </h1>
-          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+          <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5">
             Track earnings, payments, and sales performance
           </p>
         </div>
         {user?.role !== UserRole.SALON_EMPLOYEE && (
-          <Button 
-            onClick={() => handlePayment()} 
+          <Button
+            onClick={() => handlePayment()}
             disabled={stats.unpaidCount === 0}
             variant="primary"
+            size="sm"
+            className="flex items-center gap-1.5 text-xs"
           >
-            <CheckCircle className="w-4 h-4 mr-2" />
+            <CheckCircle className="w-3.5 h-3.5" />
             Mark All Paid
           </Button>
         )}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Earnings</span>
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            </div>
+      {/* Stats Strip */}
+      <div className="flex items-center gap-0 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark divide-x divide-border-light dark:divide-border-dark overflow-x-auto">
+        {[
+          { label: 'Total Earnings', value: `${stats.total.toLocaleString()} RWF`, sub: `${stats.count} records` },
+          { label: 'Paid', value: `${stats.paid.toLocaleString()} RWF`, sub: `${stats.paidCount} transactions`, valueClass: 'text-success' },
+          { label: 'Pending', value: `${stats.unpaid.toLocaleString()} RWF`, sub: `${stats.unpaidCount} pending`, valueClass: 'text-warning' },
+          { label: 'Related Sales', value: `${stats.sales.toLocaleString()} RWF`, sub: 'Total sales value' },
+        ].map((stat) => (
+          <div key={stat.label} className="flex-1 min-w-0 px-4 py-3 text-center">
+            <p className="text-[10px] uppercase tracking-wide font-semibold text-text-light/50 dark:text-text-dark/50">
+              {stat.label}
+            </p>
+            <p className={`text-base font-bold mt-0.5 ${stat.valueClass || 'text-text-light dark:text-text-dark'}`}>
+              {stat.value}
+            </p>
+            <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 mt-0.5">{stat.sub}</p>
           </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            {stats.total.toLocaleString()} <span className="text-sm font-normal text-text-light/60">RWF</span>
-          </p>
-          <div className="mt-2 text-xs text-text-light/60 dark:text-text-dark/60 flex items-center gap-1">
-            <Receipt className="w-3 h-3" />
-            {stats.count} records
-          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row gap-2 items-start lg:items-center justify-between">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto scrollbar-hide">
+          {['all', 'today', 'thisWeek', 'thisMonth'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => handleQuickFilter(filter)}
+              className={`px-2.5 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+                selectedQuickFilter === filter
+                  ? 'bg-primary text-white'
+                  : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark'
+              }`}
+            >
+              {filter === 'all' ? 'All Time' : filter.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase())}
+            </button>
+          ))}
+          <div className="h-5 w-px bg-border-light dark:bg-border-dark mx-1" />
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+              showFilters
+                ? 'bg-primary/10 text-primary'
+                : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+            }`}
+          >
+            <Filter className="w-3 h-3" />
+            Filters
+          </button>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Paid</span>
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-success">
-            {stats.paid.toLocaleString()} <span className="text-sm font-normal text-text-light/60">RWF</span>
-          </p>
-          <div className="mt-2 text-xs text-text-light/60 dark:text-text-dark/60">
-            {stats.paidCount} transactions
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Pending</span>
-            <div className="p-2 bg-orange-500/20 rounded-lg">
-              <Wallet className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-warning">
-            {stats.unpaid.toLocaleString()} <span className="text-sm font-normal text-text-light/60">RWF</span>
-          </p>
-          <div className="mt-2 text-xs text-text-light/60 dark:text-text-dark/60">
-            {stats.unpaidCount} pending
-          </div>
-        </div>
-
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Related Sales</span>
-            <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-              <TrendingUp className="w-4 h-4 text-text-light dark:text-text-dark" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-text-light dark:text-text-dark">
-            {stats.sales.toLocaleString()} <span className="text-sm font-normal text-text-light/60">RWF</span>
-          </p>
-          <div className="mt-2 text-xs text-text-light/60 dark:text-text-dark/60">
-            Total sales value
-          </div>
+        <div className="relative w-full lg:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search commissions..."
+            className="w-full h-9 pl-8 pr-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
         </div>
       </div>
 
-      {/* Filters Toolbar */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-hide">
-            {['all', 'today', 'thisWeek', 'thisMonth'].map((filter) => (
-              <button
-                key={filter}
-                onClick={() => handleQuickFilter(filter)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedQuickFilter === filter
-                    ? 'bg-primary text-white'
-                    : 'bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                {filter === 'all' ? 'All Time' : filter.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase())}
-              </button>
-            ))}
-            <div className="h-6 w-px bg-border-light dark:bg-border-dark mx-2" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className={showFilters ? 'bg-primary/10 border-primary text-primary' : ''}
-            >
-              <Filter className="w-3.5 h-3.5 mr-2" />
-              More Filters
-            </Button>
-          </div>
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 px-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
+          >
+            <option value="all">All Status</option>
+            <option value="paid">Paid Only</option>
+            <option value="unpaid">Unpaid Only</option>
+          </select>
 
-          <div className="relative w-full lg:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
+          {user?.role !== UserRole.SALON_EMPLOYEE && employees.length > 0 && (
+            <select
+              value={employeeFilter}
+              onChange={(e) => setEmployeeFilter(e.target.value)}
+              className="h-9 px-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
+            >
+              <option value="all">All Employees</option>
+              {employees.map((emp: any) => (
+                <option key={emp.id} value={emp.id}>{emp.user?.fullName || emp.roleTitle}</option>
+              ))}
+            </select>
+          )}
+
+          <div className="col-span-2 grid grid-cols-2 gap-2">
             <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search commissions..."
-              className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => {
+                setDateRange(prev => ({ ...prev, start: e.target.value }));
+                setSelectedQuickFilter('custom');
+              }}
+              className="h-9 px-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
+            />
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => {
+                setDateRange(prev => ({ ...prev, end: e.target.value }));
+                setSelectedQuickFilter('custom');
+              }}
+              className="h-9 px-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs"
             />
           </div>
         </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border-light dark:border-border-dark animate-in slide-in-from-top-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="paid">Paid Only</option>
-              <option value="unpaid">Unpaid Only</option>
-            </select>
-
-            {user?.role !== UserRole.SALON_EMPLOYEE && employees.length > 0 && (
-              <select
-                value={employeeFilter}
-                onChange={(e) => setEmployeeFilter(e.target.value)}
-                className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
-              >
-                <option value="all">All Employees</option>
-                {employees.map((emp: any) => (
-                  <option key={emp.id} value={emp.id}>{emp.user?.fullName || emp.roleTitle}</option>
-                ))}
-              </select>
-            )}
-
-            <div className="col-span-2 grid grid-cols-2 gap-2">
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => {
-                  setDateRange(prev => ({ ...prev, start: e.target.value }));
-                  setSelectedQuickFilter('custom');
-                }}
-                className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
-              />
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => {
-                  setDateRange(prev => ({ ...prev, end: e.target.value }));
-                  setSelectedQuickFilter('custom');
-                }}
-                className="px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm"
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Table */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
+      <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-background-light/50 dark:bg-background-dark/50 border-b border-border-light dark:border-border-dark">
+          <table className="w-full text-xs text-left">
+            <thead className="border-b border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60">Date</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60">Employee</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60">Source</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60">Item</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60">Rate</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60 text-right">Commission</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60">Status</th>
-                <th className="px-6 py-3 font-medium text-text-light/60 dark:text-text-dark/60 text-right">Actions</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Date</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Employee</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Source</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Item</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Rate</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Commission</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Status</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {paginatedCommissions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-text-light/40 dark:text-text-dark/40">
-                    <div className="flex flex-col items-center gap-2">
-                      <Receipt className="w-8 h-8 opacity-50" />
-                      <p>No commissions found</p>
+                  <td colSpan={8} className="px-3 py-12 text-center">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Receipt className="w-6 h-6 text-text-light/20 dark:text-text-dark/20" />
+                      <p className="text-xs text-text-light/40 dark:text-text-dark/40">No commissions found</p>
                     </div>
                   </td>
                 </tr>
@@ -521,66 +484,62 @@ function CommissionsContent() {
                 paginatedCommissions.map((commission) => {
                   const source = commission.metadata?.source || (commission.saleItemId ? 'sale' : 'appointment');
                   return (
-                    <tr key={commission.id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-text-light dark:text-text-dark">
-                        <div className="flex flex-col">
-                          <span>{new Date(commission.createdAt).toLocaleDateString()}</span>
-                          <span className="text-xs text-text-light/60">{new Date(commission.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                    <tr key={commission.id} className="hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+                      <td className="px-3 py-2.5 whitespace-nowrap text-text-light dark:text-text-dark">
+                        <span className="text-xs">{new Date(commission.createdAt).toLocaleDateString()}</span>
+                        <span className="block text-[10px] text-text-light/40 dark:text-text-dark/40">{new Date(commission.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium">{commission.salonEmployee?.user?.fullName || 'Unknown'}</div>
-                        <div className="text-xs text-text-light/60">{commission.salonEmployee?.roleTitle}</div>
+                      <td className="px-3 py-2.5">
+                        <span className="text-xs font-medium text-text-light dark:text-text-dark">{commission.salonEmployee?.user?.fullName || 'Unknown'}</span>
+                        <span className="block text-[10px] text-text-light/40 dark:text-text-dark/40">{commission.salonEmployee?.roleTitle}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${
-                          source === 'sale' 
-                            ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' 
-                            : 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          source === 'sale'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/70 dark:text-text-dark/70'
                         }`}>
-                          {source === 'sale' ? <Receipt className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
-                          {source === 'sale' ? 'Sale' : 'Appointment'}
+                          {source === 'sale' ? <Receipt className="w-2.5 h-2.5" /> : <Calendar className="w-2.5 h-2.5" />}
+                          {source === 'sale' ? 'Sale' : 'Appt'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-text-light dark:text-text-dark">
+                      <td className="px-3 py-2.5">
+                        <span className="text-xs font-medium text-text-light dark:text-text-dark">
                           {commission.saleItem?.service?.name || commission.saleItem?.product?.name || 'N/A'}
-                        </div>
-                        <div className="text-xs text-text-light/60">
-                          Sale: {toNumber(commission.saleItem?.lineTotal || commission.saleAmount).toLocaleString()} RWF
-                        </div>
+                        </span>
+                        <span className="block text-[10px] text-text-light/40 dark:text-text-dark/40">
+                          {toNumber(commission.saleItem?.lineTotal || commission.saleAmount).toLocaleString()} RWF
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-text-light/60">
+                      <td className="px-3 py-2.5 text-xs text-text-light/60 dark:text-text-dark/60 tabular-nums">
                         {toNumber(commission.commissionRate).toFixed(1)}%
                       </td>
-                      <td className="px-6 py-4 text-right font-bold text-primary">
+                      <td className="px-3 py-2.5 text-right text-xs font-semibold text-primary tabular-nums">
                         {toNumber(commission.amount).toLocaleString()} RWF
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
-                          commission.paid 
-                            ? 'bg-success/10 text-success ring-1 ring-success/20' 
-                            : 'bg-warning/10 text-warning ring-1 ring-warning/20'
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          commission.paid
+                            ? 'bg-success/10 text-success'
+                            : 'bg-warning/10 text-warning'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${commission.paid ? 'bg-success' : 'bg-warning'}`} />
                           {commission.paid ? 'Paid' : 'Pending'}
                         </span>
                         {commission.paid && commission.paidAt && (
-                          <div className="text-[10px] text-text-light/40 mt-1">
+                          <span className="block text-[10px] text-text-light/30 dark:text-text-dark/30 mt-0.5">
                             {new Date(commission.paidAt).toLocaleDateString()}
-                          </div>
+                          </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-3 py-2.5 text-right">
                         {!commission.paid && user?.role !== UserRole.SALON_EMPLOYEE && (
-                          <Button 
-                            variant="secondary" 
-                            size="sm" 
-                            className="h-7 text-xs"
+                          <button
+                            className="px-2 py-1 rounded text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
                             onClick={() => handlePayment(commission)}
                           >
                             Mark Paid
-                          </Button>
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -590,30 +549,28 @@ function CommissionsContent() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50">
-            <span className="text-xs text-text-light/60">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-border-light dark:border-border-dark">
+            <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
               Page {currentPage} of {totalPages}
             </span>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
+            <div className="flex items-center gap-1">
+              <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                className="p-1 rounded text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-30 transition-colors"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                className="p-1 rounded text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-30 transition-colors"
               >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         )}
@@ -690,7 +647,7 @@ function CommissionPaymentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
@@ -699,67 +656,62 @@ function CommissionPaymentModal({
         tabIndex={-1}
         aria-label="Close modal"
       />
-      <div className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95">
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Wallet className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Pay Commission</h2>
-              <p className="text-sm text-text-light/60">
-                {count > 1 ? `${count} pending commissions` : 'Single commission payment'}
-              </p>
-            </div>
+      <div className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl max-w-sm w-full p-5">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-text-light dark:text-text-dark">Pay Commission</h2>
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5">
+              {count > 1 ? `${count} pending commissions` : 'Single commission payment'}
+            </p>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-full transition">
-            <X className="w-5 h-5 opacity-50" />
+          <button onClick={onClose} className="p-1 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors">
+            <X className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
           </button>
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="mb-4 p-3 bg-danger/10 border border-danger/20 text-danger rounded-lg text-sm font-medium flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="mb-3 p-2.5 bg-danger/10 border border-danger/20 text-danger rounded-lg text-xs font-medium flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <span>{error}</span>
               {error.toLowerCase().includes('insufficient') && (
-                <button 
+                <button
                   onClick={() => { onClose(); router.push('/wallets'); }}
-                  className="block mt-1 text-primary hover:underline font-semibold"
+                  className="block mt-1 text-primary hover:underline font-semibold text-xs"
                 >
-                  → Top up your wallet
+                  Top up your wallet
                 </button>
               )}
             </div>
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Amount Display */}
-          <div className="bg-background-light dark:bg-background-dark rounded-xl p-4 text-center border border-border-light dark:border-border-dark">
-            <span className="text-xs font-semibold text-text-light/60 uppercase">Total to Pay</span>
-            <p className="text-3xl font-bold text-primary mt-1">
+          <div className="bg-background-light dark:bg-background-dark rounded-lg p-3 text-center border border-border-light dark:border-border-dark">
+            <span className="text-[10px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase">Total to Pay</span>
+            <p className="text-xl font-bold text-primary mt-0.5">
               RWF {totalAmount.toLocaleString()}
             </p>
           </div>
 
           {/* Wallet Balance Warning */}
           {method === 'wallet' && hasInsufficientBalance && !error && (
-            <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+            <div className="p-2.5 bg-warning/10 border border-warning/20 rounded-lg">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
-                <div className="flex-1 text-sm">
+                <AlertCircle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+                <div className="flex-1 text-xs">
                   <p className="font-semibold text-warning">Insufficient Balance</p>
-                  <p className="text-text-light/70 dark:text-text-dark/70 mt-0.5">
-                    Your wallet has RWF {walletBalance.toLocaleString()}, but you need RWF {totalAmount.toLocaleString()}.
+                  <p className="text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                    Wallet: RWF {walletBalance.toLocaleString()} / Need: RWF {totalAmount.toLocaleString()}
                   </p>
-                  <button 
+                  <button
                     onClick={() => { onClose(); router.push('/wallets'); }}
-                    className="mt-2 text-primary hover:underline font-semibold flex items-center gap-1"
+                    className="mt-1.5 text-primary hover:underline font-semibold flex items-center gap-1 text-xs"
                   >
-                    <Wallet className="w-3.5 h-3.5" />
-                    Top up your wallet
+                    <Wallet className="w-3 h-3" />
+                    Top up wallet
                   </button>
                 </div>
               </div>
@@ -768,8 +720,8 @@ function CommissionPaymentModal({
 
           {/* Payment Method Selection */}
           <div>
-            <p className="block text-sm font-medium mb-2">Payment Method</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1.5">Payment Method</p>
+            <div className="grid grid-cols-2 gap-2">
               {paymentMethods.map((pm) => {
                 const Icon = pm.icon;
                 const isSelected = method === pm.id;
@@ -779,20 +731,20 @@ function CommissionPaymentModal({
                     key={pm.id}
                     onClick={() => !isDisabled && setMethod(pm.id)}
                     disabled={isLoading}
-                    className={`p-3 rounded-xl border-2 transition-all text-left ${
-                      isSelected 
-                        ? 'bg-primary/10 border-primary' 
-                        : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                    } ${isDisabled ? 'opacity-50' : ''}`}
+                    className={`p-2.5 rounded-lg border transition-colors text-left ${
+                      isSelected
+                        ? 'bg-primary/5 border-primary'
+                        : 'border-border-light dark:border-border-dark hover:border-text-light/20 dark:hover:border-text-dark/20'
+                    } ${isDisabled ? 'opacity-40' : ''}`}
                     type="button"
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-text-light/60'}`} />
-                      <span className={`text-sm font-semibold ${isSelected ? 'text-primary' : ''}`}>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-primary' : 'text-text-light/50 dark:text-text-dark/50'}`} />
+                      <span className={`text-xs font-medium ${isSelected ? 'text-primary' : 'text-text-light dark:text-text-dark'}`}>
                         {pm.label}
                       </span>
                     </div>
-                    <p className="text-xs text-text-light/50 dark:text-text-dark/50">
+                    <p className="text-[10px] text-text-light/40 dark:text-text-dark/40">
                       {walletLoading && pm.id === 'wallet' ? 'Loading...' : pm.description}
                     </p>
                   </button>
@@ -804,7 +756,7 @@ function CommissionPaymentModal({
           {/* Reference Input (for Airtel) */}
           {method === 'mobile_money' && (
             <div>
-              <label htmlFor="commission-payment-reference" className="block text-sm font-medium mb-1.5">
+              <label htmlFor="commission-payment-reference" className="block text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
                 Transaction Reference
               </label>
               <input
@@ -813,21 +765,22 @@ function CommissionPaymentModal({
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="Airtel Money Transaction ID"
-                className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                className="w-full h-9 px-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-xs focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none"
               />
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button 
-              variant="primary" 
-              className="flex-1" 
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onClose}>Cancel</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="flex-1 text-xs"
               onClick={() => onSubmit(method, reference)}
               disabled={isLoading || (method === 'wallet' && hasInsufficientBalance)}
             >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay Now'}
+              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Pay Now'}
             </Button>
           </div>
         </div>

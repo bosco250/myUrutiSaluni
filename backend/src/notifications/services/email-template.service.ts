@@ -146,8 +146,9 @@ export class EmailTemplateService {
 
     // Process {{#if variable}}...{{/if}} conditional blocks
     // Uses a loop to handle nested blocks by processing innermost ones first
-    const conditionalRegex = /\{\{#if\s+(\w+)\}\}((?:(?!\{\{#if)[\s\S])*?)(?:\{\{else\}\}((?:(?!\{\{#if)[\s\S])*?))?\{\{\/if\}\}/g;
-    
+    const conditionalRegex =
+      /\{\{#if\s+(\w+)\}\}((?:(?!\{\{#if)[\s\S])*?)(?:\{\{else\}\}((?:(?!\{\{#if)[\s\S])*?))?\{\{\/if\}\}/g;
+
     let matchFound = true;
     while (matchFound) {
       matchFound = false;
@@ -156,7 +157,7 @@ export class EmailTemplateService {
         (match, varName, ifContent, elseContent) => {
           matchFound = true; // Continue loop if we found a match
           const value = variables[varName];
-          return value ? ifContent : (elseContent || '');
+          return value ? ifContent : elseContent || '';
         },
       );
     }
@@ -264,8 +265,6 @@ export class EmailTemplateService {
       );
   }
 
-
-
   private getAppointmentBookedTemplate(): string {
     return this.baseTemplate
       .replace('{{headerTitle}}', 'Booking Confirmed')
@@ -366,11 +365,9 @@ export class EmailTemplateService {
   }
 
   private getAppointmentConfirmedTemplate(): string {
-    return this.baseTemplate
-      .replace('{{headerTitle}}', 'Confirmed')
-      .replace(
-        '{{content}}',
-        `
+    return this.baseTemplate.replace('{{headerTitle}}', 'Confirmed').replace(
+      '{{content}}',
+      `
         <div class="greeting">Hello {{customerName}},</div>
         <div class="message">Great news! Your appointment has been confirmed by our team. Everything is set for your visit.</div>
         
@@ -401,7 +398,7 @@ export class EmailTemplateService {
         </div>
         {{/if}}
       `,
-      );
+    );
   }
 
   private getAppointmentCancelledTemplate(): string {
@@ -465,9 +462,11 @@ export class EmailTemplateService {
   }
 
   private getSaleCompletedTemplate(): string {
-    return this.baseTemplate.replace('{{headerTitle}}', 'Payment Receipt').replace(
-      '{{content}}',
-      `
+    return this.baseTemplate
+      .replace('{{headerTitle}}', 'Payment Receipt')
+      .replace(
+        '{{content}}',
+        `
         <div class="greeting">Hello {{customerName}},</div>
         <div class="message">Thank you for your purchase at {{salonName}}. Your transaction has been completed successfully.</div>
         
@@ -506,7 +505,7 @@ export class EmailTemplateService {
         </div>
         {{/if}}
       `,
-    );
+      );
   }
 
   private getCommissionEarnedTemplate(): string {
@@ -909,11 +908,9 @@ export class EmailTemplateService {
   }
 
   private getMembershipStatusTemplate(): string {
-    return this.baseTemplate
-      .replace('{{headerTitle}}', '{{title}}')
-      .replace(
-        '{{content}}',
-        `
+    return this.baseTemplate.replace('{{headerTitle}}', '{{title}}').replace(
+      '{{content}}',
+      `
         <div class="greeting">Hello,</div>
         <div class="message">{{body}}</div>
         
@@ -961,6 +958,6 @@ export class EmailTemplateService {
         </div>
         {{/if}}
       `,
-      );
+    );
   }
 }

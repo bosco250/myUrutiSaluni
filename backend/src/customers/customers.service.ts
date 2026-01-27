@@ -61,7 +61,12 @@ export class CustomersService {
     if (!customer) {
       // Auto-create customer profile for this user
       // Handle different possible field names and provide fallbacks
-      const fullName = user.fullName || user.full_name || user.name || user.email || 'Guest User';
+      const fullName =
+        user.fullName ||
+        user.full_name ||
+        user.name ||
+        user.email ||
+        'Guest User';
 
       customer = await this.customersRepository.save({
         userId: user.id,

@@ -78,6 +78,34 @@ export class UploadsController {
     return this.uploadsService.uploadFile(file, baseUrl, 'services');
   }
 
+  @Post('document')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload document to MongoDB GridFS' })
+  async uploadDocument(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    if (!file) {
+      throw new NotFoundException('No file uploaded');
+    }
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+    return this.uploadsService.uploadFile(file, baseUrl, 'documents');
+  }
+
   @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get file by ID from MongoDB GridFS' })

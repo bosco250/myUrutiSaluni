@@ -5,6 +5,7 @@ import { User } from '../users/entities/user.entity';
 import { Salon } from '../salons/entities/salon.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 import { EmployeePermissionEntity } from '../salons/entities/employee-permission.entity';
+import { SalonDocument } from '../salons/entities/salon-document.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Membership } from '../memberships/entities/membership.entity';
 import { MembershipApplication } from '../memberships/entities/membership-application.entity';
@@ -67,6 +68,7 @@ import { WaitlistEntry } from '../waitlist/entities/waitlist-entry.entity';
           Salon,
           SalonEmployee,
           EmployeePermissionEntity,
+          SalonDocument,
           Customer,
           Membership,
           MembershipApplication,

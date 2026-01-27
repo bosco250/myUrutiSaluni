@@ -93,7 +93,6 @@ export class UsersController {
     return this.update(user.id, updateUserDto, user);
   }
 
-
   @Post('names')
   @ApiOperation({
     summary: 'Get user names by IDs (for commission transactions)',

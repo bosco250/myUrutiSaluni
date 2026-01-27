@@ -1155,7 +1155,9 @@ export class NotificationOrchestratorService {
   private async handleMembershipStatus(context: NotificationContext) {
     return {
       title: context.title || 'Membership Status Update',
-      message: context.message || `Your membership status has been updated to ${context.status || 'unknown'}.`,
+      message:
+        context.message ||
+        `Your membership status has been updated to ${context.status || 'unknown'}.`,
       variables: {
         status: context.status || '',
         ...context, // Pass all context variables to template

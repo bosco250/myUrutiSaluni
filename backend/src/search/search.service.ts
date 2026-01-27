@@ -11,7 +11,15 @@ import { Product } from '../inventory/entities/product.entity';
 
 export interface SearchResultItem {
   id: string;
-  type: 'salon' | 'service' | 'customer' | 'user' | 'sale' | 'appointment' | 'product' | 'page';
+  type:
+    | 'salon'
+    | 'service'
+    | 'customer'
+    | 'user'
+    | 'sale'
+    | 'appointment'
+    | 'product'
+    | 'page';
   title: string;
   subtitle?: string;
   description?: string;
@@ -67,7 +75,7 @@ export class SearchService {
       return {
         query: '',
         totalCount: pages.length,
-        categories: [{ name: 'Quick Navigation', items: pages }]
+        categories: [{ name: 'Quick Navigation', items: pages }],
       };
     }
 
@@ -152,7 +160,6 @@ export class SearchService {
         categories.unshift({ name: 'Pages', items: pages });
         totalCount += pages.length;
       }
-
     } catch (error) {
       this.logger.error(`Global search failed: ${error.message}`, error.stack);
     }
@@ -235,7 +242,7 @@ export class SearchService {
   ): Promise<SearchResultItem[]> {
     try {
       const salons = await this.salonsService.search(query);
-      
+
       // Filter by accessible salons for non-admins
       let filteredSalons = salons;
       if (
@@ -270,7 +277,7 @@ export class SearchService {
   ): Promise<SearchResultItem[]> {
     try {
       const services = await this.servicesService.search(query);
-      
+
       return services.slice(0, 5).map((service: any) => ({
         id: service.id,
         type: 'service' as const,
@@ -496,41 +503,229 @@ export class SearchService {
       requiredRoles?: UserRole[];
     }> = [
       // Main
-      { id: 'dashboard', name: 'Dashboard', href: '/dashboard', keywords: ['home', 'overview', 'stats'] },
-      
+      {
+        id: 'dashboard',
+        name: 'Dashboard',
+        href: '/dashboard',
+        keywords: ['home', 'overview', 'stats'],
+      },
+
       // Management
-      { id: 'users', name: 'Users', href: '/users', keywords: ['user', 'people', 'admin', 'role'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN] },
-      { id: 'memberships', name: 'Memberships', href: '/memberships', keywords: ['membership', 'salon', 'member', 'association'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-      { id: 'salons-list', name: 'Salons List', href: '/salons', keywords: ['salon', 'business', 'shop'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-      { id: 'customers', name: 'Customers', href: '/customers', keywords: ['client', 'customer', 'people'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
+      {
+        id: 'users',
+        name: 'Users',
+        href: '/users',
+        keywords: ['user', 'people', 'admin', 'role'],
+        requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN],
+      },
+      {
+        id: 'memberships',
+        name: 'Memberships',
+        href: '/memberships',
+        keywords: ['membership', 'salon', 'member', 'association'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+        ],
+      },
+      {
+        id: 'salons-list',
+        name: 'Salons List',
+        href: '/salons',
+        keywords: ['salon', 'business', 'shop'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
+      {
+        id: 'customers',
+        name: 'Customers',
+        href: '/customers',
+        keywords: ['client', 'customer', 'people'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
 
       // Membership Specific
-      { id: 'membership-apply', name: 'Apply for Membership', href: '/membership/apply', keywords: ['membership', 'apply', 'application', 'join'], requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_OWNER] },
-      { id: 'membership-applications', name: 'Review Applications', href: '/membership/applications', keywords: ['membership', 'applications', 'review', 'approve'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN] },
+      {
+        id: 'membership-apply',
+        name: 'Apply for Membership',
+        href: '/membership/apply',
+        keywords: ['membership', 'apply', 'application', 'join'],
+        requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_OWNER],
+      },
+      {
+        id: 'membership-applications',
+        name: 'Review Applications',
+        href: '/membership/applications',
+        keywords: ['membership', 'applications', 'review', 'approve'],
+        requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN],
+      },
 
       // Operations
-      { id: 'appointments', name: 'Appointments', href: '/appointments', keywords: ['booking', 'schedule', 'calendar'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-      { id: 'services', name: 'Services', href: '/services', keywords: ['service', 'offering', 'treatment'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-      { id: 'sales', name: 'Sales & POS', href: '/sales', keywords: ['pos', 'transaction', 'sale', 'checkout'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-      { id: 'inventory', name: 'Inventory', href: '/inventory', keywords: ['stock', 'products', 'items'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
+      {
+        id: 'appointments',
+        name: 'Appointments',
+        href: '/appointments',
+        keywords: ['booking', 'schedule', 'calendar'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
+      {
+        id: 'services',
+        name: 'Services',
+        href: '/services',
+        keywords: ['service', 'offering', 'treatment'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
+      {
+        id: 'sales',
+        name: 'Sales & POS',
+        href: '/sales',
+        keywords: ['pos', 'transaction', 'sale', 'checkout'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
+      {
+        id: 'inventory',
+        name: 'Inventory',
+        href: '/inventory',
+        keywords: ['stock', 'products', 'items'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
 
       // Finance
-      { id: 'commissions', name: 'Commissions', href: '/commissions', keywords: ['commission', 'employee', 'earnings'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE] },
-      { id: 'payroll', name: 'Payroll', href: '/payroll', keywords: ['payroll', 'salary', 'payment', 'wages'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER] },
-      { id: 'accounting', name: 'Accounting', href: '/accounting', keywords: ['finance', 'money', 'accounts'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-      { id: 'loans', name: 'Loans', href: '/loans', keywords: ['loan', 'credit', 'lending'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-      { id: 'wallets', name: 'Wallets', href: '/wallets', keywords: ['wallet', 'balance', 'payment'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-      
+      {
+        id: 'commissions',
+        name: 'Commissions',
+        href: '/commissions',
+        keywords: ['commission', 'employee', 'earnings'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+        ],
+      },
+      {
+        id: 'payroll',
+        name: 'Payroll',
+        href: '/payroll',
+        keywords: ['payroll', 'salary', 'payment', 'wages'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.SALON_OWNER,
+        ],
+      },
+      {
+        id: 'accounting',
+        name: 'Accounting',
+        href: '/accounting',
+        keywords: ['finance', 'money', 'accounts'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+        ],
+      },
+      {
+        id: 'loans',
+        name: 'Loans',
+        href: '/loans',
+        keywords: ['loan', 'credit', 'lending'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+        ],
+      },
+      {
+        id: 'wallets',
+        name: 'Wallets',
+        href: '/wallets',
+        keywords: ['wallet', 'balance', 'payment'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+        ],
+      },
+
       // Integrations & Analytics
-      { id: 'airtel', name: 'Airtel', href: '/airtel', keywords: ['airtel', 'mobile', 'money'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-      { id: 'reports', name: 'Reports', href: '/reports', keywords: ['report', 'analytics', 'data'], requiredRoles: [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER] },
-      
+      {
+        id: 'airtel',
+        name: 'Airtel',
+        href: '/airtel',
+        keywords: ['airtel', 'mobile', 'money'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+        ],
+      },
+      {
+        id: 'reports',
+        name: 'Reports',
+        href: '/reports',
+        keywords: ['report', 'analytics', 'data'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+        ],
+      },
+
       // System
-      { id: 'settings', name: 'Settings', href: '/settings', keywords: ['config', 'preferences', 'setup'] },
+      {
+        id: 'settings',
+        name: 'Settings',
+        href: '/settings',
+        keywords: ['config', 'preferences', 'setup'],
+      },
     ];
 
     const searchLower = query.toLowerCase();
-    
+
     return pages
       .filter((page) => {
         // Check role permission
@@ -540,7 +735,7 @@ export class SearchService {
             return false;
           }
         }
-        
+
         // If empty query, return everything user has access to (limit to top results in UI)
         if (!query || query.trim() === '') {
           return true;
@@ -558,7 +753,7 @@ export class SearchService {
         title: page.name,
         subtitle: 'Navigation',
         href: page.href,
-        metadata: { category: 'Navigation' }
+        metadata: { category: 'Navigation' },
       }));
   }
 

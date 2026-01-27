@@ -104,7 +104,7 @@ export class AuthController {
   async requestEmailChange(@CurrentUser() user: any) {
     return this.authService.requestEmailChange(user.id);
   }
-  
+
   @Post('change-email')
   @Public() // Can be public since token verifies identity
   @ApiOperation({ summary: 'Change email using verification token' })
@@ -113,7 +113,7 @@ export class AuthController {
   async changeEmail(@Body() body: { token: string; newEmail: string }) {
     return this.authService.changeEmail(body.token, body.newEmail);
   }
-  
+
   @Get('profile')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user profile' })

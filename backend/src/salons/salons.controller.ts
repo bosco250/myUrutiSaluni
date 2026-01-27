@@ -27,6 +27,7 @@ import { CreateSalonDto } from './dto/create-salon.dto';
 import { UpdateSalonDto } from './dto/update-salon.dto';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { CreateDocumentDto } from './dto/create-document.dto';
 import { SalonCustomerService } from '../customers/salon-customer.service';
 import { CustomerCommunicationService } from '../customers/customer-communication.service';
 import { RewardsConfigService } from '../customers/rewards-config.service';
@@ -728,6 +729,29 @@ export class SalonsController {
     }
 
     return this.salonsService.remove(id);
+  }
+
+  @Post(':id/documents')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @ApiOperation({ summary: 'Add a document to a salon' })
+  async createDocument(
+    @Param('id', ParseUUIDPipe) salonId: string,
+    @Body() createDocumentDto: CreateDocumentDto,
+    @CurrentUser() user: any,
+  ) {
+    await this.checkSalonAccess(salonId, user);
+    return this.salonsService.createDocument(salonId, createDocumentDto);
+  }
+
+  @Get(':id/documents')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @ApiOperation({ summary: 'Get all documents for a salon' })
+  async getDocuments(
+    @Param('id', ParseUUIDPipe) salonId: string,
+    @CurrentUser() user: any,
+  ) {
+    await this.checkSalonAccess(salonId, user);
+    return this.salonsService.getDocuments(salonId);
   }
 
   @Post(':id/employees')

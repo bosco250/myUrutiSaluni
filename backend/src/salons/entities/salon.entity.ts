@@ -7,8 +7,10 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { SalonDocument } from './salon-document.entity';
 
 @Entity('salons')
 export class Salon {
@@ -68,6 +70,9 @@ export class Salon {
 
   @Column({ type: 'simple-json', nullable: true })
   images: string[];
+
+  @OneToMany(() => SalonDocument, (doc) => doc.salon)
+  documents: SalonDocument[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

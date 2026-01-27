@@ -80,6 +80,8 @@ function InspectionsContent() {
     isOpen: false,
     id: null,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Fetch salons
   const { data: salons = [] } = useQuery({
@@ -276,108 +278,138 @@ function InspectionsContent() {
             }
         />
       ) : (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg overflow-hidden shadow-sm">
-           <div className="overflow-x-auto">
-             <table className="w-full text-sm text-left">
-               <thead className="bg-background-secondary dark:bg-surface-dark/50 text-xs uppercase font-bold text-text-light/50 dark:text-text-dark/50 border-b border-border-light dark:border-border-dark">
-                 <tr>
+        <div className="space-y-4">
+            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                <thead className="bg-background-secondary dark:bg-surface-dark/50 text-xs uppercase font-bold text-text-light/50 dark:text-text-dark/50 border-b border-border-light dark:border-border-dark">
+                    <tr>
                     <th className="px-4 py-3 min-w-[200px]">Salon</th>
                     <th className="px-4 py-3 hidden md:table-cell">Inspector</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 hidden sm:table-cell">Compliance</th>
                     <th className="px-4 py-3 hidden lg:table-cell">Score</th>
                     <th className="px-4 py-3 text-right">Actions</th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                 {inspections.map((inspection) => (
-                    <tr key={inspection.id} className="group hover:bg-background-light dark:hover:bg-active transition-colors">
-                        <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
-                                    inspection.status === 'completed' ? 'bg-success/10 text-success' :
-                                    inspection.status === 'failed' ? 'bg-error/10 text-error' :
-                                    'bg-primary/10 text-primary'
-                                }`}>
-                                    <Building2 className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="font-bold text-text-light dark:text-text-dark truncate text-sm">{inspection.salon.name}</p>
-                                    <div className="flex items-center gap-2 text-xs text-text-light/50 dark:text-text-dark/50">
-                                        <Calendar className="w-3 h-3" />
-                                        <span>{format(new Date(inspection.scheduledDate), 'MMM d, yyyy')}</span>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                    {inspections
+                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .map((inspection) => (
+                        <tr key={inspection.id} className="group hover:bg-background-light dark:hover:bg-active transition-colors">
+                            <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
+                                        inspection.status === 'completed' ? 'bg-success/10 text-success' :
+                                        inspection.status === 'failed' ? 'bg-error/10 text-error' :
+                                        'bg-primary/10 text-primary'
+                                    }`}>
+                                        <Building2 className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-text-light dark:text-text-dark truncate text-sm">{inspection.salon.name}</p>
+                                        <div className="flex items-center gap-2 text-xs text-text-light/50 dark:text-text-dark/50">
+                                            <Calendar className="w-3 h-3" />
+                                            <span>{format(new Date(inspection.scheduledDate), 'MMM d, yyyy')}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                            <div className="flex items-center gap-2">
-                                <User className="w-3.5 h-3.5 text-text-light/40" />
-                                <span className="text-sm text-text-light/80 dark:text-text-dark/80">{inspection.inspector.fullName}</span>
-                            </div>
-                            <p className="text-xs text-text-light/40 pl-5.5">{inspection.inspectionType}</p>
-                        </td>
-                         <td className="px-4 py-3">
-                            <Badge variant={getStatusBadgeVariant(inspection.status)} size="sm" className="capitalize">
-                                {inspection.status.replace('_', ' ')}
-                            </Badge>
-                         </td>
-                         <td className="px-4 py-3 hidden sm:table-cell">
-                             <Badge variant={getComplianceBadgeVariant(inspection.complianceStatus)} size="sm" className="capitalize" dot>
-                                {inspection.complianceStatus.replace('_', ' ')}
-                            </Badge>
-                         </td>
-                         <td className="px-4 py-3 hidden lg:table-cell">
-                            {inspection.overallScore !== undefined && inspection.overallScore !== null ? (
-                                <div className="flex items-end gap-1.5">
-                                    <span className={`text-base font-black leading-none ${
-                                        Number(inspection.overallScore) >= 80 ? 'text-success' : 
-                                        Number(inspection.overallScore) >= 50 ? 'text-warning' : 'text-error'
-                                    }`}>
-                                        {Number(inspection.overallScore).toFixed(0)}%
-                                    </span>
-                                    <span className="text-[10px] text-text-light/40 dark:text-text-dark/40 font-medium mb-0.5">
-                                        ({Number(inspection.totalScore || 0)}/{Number(inspection.maxScore || 0)})
-                                    </span>
+                            </td>
+                            <td className="px-4 py-3 hidden md:table-cell">
+                                <div className="flex items-center gap-2">
+                                    <User className="w-3.5 h-3.5 text-text-light/40" />
+                                    <span className="text-sm text-text-light/80 dark:text-text-dark/80">{inspection.inspector.fullName}</span>
                                 </div>
-                            ) : (
-                                <span className="text-xs text-text-light/30 italic">N/A</span>
-                            )}
-                         </td>
-                         <td className="px-4 py-3 text-right">
-                             <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={() => router.push(`/inspections/${inspection.id}`)}
-                                    className="p-1.5 text-text-light/50 hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                    title="View"
-                                >
-                                    <Eye className="w-4 h-4" />
-                                </button>
-                                {inspection.status !== 'completed' && (
-                                     <button
-                                        onClick={() => router.push(`/inspections/${inspection.id}/edit`)}
-                                        className="p-1.5 text-text-light/50 hover:text-warning hover:bg-warning/10 rounded-md transition-colors"
-                                        title="Edit"
-                                        >
-                                        <Edit className="w-4 h-4" />
-                                    </button>
+                                <p className="text-xs text-text-light/40 pl-5.5">{inspection.inspectionType}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                                <Badge variant={getStatusBadgeVariant(inspection.status)} size="sm" className="capitalize">
+                                    {inspection.status.replace('_', ' ')}
+                                </Badge>
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                                <Badge variant={getComplianceBadgeVariant(inspection.complianceStatus)} size="sm" className="capitalize" dot>
+                                    {inspection.complianceStatus.replace('_', ' ')}
+                                </Badge>
+                            </td>
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                                {inspection.overallScore !== undefined && inspection.overallScore !== null ? (
+                                    <div className="flex items-end gap-1.5">
+                                        <span className={`text-base font-black leading-none ${
+                                            Number(inspection.overallScore) >= 80 ? 'text-success' : 
+                                            Number(inspection.overallScore) >= 50 ? 'text-warning' : 'text-error'
+                                        }`}>
+                                            {Number(inspection.overallScore).toFixed(0)}%
+                                        </span>
+                                        <span className="text-[10px] text-text-light/40 dark:text-text-dark/40 font-medium mb-0.5">
+                                            ({Number(inspection.totalScore || 0)}/{Number(inspection.maxScore || 0)})
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-text-light/30 italic">N/A</span>
                                 )}
-                                <button
-                                    onClick={() => setDeleteConfirmation({ isOpen: true, id: inspection.id })}
-                                    className="p-1.5 text-text-light/50 hover:text-error hover:bg-error/10 rounded-md transition-colors"
-                                    title="Delete"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                             </div>
-                         </td>
-                    </tr>
-                 ))}
-               </tbody>
-             </table>
-           </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => router.push(`/inspections/${inspection.id}`)}
+                                        className="p-1.5 text-text-light/50 hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                        title="View"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                    </button>
+                                    {inspection.status !== 'completed' && (
+                                        <button
+                                            onClick={() => router.push(`/inspections/${inspection.id}/edit`)}
+                                            className="p-1.5 text-text-light/50 hover:text-warning hover:bg-warning/10 rounded-md transition-colors"
+                                            title="Edit"
+                                            >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setDeleteConfirmation({ isOpen: true, id: inspection.id })}
+                                        className="p-1.5 text-text-light/50 hover:text-error hover:bg-error/10 rounded-md transition-colors"
+                                        title="Delete"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+            </div>
+
+             {/* Pagination Controls */}
+             <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark pt-4">
+                <p className="text-xs text-text-light/50 dark:text-text-dark/50">
+                    Showing <span className="font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold">{Math.min(currentPage * itemsPerPage, inspections.length)}</span> of <span className="font-bold">{inspections.length}</span> results
+                </p>
+                <div className="flex gap-2">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    >
+                        Previous
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={currentPage >= Math.ceil(inspections.length / itemsPerPage)}
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(inspections.length / itemsPerPage), p + 1))}
+                    >
+                        Next
+                    </Button>
+                </div>
+            </div>
         </div>
       )}
+
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

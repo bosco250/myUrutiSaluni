@@ -157,10 +157,7 @@ export class CustomerFavoritesService {
       };
     }
 
-    console.warn(
-      '[FAVORITES] Employee not found for ID:',
-      fav.salonEmployeeId,
-    );
+    console.warn('[FAVORITES] Employee not found for ID:', fav.salonEmployeeId);
     return {
       id: fav.id,
       customerId: fav.customerId,
@@ -196,7 +193,9 @@ export class CustomerFavoritesService {
 
     // Employee favorite (legacy behavior)
     if (!salonEmployeeId) {
-      throw new NotFoundException('salonEmployeeId is required for employee favorites');
+      throw new NotFoundException(
+        'salonEmployeeId is required for employee favorites',
+      );
     }
     const existing = await this.favoritesRepository.findOne({
       where: { customerId, salonEmployeeId },
