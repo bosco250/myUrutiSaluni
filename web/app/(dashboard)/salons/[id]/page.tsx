@@ -170,7 +170,7 @@ function SalonDetailContent() {
     queryKey: ['salon', salonId],
     queryFn: async () => {
       const response = await api.get(`/salons/${salonId}`);
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!salonId,
   });
@@ -194,7 +194,7 @@ function SalonDetailContent() {
     queryFn: async () => {
       try {
         const response = await api.get(`/salons/${salonId}/customers/analytics`);
-        return response.data;
+        return response.data?.data || response.data;
       } catch {
         return null;
       }
@@ -208,7 +208,8 @@ function SalonDetailContent() {
     queryFn: async () => {
       try {
         const response = await api.get(`/salons/${salonId}/employees`);
-        return response.data || [];
+        const employeesData = response.data?.data || response.data;
+        return Array.isArray(employeesData) ? employeesData : [];
       } catch {
         return [];
       }
@@ -222,7 +223,8 @@ function SalonDetailContent() {
     queryFn: async () => {
       try {
         const response = await api.get(`/salons/${salonId}/services`);
-        return response.data || [];
+        const servicesData = response.data?.data || response.data;
+        return Array.isArray(servicesData) ? servicesData : [];
       } catch {
         return [];
       }
@@ -304,32 +306,44 @@ function SalonDetailContent() {
     }
   };
 
+  // Stat Card Component
+  function StatCard({ label, value, icon: Icon, color, bg }: { label: string; value: string | number; icon: any; color: string; bg: string }) {
+    return (
+      <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-3 flex items-center gap-2">
+        <div className={`p-2 rounded-lg ${bg}`}>
+          <Icon className={`w-4 h-4 ${color}`} />
+        </div>
+        <div>
+          <p className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{value}</p>
+          <p className="text-[10px] text-gray-900/60 dark:text-white/60 uppercase tracking-wider font-semibold">{label}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button onClick={() => router.push('/salons')} variant="secondary" size="sm" className="flex-shrink-0">
+          <Button onClick={() => router.push('/salons')} variant="secondary" size="sm" className="h-9 w-9 p-0 flex items-center justify-center rounded-lg">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">{salon.name}</h1>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {/* Status */}
-              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive}`}>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{salon.name}</h1>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive}`}>
                 {salon.status}
               </span>
-              {/* Open Now */}
               {isOpen && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-success/10 text-success border border-success/20">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-green-500/10 text-green-600 border border-green-500/20">
                   <Clock className="w-3 h-3" />
                   Open Now
                 </span>
               )}
-              {/* Registration Number */}
               {salon.registrationNumber && (
-                <span className="text-xs text-text-light/60 dark:text-text-dark/60">
-                  #{salon.registrationNumber}
+                <span className="text-[11px] font-medium text-gray-900/40 dark:text-white/40">
+                  ID: {salon.registrationNumber}
                 </span>
               )}
             </div>
@@ -337,16 +351,16 @@ function SalonDetailContent() {
         </div>
 
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Link href={`/salons/${salon.id}/customers`}>
-              <Button variant="primary" size="sm">
-                <UserCheck className="w-4 h-4" />
+              <Button variant="primary" size="sm" className="h-9">
+                <UserCheck className="w-4 h-4 mr-2" />
                 Customers
               </Button>
             </Link>
             <Link href={`/salons/${salon.id}/employees`}>
-              <Button variant="secondary" size="sm">
-                <UserPlus className="w-4 h-4" />
+              <Button variant="outline" size="sm" className="h-9">
+                <UserPlus className="w-4 h-4 mr-2" />
                 Staff
               </Button>
             </Link>
@@ -354,363 +368,270 @@ function SalonDetailContent() {
         )}
       </div>
 
-      {/* Business Types & Clientele */}
-      <div className="flex flex-wrap gap-2">
-        {salon.settings?.businessTypes?.map((type) => {
-          const Icon = BUSINESS_ICONS[type] || Star;
-          return (
-            <span key={type} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
-              <Icon className="w-3.5 h-3.5" />
-              <span className="capitalize">{type.replace('_', ' ')}</span>
-            </span>
-          );
-        })}
-        {!salon.settings?.businessTypes && salon.settings?.businessType && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium capitalize">
-            <Star className="w-3.5 h-3.5" />
-            {salon.settings.businessType.replace('_', ' ')}
-          </span>
-        )}
-        {salon.settings?.targetClientele && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/10 text-secondary text-xs font-medium">
-            {(() => {
-              const clientele = CLIENTELE_LABELS[salon.settings.targetClientele];
-              const Icon = clientele?.icon || Users;
-              return (
-                <>
-                  <Icon className="w-3.5 h-3.5" />
-                  {clientele?.label || salon.settings.targetClientele}
-                </>
-              );
-            })()}
-          </span>
-        )}
-      </div>
-
-      {/* Image Gallery */}
-      {allImages.length > 0 && (
-        <div className="relative rounded-xl overflow-hidden bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">
-          <div className="h-48 sm:h-56 relative">
-            <img
-              src={allImages[currentImageIndex]}
-              alt={`${salon.name} - Image ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover"
-            />
-            {allImages.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                  {allImages.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`w-2 h-2 rounded-full transition ${idx === currentImageIndex ? 'bg-white' : 'bg-white/50 hover:bg-white/70'}`}
-                    />
-                  ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left Column: Image & Details */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Main Hero Card */}
+          <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+            {/* Business Chips Over Image */}
+            <div className="relative group">
+              {allImages.length > 0 ? (
+                <div className="h-64 sm:h-80 relative">
+                  <img
+                    src={allImages[currentImageIndex]}
+                    alt={`${salon.name}`}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+                  
+                  {allImages.length > 1 && (
+                    <>
+                      <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/20">
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all border border-white/20">
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
                 </div>
-              </>
+              ) : (
+                <div className="h-48 bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+                  <Building2 className="w-12 h-12 text-gray-200 dark:text-gray-800" />
+                </div>
+              )}
+
+              {/* Badges Overlaid on Brand Area */}
+              <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
+                {salon.settings?.businessTypes?.map((type) => {
+                  const Icon = BUSINESS_ICONS[type] || Star;
+                  return (
+                    <span key={type} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-gray-900 dark:text-white text-[10px] font-bold uppercase tracking-wider shadow-sm border border-gray-200 dark:border-gray-800">
+                      <Icon className="w-3.5 h-3.5 text-primary" />
+                      {type.replace('_', ' ')}
+                    </span>
+                  );
+                })}
+                {salon.settings?.targetClientele && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-md text-gray-900 dark:text-white text-[10px] font-bold uppercase tracking-wider shadow-sm border border-gray-200 dark:border-gray-800">
+                    {(() => {
+                      const clientele = CLIENTELE_LABELS[salon.settings.targetClientele];
+                      const Icon = clientele?.icon || Users;
+                      return <Icon className="w-3.5 h-3.5 text-secondary" />;
+                    })()}
+                    {CLIENTELE_LABELS[salon.settings.targetClientele]?.label || salon.settings.targetClientele}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Description Section */}
+            {salon.description && (
+              <div className="p-5 border-t border-gray-200 dark:border-gray-800">
+                <h3 className="text-xs font-bold text-gray-900/40 dark:text-white/40 uppercase tracking-widest mb-3">About the Salon</h3>
+                <p className="text-sm text-gray-700 dark:text-white/80 leading-relaxed font-medium">
+                  {salon.description}
+                </p>
+              </div>
             )}
           </div>
-        </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Description */}
-          {salon.description && (
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                About
-              </h2>
-              <p className="text-sm text-text-light/80 dark:text-text-dark/80 leading-relaxed">
-                {salon.description}
-              </p>
+          {/* Contact & Location Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Contact Info */}
+            <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-5">
+              <h3 className="text-xs font-bold text-gray-900/40 dark:text-white/40 uppercase tracking-widest mb-4">Contact Details</h3>
+              <div className="space-y-4">
+                {salon.address && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center shrink-0 border border-gray-100 dark:border-gray-800">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium">Location</p>
+                      <p className="text-sm text-gray-900 dark:text-white font-semibold truncate">{salon.address}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{[salon.city, salon.district].filter(Boolean).join(', ')}</p>
+                    </div>
+                  </div>
+                )}
+                {salon.phone && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center shrink-0 border border-gray-100 dark:border-gray-800">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Phone Number</p>
+                      <a href={`tel:${salon.phone}`} className="text-sm text-gray-900 dark:text-white font-bold hover:text-primary transition">{salon.phone}</a>
+                    </div>
+                  </div>
+                )}
+                {salon.email && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center shrink-0 border border-gray-100 dark:border-gray-800">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium">Email Address</p>
+                      <a href={`mailto:${salon.email}`} className="text-sm text-gray-900 dark:text-white font-bold hover:text-primary transition truncate block">{salon.email}</a>
+                    </div>
+                  </div>
+                )}
+                {salon.website && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center shrink-0 border border-gray-100 dark:border-gray-800">
+                      <Globe className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 font-medium">Website</p>
+                      <a href={salon.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary font-bold hover:underline flex items-center gap-1.5 truncate">
+                        {salon.website.replace(/^https?:\/\//, '')}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Map Preview */}
+            <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-3 flex flex-col">
+              <div className="flex-1 rounded-lg overflow-hidden relative">
+                <SalonLocationMap
+                  latitude={salon.latitude || -1.9441}
+                  longitude={salon.longitude || 30.0619}
+                  salonName={salon.name}
+                  address={salon.address}
+                  height="100%"
+                />
+              </div>
+              <div className="mt-3 px-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 px-2 rounded bg-gray-100 dark:bg-gray-900 text-[10px] font-bold text-gray-500 uppercase tracking-tighter">MAP VIEW</div>
+                </div>
+                {salon.latitude && (
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">{salon.latitude.toFixed(4)}, {salon.longitude?.toFixed(4)}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Services Section */}
+          {services.length > 0 && (
+            <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xs font-bold text-gray-900/40 dark:text-white/40 uppercase tracking-widest">Services Offered</h3>
+                <Link href={`/services?salonId=${salon.id}`} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">Manage Services →</Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {services.slice(0, 6).map((service) => (
+                  <div key={service.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800/50">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{service.name}</p>
+                      <p className="text-[11px] text-gray-400 font-medium">{service.duration} mins • {service.category || 'General'}</p>
+                    </div>
+                    <span className="text-sm font-black text-gray-900 dark:text-white">{service.price.toLocaleString()} RWF</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+        </div>
 
-          {/* Contact Information */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
-              Contact Information
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {salon.address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">Address</p>
-                    <p className="text-sm text-text-light dark:text-text-dark">{salon.address}</p>
-                    {(salon.city || salon.district) && (
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
-                        {[salon.city, salon.district, salon.country].filter(Boolean).join(', ')}
-                      </p>
-                    )}
+        {/* Right Column: Stats & Actions */}
+        <div className="space-y-4">
+          {/* Stats Grid - Using Shared Pattern */}
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard label="Staff" value={employees.length} icon={Users} color="text-blue-600" bg="bg-blue-500/10" />
+            <StatCard label="Customers" value={customerAnalytics?.totalCustomers || 0} icon={UserCheck} color="text-green-600" bg="bg-green-500/10" />
+            <StatCard label="Services" value={services.length} icon={Scissors} color="text-purple-600" bg="bg-purple-500/10" />
+            <StatCard label="New (30d)" value={customerAnalytics?.newCustomers || 0} icon={TrendingUp} color="text-yellow-600" bg="bg-yellow-500/10" />
+          </div>
+
+          {/* Quick Management Actions Grid - No Gradients */}
+          <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-2xl p-4">
+            <h3 className="text-xs font-bold text-gray-900/40 dark:text-white/40 uppercase tracking-widest mb-4">Management Hub</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Bookings', icon: Calendar, href: `/appointments?salonId=${salon.id}`, color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10' },
+                { label: 'Staff', icon: UserPlus, href: `/salons/${salon.id}/employees`, color: 'bg-purple-50 text-purple-600 dark:bg-purple-500/10' },
+                { label: 'Customers', icon: UserCheck, href: `/salons/${salon.id}/customers`, color: 'bg-green-50 text-green-600 dark:bg-green-500/10' },
+                { label: 'Payroll', icon: Calculator, href: `/payroll?salonId=${salon.id}`, color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' },
+                { label: 'Inventory', icon: Package, href: `/inventory?salonId=${salon.id}`, color: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' },
+                { label: 'Services', icon: Scissors, href: `/services?salonId=${salon.id}`, color: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10' },
+                { label: 'Sales', icon: ShoppingBag, href: `/sales?salonId=${salon.id}`, color: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' },
+                { label: 'Finance', icon: DollarSign, href: `/commissions`, color: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10' },
+                { label: 'Settings', icon: Settings, href: `/salons/${salon.id}/edit`, color: 'bg-gray-50 text-gray-600 dark:bg-gray-500/10' },
+              ].map((action) => (
+                <Link key={action.label} href={action.href} className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-800">
+                  <div className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
+                    <action.icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 text-center leading-tight">{action.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Business Metadata */}
+          <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-2xl p-5 space-y-5">
+            {/* Owner Section */}
+            <div>
+              <h3 className="text-xs font-bold text-gray-900/40 dark:text-white/40 uppercase tracking-widest mb-3">Owner</h3>
+              {salon.owner ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{salon.owner.fullName}</p>
+                    <p className="text-[11px] text-gray-400 font-medium truncate">{salon.owner.email || 'No email registered'}</p>
                   </div>
                 </div>
-              )}
-              {salon.phone && (
-                <div className="flex items-start gap-2">
-                  <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">Phone</p>
-                    <a href={`tel:${salon.phone}`} className="text-sm text-text-light dark:text-text-dark hover:text-primary transition">
-                      {salon.phone}
-                    </a>
-                  </div>
-                </div>
-              )}
-              {salon.email && (
-                <div className="flex items-start gap-2">
-                  <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">Email</p>
-                    <a href={`mailto:${salon.email}`} className="text-sm text-text-light dark:text-text-dark hover:text-primary transition">
-                      {salon.email}
-                    </a>
-                  </div>
-                </div>
-              )}
-              {salon.website && (
-                <div className="flex items-start gap-2">
-                  <Globe className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">Website</p>
-                    <a href={salon.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                      {salon.website.replace(/^https?:\/\//, '')}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Owner info not found</p>
               )}
             </div>
 
-            {/* Social Media */}
+            {/* Business IDs */}
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+              <h3 className="text-xs font-bold text-gray-900/40 dark:text-white/40 uppercase tracking-widest mb-3">Business Records</h3>
+              <div className="space-y-3">
+                {[
+                  { label: 'License No.', value: salon.settings?.licenseNumber },
+                  { label: 'Tax Identification', value: salon.settings?.taxId },
+                  { label: 'Opening Date', value: salon.settings?.openingDate ? new Date(salon.settings.openingDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) : null },
+                  { label: 'Registered On', value: new Date(salon.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) },
+                ].map((item) => item.value ? (
+                  <div key={item.label} className="flex justify-between items-center gap-4">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tight">{item.label}</span>
+                    <span className="text-[11px] font-bold text-gray-900 dark:text-white truncate">{item.value}</span>
+                  </div>
+                ) : null)}
+              </div>
+            </div>
+
+            {/* Social Links */}
             {(salon.settings?.facebookUrl || salon.settings?.instagramUrl || salon.settings?.twitterUrl) && (
-              <div className="mt-4 pt-3 border-t border-border-light dark:border-border-dark">
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-2">Social Media</p>
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
                 <div className="flex gap-2">
                   {salon.settings.facebookUrl && (
-                    <a href={salon.settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg transition">
+                    <a href={salon.settings.facebookUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center p-2.5 bg-gray-50 dark:bg-gray-900 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-400 hover:text-blue-500 rounded-xl transition border border-transparent hover:border-blue-100 dark:hover:border-blue-900/50">
                       <Facebook className="w-4 h-4" />
                     </a>
                   )}
                   {salon.settings.instagramUrl && (
-                    <a href={salon.settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 rounded-lg transition">
+                    <a href={salon.settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center p-2.5 bg-gray-50 dark:bg-gray-900 hover:bg-pink-50 dark:hover:bg-pink-500/10 text-gray-400 hover:text-pink-500 rounded-xl transition border border-transparent hover:border-pink-100 dark:hover:border-pink-900/50">
                       <Instagram className="w-4 h-4" />
                     </a>
                   )}
                   {salon.settings.twitterUrl && (
-                    <a href={salon.settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 rounded-lg transition">
+                    <a href={salon.settings.twitterUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center p-2.5 bg-gray-50 dark:bg-gray-900 hover:bg-sky-50 dark:hover:bg-sky-500/10 text-gray-400 hover:text-sky-500 rounded-xl transition border border-transparent hover:border-sky-100 dark:hover:border-sky-900/50">
                       <Twitter className="w-4 h-4" />
                     </a>
                   )}
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Services Preview */}
-          {services.length > 0 && (
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold text-text-light dark:text-text-dark">Services</h2>
-                <span className="text-xs text-text-light/60 dark:text-text-dark/60">{services.length} available</span>
-              </div>
-              <div className="space-y-2">
-                {services.slice(0, 5).map((service) => (
-                  <div key={service.id} className="flex items-center justify-between p-2 bg-background-light dark:bg-background-dark rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-text-light dark:text-text-dark">{service.name}</p>
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60">{service.duration} min</p>
-                    </div>
-                    <span className="text-sm font-bold text-primary">{service.price.toLocaleString()} RWF</span>
-                  </div>
-                ))}
-              </div>
-              {services.length > 5 && (
-                <Link href={`/salons/${salon.id}/services`} className="block mt-3 text-center text-xs text-primary hover:underline">
-                  View all {services.length} services →
-                </Link>
-              )}
-            </div>
-          )}
-
-          {/* Location */}
-          {salon.latitude && salon.longitude && (
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Location</h2>
-              <div className="rounded-lg overflow-hidden">
-                <SalonLocationMap
-                  latitude={salon.latitude}
-                  longitude={salon.longitude}
-                  salonName={salon.name}
-                  address={salon.address}
-                  height="250px"
-                />
-              </div>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
-                {salon.latitude.toFixed(6)}, {salon.longitude.toFixed(6)}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Quick Stats */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Quick Stats</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3 text-center">
-                <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
-                <p className="text-xl font-bold text-text-light dark:text-text-dark">{employees.length}</p>
-                <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 uppercase">Staff</p>
-              </div>
-              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3 text-center">
-                <UserCheck className="w-5 h-5 mx-auto mb-1 text-success" />
-                <p className="text-xl font-bold text-text-light dark:text-text-dark">{customerAnalytics?.totalCustomers || 0}</p>
-                <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 uppercase">Customers</p>
-              </div>
-              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3 text-center">
-                <Scissors className="w-5 h-5 mx-auto mb-1 text-secondary" />
-                <p className="text-xl font-bold text-text-light dark:text-text-dark">{services.length}</p>
-                <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 uppercase">Services</p>
-              </div>
-              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3 text-center">
-                <TrendingUp className="w-5 h-5 mx-auto mb-1 text-warning" />
-                <p className="text-xl font-bold text-text-light dark:text-text-dark">{customerAnalytics?.newCustomers || 0}</p>
-                <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 uppercase">New (30d)</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          {canEdit && (
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-              <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Quick Actions</h2>
-              <div className="grid grid-cols-2 gap-2">
-                <Link href={`/salons/${salon.id}/customers`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <UserCheck className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Customers</span>
-                </Link>
-                <Link href={`/salons/${salon.id}/employees`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <UserPlus className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Staff</span>
-                </Link>
-                <Link href={`/payroll?salonId=${salon.id}`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Calculator className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Payroll</span>
-                </Link>
-                <Link href={`/commissions`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <TrendingUp className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Commission</span>
-                </Link>
-                <Link href={`/services?salonId=${salon.id}`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Scissors className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Services</span>
-                </Link>
-                <Link href={`/inventory?salonId=${salon.id}`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Package className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Products</span>
-                </Link>
-                <Link href={`/sales?salonId=${salon.id}`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ShoppingBag className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Sales</span>
-                </Link>
-                <Link href={`/appointments?salonId=${salon.id}`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Calendar className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Bookings</span>
-                </Link>
-                <Link href={`/salons/${salon.id}/edit`} className="flex flex-col items-center gap-1.5 p-3 bg-background-light dark:bg-background-dark rounded-lg hover:bg-primary/10 transition group">
-                  <div className="w-8 h-8 bg-gradient-to-br from-slate-500 to-gray-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Settings className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-text-light dark:text-text-dark">Settings</span>
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* Owner */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Owner</h2>
-            {salon.owner ? (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-text-light dark:text-text-dark">{salon.owner.fullName}</p>
-                  {salon.owner.email && (
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">{salon.owner.email}</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60">Owner information not available</p>
-            )}
-          </div>
-
-          {/* Business Info */}
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-            <h2 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Business Info</h2>
-            <div className="space-y-2 text-xs">
-              {salon.settings?.licenseNumber && (
-                <div className="flex justify-between">
-                  <span className="text-text-light/60 dark:text-text-dark/60">License #</span>
-                  <span className="text-text-light dark:text-text-dark font-medium">{salon.settings.licenseNumber}</span>
-                </div>
-              )}
-              {salon.settings?.taxId && (
-                <div className="flex justify-between">
-                  <span className="text-text-light/60 dark:text-text-dark/60">Tax ID</span>
-                  <span className="text-text-light dark:text-text-dark font-medium">{salon.settings.taxId}</span>
-                </div>
-              )}
-              {salon.settings?.openingDate && (
-                <div className="flex justify-between">
-                  <span className="text-text-light/60 dark:text-text-dark/60">Opened</span>
-                  <span className="text-text-light dark:text-text-dark font-medium">{new Date(salon.settings.openingDate).toLocaleDateString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-text-light/60 dark:text-text-dark/60">Created</span>
-                <span className="text-text-light dark:text-text-dark">{new Date(salon.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-light/60 dark:text-text-dark/60">Updated</span>
-                <span className="text-text-light dark:text-text-dark">{new Date(salon.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

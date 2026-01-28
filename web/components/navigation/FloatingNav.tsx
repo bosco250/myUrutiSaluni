@@ -190,6 +190,7 @@ const allNavItems: NavItem[] = [
       UserRole.ASSOCIATION_ADMIN,
       UserRole.DISTRICT_LEADER,
       UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
     ],
   },
   {
@@ -201,6 +202,7 @@ const allNavItems: NavItem[] = [
       UserRole.ASSOCIATION_ADMIN,
       UserRole.DISTRICT_LEADER,
       UserRole.SALON_OWNER,
+      UserRole.SALON_EMPLOYEE,
     ],
   },
   {
@@ -265,7 +267,7 @@ function FloatingNavComponent() {
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none md:fixed md:right-0 md:top-0 md:h-full md:left-auto md:bottom-auto md:translate-x-0 md:flex md:flex-col md:justify-center md:pr-4">
         <nav className="pointer-events-auto relative">
           {/* Main Backdrop Container */}
-          <div className="bg-surface-light dark:bg-surface-dark backdrop-blur-xl border border-border-light dark:border-border-dark rounded-2xl shadow-xl p-1.5 flex flex-row items-center gap-1 md:flex-col pointer-events-auto transition-all duration-300">
+          <div className="bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-2xl border-2 border-slate-300 dark:border-slate-700 rounded-2xl md:rounded-[1.8rem] p-1 flex flex-row items-center gap-0.5 md:flex-col md:w-14 lg:w-16 pointer-events-auto transition-all duration-500">
             
             {/* Primary Nav Items */}
             {navItems.slice(0, 6).map((item) => {
@@ -275,64 +277,71 @@ function FloatingNavComponent() {
               const isActive = isMatch && !isExcluded && !isOpen;
 
               return (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full">
                   <Link
                     key={item.href}
                     href={item.href}
                     onMouseEnter={() => setHoveredId(item.href)}
                     onMouseLeave={() => setHoveredId(null)}
-                    className="group relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11"
+                    className="group relative flex flex-col items-center justify-center w-full min-h-[48px] md:min-h-[54px] gap-0.5 px-0.5 rounded-xl transition-all duration-300"
                   >
                     {/* Hover/Active Background Pill */}
                     <div
                       className={`absolute inset-0 rounded-xl transition-all duration-300 ${
                         isActive
-                          ? 'bg-primary opacity-100 shadow-md'
-                          : 'bg-background-secondary/50 dark:bg-white/5 opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                          ? 'bg-primary opacity-100 scale-100'
+                          : 'bg-primary/10 dark:bg-white/10 opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100'
                       }`}
                     />
 
                     {/* Icon */}
                     <Icon
-                      className={`relative z-10 w-5 h-5 transition-colors duration-300 ${
+                      strokeWidth={isActive ? 3 : 2.5}
+                      className={`relative z-10 w-4 h-4 md:w-4.5 md:h-4.5 transition-transform duration-300 group-hover:scale-110 ${
                         isActive
                           ? 'text-white'
-                          : 'text-text-secondary group-hover:text-text-primary'
+                          : 'text-text-primary dark:text-white group-hover:text-primary'
                       }`}
                     />
 
-                    {/* Premium Label Interaction (Desktop Only) */}
+                    {/* Label */}
+                    <span 
+                      className={`relative z-10 text-[7.5px] md:text-[8.5px] font-bold tracking-tight transition-colors duration-300 text-center w-full block truncate px-0.5 leading-tight ${
+                        isActive 
+                          ? 'text-white' 
+                          : 'text-text-primary dark:text-white group-hover:text-text-primary'
+                      }`}
+                      title={item.name}
+                    >
+                      {item.name}
+                    </span>
+
+                    {/* Active Indicator Bar (Bottom) */}
+                    {isActive && (
+                      <div className="absolute bottom-1 w-6 h-1 bg-white rounded-full hidden md:block" /> 
+                    )}
+
+                    {/* Floating Hover Label - Desktop Only */}
                     <AnimatePresence mode="wait">
                       {hoveredId === item.href && (
                         <motion.div
-                          initial={{ width: 0, opacity: 0 }}
-                          animate={{ width: "auto", opacity: 1 }}
-                          exit={{ width: 0, opacity: 0 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 500,
-                            damping: 35,
-                            mass: 0.8
-                          }} // Snappy but controlled
-                          className="hidden md:flex absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 items-center justify-end pointer-events-none overflow-hidden"
+                          key="tooltip"
+                          initial={{ opacity: 0, x: 10, scale: 0.8 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: 10, scale: 0.8 }}
+                          transition={{ type: "spring", stiffness: 600, damping: 30 }}
+                          className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 hidden md:flex items-center pointer-events-none z-[100]"
                         >
-                          <motion.div
-                            initial={{ x: 10, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            exit={{ x: 5, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-surface-dark dark:bg-surface-light text-text-inverse dark:text-text-primary text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap backdrop-blur-md"
-                          >
-                            {item.name}
-                          </motion.div>
+                          <div className="bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 px-2.5 py-1 rounded-lg shadow-xl border border-white/10 dark:border-black/10 backdrop-blur-md">
+                            <span className="text-[10px] font-bold tracking-wide whitespace-nowrap">{item.name}</span>
+                          </div>
+                          {/* Triangle Arrow */}
+                          <div className="w-1.5 h-1.5 bg-slate-900/95 dark:bg-white/95 border-r border-t border-white/10 dark:border-black/10 rotate-45 -ml-1 shadow-sm" />
                         </motion.div>
                       )}
                     </AnimatePresence>
-
-                  {/* Active Indicator Dot (Only showing for clarity on active) */}
-                  {isActive && (
-                    <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-3 bg-primary rounded-full opacity-0 md:opacity-100" /> 
-                  )}
                 </Link>
+                </motion.div>
               );
             })}
 
@@ -340,50 +349,50 @@ function FloatingNavComponent() {
             <div className="w-px h-6 md:w-6 md:h-px bg-border-light dark:bg-border-dark mx-1 md:mx-auto" />
 
             {/* More Button */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={toggleMenu}
-              onMouseEnter={() => setHoveredId('more')}
+              onMouseEnter={() => setHoveredId('apps')}
               onMouseLeave={() => setHoveredId(null)}
-              className={`group relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-full transition-all duration-300 ${
-                isOpen ? 'bg-primary text-white shadow-lg' : 'text-text-secondary hover:text-text-primary'
+              className={`group relative flex flex-col items-center justify-center w-11 md:w-full min-h-[48px] md:min-h-[54px] gap-0.5 px-0.5 rounded-xl transition-all duration-300 ${
+                isOpen ? 'bg-primary text-white border-2 border-white/20' : 'text-text-primary dark:text-white hover:text-primary'
               }`}
             >
               {!isOpen && (
-                 <div className="absolute inset-0 bg-background-secondary/50 dark:bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-90 group-hover:scale-100" />
+                 <div className="absolute inset-0 bg-primary/5 dark:bg-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-95 group-hover:scale-100" />
               )}
               
-              <div className={`relative z-10 transition-transform duration-300 ${isOpen ? 'rotate-90' : 'group-hover:rotate-90'}`}>
-                 {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <div className={`relative z-10 transition-transform duration-500 ${isOpen ? 'rotate-180' : 'group-hover:rotate-180'}`}>
+                 {isOpen ? <X strokeWidth={2.5} className="w-5 h-5" /> : <Menu strokeWidth={2.5} className="w-5 h-5" />}
               </div>
 
-               {/* Tooltip (Desktop Only) */}
-               <AnimatePresence mode="wait">
-                 {!isOpen && hoveredId === 'more' && (
+              <span className={`relative z-10 text-[8px] md:text-[9.5px] font-bold tracking-tight transition-colors duration-300 text-center w-full block truncate px-1 leading-tight ${
+                isOpen ? 'text-white' : 'text-text-primary dark:text-white group-hover:text-text-primary'
+              }`}>
+                {isOpen ? 'Close' : 'Apps'}
+              </span>
+
+              {/* Floating Hover Label for Apps - Desktop Only */}
+              <AnimatePresence mode="wait">
+                {hoveredId === 'apps' && !isOpen && (
                   <motion.div
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: "auto", opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 35,
-                        mass: 0.8
-                      }}
-                      className="hidden md:flex absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 items-center justify-end pointer-events-none overflow-hidden"
-                    >
-                    <motion.div
-                       initial={{ x: 10, opacity: 0 }}
-                       animate={{ x: 0, opacity: 1 }}
-                       exit={{ x: 5, opacity: 0 }}
-                       transition={{ duration: 0.2 }}
-                       className="bg-surface-dark dark:bg-surface-light text-text-inverse dark:text-text-primary text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap backdrop-blur-md"
-                    >
-                      More Apps
-                    </motion.div>
+                    key="tooltip-apps"
+                    initial={{ opacity: 0, x: 10, scale: 0.8 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 10, scale: 0.8 }}
+                    transition={{ type: "spring", stiffness: 600, damping: 30 }}
+                    className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 hidden md:flex items-center pointer-events-none z-[100]"
+                  >
+                    <div className="bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 px-2.5 py-1 rounded-lg shadow-xl border border-white/10 dark:border-black/10 backdrop-blur-md">
+                      <span className="text-[10px] font-bold tracking-wide whitespace-nowrap">Applications</span>
+                    </div>
+                    {/* Triangle Arrow */}
+                    <div className="w-1.5 h-1.5 bg-slate-900/95 dark:bg-white/95 border-r border-t border-white/10 dark:border-black/10 rotate-45 -ml-1 shadow-sm" />
                   </motion.div>
-                 )}
-               </AnimatePresence>
-            </button>
+                )}
+              </AnimatePresence>
+            </motion.button>
           </div>
         </nav>
       </div>
@@ -429,10 +438,10 @@ function FloatingNavComponent() {
                             : 'bg-background-secondary dark:bg-white/5 text-text-secondary group-hover:text-text-primary group-hover:scale-105 group-hover:bg-background-tertiary dark:group-hover:bg-white/10'
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
+                        <Icon strokeWidth={2.5} className="w-5 h-5" />
                       </div>
-                      <span className={`text-[10px] font-medium text-center truncate w-full ${
-                          isActive ? 'text-primary font-semibold' : 'text-text-secondary group-hover:text-text-primary'
+                      <span className={`text-[10px] font-bold text-center truncate w-full ${
+                          isActive ? 'text-primary' : 'text-text-secondary group-hover:text-text-primary'
                       }`}>
                         {item.name}
                       </span>

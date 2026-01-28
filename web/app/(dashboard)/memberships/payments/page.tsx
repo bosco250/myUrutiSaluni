@@ -110,7 +110,7 @@ function MembershipPaymentsContent() {
   });
 
   // Fetch payments - either for specific year or all payments
-  const { data: payments = [], isLoading } = useQuery<MembershipPayment[]>({
+  const { data: fetchedPayments, isLoading } = useQuery<MembershipPayment[]>({
     queryKey: ['membership-payments', yearFilter],
     queryFn: async () => {
       if (yearFilter === 'all') {
@@ -122,6 +122,8 @@ function MembershipPaymentsContent() {
       }
     },
   });
+
+  const payments = Array.isArray(fetchedPayments) ? fetchedPayments : [];
 
   // Reading file content next
   const recordPaymentMutation = useMutation({
@@ -186,6 +188,7 @@ function MembershipPaymentsContent() {
 
   // Filter payments
   const filteredPayments = useMemo(() => {
+    if (!payments) return [];
     return payments.filter((payment) => {
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch =

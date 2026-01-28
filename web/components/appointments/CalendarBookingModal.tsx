@@ -86,7 +86,7 @@ export default function CalendarBookingModal({
     queryKey: ['salons'],
     queryFn: async () => {
       const response = await api.get('/salons');
-      return response.data || [];
+      return response.data?.data || response.data || [];
     },
     enabled: isOpen,
   });
@@ -107,7 +107,8 @@ export default function CalendarBookingModal({
     queryFn: async () => {
       if (!selectedSalonId) return [];
       const response = await api.get(`/salons/${selectedSalonId}/employees`);
-      return (response.data || []).filter((emp: any) => emp.isActive !== false);
+      const employees = response.data?.data || response.data || [];
+      return (Array.isArray(employees) ? employees : []).filter((emp: any) => emp.isActive !== false);
     },
     enabled: isOpen && !!selectedSalonId,
   });

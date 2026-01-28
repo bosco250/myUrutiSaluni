@@ -125,64 +125,72 @@ function StatCard({
 }) {
   const styles = {
     blue: {
-      bg: 'from-blue-500/10 to-cyan-500/10',
-      border: 'border-blue-500/20 dark:border-blue-500/30',
-      iconBg: 'from-blue-500 to-cyan-500',
+      border: 'border-blue-200 dark:border-blue-800/50',
+      hover: 'hover:border-blue-300 dark:hover:border-blue-700',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+      iconText: 'text-blue-600 dark:text-blue-400',
+      label: 'text-blue-600 dark:text-blue-400',
     },
     green: {
-      bg: 'from-green-500/10 to-emerald-500/10',
-      border: 'border-green-500/20 dark:border-green-500/30',
-      iconBg: 'from-green-500 to-emerald-500',
+      border: 'border-emerald-200 dark:border-emerald-800/50',
+      hover: 'hover:border-emerald-300 dark:hover:border-emerald-700',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
+      iconText: 'text-emerald-600 dark:text-emerald-400',
+      label: 'text-emerald-600 dark:text-emerald-400',
     },
     red: {
-      bg: 'from-red-500/10 to-rose-500/10',
-      border: 'border-red-500/20 dark:border-red-500/30',
-      iconBg: 'from-red-500 to-rose-500',
+      border: 'border-rose-200 dark:border-rose-800/50',
+      hover: 'hover:border-rose-300 dark:hover:border-rose-700',
+      iconBg: 'bg-rose-100 dark:bg-rose-900/30',
+      iconText: 'text-rose-600 dark:text-rose-400',
+      label: 'text-rose-600 dark:text-rose-400',
     },
     purple: {
-      bg: 'from-purple-500/10 to-pink-500/10',
-      border: 'border-purple-500/20 dark:border-purple-500/30',
-      iconBg: 'from-purple-500 to-pink-500',
+      border: 'border-violet-200 dark:border-violet-800/50',
+      hover: 'hover:border-violet-300 dark:hover:border-violet-700',
+      iconBg: 'bg-violet-100 dark:bg-violet-900/30',
+      iconText: 'text-violet-600 dark:text-violet-400',
+      label: 'text-violet-600 dark:text-violet-400',
     },
     orange: {
-       bg: 'from-amber-500/10 to-orange-500/10',
-       border: 'border-amber-500/20 dark:border-amber-500/30',
-       iconBg: 'from-amber-500 to-orange-500',
+      border: 'border-amber-200 dark:border-amber-800/50',
+      hover: 'hover:border-amber-300 dark:hover:border-amber-700',
+      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
+      iconText: 'text-amber-600 dark:text-amber-400',
+      label: 'text-amber-600 dark:text-amber-400',
     }
   };
 
   const style = styles[color] || styles.blue;
   
-  const trendColor = trend === 'up' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
-                   : trend === 'down' ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400' 
-                   : 'bg-gray-100 dark:bg-gray-800 text-gray-500';
+  const trendColor = trend === 'up' ? 'text-emerald-500' 
+                   : trend === 'down' ? 'text-rose-500' 
+                   : 'text-text-light/40 dark:text-text-dark/40';
   
   const TrendIcon = trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : null;
 
   return (
-    <div className={`group relative flex flex-col justify-between bg-gradient-to-br ${style.bg} border ${style.border} rounded-xl p-3 hover:shadow-lg transition-all`}>
-       <div className="flex items-center justify-between mb-2">
-          {/* Header: Icon + Title */}
-          <div className="flex items-center gap-2">
-             <div className={`p-1.5 rounded-lg bg-gradient-to-br ${style.iconBg} shadow-sm group-hover:scale-110 transition-transform`}>
-                <Icon className="w-3.5 h-3.5 text-white" />
-             </div>
-             <p className="text-xs font-bold text-text-light/70 dark:text-text-dark/70 tracking-wide">{title}</p>
+    <div className={`group relative bg-surface-light dark:bg-surface-dark border ${style.border} ${style.hover} rounded-xl p-3 transition-all`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className={`text-[10px] uppercase tracking-wide font-bold ${style.label}`}>{title}</p>
+        <div className={`p-1 ${style.iconBg} rounded-md group-hover:scale-110 transition-transform`}>
+          <Icon className={`w-3 h-3 ${style.iconText}`} />
+        </div>
+      </div>
+      
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <p className="text-xl font-bold text-text-light dark:text-text-dark leading-tight">{amount}</p>
+          {subtext && <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">{subtext}</p>}
+        </div>
+        
+        {trend && (
+          <div className={`flex items-center gap-0.5 text-[10px] font-black ${trendColor}`}>
+            {TrendIcon && <TrendIcon className="w-2.5 h-2.5" />}
+            {trendValue}
           </div>
-          
-          {/* Trend Indicator */}
-          {trend && TrendIcon && (
-             <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${trendColor}`}>
-                <TrendIcon className="w-3 h-3" />
-                {trendValue}
-             </div>
-          )}
-       </div>
-       
-       <div>
-         <h3 className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{amount}</h3>
-         {subtext && <p className="text-[10px] font-medium text-text-light/50 dark:text-text-dark/50 mt-0.5">{subtext}</p>}
-       </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -338,7 +346,6 @@ export default function AccountingPage() {
     
     if (can(EmployeePermission.MANAGE_EXPENSES)) {
       t.push({ id: 'accounts', name: 'Accounts', icon: BookOpen });
-      t.push({ id: 'journals', name: 'Journals', icon: FileText });
     }
     return t;
   }, [can]);
@@ -658,7 +665,6 @@ export default function AccountingPage() {
         {activeTab === 'overview' && <OverviewTab salonId={salonId} dateRange={dateRange} summary={summary} />}
         {activeTab === 'expenses' && <ExpensesTab salonId={salonId} dateRange={dateRange} />}
         {activeTab === 'accounts' && <AccountsTab salonId={salonId} />}
-        {activeTab === 'journals' && <JournalsTab />}
       </div>
     </div>
   );
@@ -805,75 +811,85 @@ function OverviewTab({
 
   return (
     <div className="space-y-6">
-       {/* Charts & Breakdown */}
-       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Charts & Breakdown - Compacted & Flat */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Main Chart */}
           <div className="lg:col-span-2">
-             <FinancialCharts salonId={salonId} dateRange={dateRange} />
+            <FinancialCharts salonId={salonId} dateRange={dateRange} />
           </div>
 
-          {/* Expense Categories */}
-          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light p-4 shadow-sm dark:bg-surface-dark flex flex-col">
-             <h3 className="mb-4 text-sm font-bold text-text-light dark:text-text-dark">Expense Breakdown</h3>
-             
-             {expenseSummary?.byCategory?.length > 0 ? (
-                <div className="flex flex-col gap-6 flex-1">
-                   {/* Pie Chart */}
-                   <div className="h-48 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                         <PieChart>
-                            <Pie
-                               data={expenseSummary.byCategory}
-                               dataKey="total"
-                               nameKey="categoryName"
-                               cx="50%"
-                               cy="50%"
-                               innerRadius={50}
-                               outerRadius={70}
-                               paddingAngle={4}
-                               stroke="none"
-                            >
-                               {expenseSummary.byCategory.map((_: any, index: number) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                               ))}
-                            </Pie>
-                            <Tooltip 
-                               formatter={(val: number) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(val)}
-                               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
-                            />
-                         </PieChart>
-                      </ResponsiveContainer>
-                   </div>
-                   
-                   {/* Legend / List */}
-                   <div className="space-y-3 overflow-y-auto max-h-60 pr-2">
-                     {(expenseSummary.byCategory as Array<{ categoryName: string; total: number }>).map((cat, index) => (
-                       <div key={cat.categoryName} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                             <span className="font-medium text-text-light dark:text-text-dark">{cat.categoryName}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <span className="font-semibold text-text-light dark:text-text-dark">{formatCurrency(cat.total)}</span>
-                              <span className="text-text-light/50 dark:text-text-dark/50">
-                                {summary?.totalExpenses ? Math.round((cat.total / summary.totalExpenses) * 100) : 0}%
-                              </span>
-                          </div>
-                       </div>
-                     ))}
-                   </div>
+          {/* Expense Breakdown Card */}
+          <div className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4 flex flex-col transition-all hover:shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] uppercase font-black tracking-widest text-text-light/40">Expense Breakdown</h3>
+              <PieChartIcon className="w-3.5 h-3.5 text-text-light/20" />
+            </div>
+
+            {expenseSummary?.byCategory?.length > 0 ? (
+              <div className="flex flex-col gap-6 flex-1">
+                {/* Pie Chart */}
+                <div className="h-44 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={expenseSummary.byCategory}
+                        dataKey="total"
+                        nameKey="categoryName"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={4}
+                        stroke="none"
+                      >
+                        {expenseSummary.byCategory.map((_: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(val: number) => new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(val)}
+                        contentStyle={{
+                          borderRadius: '12px',
+                          border: 'none',
+                          boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                          padding: '8px 12px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-             ) : (
-                <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border-light/70 py-10 text-center text-xs text-text-light/50 dark:border-border-dark/60 dark:text-text-dark/50">
-                  <PieChartIcon className="h-6 w-6 mb-2 opacity-50" />
-                  No expenses recorded
+
+                {/* Legend / List */}
+                <div className="space-y-3 overflow-y-auto max-h-60 pr-2 custom-scrollbar">
+                  {(expenseSummary.byCategory as Array<{ categoryName: string; total: number }>).map((cat, index) => (
+                    <div key={cat.categoryName} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="text-[11px] font-bold text-text-light dark:text-text-dark">{cat.categoryName}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-black text-text-light dark:text-text-dark tracking-tighter">{formatCurrency(cat.total)}</span>
+                        <span className="text-[9px] font-black uppercase text-text-light/30 tracking-widest">
+                          {summary?.totalExpenses ? Math.round((cat.total / summary.totalExpenses) * 100) : 0}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-             )}
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border-light/70 py-10 text-center dark:border-border-dark/60">
+                <div className="p-3 bg-text-light/5 dark:bg-text-dark/5 rounded-full mb-3">
+                  <PieChartIcon className="h-5 w-5 opacity-20" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-light/30">No Data Reported</p>
+              </div>
+            )}
           </div>
-       </div>
-    </div>
-  );
-}
+        </div>
+      </div>
+    );
+  }
 
 // --- TAB 2: EXPENSES ---
 
@@ -964,23 +980,23 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
 
   return (
     <div className="space-y-6">
-       {/* Actions Bar */}
-       <div className="flex flex-col gap-3 rounded-xl border border-border-light bg-surface-light p-4 shadow-sm dark:border-border-dark dark:bg-surface-dark sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-             <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40" />
+       {/* Actions Bar - Compacted & Flat */}
+       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+             <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40" />
                 <input 
                   type="text" 
-                  placeholder="Search expenses..." 
+                  placeholder="Filter expenses..." 
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full rounded-lg border border-border-light bg-background-light py-2 pl-9 pr-3 text-sm text-text-light shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                  className="w-full rounded-xl border border-border-light bg-surface-light py-2 pl-9 pr-3 text-xs font-bold text-text-light shadow-sm transition focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/10 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
                 />
              </div>
              <select 
                value={selectedCategory}
                onChange={e => setSelectedCategory(e.target.value)}
-               className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-background-dark dark:text-text-dark sm:w-auto"
+               className="w-full rounded-xl border border-border-light bg-surface-light px-3 py-2 text-xs font-bold text-text-light transition focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/10 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark sm:w-auto outline-none"
              >
                 <option value="">All Categories</option>
                 {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -988,15 +1004,19 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
           </div>
 
           {canCreate && (
-            <Button variant="primary" onClick={() => setShowAddModal(true)} className="h-9 whitespace-nowrap text-sm font-semibold">
-               <Plus className="mr-2 h-4 w-4" />
-               Add Expense
+            <Button 
+              variant="primary" 
+              onClick={() => setShowAddModal(true)} 
+              className="h-9 px-6 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+            >
+               <Plus className="mr-2 h-3.5 w-3.5" />
+               New Expense
             </Button>
           )}
        </div>
 
-       {/* Data Table */}
-       <div className="min-h-[400px] overflow-hidden rounded-xl border border-border-light bg-surface-light shadow-sm dark:border-border-dark dark:bg-surface-dark">
+       {/* Data Table - Compacted & Flat */}
+       <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
           {isLoading ? (
              <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
           ) : filtered.length === 0 ? (
@@ -1008,55 +1028,50 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
              />
           ) : (
             <div className="overflow-x-auto">
-               <table className="w-full text-left text-sm">
-                  <thead className="border-b border-border-light/80 bg-background-light/80 text-[11px] font-semibold uppercase text-text-light/60 dark:border-border-dark/70 dark:bg-background-dark/60 dark:text-text-dark/60">
+               <table className="w-full text-left text-[11px]">
+                  <thead className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
                      <tr>
-                        <th className="px-5 py-3">Date</th>
-                        <th className="px-5 py-3">Description</th>
-                        <th className="px-5 py-3">Category</th>
-                        <th className="px-5 py-3">Method</th>
-                        <th className="px-5 py-3 text-right">Amount</th>
-                        {canDelete && <th className="px-5 py-3 w-16"></th>}
+                        <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Date</th>
+                        <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Description</th>
+                        <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Category</th>
+                        <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Method</th>
+                        <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Amount</th>
+                        {canDelete && <th className="px-3 py-2.5 w-12 text-right"></th>}
                      </tr>
                   </thead>
-                   <tbody className="divide-y divide-border-light/60 dark:divide-border-dark/60">
+                   <tbody className="divide-y divide-border-light dark:divide-border-dark">
                      {filtered.map((expense: Expense) => (
-                        <tr key={expense.id} className="group transition-colors hover:bg-background-light/60 dark:hover:bg-background-dark/40">
-                           <td className="whitespace-nowrap px-5 py-3 text-sm text-text-light dark:text-text-dark">
+                        <tr key={expense.id} className="group transition-colors hover:bg-background-light/30 dark:hover:bg-background-dark/20">
+                           <td className="whitespace-nowrap px-3 py-2.5 font-medium text-text-light dark:text-text-dark">
                               {format(new Date(expense.expenseDate), 'MMM d, yyyy')}
                            </td>
-                           <td className="px-5 py-3">
-                              <div className="text-sm font-medium text-text-light dark:text-text-dark">{expense.description}</div>
-                              {expense.vendorName && <div className="text-[11px] text-text-light/60 dark:text-text-dark/60">{expense.vendorName}</div>}
+                           <td className="px-3 py-2.5">
+                              <div className="font-bold text-text-light dark:text-text-dark">{expense.description}</div>
+                              {expense.vendorName && <div className="text-[9px] uppercase font-bold text-text-light/40 tracking-wider font-mono">{expense.vendorName}</div>}
                            </td>
-                           <td className="px-5 py-3">
-                              <Badge variant="default" size="sm" className="bg-primary/10 text-primary">
+                           <td className="px-3 py-2.5">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight bg-primary/10 text-primary border border-primary/20">
                                  {expense.category?.name || 'Uncategorized'}
-                              </Badge>
+                              </span>
                            </td>
-                           <td className="px-5 py-3 text-sm capitalize text-text-light/60 dark:text-text-dark/60">
+                           <td className="px-3 py-2.5 uppercase text-[10px] font-bold text-text-light/50 dark:text-text-dark/40">
                               {expense.paymentMethod?.replace('_', ' ') || 'N/A'}
                            </td>
-                           <td className="px-5 py-3 text-right text-sm font-semibold text-text-light dark:text-text-dark">
+                           <td className="px-3 py-2.5 text-right font-black text-text-light dark:text-text-dark">
                               {formatCurrency(expense.amount)}
                            </td>
 
-                           {canDelete ? (
-                             <td className="px-5 py-3 text-right">
-                               <Button
-                                 onClick={() => confirm('Delete expense?') && deleteMutation.mutate(expense.id)}
-                                 variant="secondary"
-                                 size="sm"
-                                 className="h-8 w-8 rounded-lg p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-error/10 hover:text-error dark:hover:bg-error/20"
-                                 title="Delete expense"
-                                 aria-label="Delete expense"
-                               >
-                                  <Trash2 className="h-4 w-4" />
-                               </Button>
+                           {canDelete && (
+                             <td className="px-3 py-2.5 text-right">
+                                <Button
+                                  onClick={() => confirm('Delete expense?') && deleteMutation.mutate(expense.id)}
+                                  variant="secondary"
+                                  size="sm"
+                                  className="h-7 w-7 rounded-lg p-0 bg-transparent hover:bg-rose-500/10 hover:text-rose-500 border-none group-hover:opacity-100 opacity-0 transition-opacity"
+                                >
+                                   <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                              </td>
-                           ) : (
-                             // Empty cell to maintain layout if header exists? No, conditional header means conditional cell
-                             null
                            )}
                         </tr>
                      ))}
@@ -1065,100 +1080,100 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
             </div>
            )}
 
-           {/* Pagination UI */}
-           <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark px-5 py-3">
-              <span className="text-xs text-text-light/50 dark:text-text-dark/50">
-                 Showing {expensesData?.data?.length || 0} of {expensesData?.total || 0} expenses
+           {/* Pagination UI - Compacted & Flat */}
+           <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark px-3 py-2.5 bg-background-light/5 dark:bg-background-dark/5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-text-light/40 dark:text-text-dark/40">
+                 {expensesData?.total || 0} Records Found
               </span>
               <div className="flex items-center gap-2">
-                 <span className="text-[11px] text-text-light/40 mr-2">Page {page} of {Math.max(1, Math.ceil((expensesData?.total || 0) / limit))}</span>
+                 <span className="text-[10px] font-black mr-2 opacity-30 uppercase tracking-tighter">Page {page} of {Math.max(1, Math.ceil((expensesData?.total || 0) / limit))}</span>
                  <Button 
                     variant="secondary" 
                     size="sm" 
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="h-8 px-3 text-xs"
-                 >Previous</Button>
+                    className="h-7 px-3 text-[10px] font-black uppercase tracking-widest bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark"
+                 >Prev</Button>
                  <Button 
                     variant="secondary" 
                     size="sm" 
                     onClick={() => setPage(p => p + 1)}
                     disabled={page * limit >= (expensesData?.total || 0)}
-                    className="h-8 px-3 text-xs"
+                    className="h-7 px-3 text-[10px] font-black uppercase tracking-widest bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark"
                  >Next</Button>
               </div>
            </div>
         </div>
 
-       {/* Add Expense Modal */}
-       {canCreate && (
-         <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="New Expense">
-            <form onSubmit={handleSubmit} className="space-y-4">
-               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                     <label htmlFor="expense-amount" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Amount (RWF) *</label>
-                     <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-light/60 dark:text-text-dark/60">RWF</div>
-                        <input 
-                           id="expense-amount"
-                           type="number" name="amount" required min="1" step="1"
-                           className="w-full rounded-lg border border-border-light bg-background-light py-2 pl-12 pr-4 text-lg font-semibold text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                           placeholder="0"
-                        />
-                     </div>
-                  </div>
+        {/* Add Expense Modal - Compacted & Flat */}
+        {canCreate && (
+          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="New Expense">
+             <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                   <div>
+                      <label htmlFor="expense-amount" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Amount (RWF) *</label>
+                      <div className="relative">
+                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-text-light/30">RWF</div>
+                         <input 
+                            id="expense-amount"
+                            type="number" name="amount" required min="1" step="1"
+                            className="w-full rounded-2xl border border-border-light bg-surface-light py-3 pl-14 pr-4 text-xl font-black text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+                            placeholder="0"
+                         />
+                      </div>
+                   </div>
 
-                  <div>
-                     <label htmlFor="expense-description" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Description *</label>
-                     <input id="expense-description" type="text" name="description" required placeholder="e.g. Monthly Rent"
-                        className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                     />
-                  </div>
+                   <div>
+                      <label htmlFor="expense-description" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Description *</label>
+                      <input id="expense-description" type="text" name="description" required placeholder="e.g. Monthly Rent"
+                         className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+                      />
+                   </div>
 
-                  <div className="md:col-span-2 space-y-1">
-                     <label htmlFor="expense-date" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Date *</label>
-                     <input id="expense-date" type="date" name="expenseDate" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
-                        className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                     />
-                  </div>
+                   <div className="md:col-span-2">
+                      <label htmlFor="expense-date" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Transaction Date *</label>
+                      <input id="expense-date" type="date" name="expenseDate" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                         className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+                      />
+                   </div>
 
-                  <div className="md:col-span-2 space-y-1">
-                     <label htmlFor="expense-category" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Category *</label>
-                     <select id="expense-category" name="categoryId" required className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark">
-                        <option value="">Select...</option>
-                        {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                     </select>
-                  </div>
+                   <div>
+                      <label htmlFor="expense-category" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Category *</label>
+                      <select id="expense-category" name="categoryId" required className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark outline-none">
+                         <option value="">Select...</option>
+                         {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                   </div>
 
-                  <div className="md:col-span-2 space-y-1">
-                     <label htmlFor="expense-payment-method" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Payment Method</label>
-                     <select id="expense-payment-method" name="paymentMethod" required className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark">
-                        <option value="cash">Cash</option>
-                        <option value="mobile_money">Mobile Money</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="card">Card</option>
-                     </select>
-                  </div>
+                   <div>
+                      <label htmlFor="expense-payment-method" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Payment Method</label>
+                      <select id="expense-payment-method" name="paymentMethod" required className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark outline-none">
+                         <option value="cash">Cash</option>
+                         <option value="mobile_money">Mobile Money</option>
+                         <option value="bank_transfer">Bank Transfer</option>
+                         <option value="card">Card</option>
+                      </select>
+                   </div>
 
-                   <div className="md:col-span-2 space-y-1">
-                     <label htmlFor="expense-vendor" className="block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Vendor (Optional)</label>
-                     <input id="expense-vendor" type="text" name="vendorName" placeholder="e.g. Landlord"
-                        className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                     />
-                  </div>
-               </div>
+                    <div className="md:col-span-2">
+                      <label htmlFor="expense-vendor" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Vendor (Optional)</label>
+                      <input id="expense-vendor" type="text" name="vendorName" placeholder="e.g. Landlord"
+                         className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+                      />
+                   </div>
+                </div>
 
-               <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)} className="h-9 px-4 text-sm font-semibold">
-                     Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" disabled={createMutation.isPending} className="h-9 px-4 text-sm font-semibold">
-                     {createMutation.isPending ? 'Saving...' : 'Add Expense'}
-                  </Button>
-               </div>
-            </form>
-         </Modal>
-       )}
+                <div className="flex justify-end gap-3 pt-4">
+                   <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)} className="px-6 text-[10px] font-black uppercase tracking-widest">
+                      Discard
+                   </Button>
+                   <Button type="submit" variant="primary" disabled={createMutation.isPending} className="px-8 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                      {createMutation.isPending ? 'Syncing...' : 'Rollout Expense'}
+                   </Button>
+                </div>
+             </form>
+          </Modal>
+        )}
     </div>
   );
 }
@@ -1209,27 +1224,31 @@ function AccountsTab({ salonId }: { salonId: string }) {
             {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="h-24 rounded-xl border border-border-light/60 bg-background-light/60 animate-pulse dark:border-border-dark/60 dark:bg-background-dark/40" />)}
          </div>
        ) : (
-         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {categories?.map((cat) => (
-               <div key={cat.id} className="group rounded-xl border border-border-light bg-surface-light p-4 transition-all hover:border-primary/40 hover:shadow-md dark:border-border-dark dark:bg-surface-dark">
-                  <div className="mb-3 flex items-start justify-between">
-                     <div className="rounded-lg bg-blue-500/10 p-2 text-blue-500 transition-transform group-hover:scale-105">
-                        <BookOpen className="h-4 w-4" />
-                     </div>
-                     <span className="text-[11px] font-mono text-text-light/50 dark:text-text-dark/50">{cat.code}</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-text-light dark:text-text-dark">{cat.name}</h3>
-                  <p className="text-[11px] text-text-light/50 dark:text-text-dark/50">Expense Category</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+             {categories?.map((cat) => (
+                <div key={cat.id} className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition-all">
+                   <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
+                         <BookOpen className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-[9px] font-mono font-black uppercase text-text-light/30 tracking-tighter bg-text-light/5 px-1.5 py-0.5 rounded">{cat.code}</span>
+                   </div>
+                   <div>
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-1">Expense Category</h3>
+                      <p className="text-sm font-black text-text-light dark:text-text-dark leading-tight">{cat.name}</p>
+                   </div>
                 </div>
              ))}
-             {/* Add New Card */}
+             {/* Add New Card - Refined */}
              <button
                 type="button"
                 onClick={() => setShowCreateCategory(true)}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border-light/70 p-4 text-sm font-medium text-text-light/50 transition-colors hover:text-primary dark:border-border-dark/60 dark:text-text-dark/50 dark:hover:bg-background-dark/40"
-             >
-                <Plus className="h-6 w-6" />
-                <span>Add Category</span>
+                className="group p-4 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border-light/50 hover:border-primary/30 hover:bg-primary/5 transition-all"
+               >
+                <div className="p-2 rounded-full border border-border-light group-hover:bg-primary group-hover:text-white transition-all">
+                   <Plus className="h-5 w-5 text-text-light/40 group-hover:text-white" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-light/30 group-hover:text-primary transition-colors">Rollout Category</span>
              </button>
           </div>
        )}
@@ -1248,70 +1267,53 @@ function AccountsTab({ salonId }: { salonId: string }) {
              if (!code || !name) return;
              createCategoryMutation.mutate({ code, name });
            }}
-           className="space-y-4"
+           className="space-y-5"
          >
-           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
              <div>
                 <label
-                  htmlFor="account-code"
-                 className="mb-2 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60"
-               >
-                 Code
-               </label>
-               <input
-                 id="account-code"
-                 name="code"
-                 type="text"
-                 placeholder="e.g. EXP-NEW"
-                 className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                 required
-               />
+                   htmlFor="account-code"
+                  className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2"
+                >
+                  Code
+                </label>
+                <input
+                  id="account-code"
+                  name="code"
+                  type="text"
+                  placeholder="e.g. EXP-NEW"
+                  className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+                  required
+                />
              </div>
              <div>
                 <label
-                  htmlFor="account-name"
-                 className="mb-2 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60"
-               >
-                 Name
-               </label>
-               <input
-                 id="account-name"
-                 name="name"
-                 type="text"
-                 placeholder="e.g. Insurance"
-                 className="w-full rounded-lg border border-border-light bg-background-light px-4 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                 required
-               />
+                   htmlFor="account-name"
+                  className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2"
+                >
+                  Name
+                </label>
+                <input
+                  id="account-name"
+                  name="name"
+                  type="text"
+                  placeholder="e.g. Insurance"
+                  className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+                  required
+                />
              </div>
            </div>
            
-           <div className="flex justify-end gap-2 pt-4">
-             <Button type="button" variant="secondary" onClick={() => setShowCreateCategory(false)} className="h-9 px-4 text-sm font-semibold">
-               Cancel
+           <div className="flex justify-end gap-3 pt-4">
+             <Button type="button" variant="secondary" onClick={() => setShowCreateCategory(false)} className="px-6 text-[10px] font-black uppercase tracking-widest">
+               Discard
              </Button>
-             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending} className="h-9 px-4 text-sm font-semibold">
-               {createCategoryMutation.isPending ? 'Saving...' : 'Create Category'}
+             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending} className="px-8 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+               {createCategoryMutation.isPending ? 'Syncing...' : 'Rollout Category'}
              </Button>
            </div>
          </form>
        </Modal>
-    </div>
-  );
-}
-
-function JournalsTab() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border-light bg-surface-light p-10 text-center shadow-sm dark:border-border-dark dark:bg-surface-dark">
-       <div className="rounded-full bg-blue-500/10 p-4 text-blue-500">
-          <FileText className="h-7 w-7" />
-       </div>
-       <div className="space-y-2">
-         <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Journal Entries</h3>
-         <p className="max-w-sm text-sm text-text-light/60 dark:text-text-dark/60">
-            Advanced journal entry management is coming soon. You can currently manage entries through the backend API.
-         </p>
-       </div>
-       <Button variant="outline" disabled className="h-9 px-4 text-sm font-semibold">View Journals</Button>
     </div>
   );
 }

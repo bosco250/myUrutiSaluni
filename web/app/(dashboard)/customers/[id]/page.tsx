@@ -29,6 +29,7 @@ import {
   Bell,
   Heart,
   LucideIcon,
+  Eye,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, isPast, isToday, isFuture } from 'date-fns';
@@ -473,203 +474,266 @@ export default function CustomerDetailPage() {
         <div className="p-4">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <div className="space-y-4">
-                {/* Customer Profile Hero */}
-                {/* Customer Profile Card (Redesigned) */}
-                <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
-                  {/* Decorative Cover */}
-                  <div className="h-20 bg-primary/5 relative">
-
-                  </div>
-
-                  <div className="px-5 pb-5 relative">
-                    {/* Avatar & Main Info */}
-                    <div className="flex flex-col md:flex-row gap-5 items-start -mt-9">
-                      <div className="relative">
-                        <div className="h-20 w-20 rounded-2xl bg-surface-light dark:bg-surface-dark p-1 shadow-xl ring-1 ring-black/5 dark:ring-white/5 z-10 relative">
-                          <div className="h-full w-full rounded-xl bg-primary flex items-center justify-center text-white font-black text-2xl">
-                            {customer.fullName.charAt(0).toUpperCase()}
-                          </div>
-                        </div>
-                        {/* Status Indicator */}
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 h-4 w-4 rounded-full border-[2px] border-surface-light dark:border-surface-dark z-20" title="Active Customer" />
+              <div className="space-y-6">
+                {/* Profile Hero & Quick Stats */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Profile Card */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
+                      <div className="h-24 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent relative">
+                         <div className="absolute top-4 right-4 group">
+                           <Button
+                             variant="secondary"
+                             size="sm"
+                             onClick={() => {
+                               setCustomerNotes(customer.preferences?.notes as string || '');
+                               setCustomerTags(customer.preferences?.tags as string[] || []);
+                               setShowNotesModal(true);
+                             }}
+                             className="h-8 bg-white/50 backdrop-blur-md border-white/20 hover:bg-white/80"
+                           >
+                             <Edit className="w-3.5 h-3.5 mr-1.5" />
+                             Edit Profile
+                           </Button>
+                         </div>
                       </div>
 
-                      <div className="flex-1 pt-1 md:pt-11 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <h2 className="text-xl font-black text-text-light dark:text-text-dark tracking-tight">
-                                {customer.fullName}
-                              </h2>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                                customerSegment.color === 'purple' ? 'bg-purple-500/10 text-purple-600 border-purple-200/50' :
-                                customerSegment.color === 'blue' ? 'bg-blue-500/10 text-blue-600 border-blue-200/50' :
-                                customerSegment.color === 'green' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50' :
-                                'bg-gray-100 text-gray-600 border-gray-200'
-                              }`}>
-                                {customerSegment.label}
-                              </span>
+                      <div className="px-6 pb-6 relative">
+                        <div className="flex flex-col md:flex-row gap-6 items-start -mt-10">
+                          <div className="relative">
+                            <div className="h-24 w-24 rounded-2xl bg-surface-light dark:bg-surface-dark p-1 shadow-2xl ring-1 ring-black/5 z-10 relative">
+                              <div className="h-full w-full rounded-xl bg-primary flex items-center justify-center text-white font-black text-3xl">
+                                {customer.fullName.charAt(0).toUpperCase()}
+                              </div>
                             </div>
-                            <p className="text-text-light/50 dark:text-text-dark/50 text-[10px] font-mono ml-0.5">
-                              ID: {customer.id.substring(0, 8)}
-                            </p>
+                            <div className="absolute -bottom-1 -right-1 bg-emerald-500 h-5 w-5 rounded-full border-[3px] border-surface-light dark:border-surface-dark z-20" />
+                          </div>
+
+                          <div className="flex-1 pt-12 md:pt-12">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <div>
+                                <h2 className="text-2xl font-black text-text-light dark:text-text-dark tracking-tight mb-1">
+                                  {customer.fullName}
+                                </h2>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                    customerSegment.color === 'purple' ? 'bg-purple-500/10 text-purple-600 border-purple-200/50' :
+                                    customerSegment.color === 'blue' ? 'bg-blue-500/10 text-blue-600 border-blue-200/50' :
+                                    customerSegment.color === 'green' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50' :
+                                    'bg-gray-100 text-gray-600 border-gray-200'
+                                  }`}>
+                                    {customerSegment.label} Status
+                                  </span>
+                                  <span className="text-text-light/40 dark:text-text-dark/40 text-[10px] font-mono">
+                                    REF: {customer.id.substring(0, 8).toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                              <div className="flex items-center gap-3">
+                                 <div className="h-9 w-9 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center text-text-light/40">
+                                   <Phone className="w-4 h-4" />
+                                 </div>
+                                 <div className="min-w-0">
+                                   <p className="text-[10px] font-bold uppercase text-text-light/40 tracking-wider">Mobile Phone</p>
+                                   <p className="text-sm font-bold text-text-light dark:text-text-dark">{customer.phone}</p>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                 <div className="h-9 w-9 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark flex items-center justify-center text-text-light/40">
+                                   <Mail className="w-4 h-4" />
+                                 </div>
+                                 <div className="min-w-0">
+                                   <p className="text-[10px] font-bold uppercase text-text-light/40 tracking-wider">Email Address</p>
+                                   <p className="text-sm font-bold text-text-light dark:text-text-dark truncate">{customer.email || 'No email provided'}</p>
+                                 </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
+                      </div>
+                    </div>
 
-                        {/* Contact & Info Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group hover:border-primary/30 transition-colors">
-                            <div className="p-1.5 bg-primary/10 text-primary rounded-md group-hover:bg-primary group-hover:text-white transition-colors">
-                              <Phone className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[9px] font-bold uppercase text-text-light/40 dark:text-text-dark/40 tracking-wider mb-0.5">Phone</p>
-                              <p className="font-bold text-xs text-text-light dark:text-text-dark truncate">
-                                {customer.phone}
-                              </p>
-                            </div>
+                    {/* Statistics Grid - Compacted & Flat */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 group hover:border-primary/30 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] uppercase font-black text-text-light/40 tracking-widest">Lifetime Spent</p>
+                          <div className="p-1.5 bg-primary/10 rounded-lg group-hover:bg-primary group-hover:text-white transition-all text-primary">
+                            <DollarSign className="w-3.5 h-3.5" />
                           </div>
+                        </div>
+                        <p className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">
+                          {Math.round(statistics?.totalSpent || 0).toLocaleString()} <span className="text-[10px] font-bold opacity-40">RWF</span>
+                        </p>
+                      </div>
 
-                          {customer.email && (
-                            <div className="flex items-center gap-2.5 p-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group hover:border-blue-500/30 transition-colors">
-                              <div className="p-1.5 bg-blue-500/10 text-blue-600 rounded-md group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                <Mail className="w-3.5 h-3.5" />
+                      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 group hover:border-blue-500/30 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] uppercase font-black text-text-light/40 tracking-widest">Total Visits</p>
+                          <div className="p-1.5 bg-blue-500/10 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-all text-blue-600">
+                            <Activity className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <p className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">
+                          {statistics?.totalVisits || 0} <span className="text-[10px] font-bold opacity-40">Sessions</span>
+                        </p>
+                      </div>
+
+                      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 group hover:border-purple-500/30 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] uppercase font-black text-text-light/40 tracking-widest">Avg Ticket</p>
+                          <div className="p-1.5 bg-purple-500/10 rounded-lg group-hover:bg-purple-500 group-hover:text-white transition-all text-purple-600">
+                            <TrendingUp className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <p className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">
+                          {Math.round(statistics?.averageOrderValue || 0).toLocaleString()} <span className="text-[10px] font-bold opacity-40">RWF</span>
+                        </p>
+                      </div>
+
+                      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 group hover:border-amber-500/30 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[10px] uppercase font-black text-text-light/40 tracking-widest">Loyalty</p>
+                          <div className="p-1.5 bg-amber-500/10 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-all text-amber-600">
+                            <Star className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <p className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">
+                          {customer.loyaltyPoints || 0} <span className="text-[10px] font-bold opacity-40">Points</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Banners & Insights */}
+                  <div className="space-y-4">
+                    {/* Next Appointment Section */}
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
+                      <div className="bg-primary/5 px-5 py-3 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+                         <h3 className="text-[10px] font-black uppercase text-text-light/60 tracking-widest">Next Booking</h3>
+                         <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      </div>
+                      <div className="p-5">
+                        {nextAppointment ? (
+                          <div className="space-y-4">
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary flex-shrink-0">
+                                <Calendar className="w-5 h-5" />
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-[9px] font-bold uppercase text-text-light/40 dark:text-text-dark/40 tracking-wider mb-0.5">Email</p>
-                                <p className="font-bold text-xs text-text-light dark:text-text-dark truncate">
-                                  {customer.email}
+                              <div>
+                                <p className="text-sm font-black text-text-light dark:text-text-dark">{nextAppointment.service?.name}</p>
+                                <p className="text-xs text-text-light/50 dark:text-text-dark/50 font-medium">
+                                  {format(parseISO(nextAppointment.scheduledStart), 'EEEE, MMM d @ h:mm a')}
                                 </p>
                               </div>
                             </div>
-                          )}
-
-                          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group hover:border-purple-500/30 transition-colors">
-                            <div className="p-1.5 bg-purple-500/10 text-purple-600 rounded-md group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                              <Calendar className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[9px] font-bold uppercase text-text-light/40 dark:text-text-dark/40 tracking-wider mb-0.5">Member Since</p>
-                              <p className="font-bold text-xs text-text-light dark:text-text-dark truncate">
-                                {format(parseISO(customer.createdAt), 'MMM yyyy')}
-                              </p>
-                            </div>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="w-full text-xs font-bold h-9"
+                              onClick={() => router.push(`/appointments/${nextAppointment.id}`)}
+                            >
+                              View Details
+                            </Button>
                           </div>
-                        </div>
-
-                        {/* Tags */}
-                        {customerTags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                             {customerTags.map((tag, idx) => (
-                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded bg-transparent border border-border-light dark:border-border-dark text-[10px] font-bold text-text-light/60 dark:text-text-dark/60">
-                                  <Tag className="w-2.5 h-2.5 mr-1 opacity-50" />
-                                  {tag}
-                                </span>
-                             ))}
+                        ) : (
+                          <div className="text-center py-4">
+                             <p className="text-xs text-text-light/40 dark:text-text-dark/40 italic">No upcoming sessions</p>
+                             <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-4 w-full h-9 text-xs font-bold"
+                                onClick={() => router.push(`/appointments?customerId=${customerId}`)}
+                             >
+                               Book Now
+                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Statistics Bar */}
-                    {statistics && (
-                      <div className="mt-5 pt-4 border-t border-border-light dark:border-border-dark grid grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-2">
-                         {/* Total Spent */}
-                         <div className="relative pl-3 border-l-[3px] border-primary/20">
-                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Lifetime Spent</p>
-                            <div className="flex items-baseline gap-1">
-                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
-                                 {Math.round(statistics.totalSpent).toLocaleString()}
-                               </span>
-                               <span className="text-[10px] font-bold text-text-light/40">RWF</span>
-                            </div>
-                         </div>
-
-                         {/* Visits */}
-                         <div className="relative pl-3 border-l-[3px] border-blue-500/20">
-                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Total Visits</p>
-                            <div className="flex items-baseline gap-1">
-                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
-                                 {statistics.totalVisits}
-                               </span>
-                               <span className="text-[10px] font-bold text-text-light/40">Visits</span>
-                            </div>
-                         </div>
-
-                         {/* Avg Order */}
-                         <div className="relative pl-3 border-l-[3px] border-purple-500/20">
-                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Avg. Order</p>
-                            <div className="flex items-baseline gap-1">
-                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
-                                 {Math.round(statistics.averageOrderValue).toLocaleString()}
-                               </span>
-                               <span className="text-[10px] font-bold text-text-light/40">RWF</span>
-                            </div>
-                         </div>
-
-                         {/* Loyalty */}
-                         <div className="relative pl-3 border-l-[3px] border-amber-500/20">
-                            <p className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Loyalty Points</p>
-                            <div className="flex items-baseline gap-1">
-                               <span className="text-xl lg:text-2xl font-black text-text-light dark:text-text-dark tracking-tight">
-                                 {customer.loyaltyPoints || 0}
-                               </span>
-                               <span className="text-[10px] font-bold text-text-light/40">Pts</span>
-                            </div>
-                         </div>
+                    {/* Preferred Services Card */}
+                    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
+                      <div className="bg-background-light dark:bg-background-dark px-5 py-3 border-b border-border-light dark:border-border-dark">
+                         <h3 className="text-[10px] font-black uppercase text-text-light/60 tracking-widest">Top Services</h3>
                       </div>
-                    )}
+                      <div className="p-5">
+                         {preferredServices.length > 0 ? (
+                           <div className="space-y-4">
+                             {preferredServices.map((service, idx) => {
+                               const maxCount = preferredServices[0].count;
+                               const percentage = (service.count / maxCount) * 100;
+                               return (
+                                 <div key={idx} className="space-y-1.5">
+                                   <div className="flex items-center justify-between">
+                                      <p className="text-xs font-bold text-text-light dark:text-text-dark truncate mr-2">{service.name}</p>
+                                      <span className="text-[10px] font-black text-text-light/40">{service.count}x</span>
+                                   </div>
+                                   <div className="h-1.5 w-full bg-background-light dark:bg-background-dark rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-primary rounded-full transition-all duration-1000"
+                                        style={{ width: `${percentage}%` }}
+                                      />
+                                   </div>
+                                 </div>
+                               );
+                             })}
+                           </div>
+                         ) : (
+                           <p className="text-xs text-text-light/40 dark:text-text-dark/40 italic text-center py-4">No service history yet</p>
+                         )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Next Appointment Banner */}
-                {nextAppointment && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                {/* Second Row: Notes & Preferences */}
+                <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
+                   <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
+                      <div className="flex items-center gap-2">
+                         <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600">
+                            <FileText className="w-4 h-4" />
+                         </div>
+                         <h3 className="text-sm font-black text-text-light dark:text-text-dark tracking-tight">Customer Notes & Preferences</h3>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-text-light dark:text-text-dark">
-                          Next Appointment
-                        </p>
-                        <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                          {format(parseISO(nextAppointment.scheduledStart), 'EEEE, MMM d @ h:mm a')} • {nextAppointment.service?.name}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => router.push(`/appointments/${nextAppointment.id}`)}
-                    >
-                      View
-                    </Button>
-                  </div>
-                )}
-
-                {/* Preferred Services */}
-                {preferredServices.length > 0 && (
-                  <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
-                      <Heart className="w-4 h-4 text-primary" />
-                      Preferred Services
-                    </h3>
-                    <div className="space-y-2">
-                      {preferredServices.map((service, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-sm text-text-light dark:text-text-dark">
-                            {service.name}
-                          </span>
-                          <span className="text-xs font-semibold text-text-light/60 dark:text-text-dark/60">
-                            {service.count} times
-                          </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowNotesModal(true)}
+                        className="h-8 text-[10px] font-bold uppercase tracking-wider"
+                      >
+                        Capture Note
+                      </Button>
+                   </div>
+                   <div className="p-6">
+                      {customerNotes ? (
+                        <div className="bg-background-light/50 dark:bg-background-dark/50 border border-border-light/50 dark:border-border-dark/50 rounded-xl p-4">
+                           <p className="text-sm text-text-light/70 dark:text-text-dark/70 leading-relaxed italic">
+                             "{customerNotes}"
+                           </p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center bg-background-light/30 dark:bg-background-dark/30 rounded-xl border border-dashed border-border-light dark:border-border-dark">
+                           <FileText className="w-8 h-8 text-text-light/10 mb-2" />
+                           <p className="text-xs text-text-light/40 dark:text-text-dark/40">No internal notes added yet for this customer.</p>
+                        </div>
+                      )}
+
+                      {customerTags.length > 0 && (
+                        <div className="mt-6 flex flex-wrap gap-2">
+                           {customerTags.map((tag, idx) => (
+                             <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-lg bg-primary/5 border border-primary/10 text-[10px] font-bold text-primary uppercase tracking-wide">
+                                <Tag className="w-3 h-3 mr-1.5 opacity-50" />
+                                {tag}
+                             </span>
+                           ))}
+                        </div>
+                      )}
+                   </div>
+                </div>
               </div>
             )}
 
@@ -681,72 +745,93 @@ export default function CustomerDetailPage() {
                     <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : sales.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-8 max-w-lg mx-auto border border-dashed border-border-light dark:border-border-dark rounded-xl bg-surface-light/50 dark:bg-surface-dark/50">
                     <ShoppingBag className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
                       No purchases found
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">
+                      New transactions will appear here after checkout
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {sales.map((sale) => (
-                      <div
-                        key={sale.id}
-                        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="p-1.5 bg-purple-500/10 rounded-lg">
-                                <Building2 className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                              </div>
-                              <span className="text-sm font-bold text-text-light dark:text-text-dark">
-                                {sale.salon?.name || 'Salon'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                              {format(parseISO(sale.createdAt), 'MMM d, yyyy h:mm a')}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xl font-bold text-text-light dark:text-text-dark">
-                              {sale.currency} {sale.totalAmount.toLocaleString()}
-                            </p>
-                            <span
-                              className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${
-                                sale.status === 'completed'
-                                  ? 'bg-success/10 text-success'
-                                  : 'bg-warning/10 text-warning'
-                              }`}
-                            >
-                              {sale.status}
-                            </span>
-                          </div>
-                        </div>
-                        {sale.items && sale.items.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
-                            <p className="text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-2">
+                  <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+                          <tr>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Date
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Salon
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                               Items
-                            </p>
-                            <div className="space-y-2">
-                              {sale.items.map((item, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between text-sm"
-                                >
-                                  <span className="text-text-light/60 dark:text-text-dark/60">
-                                    {item.service?.name || item.product?.name} × {item.quantity}
-                                  </span>
-                                  <span className="font-bold text-text-light dark:text-text-dark">
-                                    {sale.currency} {item.lineTotal.toLocaleString()}
-                                  </span>
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Payment
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Amount
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                          {sales.map((sale) => (
+                            <tr 
+                              key={sale.id}
+                              className="hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors"
+                            >
+                              <td className="px-4 py-3 text-text-light/80 dark:text-text-dark/80 font-medium">
+                                {format(parseISO(sale.createdAt), 'MMM d, yyyy')}
+                                <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 mt-0.5 font-normal">
+                                  {format(parseISO(sale.createdAt), 'h:mm a')}
+                                </p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5 text-text-light dark:text-text-dark">
+                                  <Building2 className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+                                  {sale.salon?.name || 'Salon'}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="max-w-[180px]">
+                                  <p className="text-text-light/70 dark:text-text-dark/70 truncate">
+                                    {(sale.items || []).map(i => i.service?.name || i.product?.name).join(', ') || '-'}
+                                  </p>
+                                  {(sale.items?.length || 0) > 1 && (
+                                    <p className="text-[9px] text-primary font-bold uppercase mt-0.5">
+                                      +{sale.items!.length - 1} more items
+                                    </p>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase">
+                                  {sale.paymentMethod.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-bold text-text-light dark:text-text-dark">
+                                {sale.currency} {sale.totalAmount.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${
+                                  sale.status === 'completed'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                }`}>
+                                  {sale.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -760,86 +845,110 @@ export default function CustomerDetailPage() {
                     <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : !appointments || appointments.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-8 max-w-lg mx-auto border border-dashed border-border-light dark:border-border-dark rounded-xl bg-surface-light/50 dark:bg-surface-dark/50">
                     <Calendar className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
                       No appointments found
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1">
+                      Schedule a new appointment to see history here
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {appointments.map((appointment) => {
-                      const aptDate = parseISO(appointment.scheduledStart);
-                      const isPastApt = isPast(aptDate);
-                      const isTodayApt = isToday(aptDate);
-                      const isFutureApt = isFuture(aptDate);
+                  <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+                          <tr>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Service Details
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Salon
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Date & Time
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                              Status
+                            </th>
+                            <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
+                              Notes
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                          {appointments.map((appointment) => {
+                             const aptDate = parseISO(appointment.scheduledStart);
+                             const isPastApt = isPast(aptDate);
+                             const isTodayApt = isToday(aptDate);
+                             const isFutureApt = isFuture(aptDate);
 
-                      return (
-                        <div
-                          key={appointment.id}
-                          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                                  <Package className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <span className="text-sm font-bold text-text-light dark:text-text-dark">
-                                  {appointment.service?.name || 'Service'}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-light/60 dark:text-text-dark/60">
-                                <div className="flex items-center gap-1">
-                                  <Building2 className="w-3 h-3" />
-                                  {appointment.salon?.name || 'Salon'}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {format(aptDate, 'MMM d, yyyy h:mm a')}
-                                </div>
-                              </div>
-                              {appointment.notes && (
-                                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
-                                  {appointment.notes}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-end gap-1.5">
-                              <span
-                                className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${
-                                  appointment.status === 'completed'
-                                    ? 'bg-success/10 text-success'
-                                    : appointment.status === 'cancelled' ||
-                                        appointment.status === 'no_show'
-                                      ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-                                      : appointment.status === 'confirmed'
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'bg-warning/10 text-warning'
-                                }`}
+                             return (
+                              <tr 
+                                key={appointment.id}
+                                className="hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors"
                               >
-                                {appointment.status}
-                              </span>
-                              {isTodayApt && (
-                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary rounded-full">
-                                  Today
-                                </span>
-                              )}
-                              {isFutureApt && (
-                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-success/10 text-success rounded-full">
-                                  Upcoming
-                                </span>
-                              )}
-                              {isPastApt && appointment.status !== 'completed' && (
-                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-text-light/10 text-text-light/60 dark:text-text-dark/60 rounded-full">
-                                  Past
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                      <Package className="w-3.5 h-3.5" />
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-text-light dark:text-text-dark">
+                                        {appointment.service?.name || 'Service'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-text-light dark:text-text-dark">
+                                  <div className="flex items-center gap-1.5">
+                                    <Building2 className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+                                    {appointment.salon?.name || 'Salon'}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-text-light/80 dark:text-text-dark/80 font-medium">
+                                  {format(aptDate, 'MMM d, yyyy h:mm a')}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                     <span
+                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${
+                                          appointment.status === 'completed'
+                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                            : appointment.status === 'cancelled' || appointment.status === 'no_show'
+                                              ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                              : appointment.status === 'confirmed'
+                                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                        }`}
+                                      >
+                                        {appointment.status.replace('_', ' ')}
+                                      </span>
+                                      {isTodayApt && (
+                                        <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-primary/10 text-primary border border-primary/20">
+                                          Today
+                                        </span>
+                                      )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-right max-w-[200px]">
+                                  {appointment.notes ? (
+                                    <p className="text-text-light/60 dark:text-text-dark/60 truncate" title={appointment.notes}>
+                                      {appointment.notes}
+                                    </p>
+                                  ) : (
+                                    <span className="text-text-light/20 dark:text-text-dark/20 text-[10px] italic">
+                                      -
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                             );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -848,13 +957,13 @@ export default function CustomerDetailPage() {
             {/* Style References Tab */}
             {activeTab === 'references' && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center justify-between pb-2">
                   <div>
-                    <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
-                      Styling References
+                    <h3 className="text-sm font-bold text-text-light dark:text-text-dark">
+                      Style Gallery
                     </h3>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                      Visual history of looks the customer loves
+                    <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider font-medium">
+                      Customer inspirations & history
                     </p>
                   </div>
                   <Button
@@ -864,136 +973,115 @@ export default function CustomerDetailPage() {
                       setEditingReference(null);
                       setShowReferenceModal(true);
                     }}
-                    className="gap-2"
+                    className="h-8 px-3 text-xs"
                   >
-                    <Plus className="w-4 h-4" />
-                    Add Reference
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    Add Look
                   </Button>
                 </div>
 
                 {referencesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="flex items-center justify-center py-12">
+                     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : styleReferences.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-10 max-w-lg mx-auto border border-dashed border-border-light dark:border-border-dark rounded-xl bg-surface-light/50 dark:bg-surface-dark/50">
                     <ImageIcon className="w-10 h-10 text-text-light/20 dark:text-text-dark/20 mx-auto mb-3" />
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-4">
-                      No styling references yet
+                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">
+                      No style references yet
+                    </p>
+                    <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-1 mb-4">
+                      Upload photos to build a visual style history
                     </p>
                     <Button
-                      variant="primary"
-                      className="gap-2 mx-auto"
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         setEditingReference(null);
                         setShowReferenceModal(true);
                       }}
+                       className="mx-auto h-8"
                     >
-                      <Plus className="w-4 h-4" />
-                      Add Reference
+                      <Plus className="w-3.5 h-3.5 mr-1.5" />
+                      Upload First Look
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {styleReferences.map((reference) => (
                       <div
                         key={reference.id}
-                        className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden hover:shadow-lg transition-all"
+                        className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden hover:border-primary/50 transition-all shadow-sm flex flex-col"
                       >
-                        <div className="relative h-48 bg-surface-light dark:bg-surface-dark">
+                        {/* Image Container */}
+                        <div className="relative aspect-[4/5] bg-background-light dark:bg-background-dark overflow-hidden">
                           <Image
                             src={reference.imageUrl}
                             alt={reference.title}
                             fill
-                            sizes="(max-width: 768px) 100vw, 33vw"
-                            className="object-cover"
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                             unoptimized
                           />
-                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/70 text-white">
-                            {reference.sharedWithEmployees ? 'Shared' : 'Private'}
+                          
+                          {/* Top Overlays */}
+                          <div className="absolute top-2 left-2 flex gap-1">
+                             <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide backdrop-blur-md ${
+                               reference.sharedWithEmployees 
+                               ? 'bg-emerald-500/80 text-white' 
+                               : 'bg-black/60 text-white'
+                             }`}>
+                               {reference.sharedWithEmployees ? 'Shared' : 'Private'}
+                             </div>
+                          </div>
+
+                          {/* Action Overlay (Visible on Hover) */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                             <button
+                               onClick={() => {
+                                 setEditingReference(reference);
+                                 setShowReferenceModal(true);
+                               }}
+                               className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-md transition-colors"
+                               title="Edit"
+                             >
+                                <Edit className="w-4 h-4" />
+                             </button>
+                             <button
+                                onClick={() => {
+                                  if (confirm('Delete this look?')) deleteReferenceMutation.mutate(reference.id);
+                                }}
+                                className="p-2 bg-red-500/60 hover:bg-red-500/80 text-white rounded-full backdrop-blur-md transition-colors"
+                                title="Delete"
+                             >
+                                <Trash2 className="w-4 h-4" />
+                             </button>
                           </div>
                         </div>
-                        <div className="p-4 space-y-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <h4 className="text-sm font-bold text-text-light dark:text-text-dark">
-                                {reference.title}
-                              </h4>
-                              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60">
-                                {format(parseISO(reference.createdAt), 'MMM d, yyyy')}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() =>
-                                  toggleShareMutation.mutate({
-                                    id: reference.id,
-                                    shared: !reference.sharedWithEmployees,
-                                  })
-                                }
-                                className={`p-1.5 rounded-lg border transition-all ${
-                                  reference.sharedWithEmployees
-                                    ? 'border-success/20 bg-success/10 text-success'
-                                    : 'border-border-light dark:border-border-dark text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark'
-                                }`}
-                                title={
-                                  reference.sharedWithEmployees
-                                    ? 'Hide from salon team'
-                                    : 'Share with salon team'
-                                }
-                              >
-                                {reference.sharedWithEmployees ? (
-                                  <ShieldCheck className="w-3.5 h-3.5" />
-                                ) : (
-                                  <ShieldOff className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingReference(reference);
-                                  setShowReferenceModal(true);
-                                }}
-                                className="p-1.5 rounded-lg border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-all"
-                                title="Edit reference"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (
-                                    confirm('Delete this reference? This action cannot be undone.')
-                                  ) {
-                                    deleteReferenceMutation.mutate(reference.id);
-                                  }
-                                }}
-                                className="p-1.5 rounded-lg border border-border-light dark:border-border-dark text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all"
-                                title="Delete reference"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+
+                        {/* Card Content */}
+                        <div className="p-3 flex-1 flex flex-col justify-between">
+                          <div>
+                             <h4 className="text-xs font-bold text-text-light dark:text-text-dark truncate mb-0.5">
+                               {reference.title}
+                             </h4>
+                             <p className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                               {format(parseISO(reference.createdAt), 'MMM d, yyyy')}
+                             </p>
                           </div>
-                          {reference.description && (
-                            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                              {reference.description}
-                            </p>
-                          )}
+
                           {reference.tags && reference.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {reference.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-semibold"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {reference.appointment && (
-                            <div className="text-[10px] text-text-light/60 dark:text-text-dark/60 border-t border-border-light dark:border-border-dark pt-2">
-                              From {reference.appointment.service?.name || 'appointment'} at{' '}
-                              {reference.appointment.salon?.name || 'salon'}
+                            <div className="mt-2 flex flex-wrap gap-1">
+                               {reference.tags.slice(0, 2).map(tag => (
+                                 <span key={tag} className="px-1.5 py-0.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded text-[9px] font-medium text-text-light/60 dark:text-text-dark/60">
+                                   #{tag}
+                                 </span>
+                               ))}
+                               {reference.tags.length > 2 && (
+                                 <span className="text-[9px] text-text-light/40 dark:text-text-dark/40 font-bold ml-0.5">
+                                   +{reference.tags.length - 2}
+                                 </span>
+                               )}
                             </div>
                           )}
                         </div>
@@ -1235,165 +1323,217 @@ function StyleReferenceModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-xl w-full max-w-2xl overflow-hidden border border-border-light dark:border-border-dark">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-light dark:border-border-dark">
-          <div>
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
-              {reference ? 'Edit Styling Reference' : 'Add Styling Reference'}
-            </h2>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-              Upload inspiration photos or finished looks
-            </p>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-border-light dark:border-border-dark flex flex-col md:flex-row max-h-[90vh]">
+        
+        {/* Left Side: Visual Preview / Upload Zone */}
+        <div className="w-full md:w-1/2 bg-background-light dark:bg-background-dark border-r border-border-light dark:border-border-dark relative flex flex-col">
+          <div className="absolute top-4 left-4 z-10">
+             <div className="px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
+                Visual Preview
+             </div>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="style-ref-title"
-                className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
-              >
-                Title *
-              </label>
-              <input
-                id="style-ref-title"
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
-              />
-            </div>
-            <div>
-              <p className="block text-sm font-bold text-text-light dark:text-text-dark mb-2">
-                Image *
-              </p>
-              <div className="flex gap-2 mb-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={uploadMethod === 'file' ? 'primary' : 'secondary'}
-                  onClick={() => setUploadMethod('file')}
-                >
-                  Upload File
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={uploadMethod === 'url' ? 'primary' : 'secondary'}
-                  onClick={() => setUploadMethod('url')}
-                >
-                  Use URL
-                </Button>
+
+          <div className="flex-1 flex items-center justify-center p-6 min-h-[300px]">
+            {previewUrl ? (
+              <div className="relative w-full h-full rounded-xl overflow-hidden shadow-lg border border-border-light dark:border-border-dark group">
+                <Image
+                  src={previewUrl}
+                  alt="Preview"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                   <Button 
+                    type="button" 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => {
+                        setPreviewUrl(null);
+                        setSelectedFile(null);
+                        if (uploadMethod === 'url') setFormData({...formData, imageUrl: ''});
+                    }}
+                    className="bg-white/20 text-white backdrop-blur-md border-white/20 hover:bg-white/40"
+                   >
+                     Change Image
+                   </Button>
+                </div>
               </div>
-              {uploadMethod === 'file' ? (
-                <div>
-                  <input
+            ) : (
+              <label 
+                htmlFor="style-ref-file"
+                className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-border-light dark:border-border-dark rounded-2xl hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+              >
+                 <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <ImageIcon className="w-8 h-8 text-primary" />
+                 </div>
+                 <p className="text-sm font-bold text-text-light dark:text-text-dark">Select Look Photo</p>
+                 <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">PNG, JPG up to 10MB</p>
+                 <input
                     id="style-ref-file"
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
-                    className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    className="hidden"
                   />
-                  {previewUrl && (
-                    <div className="mt-3">
-                      <Image
-                        src={previewUrl}
-                        alt="Preview"
-                        width={900}
-                        height={360}
-                        className="max-w-full h-48 object-cover rounded-lg border border-border-light dark:border-border-dark"
-                        unoptimized
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
+              </label>
+            )}
+          </div>
+
+          {/* Upload Method Switcher */}
+          <div className="p-4 bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center gap-2">
+             <button 
+              type="button"
+              onClick={() => setUploadMethod('file')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${uploadMethod === 'file' ? 'bg-primary text-white shadow-md' : 'text-text-light/50 hover:text-text-light hover:bg-background-light dark:hover:bg-background-dark'}`}
+             >
+                Local Upload
+             </button>
+             <button 
+              type="button"
+              onClick={() => setUploadMethod('url')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${uploadMethod === 'url' ? 'bg-primary text-white shadow-md' : 'text-text-light/50 hover:text-text-light hover:bg-background-light dark:hover:bg-background-dark'}`}
+             >
+                External URL
+             </button>
+          </div>
+        </div>
+
+        {/* Right Side: Metadata Form */}
+        <div className="w-full md:w-1/2 flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark">
+            <div>
+              <h2 className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">
+                {reference ? 'Refine Look' : 'New Style Entry'}
+              </h2>
+              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 uppercase font-bold tracking-wider">
+                Capturing customer inspiration
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0 rounded-full bg-background-light dark:bg-background-dark border-none"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+            {uploadMethod === 'url' && !previewUrl && (
+              <div className="animate-in fade-in duration-300">
+                <label className="block text-[10px] font-black uppercase text-text-light/40 dark:text-text-dark/40 tracking-widest mb-1.5 ml-1">
+                  Image URL
+                </label>
                 <input
-                  id="style-ref-url"
                   type="url"
-                  required={uploadMethod === 'url'}
+                  required
                   value={formData.imageUrl}
                   onChange={(e) => {
                     setFormData({ ...formData, imageUrl: e.target.value });
                     setPreviewUrl(e.target.value);
                   }}
-                  placeholder="https://example.com/photo.jpg"
-                  className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                 />
-              )}
-            </div>
-          </div>
-          <div>
-            <label
-              htmlFor="style-ref-description"
-              className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
-            >
-              Description
-            </label>
-            <textarea
-              id="style-ref-description"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="style-ref-tags"
-              className="block text-sm font-bold text-text-light dark:text-text-dark mb-2"
-            >
-              Tags (separate with commas)
-            </label>
-            <input
-              id="style-ref-tags"
-              type="text"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              placeholder="braids, balayage, formal"
-              className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm"
-            />
-          </div>
-          <div className="flex items-start gap-3 p-3 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark">
-            <input
-              id="style-ref-shared"
-              type="checkbox"
-              checked={formData.sharedWithEmployees}
-              onChange={(e) => setFormData({ ...formData, sharedWithEmployees: e.target.checked })}
-              className="mt-0.5 h-4 w-4 text-primary rounded border-border-light dark:border-border-dark focus:ring-primary/50"
-            />
-            <div className="min-w-0">
-              <label
-                htmlFor="style-ref-shared"
-                className="text-sm font-bold text-text-light dark:text-text-dark"
-              >
-                Share with salon team
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[10px] font-black uppercase text-text-light/40 dark:text-text-dark/40 tracking-widest mb-1.5 ml-1">
+                Entry Title
               </label>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                Allow stylists to view this reference
-              </p>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Summer Balayage Flow"
+                className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none font-bold"
+              />
             </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+
+            <div className="grid grid-cols-1 gap-5">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-text-light/40 dark:text-text-dark/40 tracking-widest mb-1.5 ml-1">
+                  Category Tags
+                </label>
+                <div className="relative">
+                  <Tag className="absolute left-3.5 top-3 w-3.5 h-3.5 text-text-light/30" />
+                  <input
+                    type="text"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="braids, formal, winter, bold"
+                    className="w-full pl-10 pr-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-xs focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase text-text-light/40 dark:text-text-dark/40 tracking-widest mb-1.5 ml-1">
+                Technique Notes
+              </label>
+              <textarea
+                rows={3}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe formulas or specific requests..."
+                className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+              />
+            </div>
+
+            {/* Sharing Toggle Section */}
+            <div 
+              className={`p-4 rounded-xl border transition-all flex items-start gap-3 cursor-pointer ${
+                formData.sharedWithEmployees 
+                  ? 'border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10' 
+                  : 'border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 opacity-60'
+              }`}
+              onClick={() => setFormData({...formData, sharedWithEmployees: !formData.sharedWithEmployees})}
+            >
+              <div className={`mt-0.5 h-5 w-5 rounded-md border flex items-center justify-center transition-all ${
+                formData.sharedWithEmployees 
+                  ? 'bg-emerald-500 border-emerald-500 text-white' 
+                  : 'bg-transparent border-border-light dark:border-border-dark'
+              }`}>
+                {formData.sharedWithEmployees && <ShieldCheck className="w-3.5 h-3.5" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-text-light dark:text-text-dark">Share with salon team</p>
+                <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Allow other stylists to view this look for coordination</p>
+              </div>
+            </div>
+          </form>
+
+          {/* Footer Actions */}
+          <div className="px-6 py-4 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark flex items-center justify-end gap-3">
+            <Button 
+                type="button" 
+                variant="secondary" 
+                size="sm" 
+                onClick={onClose}
+                className="px-6 h-9 text-xs font-bold"
+            >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="sm" loading={loading} loadingText="Saving...">
-              {reference ? 'Update' : 'Save'}
+            <Button 
+                type="submit" 
+                variant="primary" 
+                size="lg" 
+                loading={loading} 
+                loadingText="Saving Look..."
+                onClick={(e) => { e.preventDefault(); handleSubmit(e); }}
+                className="px-8 h-9 shadow-lg shadow-primary/20 text-xs font-bold"
+            >
+              {reference ? 'Update Entry' : 'Create Entry'}
             </Button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

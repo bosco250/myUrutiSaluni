@@ -10,16 +10,18 @@ import {
   Search,
   Filter,
   DollarSign,
-  Percent,
   XCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { canViewAllSalons } from '@/lib/permissions';
+import { useToast } from '@/components/ui/Toast';
 
 interface Product {
   id: string;
@@ -58,6 +60,8 @@ function InventoryContent() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'inventory' | 'non-inventory'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const [selectedSalonId, setSelectedSalonId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -161,6 +165,10 @@ function InventoryContent() {
       queryClient.invalidateQueries({ queryKey: productsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-products'] });
+      useToast().success('Product deleted successfully');
+    },
+    onError: () => {
+      useToast().error('Failed to delete product');
     },
   });
 
@@ -181,13 +189,27 @@ function InventoryContent() {
     });
   }, [products, searchQuery, typeFilter]);
 
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, typeFilter]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+
   const stats = useMemo(() => {
     const total = products.length;
     const inventoryItems = products.filter((p) => p.isInventoryItem).length;
     const nonInventoryItems = products.filter((p) => !p.isInventoryItem).length;
+    
+    // Calculate average only for items with a price value
+    const pricedProducts = products.filter(p => (Number(p.unitPrice) || 0) > 0);
     const avgPrice =
-      products.length > 0
-        ? products.reduce((sum, p) => sum + (p.unitPrice || 0), 0) / products.length
+      pricedProducts.length > 0
+        ? pricedProducts.reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0) / pricedProducts.length
         : 0;
 
     return { total, inventoryItems, nonInventoryItems, avgPrice };
@@ -280,113 +302,98 @@ function InventoryContent() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                Total Products
-              </p>
-              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                {stats.total}
-              </p>
-            </div>
-            <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
-              <Package className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+      {/* Stats Cards - Compacted & Flat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {/* Total Products */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-indigo-600 dark:text-indigo-400">Total Products</p>
+            <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Package className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.total}</p>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-primary/10 to-blue-500/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                Inventory Items
-              </p>
-              <p className="text-2xl font-black text-primary mt-1">{stats.inventoryItems}</p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-primary to-primary-dark rounded-lg">
-              <Package className="w-4 h-4 text-white" />
+        {/* Inventory Items */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Inventory Items</p>
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Package className="w-3 h-3 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.inventoryItems}</p>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-gray-500/10 to-slate-500/10 border border-gray-500/20 dark:border-gray-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                Non-Inventory
-              </p>
-              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                {stats.nonInventoryItems}
-              </p>
-            </div>
-            <div className="p-2 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
-              <Filter className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+        {/* Non-Inventory */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-800/50 rounded-xl p-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-slate-600 dark:text-slate-400">Non-Inventory</p>
+            <div className="p-1 bg-slate-100 dark:bg-slate-800/50 rounded-md group-hover:scale-110 transition-transform">
+              <Filter className="w-3 h-3 text-slate-600 dark:text-slate-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.nonInventoryItems}</p>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                Avg. Price
-              </p>
-              <p className="text-2xl font-black text-text-light dark:text-text-dark mt-1">
-                RWF {Math.round(stats.avgPrice).toLocaleString()}
-              </p>
-            </div>
-            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
-              <DollarSign className="w-4 h-4 text-white" />
+        {/* Avg Price */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Avg. Price</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">
+            RWF {Math.round(stats.avgPrice).toLocaleString()}
+          </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {(salons.length > 1 || canViewAll) && (
-            <div className="relative min-w-[200px]">
-              <select
-                value={selectedSalonId}
-                onChange={(e) => setSelectedSalonId(e.target.value)}
-                className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
-              >
-                <option value="">{canViewAll ? 'All Salons' : 'Select Salon'}</option>
-                {salons.map((salon) => (
-                  <option key={salon.id} value={salon.id}>
-                    {salon.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-            <input
-              type="text"
-              placeholder="Search products by name, SKU, or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-            />
-          </div>
-          <div className="relative min-w-[140px]">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+      <div className="flex flex-col sm:flex-row gap-2">
+        {(salons.length > 1 || canViewAll) && (
+          <div className="relative min-w-[200px]">
             <select
-              value={typeFilter}
-              onChange={(e) =>
-                setTypeFilter(e.target.value as 'all' | 'inventory' | 'non-inventory')
-              }
-              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+              value={selectedSalonId}
+              onChange={(e) => setSelectedSalonId(e.target.value)}
+              className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary hover:border-primary/50 transition-colors appearance-none cursor-pointer"
             >
-              <option value="all">All Types</option>
-              <option value="inventory">Inventory Items</option>
-              <option value="non-inventory">Non-Inventory</option>
+              <option value="">{canViewAll ? 'All Salons' : 'Select Salon'}</option>
+              {salons.map((salon) => (
+                <option key={salon.id} value={salon.id}>
+                  {salon.name}
+                </option>
+              ))}
             </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
           </div>
+        )}
+        <div className="flex-1 relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-9 pl-8 pr-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary hover:border-primary/50 transition-colors"
+          />
+        </div>
+        <div className="relative min-w-[150px]">
+          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+          <select
+            value={typeFilter}
+            onChange={(e) =>
+              setTypeFilter(e.target.value as 'all' | 'inventory' | 'non-inventory')
+            }
+            className="w-full h-9 pl-8 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary hover:border-primary/50 transition-colors appearance-none cursor-pointer"
+          >
+            <option value="all">All Types</option>
+            <option value="inventory">Inventory Items</option>
+            <option value="non-inventory">Non-Inventory</option>
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
         </div>
       </div>
 
@@ -420,94 +427,89 @@ function InventoryContent() {
       ) : (
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-light dark:divide-border-dark">
-              <thead className="bg-surface-accent-light dark:bg-surface-accent-dark">
+            <table className="w-full text-xs text-left">
+              <thead className="border-b border-border-light dark:border-border-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     SKU
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Product Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Unit Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Tax Rate
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Type
                   </th>
                   {(salons.length > 1 || canViewAll) && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                       Salon
                     </th>
                   )}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
-                {filteredProducts.map((product) => (
+              <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                {paginatedProducts.map((product) => (
                   <tr
                     key={product.id}
-                    className="hover:bg-surface-accent-light dark:hover:bg-surface-accent-dark transition"
+                    className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-light dark:text-text-dark">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-text-light dark:text-text-dark">
                       {product.sku || '-'}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-text-light dark:text-text-dark">
+                    <td className="px-3 py-2.5">
+                      <div className="font-medium text-text-light dark:text-text-dark">
                         {product.name}
                       </div>
                       {product.description && (
-                        <div className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                        <div className="text-[10px] text-text-light/40 dark:text-text-dark/40 mt-0.5 max-w-[200px] truncate">
                           {product.description}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-sm font-medium text-text-light dark:text-text-dark">
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <div className="font-medium text-text-light dark:text-text-dark">
                         {product.unitPrice ? product.unitPrice.toLocaleString() : '-'} RWF
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-sm text-text-light dark:text-text-dark">
-                        <Percent className="w-4 h-4" />
-                        {product.taxRate ? `${product.taxRate}%` : '0%'}
-                      </div>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-text-light/60 dark:text-text-dark/60 tabular-nums">
+                      {product.taxRate ? `${product.taxRate}%` : '0%'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        variant={product.isInventoryItem ? 'primary' : 'default'}
-                        size="sm"
-                        dot
-                      >
-                        {product.isInventoryItem ? 'Inventory' : 'Non-Inventory'}
-                      </Badge>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        product.isInventoryItem 
+                          ? 'bg-primary/10 text-primary' 
+                          : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/70 dark:text-text-dark/70'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${product.isInventoryItem ? 'bg-primary' : 'bg-text-light/40 dark:bg-text-dark/40'}`} />
+                        {product.isInventoryItem ? 'Inventory' : 'Service'}
+                      </span>
                     </td>
                     {(salons.length > 1 || canViewAll) && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-light/60 dark:text-text-dark/60">
+                      <td className="px-3 py-2.5 whitespace-nowrap text-text-light/60 dark:text-text-dark/60">
                         {product.salon?.name || '-'}
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
+                    <td className="px-3 py-2.5 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
                           onClick={() => {
                             setEditingProduct(product);
                             setShowModal(true);
                           }}
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          className="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark text-text-light/60 dark:text-text-dark/60 hover:text-primary transition-colors"
                           title="Edit product"
                         >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => {
                             if (
                               confirm(
@@ -517,14 +519,11 @@ function InventoryContent() {
                               deleteMutation.mutate(product.id);
                             }
                           }}
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-danger hover:bg-danger/10"
+                          className="p-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark text-text-light/60 dark:text-text-dark/60 hover:text-danger hover:bg-danger/10 transition-colors"
                           title="Delete product"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -532,8 +531,57 @@ function InventoryContent() {
               </tbody>
             </table>
           </div>
+
+          
+          {/* Pagination */}
+          {filteredProducts.length > ITEMS_PER_PAGE && (
+            <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 py-3">
+              <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
+                <span>
+                  Showing{' '}
+                  <span className="font-medium text-text-light dark:text-text-dark">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                  </span>{' '}
+                  to{' '}
+                  <span className="font-medium text-text-light dark:text-text-dark">
+                    {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)}
+                  </span>{' '}
+                  of{' '}
+                  <span className="font-medium text-text-light dark:text-text-dark">
+                    {filteredProducts.length}
+                  </span>{' '}
+                  results
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 px-2 text-xs"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                  Previous
+                </Button>
+                <div className="text-xs font-medium text-text-light dark:text-text-dark">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-2 text-xs"
+                >
+                  Next
+                  <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+       )}
 
       {showModal && (
         <ProductModal
@@ -567,6 +615,7 @@ function ProductModal({
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  const { success, error: errorToast } = useToast();
   const [formData, setFormData] = useState({
     salonId: product?.salonId || salons[0]?.id || '',
     name: product?.name || '',
@@ -589,12 +638,13 @@ function ProductModal({
     },
     onSuccess: () => {
       onSuccess();
+      success(product ? 'Product updated successfully' : 'Product created successfully');
     },
     onError: (err: unknown) => {
       const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(
-        maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to save product'
-      );
+      const errorMessage = maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to save product';
+      setError(errorMessage);
+      errorToast(errorMessage);
       setLoading(false);
     },
   });
@@ -657,39 +707,42 @@ function ProductModal({
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 md:p-5">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-3">
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-2.5 text-xs font-medium text-red-600 dark:text-red-400">
                 {error}
               </div>
             )}
 
             {/* Salon Selection */}
             {(salons.length > 1 || canViewAllSalons(null)) && (
-              <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <div className="relative">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   Salon *
                 </label>
-                <select
-                  required
-                  value={formData.salonId}
-                  onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                >
-                  <option value="">Select Salon</option>
-                  {salons.map((salon) => (
-                    <option key={salon.id} value={salon.id}>
-                      {salon.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    required
+                    value={formData.salonId}
+                    onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
+                    className="w-full h-9 rounded-lg border border-border-light bg-background-light px-3 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark appearance-none"
+                  >
+                    <option value="">Select Salon</option>
+                    {salons.map((salon) => (
+                      <option key={salon.id} value={salon.id}>
+                        {salon.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+                </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   Product Name *
                 </label>
                 <input
@@ -698,12 +751,12 @@ function ProductModal({
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Professional Shampoo"
-                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                  className="w-full h-9 rounded-lg border border-border-light bg-background-light px-3 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   SKU
                 </label>
                 <input
@@ -711,26 +764,29 @@ function ProductModal({
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                   placeholder="e.g. SHP-001"
-                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                  className="w-full h-9 rounded-lg border border-border-light bg-background-light px-3 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   Type
                 </label>
-                 <select
-                    value={formData.isInventoryItem ? 'inventory' : 'service'}
-                    onChange={(e) => setFormData({...formData, isInventoryItem: e.target.value === 'inventory'})}
-                    className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
-                 >
-                    <option value="inventory">Inventory Item (Track Stock)</option>
-                    <option value="service">Non-Inventory / Service</option>
-                 </select>
+                <div className="relative">
+                  <select
+                     value={formData.isInventoryItem ? 'inventory' : 'service'}
+                     onChange={(e) => setFormData({...formData, isInventoryItem: e.target.value === 'inventory'})}
+                     className="w-full h-9 rounded-lg border border-border-light bg-background-light px-3 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark appearance-none"
+                  >
+                     <option value="inventory">Inventory Item (Track Stock)</option>
+                     <option value="service">Non-Inventory / Service</option>
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+                </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   Unit Price (RWF)
                 </label>
                 <input
@@ -741,12 +797,12 @@ function ProductModal({
                   onChange={(e) =>
                     setFormData({ ...formData, unitPrice: e.target.value })
                   }
-                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                  className="w-full h-9 rounded-lg border border-border-light bg-background-light px-3 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   Tax Rate (%)
                 </label>
                 <input
@@ -758,12 +814,12 @@ function ProductModal({
                   onChange={(e) =>
                     setFormData({ ...formData, taxRate: parseFloat(e.target.value) || 0 })
                   }
-                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
+                  className="w-full h-9 rounded-lg border border-border-light bg-background-light px-3 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+                <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                   Description
                 </label>
                 <textarea
@@ -771,7 +827,7 @@ function ProductModal({
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={2}
                   placeholder="Optional product description..."
-                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-sm text-text-light focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-border-dark dark:bg-background-dark dark:text-text-dark resize-none"
+                  className="w-full rounded-lg border border-border-light bg-background-light px-3 py-2 text-xs text-text-light focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-border-dark dark:bg-background-dark dark:text-text-dark resize-none"
                 />
               </div>
             </div>

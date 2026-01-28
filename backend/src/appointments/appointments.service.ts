@@ -287,6 +287,19 @@ export class AppointmentsService {
     return appointments;
   }
 
+  async findByEmployeeUserId(userId: string): Promise<Appointment[]> {
+    return this.appointmentsRepository
+      .createQueryBuilder('appointment')
+      .leftJoin('appointment.salonEmployee', 'salonEmployee')
+      .where('salonEmployee.user_id = :userId', { userId })
+      .leftJoinAndSelect('appointment.customer', 'customer')
+      .leftJoinAndSelect('appointment.service', 'service')
+      .leftJoinAndSelect('appointment.salon', 'salon')
+      .orderBy('appointment.scheduledStart', 'DESC')
+      .getMany();
+  }
+
+
   async findByCustomerId(customerId: string): Promise<Appointment[]> {
     return this.appointmentsRepository.find({
       where: { customerId },

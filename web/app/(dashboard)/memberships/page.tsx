@@ -107,9 +107,9 @@ const statusConfig = {
   },
   suspended: {
     icon: Ban,
-    color: 'text-text-light/60 dark:text-text-dark/60',
+    color: 'text-gray-900/60 dark:text-text-dark/60',
     bg: 'bg-text-light/5 dark:bg-text-dark/5',
-    border: 'border-border-light dark:border-border-dark',
+    border: 'border-gray-300 dark:border-border-dark',
     label: 'Suspended',
   },
 };
@@ -440,11 +440,11 @@ function MembershipsPageContent() {
         </div>
 
         {/* Stats Skeletons */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3"
+              className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-3"
             >
               <Skeleton variant="text" width={60} height={12} className="mb-1" />
               <Skeleton variant="text" width={40} height={24} />
@@ -469,7 +469,7 @@ function MembershipsPageContent() {
         <>
           {/* No membership application */}
           {!membershipStatus.application && (
-            <div className="mb-6 bg-primary/10 border border-primary/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="mb-3 bg-primary/10 border border-primary/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="text-primary font-semibold text-sm mb-1">Apply for Membership</p>
                 <p className="text-xs text-primary/80">
@@ -484,7 +484,7 @@ function MembershipsPageContent() {
 
           {/* Membership application pending */}
           {membershipStatus.application?.status === 'pending' && (
-            <div className="mb-6 bg-warning/10 border border-warning/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="mb-3 bg-warning/10 border border-warning/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="text-warning font-semibold text-sm mb-1">Application Pending</p>
                 <p className="text-xs text-warning/80">
@@ -504,7 +504,7 @@ function MembershipsPageContent() {
 
           {/* Membership application rejected */}
           {membershipStatus.application?.status === 'rejected' && (
-            <div className="mb-6 bg-danger/10 border border-danger/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="mb-3 bg-danger/10 border border-danger/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="text-danger font-semibold text-sm mb-1">Application Not Approved</p>
                 <p className="text-xs text-danger/80">
@@ -524,10 +524,10 @@ function MembershipsPageContent() {
       <div className="pb-4">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-text-light dark:text-text-dark">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-text-dark">
               Memberships
             </h1>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark text-gray-900/60 dark:text-text-dark/60">
               {filteredMemberships.length}
             </span>
           </div>
@@ -586,17 +586,17 @@ function MembershipsPageContent() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-900/60 dark:text-text-dark/60">
                 Total
               </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
+              <p className="text-xl font-bold text-gray-900 dark:text-text-dark mt-1">
                 {stats?.total || 0}
               </p>
-              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">
+              <p className="text-[10px] text-gray-900/50 dark:text-text-dark/50 mt-0.5">
                 {stats?.activePercentage || 0}% active
               </p>
             </div>
@@ -606,14 +606,14 @@ function MembershipsPageContent() {
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+        <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-900/60 dark:text-text-dark/60">
                 Active
               </p>
               <p className="text-xl font-bold text-success mt-1">{stats?.active || 0}</p>
-              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">
+              <p className="text-[10px] text-gray-900/50 dark:text-text-dark/50 mt-0.5">
                 In good standing
               </p>
             </div>
@@ -623,14 +623,14 @@ function MembershipsPageContent() {
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+        <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-900/60 dark:text-text-dark/60">
                 New
               </p>
               <p className="text-xl font-bold text-primary mt-1">{stats?.new || 0}</p>
-              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Pending</p>
+              <p className="text-[10px] text-gray-900/50 dark:text-text-dark/50 mt-0.5">Pending</p>
             </div>
             <div className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
               <Clock className="w-4 h-4" />
@@ -638,14 +638,14 @@ function MembershipsPageContent() {
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+        <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-900/60 dark:text-text-dark/60">
                 Renewal
               </p>
               <p className="text-xl font-bold text-warning mt-1">{stats?.pendingRenewal || 0}</p>
-              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Follow-up</p>
+              <p className="text-[10px] text-gray-900/50 dark:text-text-dark/50 mt-0.5">Follow-up</p>
             </div>
             <div className="h-8 w-8 rounded-md bg-warning/10 text-warning flex items-center justify-center">
               <AlertCircle className="w-4 h-4" />
@@ -653,14 +653,14 @@ function MembershipsPageContent() {
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+        <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-900/60 dark:text-text-dark/60">
                 Expired
               </p>
               <p className="text-xl font-bold text-error mt-1">{stats?.expired || 0}</p>
-              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">Needs action</p>
+              <p className="text-[10px] text-gray-900/50 dark:text-text-dark/50 mt-0.5">Needs action</p>
             </div>
             <div className="h-8 w-8 rounded-md bg-error/10 text-error flex items-center justify-center">
               <XCircle className="w-4 h-4" />
@@ -668,18 +668,18 @@ function MembershipsPageContent() {
           </div>
         </div>
 
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+        <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-900/60 dark:text-text-dark/60">
                 Suspended
               </p>
-              <p className="text-xl font-bold text-text-light/60 dark:text-text-dark/60 mt-1">
+              <p className="text-xl font-bold text-gray-900/60 dark:text-text-dark/60 mt-1">
                 {stats?.suspended || 0}
               </p>
-              <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mt-0.5">On hold</p>
+              <p className="text-[10px] text-gray-900/50 dark:text-text-dark/50 mt-0.5">On hold</p>
             </div>
-            <div className="h-8 w-8 rounded-md bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-md bg-text-light/10 dark:bg-text-dark/10 text-gray-900/60 dark:text-text-dark/60 flex items-center justify-center">
               <Ban className="w-4 h-4" />
             </div>
           </div>
@@ -687,16 +687,16 @@ function MembershipsPageContent() {
       </div>
 
       {/* Search + Status Pills */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-3">
+      <div className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg p-2">
         <div className="flex flex-col lg:flex-row lg:items-center gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-text-dark/40" />
             <input
               type="text"
               placeholder="Search by salon, owner, or membership #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+              className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg text-sm text-gray-900 dark:text-text-dark placeholder:text-gray-900/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
             />
           </div>
 
@@ -767,7 +767,7 @@ function MembershipsPageContent() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-3.5 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
+                className="w-full px-3.5 py-2 bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg text-sm text-gray-900 dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
               >
                 <option value="all">All Categories</option>
                 {categories.map((cat) => (
@@ -786,16 +786,16 @@ function MembershipsPageContent() {
       {/* Alert for expiring memberships */}
       {(stats?.expiringSoon || 0) > 0 && (
         <div className="bg-warning/10 border border-warning/30 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-start gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-warning/20 rounded-xl flex-shrink-0">
+          <div className="flex items-start gap-2 sm:gap-4">
+            <div className="p-2 sm:p-2 bg-warning/20 rounded-xl flex-shrink-0">
               <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-warning" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base sm:text-lg font-bold text-text-light dark:text-text-dark mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-text-dark mb-1">
                 {stats?.expiringSoon} Membership{(stats?.expiringSoon || 0) !== 1 ? 's' : ''}{' '}
                 Expiring Soon
               </h3>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-3">
+              <p className="text-sm text-gray-900/60 dark:text-text-dark/60 mb-3">
                 {stats?.expiringSoon} membership{(stats?.expiringSoon || 0) !== 1 ? 's' : ''} will
                 expire in the next 30 days. Consider sending renewal reminders.
               </p>
@@ -816,7 +816,7 @@ function MembershipsPageContent() {
       {/* Memberships List */}
       {filteredMemberships.length === 0 ? (
         <EmptyState
-          icon={<Building2 className="w-full h-full text-text-light/20 dark:text-text-dark/20" />}
+          icon={<Building2 className="w-full h-full text-gray-900/20 dark:text-text-dark/20" />}
           title={
             searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
               ? 'No memberships match your filters'
@@ -863,180 +863,236 @@ function MembershipsPageContent() {
               </Button>
             ) : undefined
           }
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl"
+          className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-2xl"
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Queue */}
-          <div className="lg:col-span-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-black text-text-light dark:text-text-dark">
-                  Needs attention
-                </p>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Prioritize renewals, expiries, and new memberships.
-                </p>
-              </div>
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/20">
-                {needsAttentionMemberships.length} items
-              </span>
-            </div>
+        <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800">
+                <tr>
+                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Salon / Owner</th>
+                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Membership #</th>
+                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Status</th>
+                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Payment</th>
+                   <th className="px-3 py-2 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Expiry</th>
+                   <th className="px-3 py-2 text-right text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                {paginatedMemberships.map((membership) => {
+                   const config = statusConfig[membership.status];
+                   const Icon = config.icon;
+                   const pStatus = membership.salon?.owner?.id ? paymentStatuses[membership.salon.owner.id] : undefined;
+                   const isPaid = pStatus?.isComplete;
+                   const paidAmount = pStatus?.totalPaid || 0;
+                   const daysUntilExpiry = membership.endDate
+                     ? Math.ceil((new Date(membership.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                     : null;
 
-            {needsAttentionMemberships.length === 0 ? (
-              <div className="rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 text-center">
-                <div className="h-10 w-10 rounded-xl bg-success/10 text-success flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle className="w-5 h-5" />
-                </div>
-                <p className="text-sm font-semibold text-text-light dark:text-text-dark">
-                  Nothing needs attention right now
-                </p>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Great — renewals and expiries are under control.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {needsAttentionMemberships.map((membership) => (
-                  <MembershipCard
-                    key={membership.id}
-                    membership={membership}
-                    paymentStatus={
-                      membership.salon?.owner?.id
-                        ? paymentStatuses[membership.salon.owner.id]
-                        : undefined
-                    }
-                    onView={() => setSelectedMembership(membership)}
-                    onActivate={() => activateMutation.mutate(membership.id)}
-                    onSuspend={() => requestSuspend(membership.id, membership.membershipNumber)}
-                    onExpire={() => requestExpire(membership.id, membership.membershipNumber)}
-                    onRenew={() => {
-                      setPaymentAmount(MEMBERSHIP_ANNUAL_FEE);
-                      setShowPaymentModal(true);
-                    }}
-                    onDownloadCertificate={
-                      membership.salon?.owner?.id
-                        ? () => handleDownloadCertificate(membership.salon.owner.id)
-                        : undefined
-                    }
-                    onPayNew={() => handlePayNew()}
-                    canManage={canManageUsers()}
-                    isProcessing={
-                      activateMutation.isPending ||
-                      suspendMutation.isPending ||
-                      expireMutation.isPending
-                    }
-                    showQuickActions={showQuickActions === membership.id}
-                    onToggleQuickActions={() =>
-                      setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
-                    }
-                    onError={(message) =>
-                      setActivationError({
-                        isOpen: true,
-                        title: 'Activation Failed',
-                        message,
-                        membershipNumber: membership.membershipNumber,
-                      })
-                    }
-                    currentUserId={user?.id}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+                   return (
+                     <tr key={membership.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group">
+                       <td className="px-3 py-1.5 align-top">
+                          <div className="flex flex-col">
+                             <span className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[180px]">
+                               {membership.salon?.name || 'Unknown Salon'}
+                             </span>
+                             <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Users className="w-3 h-3" />
+                                {membership.salon?.owner?.fullName || 'N/A'}
+                             </div>
+                             {membership.salon?.phone && (
+                               <div className="flex items-center gap-1 text-xs text-gray-400">
+                                  <Phone className="w-3 h-3" />
+                                  {membership.salon.phone}
+                               </div>
+                             )}
+                          </div>
+                       </td>
+                       <td className="px-3 py-1.5 align-top">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                               {membership.membershipNumber}
+                            </span>
+                            <span className="text-xs text-gray-500 capitalize">{membership.category}</span>
+                          </div>
+                       </td>
+                       <td className="px-3 py-1.5 align-top">
+                          <Badge
+                            variant={
+                                config.color === 'text-success'
+                                  ? 'success'
+                                  : config.color === 'text-warning'
+                                    ? 'warning'
+                                    : config.color === 'text-error'
+                                      ? 'danger'
+                                      : 'default'
+                            } 
+                            size="sm"
+                            className="px-1.5 py-0.5 text-[10px] h-auto whitespace-nowrap"
+                          >
+                           <Icon className="w-3 h-3 mr-1" />
+                           {config.label}
+                          </Badge>
+                       </td>
+                       <td className="px-3 py-1.5 align-top">
+                          <div className="flex flex-col">
+                             {pStatus ? (
+                                <>
+                                   <div className={`flex items-center gap-1 text-xs font-semibold ${isPaid ? 'text-green-600' : 'text-red-600'}`}>
+                                      {isPaid ? <CheckCircle className="w-3 h-3" /> : <DollarSign className="w-3 h-3" />}
+                                      {paidAmount.toLocaleString()} RWF
+                                   </div>
+                                </>
+                             ) : (
+                                <span className="text-xs text-gray-400 italic">No info</span>
+                             )}
+                          </div>
+                       </td>
+                       <td className="px-3 py-1.5 align-top">
+                          <div className="flex flex-col">
+                             <span className={`text-xs ${
+                                daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0 ? 'text-amber-600 font-medium' :
+                                daysUntilExpiry !== null && daysUntilExpiry <= 0 ? 'text-red-600 font-medium' : 'text-gray-500'
+                             }`}>
+                                {membership.endDate ? new Date(membership.endDate).toLocaleDateString() : 'N/A'}
+                             </span>
+                             {daysUntilExpiry !== null && (
+                                <span className="text-[10px] text-gray-400">
+                                   {daysUntilExpiry > 0 ? `${daysUntilExpiry} days left` : `${Math.abs(daysUntilExpiry)} days ago`}
+                                </span>
+                             )}
+                          </div>
+                       </td>
+                       <td className="px-3 py-1.5 align-top text-right">
+                          <div className="flex items-center justify-end gap-2 text-right">
+                             {/* OWNER ACTIONS */}
+                             {user?.id === membership.salon?.owner?.id && (
+                                <>
+                                  {/* Owner Pay (New & Unpaid) -> Modal */}
+                                  {membership.status === 'new' && (!isPaid && paidAmount < 1500) && (
+                                     <Button 
+                                       onClick={() => {
+                                         setPaymentAmount(MEMBERSHIP_ANNUAL_FEE);
+                                         setShowPaymentModal(true);
+                                       }} 
+                                       variant="secondary" 
+                                       size="sm" 
+                                       className="h-8 px-3 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 shadow-sm"
+                                     >
+                                       Pay Fee
+                                     </Button>
+                                  )}
+                                  {/* Owner Certificate (Active) */}
+                                  {membership.status === 'active' && (
+                                     <Button 
+                                       onClick={() => handleDownloadCertificate(membership.salon.owner.id)} 
+                                       variant="secondary" 
+                                       size="sm" 
+                                       className="h-8 px-3 text-xs text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 shadow-sm"
+                                     >
+                                        Certificate
+                                     </Button>
+                                  )}
+                                  {/* Owner Renew (Expired/Suspended) -> Modal */}
+                                  {['expired', 'suspended', 'pending_renewal'].includes(membership.status) && (
+                                      <Button 
+                                        onClick={() => {
+                                          setPaymentAmount(MEMBERSHIP_ANNUAL_FEE);
+                                          setShowPaymentModal(true);
+                                        }} 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        className="h-8 px-3 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-sm"
+                                      >
+                                        Renew
+                                      </Button>
+                                  )}
+                                </>
+                             )}
 
-          {/* Archive */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-black text-text-light dark:text-text-dark">All others</p>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Active and suspended memberships.
-                </p>
-              </div>
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                {otherMemberships.length} items
-              </span>
-            </div>
+                             {/* ADMIN ACTIONS */}
+                             {canManageUsers() && (
+                                <>
+                                   {/* Admin Pay (New & Unpaid) -> Redirect (Navigation) */}
+                                   {membership.status === 'new' && (!isPaid && paidAmount < 1500) && (
+                                      <Button 
+                                        onClick={() => router.push(`/memberships/payments?search=${membership.membershipNumber}`)} 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        className="h-8 px-3 text-xs text-red-600 border border-red-200 hover:bg-red-50"
+                                      >
+                                        Pay
+                                      </Button>
+                                   )}
+                                   {/* Admin Activate (New & Paid) */}
+                                   {membership.status === 'new' && (isPaid || paidAmount >= 1500) && (
+                                      <Button onClick={() => activateMutation.mutate(membership.id)} size="sm" className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white border-none shadow-sm">
+                                        Activate
+                                      </Button>
+                                   )}
+                                   {/* Admin Renew (Expired) -> Redirect/Modal? (Usually Admin might pay or renew directly. I'll use Modal for consistency with Owner if pure Renew, or redirect if Payment needed. Original was Renew button. I'll use Modal for Renew as it's easier). */}
+                                   {/* Actually, user said 'navigating to different role'. Admin Pay -> Navigation. Admin Renew -> Navigation? */}
+                                   {['expired', 'suspended', 'pending_renewal'].includes(membership.status) && (
+                                      <Button 
+                                        onClick={() => router.push(`/memberships/payments?search=${membership.membershipNumber}`)} 
+                                        variant="secondary" 
+                                        size="sm" 
+                                        className="h-8 px-3 text-xs text-blue-600 border border-blue-200 hover:bg-blue-50"
+                                      >
+                                        Renew
+                                      </Button>
+                                   )}
+                                </>
+                             )}
 
-            {otherMemberships.length === 0 ? (
-              <div className="rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-6 text-center">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <p className="text-sm font-semibold text-text-light dark:text-text-dark">
-                  No memberships in this section
-                </p>
-                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Try adjusting your filters.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {otherMemberships.map((membership) => (
-                  <MembershipCard
-                    key={membership.id}
-                    membership={membership}
-                    paymentStatus={
-                      membership.salon?.owner?.id
-                        ? paymentStatuses[membership.salon.owner.id]
-                        : undefined
-                    }
-                    onView={() => setSelectedMembership(membership)}
-                    onActivate={() => activateMutation.mutate(membership.id)}
-                    onSuspend={() => requestSuspend(membership.id, membership.membershipNumber)}
-                    onExpire={() => requestExpire(membership.id, membership.membershipNumber)}
-                    onRenew={() => {
-                      setPaymentAmount(MEMBERSHIP_ANNUAL_FEE);
-                      setShowPaymentModal(true);
-                    }}
-                    onDownloadCertificate={
-                      membership.salon?.owner?.id
-                        ? () => handleDownloadCertificate(membership.salon.owner.id)
-                        : undefined
-                    }
-                    onPayNew={() => handlePayNew()}
-                    canManage={canManageUsers()}
-                    isProcessing={
-                      activateMutation.isPending ||
-                      suspendMutation.isPending ||
-                      expireMutation.isPending
-                    }
-                    showQuickActions={showQuickActions === membership.id}
-                    onToggleQuickActions={() =>
-                      setShowQuickActions(showQuickActions === membership.id ? null : membership.id)
-                    }
-                    onError={(message) =>
-                      setActivationError({
-                        isOpen: true,
-                        title: 'Activation Failed',
-                        message,
-                        membershipNumber: membership.membershipNumber,
-                      })
-                    }
-                    currentUserId={user?.id}
-                    onSendReminder={canManageUsers() ? () => sendReminderMutation.mutate(membership.id) : undefined}
-                  />
-                ))}
-              </div>
-            )}
+                             {/* COMMON ACTIONS (View) */}
+                             <Button onClick={() => setSelectedMembership(membership)} variant="secondary" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 border-gray-200" title="View Details">
+                               <Eye className="w-4 h-4" />
+                             </Button>
+
+                             {/* ADMIN MANAGEMENT */}
+                             {canManageUsers() && (
+                                <>
+                                  <Button onClick={() => sendReminderMutation.mutate(membership.id)} variant="secondary" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 border-gray-200" title="Send Reminder">
+                                    <Bell className="w-4 h-4" />
+                                  </Button>
+                                  {membership.status === 'active' && (
+                                      <>
+                                          <Button onClick={() => requestSuspend(membership.id, membership.membershipNumber)} variant="secondary" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-amber-600 border-gray-200" title="Suspend">
+                                            <Ban className="w-4 h-4" />
+                                          </Button>
+                                          <Button onClick={() => requestExpire(membership.id, membership.membershipNumber)} variant="secondary" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 border-gray-200" title="Expire">
+                                            <XCircle className="w-4 h-4" />
+                                          </Button>
+                                      </>
+                                  )}
+                                </>
+                             )}
+                          </div>
+                       </td>
+                     </tr>
+                   );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
       {/* Pagination Controls */}
       {filteredMemberships.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t border-border-light dark:border-border-dark">
-          <div className="flex items-center gap-2 text-sm text-text-light/60 dark:text-text-dark/60">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t border-gray-300 dark:border-border-dark">
+          <div className="flex items-center gap-2 text-sm text-gray-900/60 dark:text-text-dark/60">
             <span>Showing</span>
-            <span className="font-medium text-text-light dark:text-text-dark">
+            <span className="font-medium text-gray-900 dark:text-text-dark">
               {Math.min(startIndex + 1, filteredMemberships.length)}
             </span>
             <span>to</span>
-            <span className="font-medium text-text-light dark:text-text-dark">
+            <span className="font-medium text-gray-900 dark:text-text-dark">
               {Math.min(endIndex, filteredMemberships.length)}
             </span>
             <span>of</span>
-            <span className="font-medium text-text-light dark:text-text-dark">
+            <span className="font-medium text-gray-900 dark:text-text-dark">
               {filteredMemberships.length}
             </span>
             <span>items</span>
@@ -1044,14 +1100,14 @@ function MembershipsPageContent() {
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-text-light/60 dark:text-text-dark/60">Rows per page:</span>
+              <span className="text-sm text-gray-900/60 dark:text-text-dark/60">Rows per page:</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="h-8 pl-2 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+                className="h-8 pl-2 pr-8 bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg text-sm text-gray-900 dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
               >
                 {[10, 20, 50, 100].map((size) => (
                   <option key={size} value={size}>
@@ -1073,10 +1129,10 @@ function MembershipsPageContent() {
               </Button>
               
               <div className="flex items-center gap-1 mx-2">
-                <span className="text-sm font-medium text-text-light dark:text-text-dark">
+                <span className="text-sm font-medium text-gray-900 dark:text-text-dark">
                   {currentPage}
                 </span>
-                <span className="text-sm text-text-light/60 dark:text-text-dark/60">
+                <span className="text-sm text-gray-900/60 dark:text-text-dark/60">
                   / {totalPages}
                 </span>
               </div>
@@ -1111,7 +1167,7 @@ function MembershipsPageContent() {
             </div>
           </div>
 
-          <p className="text-sm text-text-light/80 dark:text-text-dark/80">
+          <p className="text-sm text-gray-900/80 dark:text-text-dark/80">
             Memberships cannot be activated until the required payment is recorded.
           </p>
 
@@ -1258,7 +1314,7 @@ function MembershipCard({
 
   // Condensed layout
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:shadow-md transition-all">
+    <div className="group relative overflow-hidden rounded-lg border border-gray-300 dark:border-border-dark bg-white dark:bg-surface-dark hover:shadow-md transition-all">
       <div className={`absolute inset-y-0 left-0 w-1 ${railClass}`} />
 
       <div className="relative p-3 flex flex-col gap-3">
@@ -1272,7 +1328,7 @@ function MembershipCard({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-0.5">
-              <h3 className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-text-dark truncate">
                 {membership.salon?.name || 'Unknown Salon'}
               </h3>
               <Badge
@@ -1291,7 +1347,7 @@ function MembershipCard({
                 {config.label}
               </Badge>
             </div>
-            <p className="text-[11px] text-text-light/60 dark:text-text-dark/60 font-medium">
+            <p className="text-[11px] text-gray-900/60 dark:text-text-dark/60 font-medium">
               #{membership.membershipNumber}
             </p>
           </div>
@@ -1330,11 +1386,11 @@ function MembershipCard({
                   className="h-7 w-7 p-0 hover:bg-background-light dark:hover:bg-background-dark border-none bg-transparent"
                   aria-label="Open actions"
                 >
-                  <MoreVertical className="w-4 h-4 text-text-light/60 dark:text-text-dark/60" />
+                  <MoreVertical className="w-4 h-4 text-gray-900/60 dark:text-text-dark/60" />
                 </Button>
 
                 {showQuickActions && (
-                  <div className="absolute right-0 top-full mt-1 w-44 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl z-20 py-1 animate-in fade-in slide-in-from-top-1">
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-lg shadow-xl z-20 py-1 animate-in fade-in slide-in-from-top-1">
                     {membership.status === 'active' && (
                       <>
                         <button
@@ -1343,7 +1399,7 @@ function MembershipCard({
                             onToggleQuickActions();
                           }}
                           disabled={isProcessing}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-900 dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
                         >
                           <Ban className="w-3.5 h-3.5" />
                           Suspend
@@ -1354,7 +1410,7 @@ function MembershipCard({
                             onToggleQuickActions();
                           }}
                           disabled={isProcessing}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-900 dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           Expire
@@ -1371,7 +1427,7 @@ function MembershipCard({
                             Download Certificate
                           </button>
                         )}
-                        <div className="my-1 border-t border-border-light dark:border-border-dark" />
+                        <div className="my-1 border-t border-gray-300 dark:border-border-dark" />
                       </>
                     )}
                     
@@ -1385,7 +1441,7 @@ function MembershipCard({
                               onToggleQuickActions();
                             }}
                             disabled={isProcessing}
-                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-900 dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
                             Renew Membership
@@ -1397,13 +1453,13 @@ function MembershipCard({
                                   onToggleQuickActions();
                                 }}
                                 disabled={isProcessing}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-900 dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition disabled:opacity-50"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" />
                                 Re-Activate
                               </button>
                           )}
-                          <div className="my-1 border-t border-border-light dark:border-border-dark" />
+                          <div className="my-1 border-t border-gray-300 dark:border-border-dark" />
                       </>
                     )}
 
@@ -1413,7 +1469,7 @@ function MembershipCard({
                           onSendReminder();
                           onToggleQuickActions();
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-900 dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
                       >
                          <Bell className="w-3.5 h-3.5" />
                          Send Reminder
@@ -1425,7 +1481,7 @@ function MembershipCard({
                         onView();
                         onToggleQuickActions();
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-900 dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       View Details
@@ -1465,11 +1521,11 @@ function MembershipCard({
         </div>
 
         {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-x-2 gap-y-2 pt-2 border-t border-border-light/50 dark:border-border-dark/50">
+        <div className="grid grid-cols-2 gap-x-2 gap-y-2 pt-2 border-t border-gray-300/50 dark:border-border-dark/50">
            {/* Owner */}
            <div className="flex items-center gap-1.5 overflow-hidden">
-              <Users className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-              <span className="text-xs text-text-light/80 dark:text-text-dark/80 truncate font-medium">
+              <Users className="w-3 h-3 text-gray-900/40 dark:text-text-dark/40 flex-shrink-0" />
+              <span className="text-xs text-gray-900/80 dark:text-text-dark/80 truncate font-medium">
                 {membership.salon?.owner?.fullName || 'N/A'}
               </span>
            </div>
@@ -1488,7 +1544,7 @@ function MembershipCard({
                    </span>
                 </>
               ) : (
-                <span className="text-xs text-text-light/40 dark:text-text-dark/40 italic">No payment info</span>
+                <span className="text-xs text-gray-900/40 dark:text-text-dark/40 italic">No payment info</span>
               )}
            </div>
 
@@ -1499,7 +1555,7 @@ function MembershipCard({
                   ? 'text-warning'
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
                     ? 'text-error'
-                    : 'text-text-light/40 dark:text-text-dark/40'
+                    : 'text-gray-900/40 dark:text-text-dark/40'
               } flex-shrink-0`} />
               
               <span className={`text-xs truncate ${
@@ -1507,7 +1563,7 @@ function MembershipCard({
                   ? 'text-warning font-medium'
                   : daysUntilExpiry !== null && daysUntilExpiry <= 0
                     ? 'text-error font-medium'
-                    : 'text-text-light/70 dark:text-text-dark/70'
+                    : 'text-gray-900/70 dark:text-text-dark/70'
               }`}>
                 {membership.status === 'new' 
                   ? 'Payment pending' 
@@ -1523,7 +1579,7 @@ function MembershipCard({
         {/* Compact Progress Bar */}
         {membership.status === 'active' && membership.startDate && membership.endDate && (
              <div className="mt-0.5">
-                <div className="flex items-center justify-between text-[10px] text-text-light/50 dark:text-text-dark/50 mb-1">
+                <div className="flex items-center justify-between text-[10px] text-gray-900/50 dark:text-text-dark/50 mb-1">
                    <span>{new Date(membership.startDate).toLocaleDateString()}</span>
                    <span>{new Date(membership.endDate).toLocaleDateString()}</span>
                 </div>
@@ -1539,21 +1595,21 @@ function MembershipCard({
         )}
 
         {/* Restore Meta Information (Phone, Reminder, Category) */}
-        <div className="mt-1 pt-2 border-t border-border-light/50 dark:border-border-dark/50 flex flex-wrap gap-x-3 gap-y-1">
+        <div className="mt-1 pt-2 border-t border-gray-300/50 dark:border-border-dark/50 flex flex-wrap gap-x-3 gap-y-1">
              {membership.category && (
-               <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+               <div className="inline-flex items-center gap-1 text-[10px] text-gray-900/60 dark:text-text-dark/60">
                  <Building2 className="w-2.5 h-2.5" />
                  <span className="capitalize">{membership.category}</span>
                </div>
              )}
              {membership.salon?.phone && (
-              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+              <div className="inline-flex items-center gap-1 text-[10px] text-gray-900/60 dark:text-text-dark/60">
                 <Phone className="w-2.5 h-2.5" />
                 <span>{membership.salon.phone}</span>
               </div>
             )}
             {membership.lastReminderSent && (
-              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60" title="Last Reminder Sent">
+              <div className="inline-flex items-center gap-1 text-[10px] text-gray-900/60 dark:text-text-dark/60" title="Last Reminder Sent">
                 <Mail className="w-2.5 h-2.5" />
                 <span>{new Date(membership.lastReminderSent).toLocaleDateString()}</span>
               </div>
@@ -1570,15 +1626,15 @@ function MembershipCardMeta({
 }: { membership: Membership }) {
   if (!membership.lastReminderSent && !membership.salon?.phone) return null;
    return (
-       <div className="mt-2 pt-2 border-t border-border-light dark:border-border-dark flex flex-wrap gap-2">
+       <div className="mt-2 pt-2 border-t border-gray-300 dark:border-border-dark flex flex-wrap gap-2">
             {membership.lastReminderSent && (
-              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+              <div className="inline-flex items-center gap-1 text-[10px] text-gray-900/60 dark:text-text-dark/60">
                 <Mail className="w-2.5 h-2.5" />
                 <span>{new Date(membership.lastReminderSent).toLocaleDateString()}</span>
               </div>
             )}
             {membership.salon?.phone && (
-              <div className="inline-flex items-center gap-1 text-[10px] text-text-light/60 dark:text-text-dark/60">
+              <div className="inline-flex items-center gap-1 text-[10px] text-gray-900/60 dark:text-text-dark/60">
                 <Phone className="w-2.5 h-2.5" />
                 <span>{membership.salon.phone}</span>
               </div>
@@ -1629,13 +1685,13 @@ function MembershipDetailModal({
       />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in fade-in slide-in-from-bottom-4 flex flex-col"
+          className="bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in fade-in slide-in-from-bottom-4 flex flex-col"
           role="presentation"
         >
           {/* Header */}
-          <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
+          <div className="px-5 py-4 border-b border-gray-300 dark:border-border-dark">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-text-dark">
                 Membership Details
               </h2>
               <Button
@@ -1657,7 +1713,7 @@ function MembershipDetailModal({
                 className={`px-3 py-2 font-medium text-xs transition-colors relative ${
                   activeTab === 'overview'
                     ? 'text-primary'
-                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                    : 'text-gray-900/60 dark:text-text-dark/60 hover:text-gray-900 dark:hover:text-text-dark'
                 }`}
               >
                 Overview
@@ -1670,7 +1726,7 @@ function MembershipDetailModal({
                 className={`px-3 py-2 font-medium text-xs transition-colors relative ${
                   activeTab === 'details'
                     ? 'text-primary'
-                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                    : 'text-gray-900/60 dark:text-text-dark/60 hover:text-gray-900 dark:hover:text-text-dark'
                 }`}
               >
                 Details
@@ -1683,7 +1739,7 @@ function MembershipDetailModal({
                 className={`px-3 py-2 font-medium text-xs transition-colors relative ${
                   activeTab === 'activity'
                     ? 'text-primary'
-                    : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark'
+                    : 'text-gray-900/60 dark:text-text-dark/60 hover:text-gray-900 dark:hover:text-text-dark'
                 }`}
               >
                 Activity
@@ -1700,7 +1756,7 @@ function MembershipDetailModal({
               <div className="space-y-4">
                 {/* Status with Alert */}
                 <div>
-                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                  <h3 className="text-xs font-bold text-gray-900 dark:text-text-dark mb-2 uppercase tracking-wide">
                     Membership Status
                   </h3>
                   <div
@@ -1723,7 +1779,7 @@ function MembershipDetailModal({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                      <p className="text-xs text-gray-900/60 dark:text-text-dark/60 mt-0.5">
                         {daysUntilExpiry !== null && daysUntilExpiry > 0
                           ? `Valid for ${daysUntilExpiry} days.`
                           : daysUntilExpiry !== null && daysUntilExpiry <= 0
@@ -1737,8 +1793,8 @@ function MembershipDetailModal({
                 {/* Quick Stats Grid */}
                 <div className="grid grid-cols-2 gap-3">
                   {/* Payment Status Card */}
-                  <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                    <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1.5">
+                  <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1.5">
                       Payment Status
                     </p>
                     <div className="flex items-center gap-2">
@@ -1766,7 +1822,7 @@ function MembershipDetailModal({
                               : 'Pending'}
                         </span>
                         {paymentStatus && !paymentStatus.isComplete && paymentStatus.totalPaid > 0 && (
-                          <span className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60 mt-0.5">
+                          <span className="text-[10px] font-medium text-gray-900/60 dark:text-text-dark/60 mt-0.5">
                             RWF {paymentStatus.totalPaid.toLocaleString()} paid
                           </span>
                         )}
@@ -1775,19 +1831,19 @@ function MembershipDetailModal({
                   </div>
 
                   {/* Time Remaining Card */}
-                  <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                    <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1.5">
+                  <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1.5">
                       Time Remaining
                     </p>
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                      <Calendar className="w-4 h-4 text-gray-900/40 dark:text-text-dark/40" />
                       <span
                         className={`text-sm font-bold ${
                           daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry > 0
                             ? 'text-warning'
                             : daysUntilExpiry !== null && daysUntilExpiry <= 0
                               ? 'text-error'
-                              : 'text-text-light dark:text-text-dark'
+                              : 'text-gray-900 dark:text-text-dark'
                         }`}
                       >
                         {daysUntilExpiry !== null && daysUntilExpiry > 0
@@ -1802,17 +1858,17 @@ function MembershipDetailModal({
 
                 {/* Salon Information */}
                 <div>
-                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                  <h3 className="text-xs font-bold text-gray-900 dark:text-text-dark mb-2 uppercase tracking-wide">
                     Salon Information
                   </h3>
-                  <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3 space-y-2.5">
+                  <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3 space-y-2.5">
                     <div className="flex items-start gap-3">
-                      <Building2 className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                      <Building2 className="w-4 h-4 text-gray-900/40 dark:text-text-dark/40 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                        <p className="text-[10px] font-medium text-gray-900/60 dark:text-text-dark/60">
                           Salon Name
                         </p>
-                        <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-text-dark truncate">
                           {membership.salon?.name || 'N/A'}
                         </p>
                       </div>
@@ -1820,12 +1876,12 @@ function MembershipDetailModal({
 
                     {membership.salon?.address && (
                       <div className="flex items-start gap-3">
-                        <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                        <MapPin className="w-4 h-4 text-gray-900/40 dark:text-text-dark/40 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                          <p className="text-[10px] font-medium text-gray-900/60 dark:text-text-dark/60">
                             Address
                           </p>
-                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-text-dark truncate">
                             {membership.salon.address}
                           </p>
                         </div>
@@ -1834,12 +1890,12 @@ function MembershipDetailModal({
 
                     {membership.salon?.phone && (
                       <div className="flex items-start gap-3">
-                        <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                        <Phone className="w-4 h-4 text-gray-900/40 dark:text-text-dark/40 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                          <p className="text-[10px] font-medium text-gray-900/60 dark:text-text-dark/60">
                             Phone
                           </p>
-                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-text-dark truncate">
                             {membership.salon.phone}
                           </p>
                         </div>
@@ -1847,17 +1903,17 @@ function MembershipDetailModal({
                     )}
 
                     <div className="flex items-start gap-3">
-                      <Users className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 mt-0.5" />
+                      <Users className="w-4 h-4 text-gray-900/40 dark:text-text-dark/40 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium text-text-light/60 dark:text-text-dark/60">
+                        <p className="text-[10px] font-medium text-gray-900/60 dark:text-text-dark/60">
                           Owner
                         </p>
                         <div className="flex flex-col">
-                          <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-text-dark truncate">
                             {membership.salon?.owner?.fullName || 'N/A'}
                           </p>
                           {membership.salon?.owner?.email && (
-                            <p className="text-xs text-text-light/60 dark:text-text-dark/60 truncate">
+                            <p className="text-xs text-gray-900/60 dark:text-text-dark/60 truncate">
                               {membership.salon.owner.email}
                             </p>
                           )}
@@ -1872,32 +1928,32 @@ function MembershipDetailModal({
             {activeTab === 'details' && (
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                  <h3 className="text-xs font-bold text-gray-900 dark:text-text-dark mb-2 uppercase tracking-wide">
                     Membership Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                    <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
                         Membership Number
                       </p>
-                      <p className="text-text-light dark:text-text-dark font-mono text-sm">
+                      <p className="text-gray-900 dark:text-text-dark font-mono text-sm">
                         {membership.membershipNumber}
                       </p>
                     </div>
-                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                    <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
                         Category
                       </p>
-                      <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                      <p className="text-gray-900 dark:text-text-dark text-sm font-medium">
                         {membership.category || 'N/A'}
                       </p>
                     </div>
                     {membership.startDate && (
-                      <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                        <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                      <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                        <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
                           Start Date
                         </p>
-                        <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                        <p className="text-gray-900 dark:text-text-dark text-sm font-medium">
                           {new Date(membership.startDate).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -1907,11 +1963,11 @@ function MembershipDetailModal({
                       </div>
                     )}
                     {membership.endDate && (
-                      <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                        <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                      <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                        <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
                           End Date
                         </p>
-                        <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                        <p className="text-gray-900 dark:text-text-dark text-sm font-medium">
                           {new Date(membership.endDate).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -1924,23 +1980,23 @@ function MembershipDetailModal({
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                  <h3 className="text-xs font-bold text-gray-900 dark:text-text-dark mb-2 uppercase tracking-wide">
                     Timestamps
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                    <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
                         Created
                       </p>
-                      <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                      <p className="text-gray-900 dark:text-text-dark text-sm font-medium">
                         {new Date(membership.createdAt).toLocaleString()}
                       </p>
                     </div>
-                    <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-3">
-                      <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
+                    <div className="bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-gray-900/60 dark:text-text-dark/60 uppercase tracking-wide mb-1">
                         Last Updated
                       </p>
-                      <p className="text-text-light dark:text-text-dark text-sm font-medium">
+                      <p className="text-gray-900 dark:text-text-dark text-sm font-medium">
                         {new Date(membership.updatedAt).toLocaleString()}
                       </p>
                     </div>
@@ -1951,17 +2007,17 @@ function MembershipDetailModal({
 
             {activeTab === 'activity' && (
               <div className="space-y-4">
-                <h3 className="text-xs font-bold text-text-light dark:text-text-dark mb-2 uppercase tracking-wide">
+                <h3 className="text-xs font-bold text-gray-900 dark:text-text-dark mb-2 uppercase tracking-wide">
                   Recent Activity
                 </h3>
-                <div className="flex flex-col items-center justify-center py-8 text-center bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg border-dashed">
-                  <div className="w-8 h-8 mb-2 text-text-light/30 dark:text-text-dark/30">
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-background-light dark:bg-background-dark border border-gray-300 dark:border-border-dark rounded-lg border-dashed">
+                  <div className="w-8 h-8 mb-2 text-gray-900/30 dark:text-text-dark/30">
                     <Clock className="w-full h-full" />
                   </div>
-                  <p className="text-xs font-bold text-text-light dark:text-text-dark mb-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-text-dark mb-1">
                     No activity recorded
                   </p>
-                  <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 max-w-[200px]">
+                  <p className="text-[10px] text-gray-900/60 dark:text-text-dark/60 max-w-[200px]">
                     Activity logs will appear here once actions are performed.
                   </p>
                 </div>
@@ -1970,7 +2026,7 @@ function MembershipDetailModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="px-5 py-4 border-t border-border-light dark:border-border-dark flex gap-3 justify-end">
+          <div className="px-5 py-4 border-t border-gray-300 dark:border-border-dark flex gap-3 justify-end">
             <Button onClick={onClose} variant="secondary" size="sm">
               Close
             </Button>

@@ -30,7 +30,9 @@ export function useMembershipStatus() {
     queryFn: async () => {
       try {
         const response = await api.get('/memberships/status');
-        return response.data;
+        // Unwrap the TransformInterceptor envelope: { data: { isMember, application }, statusCode }
+        const result = response.data?.data || response.data;
+        return result;
       } catch (error) {
         // Return default values on error
         return { isMember: false, application: null };

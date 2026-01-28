@@ -12,6 +12,7 @@ import {
   canAccessAccounting,
   canAccessLoans,
   canAccessReports,
+  canManageLoanProducts,
 } from '@/lib/permissions';
 
 /**
@@ -41,6 +42,7 @@ export function usePermissions() {
       canAccessAccounting: () => canAccessAccounting(userRole),
       canAccessLoans: () => canAccessLoans(userRole),
       canAccessReports: () => canAccessReports(userRole),
+      canManageLoanProducts: () => canManageLoanProducts(userRole),
 
       // Role checks
       isSuperAdmin: () => userRole === UserRole.SUPER_ADMIN,

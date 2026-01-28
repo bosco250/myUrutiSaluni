@@ -110,21 +110,23 @@ export function clearAllSessionData(): void {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
-    if (response.data.access_token && typeof window !== 'undefined') {
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    const response = await api.post<any>('/auth/login', credentials);
+    const data = response.data.data || response.data;
+    if (data.access_token && typeof window !== 'undefined') {
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
     }
-    return response.data;
+    return data;
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', data);
-    if (response.data.access_token && typeof window !== 'undefined') {
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    const response = await api.post<any>('/auth/register', data);
+    const authData = response.data.data || response.data;
+    if (authData.access_token && typeof window !== 'undefined') {
+      localStorage.setItem('token', authData.access_token);
+      localStorage.setItem('user', JSON.stringify(authData.user));
     }
-    return response.data;
+    return authData;
   },
 
   logout() {
@@ -152,11 +154,12 @@ export const authService = {
 
   async refreshUser(): Promise<AuthResponse['user'] | null> {
     try {
-      const response = await api.get<AuthResponse['user']>('/users/me');
-      if (response.data && typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(response.data));
+      const response = await api.get<any>('/users/me');
+      const userData = response.data.data || response.data;
+      if (userData && typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(userData));
       }
-      return response.data;
+      return userData;
     } catch (error) {
       console.error('Failed to refresh user profile:', error);
       return null;
@@ -164,16 +167,16 @@ export const authService = {
   },
 
   async forgotPassword(email: string): Promise<{ message: string }> {
-    const response = await api.post<{ message: string }>('/auth/forgot-password', { email });
-    return response.data;
+    const response = await api.post<any>('/auth/forgot-password', { email });
+    return response.data.data || response.data;
   },
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    const response = await api.post<{ message: string }>('/auth/reset-password', {
+    const response = await api.post<any>('/auth/reset-password', {
       token,
       newPassword,
     });
-    return response.data;
+    return response.data.data || response.data;
   },
 };
 

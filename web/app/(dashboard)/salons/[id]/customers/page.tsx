@@ -115,7 +115,7 @@ function SalonCustomersContent() {
       queryParams.append('limit', '20');
 
       const response = await api.get(`/salons/${salonId}/customers?${queryParams.toString()}`);
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!salonId,
   });
@@ -125,7 +125,7 @@ function SalonCustomersContent() {
     queryKey: ['salon-customer-analytics', salonId],
     queryFn: async () => {
       const response = await api.get(`/salons/${salonId}/customers/analytics`);
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!salonId,
   });
@@ -148,7 +148,10 @@ function SalonCustomersContent() {
     },
   });
 
-  const customers = useMemo(() => customersData?.data || [], [customersData]);
+  const customers = useMemo(() => {
+    const data = customersData?.data || customersData;
+    return Array.isArray(data) ? data : [];
+  }, [customersData]);
   const totalPages = customersData?.totalPages || 0;
 
   const availableTags = useMemo(() => {

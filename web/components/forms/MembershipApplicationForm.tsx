@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
-import { Building2, MapPin, Phone, Mail, FileText, AlertCircle, CheckCircle, Loader2, Navigation } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, FileText, AlertCircle, CheckCircle, Loader2, Navigation, Shield, ChevronDown, User, Sparkles } from 'lucide-react';
 import LocationPicker from '@/components/maps/LocationPicker';
 import Link from 'next/link';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
+import rwandaData from '@/components/data/rwanda_structure.json';
 
 interface MembershipApplicationFormProps {
   onSuccess?: () => void;
@@ -29,13 +30,20 @@ export default function MembershipApplicationForm({
   const [formData, setFormData] = useState({
     businessName: '',
     businessAddress: '',
-    city: '',
+    province: '',
     district: '',
+    sector: '',
+    cell: '',
+    village: '',
+    city: '', // Used for Province in backend compatibility
     phone: '',
     email: '',
+    website: '',
     businessDescription: '',
     registrationNumber: '',
     taxId: '',
+    nationalId: '', // Owner/Applicant ID
+    category: '', // Salon, Barbershop, etc.
     latitude: '',
     longitude: '',
   });
@@ -47,26 +55,33 @@ export default function MembershipApplicationForm({
 
   const createApplicationMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      // Prepare data for API - exclude latitude/longitude strings, add as numbers if valid
-      const { latitude, longitude, ...restData } = data;
-      const apiData: any = { ...restData };
+      // Prepare data for API
+      const { latitude, longitude, province, sector, cell, village, category, website, nationalId, ...restData } = data;
       
-      // Handle latitude - only include if it's a valid number
+      // Map extra fields into metadata to avoid backend changes
+      const apiData: any = { 
+        ...restData,
+        metadata: {
+          province,
+          sector,
+          cell,
+          village,
+          category,
+          website,
+          nationalId,
+          applied_at: new Date().toISOString()
+        }
+      };
+      
+      // Handle latitude/longitude numbers
       if (latitude && latitude.trim() !== '') {
         const latNum = parseFloat(latitude);
-        if (!isNaN(latNum)) {
-          apiData.latitude = latNum;
-        }
+        if (!isNaN(latNum)) apiData.latitude = latNum;
       }
-      
-      // Handle longitude - only include if it's a valid number
       if (longitude && longitude.trim() !== '') {
         const lngNum = parseFloat(longitude);
-        if (!isNaN(lngNum)) {
-          apiData.longitude = lngNum;
-        }
+        if (!isNaN(lngNum)) apiData.longitude = lngNum;
       }
-      
       const response = await api.post('/memberships/apply', apiData);
       return response.data;
     },
@@ -95,10 +110,13 @@ export default function MembershipApplicationForm({
       newErrors.city = 'City is required';
     }
     if (!formData.district.trim()) {
-      newErrors.district = 'District is required';
+      newErrors.district = 'Required';
+    }
+    if (!formData.category.trim()) {
+      newErrors.category = 'Required';
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = 'Required';
     }
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -145,7 +163,10 @@ export default function MembershipApplicationForm({
     address: string;
     city: string;
     district: string;
-    country: string;
+    province?: string;
+    sector?: string;
+    cell?: string;
+    village?: string;
   }> => {
     try {
       const response = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`, {
@@ -170,14 +191,16 @@ export default function MembershipApplicationForm({
         address: data.address || '',
         city: data.city || '',
         district: data.district || '',
-        country: data.country || 'Rwanda',
+        province: data.province || '',
+        sector: data.sector || '',
+        cell: data.cell || '',
+        village: data.village || '',
       };
     } catch (error: any) {
       return {
         address: `Location at ${lat.toFixed(6)}, ${lon.toFixed(6)}`,
         city: '',
         district: '',
-        country: 'Rwanda',
       };
     }
   };
@@ -229,12 +252,29 @@ export default function MembershipApplicationForm({
     updateField('latitude', lat.toString());
     updateField('longitude', lng.toString());
     
+    // Attempt auto-fill of address fields
     const geocoded = await reverseGeocode(lat, lng);
+    
+    // Find matching province for this district
+    let foundProv = '';
+    if (geocoded.district) {
+      for (const [prov, dists] of Object.entries(rwandaData as any)) {
+        if ((dists as any)[geocoded.district]) {
+          foundProv = prov;
+          break;
+        }
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       businessAddress: geocoded.address || prev.businessAddress || '',
-      city: geocoded.city !== undefined ? geocoded.city : (prev.city || ''),
-      district: geocoded.district !== undefined ? geocoded.district : (prev.district || ''),
+      province: foundProv || prev.province || '',
+      district: geocoded.district || prev.district || '',
+      sector: geocoded.sector || prev.sector || '',
+      cell: geocoded.cell || prev.cell || '',
+      village: geocoded.village || prev.village || '',
+      city: foundProv // Mapping province to city for backend compatibility
     }));
   };
 
@@ -279,12 +319,11 @@ export default function MembershipApplicationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, showSuccess]);
 
-  // Define steps before they're used in JSX
+  // Define steps for the visual progress tracker
   const membershipSteps = [
-    { id: 'fill-form', label: 'Fill Form', description: 'Enter your details' },
-    { id: 'create-account', label: 'Create Account', description: 'Sign up' },
-    { id: 'submit', label: 'Submit', description: 'Auto-submit' },
-    { id: 'complete', label: 'Complete', description: 'Done!' },
+    { id: 'fill-form', label: 'Identity', description: 'Business details' },
+    { id: 'location', label: 'Presence', description: 'Map & Address' },
+    { id: 'submit', label: 'Activation', description: 'Final review' },
   ];
 
   const getCurrentStep = () => {
@@ -347,20 +386,24 @@ export default function MembershipApplicationForm({
   }
 
   return (
-    <div className={`bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl ${compact ? 'p-4 md:p-6' : 'p-6 md:p-8'}`}>
+    <div className={`bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-[2rem] shadow-2xl overflow-hidden transition-all duration-500 hover:shadow-primary/5 ${compact ? 'p-3 md:p-5' : 'p-8 md:p-12'}`}>
       {showTitle && (
-        <div className="mb-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-text-light dark:text-text-dark mb-2">
-            Apply for Membership
-          </h2>
-          <p className="text-text-light/60 dark:text-text-dark/60">
-            Join the Salon Association to start managing your salons and employees
-          </p>
+        <div className="mb-8 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mb-4">
+                <Building2 className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Partner Application</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-text-light dark:text-text-dark mb-3 tracking-tighter leading-none">
+              Join the <span className="text-primary italic">Association.</span>
+            </h2>
+            <p className="text-xs text-text-light/50 dark:text-text-dark/50 max-w-lg mx-auto font-bold leading-relaxed">
+              Unlock your digital command center. Managed business, automated financing, and elite growth tools for professional salons.
+            </p>
         </div>
       )}
 
       {showProgress && (
-        <div className="mb-8">
+        <div className="mb-8 px-4">
           <ProgressIndicator
             steps={membershipSteps}
             currentStep={getCurrentStep()}
@@ -370,368 +413,390 @@ export default function MembershipApplicationForm({
       )}
 
       {!isAuthenticated() && (
-        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm text-text-light dark:text-text-dark font-medium mb-1">
-                Step 1 of 3: Fill Out Application Form
-              </p>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60 mb-3">
-                Your form data will be automatically saved. After clicking "Continue to Sign Up", 
-                you'll create your account (Step 2), and then your application will be automatically submitted (Step 3).
-              </p>
-              <div className="flex items-center gap-2 text-xs text-primary font-medium">
-                <CheckCircle className="w-4 h-4" />
-                <span>Your data is safe and will be restored after registration</span>
-              </div>
-            </div>
+        <div className="mb-6 p-4 bg-primary/5 border border-primary/10 rounded-2xl flex items-start gap-4 group">
+          <div className="p-2.5 bg-white dark:bg-slate-900 border border-primary/20 rounded-xl group-hover:scale-110 transition-transform">
+             <AlertCircle className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-xs font-black text-primary uppercase tracking-widest mb-1">
+              Onboarding: Step 1 of 3
+            </h4>
+            <p className="text-[11px] font-bold text-text-light/60 dark:text-text-dark/60 leading-relaxed">
+                Provide your salon essentials below. After this, you'll secure your account and the system will instantly route your application for activation.
+            </p>
           </div>
         </div>
       )}
 
       {isAuthenticated() && createApplicationMutation.isPending && (
-        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-primary animate-spin" />
-            <div className="flex-1">
-              <p className="text-sm text-text-light dark:text-text-dark font-medium">
-                Submitting your application...
-              </p>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-                Please wait while we process your membership application.
-              </p>
-            </div>
+        <div className="mb-6 p-5 bg-primary/5 border border-primary/10 rounded-2xl flex items-center gap-4 animate-pulse">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <div>
+            <h4 className="text-sm font-black text-primary uppercase tracking-widest leading-none mb-1">Authenticating Data...</h4>
+            <p className="text-[10px] font-bold text-text-light/40 dark:text-text-dark/40">Securely routing your application to the association board.</p>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Business Information */}
-        <div>
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-light dark:border-border-dark">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Building2 className="w-6 h-6 text-primary" />
+      <form onSubmit={handleSubmit} className="space-y-10">
+        {/* Section 1: Business Core */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 pb-3 border-b border-border-light dark:border-border-dark">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
+              <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className={`font-bold text-text-light dark:text-text-dark ${compact ? 'text-base' : 'text-xl'}`}>
-                Business Information
-              </h3>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                Tell us about your business
-              </p>
+              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">Business Identity</h3>
+              <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Core Information</p>
             </div>
           </div>
-          <div className={`grid gap-6 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Business Name <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.businessName}
-                onChange={(e) => updateField('businessName', e.target.value)}
-                className={`w-full px-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 ${
-                  errors.businessName ? 'border-danger focus:ring-danger/50' : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                }`}
-                placeholder="Enter your business name"
-              />
-              {errors.businessName && (
-                <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.businessName}
-                </p>
-              )}
+          
+          <div className={`grid gap-5 ${compact ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-12'}`}>
+            <div className="md:col-span-12 lg:col-span-5">
+                <InputGroup 
+                    label="Business Name" 
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={(val: string) => updateField('businessName', val)}
+                    error={errors.businessName}
+                    placeholder="e.g. Uruti Style Rwanda"
+                    icon={Building2}
+                    required
+                />
+            </div>
+            <div className="md:col-span-6 lg:col-span-3">
+                <SelectGroup 
+                    label="Business Category" 
+                    name="category"
+                    value={formData.category}
+                    onChange={(val: string) => updateField('category', val)}
+                    options={['Hair Salon', 'Barbershop', 'Beauty Spa', 'Nail Salon', 'Mixed Services']}
+                    error={errors.category}
+                    placeholder="Choose type..."
+                    required
+                />
+            </div>
+            <div className="md:col-span-6 lg:col-span-4">
+                <InputGroup 
+                    label="National ID (Owner)" 
+                    name="nationalId"
+                    value={formData.nationalId}
+                    onChange={(val: string) => updateField('nationalId', val)}
+                    placeholder="16 digits ID"
+                    icon={User}
+                />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Registration Number
-                <span className="text-xs font-normal text-text-light/50 dark:text-text-dark/50 ml-2">(Optional)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.registrationNumber}
-                onChange={(e) => updateField('registrationNumber', e.target.value)}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 hover:border-primary/50"
-                placeholder="Business registration number"
-              />
+            <div className="md:col-span-6 lg:col-span-6">
+                <InputGroup 
+                    label="Registration Number" 
+                    name="registrationNumber"
+                    value={formData.registrationNumber}
+                    onChange={(val: string) => updateField('registrationNumber', val)}
+                    placeholder="RCA-XXXX-2026"
+                    icon={FileText}
+                />
+            </div>
+            <div className="md:col-span-6 lg:col-span-6">
+                <InputGroup 
+                    label="Tax ID / TIN" 
+                    name="taxId"
+                    value={formData.taxId}
+                    onChange={(val: string) => updateField('taxId', val)}
+                    placeholder="TIN-XXXX"
+                    icon={Shield}
+                />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Tax ID
-                <span className="text-xs font-normal text-text-light/50 dark:text-text-dark/50 ml-2">(Optional)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.taxId}
-                onChange={(e) => updateField('taxId', e.target.value)}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 hover:border-primary/50"
-                placeholder="Tax identification number"
-              />
-            </div>
-
-            <div className={compact ? '' : 'md:col-span-2'}>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Business Description
-                <span className="text-xs font-normal text-text-light/50 dark:text-text-dark/50 ml-2">(Optional)</span>
-              </label>
-              <textarea
-                value={formData.businessDescription}
-                onChange={(e) => updateField('businessDescription', e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 hover:border-primary/50 resize-none"
-                placeholder="Describe your business, services offered, and any other relevant information..."
-              />
-              <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-2">
-                {formData.businessDescription.length} characters
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Location Information */}
-        <div>
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-light dark:border-border-dark">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <MapPin className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h3 className={`font-bold text-text-light dark:text-text-dark ${compact ? 'text-base' : 'text-xl'}`}>
-                Location Information
-              </h3>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                Where is your business located?
-              </p>
-            </div>
-          </div>
-          <div className={`grid gap-6 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-            <div className={compact ? '' : 'md:col-span-2'}>
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={handleGetCurrentLocation}
-                  disabled={locationLoading}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed border border-primary/20"
-                >
-                  {locationLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Getting your location...
-                    </>
-                  ) : (
-                    <>
-                      <Navigation className="w-5 h-5" />
-                      Use Current Location
-                    </>
-                  )}
-                </button>
-                {locationError && (
-                  <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                    <AlertCircle className="w-4 h-4" />
-                    {locationError}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className={compact ? '' : 'md:col-span-2'}>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Select Location on Map
-              </label>
-              <p className="text-xs text-text-light/60 dark:text-text-dark/60 mb-3">
-                Click on the map to set your business location. The address will be automatically filled.
-              </p>
-              <LocationPicker
-                key={mapKey}
-                latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
-                longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
-                onLocationSelect={handleMapLocationSelect}
-                onReverseGeocode={handleMapLocationSelect}
-                height="400px"
-              />
-            </div>
-
-            <div className={compact ? '' : 'md:col-span-2'}>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Business Address <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.businessAddress}
-                onChange={(e) => updateField('businessAddress', e.target.value)}
-                className={`w-full px-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 ${
-                  errors.businessAddress ? 'border-danger focus:ring-danger/50' : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                }`}
-                placeholder="Street address, building number"
-              />
-              {errors.businessAddress && (
-                <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.businessAddress}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                City <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => updateField('city', e.target.value)}
-                className={`w-full px-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 ${
-                  errors.city ? 'border-danger focus:ring-danger/50' : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                }`}
-                placeholder="City name"
-              />
-              {errors.city && (
-                <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.city}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                District <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.district}
-                onChange={(e) => updateField('district', e.target.value)}
-                className={`w-full px-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 ${
-                  errors.district ? 'border-danger focus:ring-danger/50' : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                }`}
-                placeholder="District name"
-              />
-              {errors.district && (
-                <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.district}
-                </p>
-              )}
+            <div className="col-span-full">
+                <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-widest font-black text-text-light/40 dark:text-text-dark/40 block ml-1">Business Vision / Description</label>
+                    <textarea
+                        value={formData.businessDescription}
+                        onChange={(e) => updateField('businessDescription', e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-3 bg-gray-50/50 dark:bg-gray-950/50 border border-border-light dark:border-border-dark focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-xs font-bold text-text-light dark:text-text-dark placeholder:text-text-light/20 dark:placeholder:text-text-dark/20 transition-all resize-none outline-none"
+                        placeholder="Tell the association about your salon's legacy and objectives..."
+                    />
+                </div>
             </div>
           </div>
         </div>
 
-        {/* Contact Information */}
-        <div>
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-light dark:border-border-dark">
-            <div className="p-2 bg-primary/10 rounded-xl">
-              <Phone className="w-6 h-6 text-primary" />
+        {/* Section 2: Physical Presence */}
+        <div className="space-y-6 pt-4 border-t border-dashed border-border-light dark:border-border-dark">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
+              <MapPin className="w-4 h-4" />
             </div>
             <div>
-              <h3 className={`font-bold text-text-light dark:text-text-dark ${compact ? 'text-base' : 'text-xl'}`}>
-                Contact Information
-              </h3>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                How can we reach you?
-              </p>
+              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">Physical Presence</h3>
+              <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Geographical data</p>
             </div>
           </div>
-          <div className={`grid gap-6 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+
+          <div className="grid gap-6">
+            <div className="relative rounded-[1.5rem] overflow-hidden border border-border-light dark:border-border-dark shadow-inner group">
+                <div className="grayscale group-hover:grayscale-0 transition-all duration-700 opacity-90 group-hover:opacity-100">
+                    <LocationPicker
+                        key={mapKey}
+                        latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
+                        longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
+                        onLocationSelect={handleMapLocationSelect}
+                        onReverseGeocode={handleMapLocationSelect}
+                        height="320px"
+                    />
+                </div>
+                {/* Float Action: Current Location */}
+                <div className="absolute top-4 right-4 z-[100]">
+                    <button
+                        type="button"
+                        onClick={handleGetCurrentLocation}
+                        disabled={locationLoading}
+                        className="flex items-center gap-2 px-4 h-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl hover:bg-white dark:hover:bg-gray-900 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {locationLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5 text-primary" />}
+                        {locationLoading ? 'Pinpointing...' : 'Locate Me'}
+                    </button>
+                </div>
+            </div>
+            
+            {locationError && (
+                 <div className="flex items-center gap-2 text-danger text-[10px] font-black uppercase tracking-widest bg-danger/5 p-3 rounded-xl border border-danger/10 animate-in fade-in slide-in-from-top-1">
+                   <AlertCircle className="w-3.5 h-3.5" />
+                   {locationError}
+                 </div>
+               )}
+
+            <div className={`grid gap-4 ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-5'}`}>
+               <SelectGroup 
+                    label="Province" 
+                    name="province"
+                    value={formData.province}
+                    onChange={(val: string) => {
+                      updateField('province', val);
+                      setFormData(prev => ({ ...prev, district: '', sector: '', cell: '', village: '' }));
+                    }}
+                    options={Object.keys(rwandaData)}
+                    placeholder="Choose..."
+                    required
+               />
+               <SelectGroup 
+                    label="District" 
+                    name="district"
+                    value={formData.district}
+                    onChange={(val: string) => {
+                      updateField('district', val);
+                      setFormData(prev => ({ ...prev, sector: '', cell: '', village: '' }));
+                    }}
+                    options={formData.province ? Object.keys((rwandaData as any)[formData.province] || {}) : []}
+                    placeholder="Choose..."
+                    required
+               />
+               <SelectGroup 
+                    label="Sector" 
+                    name="sector"
+                    value={formData.sector}
+                    onChange={(val: string) => {
+                      updateField('sector', val);
+                      setFormData(prev => ({ ...prev, cell: '', village: '' }));
+                    }}
+                    options={(formData.province && formData.district) ? Object.keys((rwandaData as any)[formData.province][formData.district] || {}) : []}
+                    placeholder="Choose..."
+               />
+               <SelectGroup 
+                    label="Cell" 
+                    name="cell"
+                    value={formData.cell}
+                    onChange={(val: string) => {
+                      updateField('cell', val);
+                      setFormData(prev => ({ ...prev, village: '' }));
+                    }}
+                    options={(formData.province && formData.district && formData.sector) ? Object.keys((rwandaData as any)[formData.province][formData.district][formData.sector] || {}) : []}
+                    placeholder="Choose..."
+               />
+               <SelectGroup 
+                    label="Village" 
+                    name="village"
+                    value={formData.village}
+                    onChange={(val: string) => updateField('village', val)}
+                    options={(formData.province && formData.district && formData.sector && formData.cell) ? (rwandaData as any)[formData.province][formData.district][formData.sector][formData.cell] || [] : []}
+                    placeholder="Choose..."
+               />
+               <div className="col-span-full">
+                    <InputGroup 
+                        label="Exact Street / Landmark" 
+                        name="businessAddress"
+                        value={formData.businessAddress}
+                        onChange={(val: string) => updateField('businessAddress', val)}
+                        error={errors.businessAddress}
+                        placeholder="Street No, Building Name, or Landmark"
+                        icon={Navigation}
+                        required
+                    />
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Connectivity */}
+        <div className="space-y-6 pt-4 border-t border-dashed border-border-light dark:border-border-dark">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
+              <Phone className="w-4 h-4" />
+            </div>
             <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Phone Number <span className="text-danger">*</span>
-              </label>
-              <input
+              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">Connectivity</h3>
+              <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Communication Protocols</p>
+            </div>
+          </div>
+
+          <div className={`grid gap-4 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'}`}>
+            <InputGroup 
+                label="Primary Phone" 
+                name="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => updateField('phone', e.target.value)}
-                className={`w-full px-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 ${
-                  errors.phone ? 'border-danger focus:ring-danger/50' : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                }`}
-                placeholder="+250 7XX XXX XXX"
-              />
-              {errors.phone && (
-                <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.phone}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2.5">
-                Email Address <span className="text-danger">*</span>
-              </label>
-              <input
+                onChange={(val: string) => updateField('phone', val)}
+                error={errors.phone}
+                placeholder="+250 788 000 000"
+                icon={Phone}
+                required
+            />
+            <InputGroup 
+                label="Official Email" 
+                name="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => updateField('email', e.target.value)}
-                className={`w-full px-4 py-3 bg-background-light dark:bg-background-dark border rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 ${
-                  errors.email ? 'border-danger focus:ring-danger/50' : 'border-border-light dark:border-border-dark hover:border-primary/50'
-                }`}
-                placeholder="your@email.com"
-              />
-              {errors.email && (
-                <p className="text-danger text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.email}
-                </p>
-              )}
-            </div>
+                onChange={(val: string) => updateField('email', val)}
+                error={errors.email}
+                placeholder="contact@biz.com"
+                icon={Mail}
+                required
+            />
+            <InputGroup 
+                label="Website / Social" 
+                name="website"
+                value={formData.website}
+                onChange={(val: string) => updateField('website', val)}
+                placeholder="www.salon.rw"
+                icon={Sparkles}
+            />
           </div>
         </div>
 
         {createApplicationMutation.isError && (
-          <div className="p-4 bg-danger/10 border border-danger rounded-xl flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-danger font-semibold mb-1">Submission Failed</p>
-              <p className="text-danger text-sm">
-                {(createApplicationMutation.error as any)?.response?.data?.message || 'Failed to submit application. Please try again.'}
-              </p>
-            </div>
+          <div className="p-4 bg-danger/5 border border-danger/20 rounded-2xl flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
+            <p className="text-[11px] font-black uppercase tracking-widest text-danger">
+              Transmission error: {(createApplicationMutation.error as any)?.response?.data?.message || 'Check your inputs and try again.'}
+            </p>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-border-light dark:border-border-dark">
+        <div className="pt-8 border-t border-border-light dark:border-border-dark">
           {isAuthenticated() ? (
-            <>
-              <Button
-                type="submit"
-                variant="primary"
-                className="flex-1 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200"
-                disabled={createApplicationMutation.isPending}
-              >
-                {createApplicationMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting Application...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Submit Application
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="submit"
-                variant="primary"
-                className="flex-1"
-              >
-                Save & Continue to Step 2
-              </Button>
-              <Link href="/login?redirect=membership" className="flex-1">
-                <Button type="button" variant="secondary" className="w-full">
-                  Already have an account? Sign In
+            <div className="flex flex-col items-center gap-4">
+                <Button
+                    type="submit"
+                    disabled={createApplicationMutation.isPending}
+                    className="w-full h-14 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-3"
+                >
+                {createApplicationMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                {createApplicationMutation.isPending ? 'Propagating Application...' : 'Commit Application'}
                 </Button>
-              </Link>
-            </>
+                <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Board review usually takes 24-48 hours</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Button
+                type="submit"
+                className="w-full h-14 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.98]"
+              >
+                Proceed to Identity Verification
+              </Button>
+              <div className="text-center">
+                 <Link href="/login?redirect=membership" className="text-[10px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest hover:text-primary transition-colors">
+                  Association Member? <span className="text-primary italic border-b border-primary/30 ml-1">Secure Sign In</span>
+                </Link>
+              </div>
+            </div>
           )}
         </div>
       </form>
     </div>
   );
+}
+
+/**
+ * Senior UI Design Pattern: InputGroup
+ * High-performance reusable input component with professional feedback.
+ */
+function InputGroup({ label, name, type = 'text', value, onChange, icon: Icon, disabled, placeholder, required, error, capitalize }: any) {
+    return (
+        <div className="space-y-1.5 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-text-light/40 dark:text-text-dark/40 block">
+                    {label} {required && <span className="text-primary">*</span>}
+                </label>
+                {error && <span className="text-[9px] font-black text-danger uppercase tracking-widest">Required</span>}
+            </div>
+            <div className="relative group">
+                {Icon && (
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center border-r border-border-light dark:border-border-dark group-focus-within:border-primary transition-colors pr-2">
+                        <Icon className="w-3.5 h-3.5 text-text-light/30 dark:text-text-dark/30 group-focus-within:text-primary transition-colors" />
+                    </div>
+                )}
+                <input
+                    type={type} 
+                    name={name} 
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    disabled={disabled} 
+                    placeholder={placeholder}
+                    className={`
+                        w-full h-11 text-xs font-bold bg-gray-50/50 dark:bg-gray-950/50 
+                        border transition-all placeholder:text-text-light/20 dark:placeholder:text-text-dark/20 
+                        text-text-light dark:text-text-dark shadow-sm rounded-xl outline-none
+                        ${Icon ? 'pl-13 pr-4' : 'px-4'} 
+                        ${disabled ? 'cursor-not-allowed opacity-60' : 'focus:ring-1 focus:ring-primary focus:border-primary'} 
+                        ${error ? 'border-danger/50 focus:border-danger' : 'border-border-light dark:border-border-dark'}
+                        ${capitalize ? 'capitalize' : ''}
+                    `}
+                    style={{ paddingLeft: Icon ? '3.25rem' : '1rem' }}
+                />
+            </div>
+        </div>
+    );
+}
+
+function SelectGroup({ label, name, value, onChange, options, disabled, placeholder, required, error }: any) {
+    return (
+        <div className="space-y-1.5">
+            <label className="text-[10px] uppercase tracking-[0.15em] font-black text-text-light/40 dark:text-text-dark/40 block ml-1">
+                {label} {required && <span className="text-primary">*</span>}
+            </label>
+            <div className={`relative ${disabled ? 'opacity-50' : ''}`}>
+                <select 
+                  name={name} 
+                  value={value} 
+                  onChange={e => onChange(e.target.value)}
+                  disabled={disabled}
+                  className={`
+                    w-full h-11 px-4 text-xs font-bold bg-gray-50/50 dark:bg-gray-950/50 
+                    border border-border-light dark:border-border-dark rounded-xl 
+                    focus:ring-1 focus:ring-primary focus:border-primary outline-none 
+                    transition-all appearance-none cursor-pointer text-text-light dark:text-text-dark shadow-sm
+                    ${error ? 'border-danger/50' : ''}
+                  `}
+                >
+                    <option value="" className="text-text-light/20">{placeholder || 'Select...'}</option>
+                    {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/30 pointer-events-none" />
+            </div>
+        </div>
+    );
 }
 
 

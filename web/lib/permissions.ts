@@ -157,3 +157,12 @@ export function canAccessReports(userRole: string | null | undefined): boolean {
   ]);
 }
 
+/**
+ * Check if user can manage loan products
+ */
+export function canManageLoanProducts(userRole: string | null | undefined): boolean {
+  return hasAnyRole(userRole, [
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+  ]);
+}

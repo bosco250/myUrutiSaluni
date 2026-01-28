@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useCallback, memo, useEffect } from 'react';
-import { Search, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { Search, User, Settings, LogOut, Moon, Sun, Scissors } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
+import Link from 'next/link';
+import Image from 'next/image';
 import GlobalSearch from '@/components/navigation/GlobalSearch';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
@@ -44,11 +46,34 @@ function ModernHeaderComponent() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-b border-border-light dark:border-border-dark">
-        <div className="px-4 py-2.5">
-          <div className="flex items-center justify-between gap-3">
-            {/* Left: Search */}
-            <div className="flex-1 max-w-xl">
+      <header className="sticky top-0 z-[100] bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-b border-border-light dark:border-border-dark">
+        <div className="px-6 sm:px-10 py-2.5">
+          <div className="flex items-center justify-between gap-6">
+            {/* Left: Logo & Search */}
+            <div className="flex items-center flex-1 gap-12">
+              <Link href="/dashboard" className="flex items-center gap-2.5 group transition-transform hover:scale-102">
+                <div className="w-9 h-9 relative overflow-hidden rounded-xl border border-border-light dark:border-border-dark flex items-center justify-center bg-white shadow-sm transition-all group-hover:shadow-md">
+                  <Image 
+                    src="/logo.png" 
+                    alt="Uruti Saluni Logo" 
+                    width={36} 
+                    height={36} 
+                    className="object-cover"
+                  />
+                </div>
+                <div className="hidden lg:block">
+                  <div className="flex flex-col">
+                    <span className="text-xl font-extrabold text-slate-950 dark:text-white tracking-tighter leading-none">
+                      Uruti<span className="text-primary">.</span>
+                    </span>
+                    <span className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em] leading-none mt-1.5 ml-0.5">
+                      Saluni
+                    </span>
+                  </div>
+                </div>
+              </Link>
+
+              <div className="flex-1 max-w-xl">
               <div className="relative group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40 group-focus-within:text-primary transition" />
                 <input
@@ -64,6 +89,7 @@ function ModernHeaderComponent() {
                 </kbd>
               </div>
             </div>
+          </div>
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
@@ -85,8 +111,17 @@ function ModernHeaderComponent() {
                   onClick={toggleUserMenu}
                   className="flex items-center gap-2 p-1.5 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition group"
                 >
-                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xs ring-2 ring-primary/20">
-                    {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xs ring-2 ring-primary/20 overflow-hidden relative">
+                    {user?.avatarUrl || user?.avatar ? (
+                      <Image 
+                        src={user?.avatarUrl || user?.avatar || ''} 
+                        alt={user?.fullName || 'User'} 
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      user?.fullName?.charAt(0).toUpperCase() || 'U'
+                    )}
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-xs font-semibold text-text-light dark:text-text-dark">
@@ -101,8 +136,8 @@ function ModernHeaderComponent() {
                 {/* User Dropdown */}
                 {showUserMenu && (
                   <>
-                    <div className="fixed inset-0 z-10" onClick={closeUserMenu} />
-                    <div className="absolute right-0 mt-1 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="fixed inset-0 z-[110]" onClick={closeUserMenu} />
+                    <div className="absolute right-0 mt-1 w-48 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl overflow-hidden z-[120] animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="p-3 border-b border-border-light dark:border-border-dark">
                         <p className="text-xs font-semibold text-text-light dark:text-text-dark">
                           {user?.fullName}

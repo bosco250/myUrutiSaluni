@@ -61,4 +61,8 @@ export class CreateLoanDto {
   @ApiProperty()
   @IsDateString()
   applicationDate: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  metadata?: Record<string, any>;
 }

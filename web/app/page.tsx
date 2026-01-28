@@ -8,23 +8,24 @@ import { useAuthStore } from '@/store/auth-store';
 import Link from 'next/link';
 import MembershipApplicationForm from '@/components/forms/MembershipApplicationForm';
 import {
-  Building2,
   Calendar,
   DollarSign,
   CreditCard,
   Package,
   ShoppingCart,
   Shield,
-  CheckCircle,
-  ArrowRight,
   Sparkles,
   BarChart3,
   Wallet,
-  MapPin,
   Phone,
   Mail,
   ChevronRight,
+  Scissors,
+  LogIn,
+  UserPlus,
+  BookOpen
 } from 'lucide-react';
+import Image from 'next/image';
 import Button from '@/components/ui/Button';
 
 export default function Home() {
@@ -59,356 +60,181 @@ export default function Home() {
   }
 
   const features = [
-    {
-      icon: Building2,
-      title: 'Membership Management',
-      description: 'Register and manage salon owners, employees, and members with ease',
-      color: 'text-primary',
-      bg: 'bg-primary/5',
-    },
-    {
-      icon: Calendar,
-      title: 'Smart Scheduling',
-      description: 'Streamline bookings with an intuitive calendar and scheduling system',
-      color: 'text-primary',
-      bg: 'bg-primary/5',
-    },
-    {
-      icon: ShoppingCart,
-      title: 'Point of Sale (POS)',
-      description: 'Complete sales management with inventory tracking and reporting',
-      color: 'text-primary',
-      bg: 'bg-primary/5',
-    },
-    {
-      icon: Package,
-      title: 'Inventory Control',
-      description: 'Track products, stock levels, and manage your salon supplies',
-      color: 'text-primary',
-      bg: 'bg-primary/5',
-    },
-    {
-      icon: DollarSign,
-      title: 'Finance & Accounting',
-      description: 'Comprehensive financial management with real-time reporting',
-      color: 'text-primary',
-      bg: 'bg-primary/5',
-    },
-    {
-      icon: CreditCard,
-      title: 'Micro-Lending',
-      description: 'Access financial services and manage loans for your business',
-      color: 'text-primary',
-      bg: 'bg-primary/5',
-    },
+    { icon: Scissors, title: 'Memberships', color: 'text-primary' },
+    { icon: Calendar, title: 'Scheduling', color: 'text-primary' },
+    { icon: ShoppingCart, title: 'POS Tools', color: 'text-primary' },
+    { icon: Package, title: 'Inventory', color: 'text-primary' },
+    { icon: DollarSign, title: 'Finance', color: 'text-primary' },
+    { icon: CreditCard, title: 'Lending', color: 'text-primary' },
   ];
 
-  const benefits = [
-    'Professional salon management tools',
-    'Real-time analytics and reporting',
-    'Secure payment processing',
-    'Mobile-friendly interface',
-    '24/7 customer support',
-    'Regular platform updates',
+  const highlights = [
+    { icon: Shield, title: 'Secure' },
+    { icon: BarChart3, title: 'Live Data' },
+    { icon: Wallet, title: 'Growth' }
   ];
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark selection:bg-primary/20 selection:text-primary">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-background-light dark:bg-background-dark pt-32 pb-24 lg:pt-40 lg:pb-32">
-        {/* Subtle Background Pattern */}
-        <div className="absolute inset-0 opacity-5 dark:opacity-10 pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary rounded-full blur-3xl" />
+    <div className="min-h-screen bg-background-light dark:bg-background-dark selection:bg-primary/20 selection:text-primary overflow-x-hidden">
+      {/* NavigationBar - Ultra Compact */}
+      <nav className="fixed top-0 inset-x-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-light dark:border-border-dark">
+        <div className="max-w-7xl mx-auto px-8 md:px-12 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-7 h-7 relative overflow-hidden rounded-lg border border-border-light dark:border-border-dark flex items-center justify-center bg-white shadow-sm transition-all group-hover:scale-105">
+              <Image src="/logo.png" alt="Logo" width={28} height={28} className="object-cover" />
+            </div>
+            <span className="text-base font-extrabold text-text-light dark:text-text-dark tracking-tighter leading-none">
+              Uruti<span className="text-primary">.</span>
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="text-[10px] font-black uppercase tracking-widest text-text-light/50 hover:text-primary transition-colors">
+              Sign In
+            </Link>
+            <Button
+              onClick={() => document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' })}
+              className="bg-primary hover:bg-primary/90 text-white text-[11px] font-bold px-5 h-9 rounded-xl shadow-lg shadow-primary/20 border-none transition-all active:scale-95"
+            >
+              Apply Now
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Integrated Hero Section - Everything Visible Above the Fold */}
+      <section className="relative pt-20 pb-10 container mx-auto px-8 md:px-12 max-w-7xl">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-primary/5 rounded-full blur-[80px]" />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-4xl mx-auto space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                Professional Salon Management
-              </span>
+        <div className="relative grid lg:grid-cols-12 gap-8 items-start">
+          {/* Main Messaging - 7 cols */}
+          <div className="lg:col-span-7 space-y-4 animate-in fade-in slide-in-from-left-4 duration-700">
+            <div className="inline-flex items-center gap-2 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-[8px] font-black text-primary uppercase tracking-widest">Digital Command Center</span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text-light dark:text-text-dark leading-[1.1]">
-              Elevate Your
-              <span className="block text-primary mt-2">Salon Business</span>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-text-light dark:text-text-dark leading-none">
+              Better Beauty <span className="text-primary italic">Operations</span>
             </h1>
-
-            <p className="text-xl text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto leading-relaxed">
-              Complete digital platform for salon operations. Manage memberships, bookings,
-              finances, and inventory with professional-grade tools.
+            
+            <p className="text-xs md:text-sm text-text-light/50 dark:text-text-dark/50 max-w-md font-bold leading-tight">
+              Manage memberships, bookings, inventory & finance in one sleek dashboard.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+            <div className="flex flex-wrap gap-4 pt-3">
               <Button
-                onClick={() => {
-                  document
-                    .getElementById('membership-form')
-                    ?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="h-14 px-10 rounded-lg text-lg font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg transition-all"
+                onClick={() => router.push('/salons/browse')}
+                className="h-12 px-8 rounded-sm text-sm font-bold bg-slate-950 dark:bg-white text-white dark:text-slate-950 shadow-xl shadow-slate-900/10 dark:shadow-white/5 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5"
               >
-                Apply for Membership
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <BookOpen className="w-5 h-5" />
+                Book Service
               </Button>
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  className="h-14 px-10 rounded-lg text-lg font-semibold border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-all"
-                >
-                  Sign In
-                  <ChevronRight className="w-5 h-5 ml-1" />
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' })}
+                className="h-12 px-8 rounded-sm text-sm border-[1px] font-bold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5"
+              >
+                <UserPlus className="w-5 h-5" />
+                Join Membership
+              </Button>
+            </div>
+
+            {/* Quick Stats - Inline */}
+            <div className="flex items-center gap-8 pt-4">
+              <div className="flex flex-col">
+                <span className="text-2xl font-black tracking-tighter">2.4k+</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-text-light/30">Active Salons</span>
+              </div>
+              <div className="w-px h-8 bg-border-light dark:border-border-dark" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-black tracking-tighter">98%</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-text-light/30">Client Joy</span>
+              </div>
+            </div>
+
+            {/* Features Mini-Grid - Pulled into Hero */}
+            <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-3 gap-3 pt-6 lg:pt-8 bg-surface-light/30 dark:bg-surface-dark/30 p-4 rounded-2xl border border-border-light/50 dark:border-border-dark/50">
+              {features.map((f, i) => (
+                <div key={i} className="flex flex-col items-center text-center gap-1.5 p-2 rounded-xl hover:bg-white dark:hover:bg-slate-900 transition-colors cursor-default border border-transparent hover:border-primary/20 group">
+                  <f.icon className="w-4 h-4 text-primary transition-transform group-hover:scale-110" />
+                  <span className="text-[9px] font-black uppercase tracking-tighter text-text-light/60 dark:text-text-dark/60">{f.title}</span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-24 bg-surface-light/50 dark:bg-surface-dark/50 border-y border-border-light dark:border-border-dark">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20 max-w-2xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-4">
-              Everything You Need
-            </h2>
-            <p className="text-base text-text-light/60 dark:text-text-dark/60">
-              Powerful tools designed specifically for salon businesses, helping you save time and
-              grow revenue.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={index}
-                  className="group bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 hover:border-primary/30 transition-all duration-300"
-                >
-                  <div
-                    className={`inline-flex p-3 rounded-lg ${feature.bg} ${feature.color} mb-5 transition-transform`}
-                  >
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 leading-relaxed">
-                    {feature.description}
-                  </p>
+          {/* Visual Side & Ecosystem Pulled in - 5 cols */}
+          <div className="lg:col-span-5 space-y-6 animate-in fade-in slide-in-from-right-4 duration-700 delay-150">
+            {/* Visual Header */}
+            <div className="relative group overflow-hidden rounded-3xl border border-border-light dark:border-border-dark shadow-2xl">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=600')] bg-cover bg-center brightness-50 contrast-125" />
+              <div className="relative p-10 flex flex-col items-center justify-center gap-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-2xl animate-bounce-slow overflow-hidden p-2.5">
+                  <Image src="/urutisalunilogo.png" alt="Logo" width={44} height={44} className="object-cover" />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+                <span className="text-xl font-black tracking-tighter text-white">Uruti Saluni<span className="text-primary italic">.cloud</span></span>
+              </div>
+            </div>
 
-      {/* Membership Application Section */}
-      <section id="membership-form" className="py-24 bg-background-light dark:bg-background-dark">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-4">
-              Join Our Network
-            </h2>
-            <p className="text-base text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
-              Apply for membership to unlock the full potential of your salon business.
-            </p>
-          </div>
-
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-lg overflow-hidden">
-            <MembershipApplicationForm showTitle={false} showProgress={true} />
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-24 bg-surface-light/30 dark:bg-surface-dark/30 border-t border-border-light dark:border-border-dark">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-text-light dark:text-text-dark mb-6">
-                Why Choose Us?
-              </h2>
-              <p className="text-lg text-text-light/70 dark:text-text-dark/70 mb-8 leading-relaxed">
-                We provide an ecosystem that scales with your business, from a single chair to a
-                franchise.
-              </p>
-
-              <div className="space-y-4">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-4 h-4 text-primary" />
+            {/* Ecosystem Highlights - Pulled in */}
+            <div className="bg-slate-950 dark:bg-white rounded-3xl p-6 text-white dark:text-slate-950 shadow-2xl space-y-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40">System Core</p>
+              <div className="grid gap-4">
+                {highlights.map((h, i) => (
+                  <div key={i} className="flex items-center gap-4 group">
+                    <div className="w-9 h-9 rounded-xl bg-white/10 dark:bg-slate-950/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <h.icon className="w-4 h-4 text-primary" />
                     </div>
-                    <p className="text-base text-text-light/80 dark:text-text-dark/80">{benefit}</p>
+                    <div>
+                      <h4 className="text-xs font-black tracking-tight uppercase tracking-widest">{h.title}</h4>
+                      <p className="text-[10px] font-medium opacity-50">Enterprise protocols</p>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="relative">
-              <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-8 border border-border-light dark:border-border-dark shadow-lg">
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
-                        Bank-Grade Security
-                      </h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                        Your data is encrypted and protected with enterprise-level security
-                        protocols.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full h-px bg-border-light dark:bg-border-dark" />
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <BarChart3 className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
-                        Real-Time Analytics
-                      </h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                        Make informed decisions with live dashboards and comprehensive reports.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full h-px bg-border-light dark:bg-border-dark" />
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-text-light dark:text-text-dark mb-1">
-                        Financial Growth
-                      </h3>
-                      <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                        Access micro-loans and manage your cash flow effectively.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-surface-light/50 dark:bg-surface-dark/50 border-t border-border-light dark:border-border-dark">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-text-light dark:text-text-dark">
-            Ready to Get Started?
-          </h2>
-          <p className="text-lg text-text-light/70 dark:text-text-dark/70 mb-10 max-w-2xl mx-auto">
-            Join hundreds of salon owners who are already transforming their business with our
-            platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={() => {
-                document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="h-14 px-10 rounded-lg text-lg font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg transition-all"
-            >
-              Apply Now
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Link href="/login">
-              <Button
-                variant="outline"
-                className="h-14 px-10 rounded-lg text-lg font-semibold border-border-light dark:border-border-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-all"
-              >
-                Sign In
-              </Button>
+      {/* Form Section - Integrated Tight */}
+      <section id="membership-form" className="py-8 bg-surface-light/50 dark:bg-surface-dark/50 border-y border-border-light dark:border-border-dark relative overflow-hidden">
+        <div className="max-w-5xl mx-auto px-2 md:px-4 relative z-10">
+          <div className="text-center mb-4">
+            <h2 className="text-3xl font-black text-text-light dark:text-text-dark tracking-tighter">Scalable Membership</h2>
+            <p className="text-xs font-bold text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mt-1">Apply for your digital command center</p>
+          </div>
+          <MembershipApplicationForm showTitle={false} showProgress={true} compact={true} />
+        </div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-[0.03] dark:opacity-[0.05] pointer-events-none" 
+             style={{ backgroundImage: `radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)`, backgroundSize: '32px 32px' }} />
+      </section>
+
+      {/* Footer - Ultra Compact */}
+      <footer className="bg-background-light dark:bg-background-dark py-12">
+        <div className="max-w-7xl mx-auto px-8 md:px-12 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex flex-col items-center md:items-start gap-4">
+             <Link href="/" className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md border border-primary/20 flex items-center justify-center bg-white shadow-sm overflow-hidden text-[10px] font-black">U</div>
+              <span className="text-sm font-black tracking-tighter">Uruti<span className="text-primary">.</span>Saluni</span>
             </Link>
+            <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Digital tools for professional beauty commerce</p>
+          </div>
+          
+          <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-text-light/50">
+            <Link href="/login" className="hover:text-primary transition-colors">Sign In</Link>
+            <Link href="#membership-form" className="hover:text-primary transition-colors">Apply</Link>
+            <div className="flex items-center gap-4 border-l border-border-light pl-8 ml-4">
+              <span className="opacity-30">Kigali, Rwanda</span>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark py-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-            <div className="col-span-1 md:col-span-1">
-              <span className="text-xl font-bold text-text-light dark:text-text-dark tracking-tight">
-                Uruti<span className="text-primary">Saluni</span>
-              </span>
-              <p className="mt-4 text-sm text-text-light/60 dark:text-text-dark/60 leading-relaxed">
-                Empowering salon businesses with next-generation digital tools.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">
-                Platform
-              </h3>
-              <ul className="space-y-3 text-sm text-text-light/60 dark:text-text-dark/60">
-                <li>
-                  <Link href="#membership-form" className="hover:text-primary transition-colors">
-                    Membership
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="hover:text-primary transition-colors">
-                    Sign In
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/register" className="hover:text-primary transition-colors">
-                    Sign Up
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">
-                Features
-              </h3>
-              <ul className="space-y-3 text-sm text-text-light/60 dark:text-text-dark/60">
-                <li>Salon Management</li>
-                <li>Appointment Scheduling</li>
-                <li>Financial Tools</li>
-                <li>Inventory Management</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-sm text-text-light dark:text-text-dark uppercase tracking-wider mb-4">
-                Contact
-              </h3>
-              <ul className="space-y-3 text-sm text-text-light/60 dark:text-text-dark/60">
-                <li className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-primary" />
-                  support@urutisaluni.com
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-primary" />
-                  +250 7XX XXX XXX
-                </li>
-                <li className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  Kigali, Rwanda
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-border-light dark:border-border-dark text-center text-sm text-text-light/40 dark:text-text-dark/40">
-            <p>&copy; {new Date().getFullYear()} UrutiSaluni Platform. All rights reserved.</p>
-          </div>
+        <div className="mt-12 text-[8px] font-bold text-center uppercase tracking-[0.4em] text-text-light/10 dark:text-text-dark/10">
+          &copy; {new Date().getFullYear()} UrutiSaluni Platform &bull; Made with pride
         </div>
       </footer>
     </div>

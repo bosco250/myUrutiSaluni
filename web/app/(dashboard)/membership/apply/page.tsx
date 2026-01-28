@@ -76,7 +76,7 @@ function MembershipApplyContent() {
     queryKey: ['membership-status', user?.id],
     queryFn: async () => {
       const response = await api.get('/memberships/status');
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!user,
     retry: false,
@@ -87,7 +87,7 @@ function MembershipApplyContent() {
     queryKey: ['membership-application', user?.id],
     queryFn: async () => {
       const response = await api.get('/memberships/applications/my');
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!user,
     retry: false,

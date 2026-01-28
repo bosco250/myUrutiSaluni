@@ -5,6 +5,8 @@
 // Currently re-exports for consistency with the lazy loading pattern
 
 export {
+  AreaChart,
+  Area,
   LineChart,
   Line,
   BarChart,

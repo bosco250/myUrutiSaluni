@@ -31,6 +31,7 @@ import {
   Clock,
   Check,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { format, isWithinInterval, parse } from 'date-fns';
 import { useState, useEffect } from 'react';
@@ -257,14 +258,18 @@ export default function SalonsPage() {
       )}
 
       {/* Header */}
-      <div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">Salons</h1>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              Manage and monitor salon businesses
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Salons</h1>
+          <p className="text-sm text-gray-900/60 dark:text-white/60 mt-0.5">
+            Manage and monitor salon businesses
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['salons'] })} className="h-9">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
           <RoleGuard
             requiredRoles={[UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER]}
           >
@@ -281,6 +286,7 @@ export default function SalonsPage() {
               }}
               variant="primary"
               size="sm"
+              className="h-9"
               disabled={isSalonOwner() && membershipStatus && !membershipStatus.isMember}
               title={
                 isSalonOwner() && membershipStatus && !membershipStatus.isMember
@@ -288,98 +294,81 @@ export default function SalonsPage() {
                   : ''
               }
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 mr-2" />
               Add Salon
             </Button>
           </RoleGuard>
         </div>
-
-        {/* Search, Filter, and View Toggle */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-            <input
-              type="text"
-              placeholder="Search salons..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-9 pr-8 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition appearance-none cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-          {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-md transition ${
-                viewMode === 'cards'
-                  ? 'bg-primary text-white'
-                  : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
-              }`}
-              title="Card View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md transition ${
-                viewMode === 'table'
-                  ? 'bg-primary text-white'
-                  : 'text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark hover:bg-surface-light dark:hover:bg-surface-dark'
-              }`}
-              title="Table View"
-            >
-              <Table className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
-          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Total Salons
-          </p>
-          <p className="text-xl font-bold text-text-light dark:text-text-dark">
-            {salons?.length || 0}
-          </p>
-        </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
-          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Active
-          </p>
-          <p className="text-xl font-bold text-success">
-            {salons?.filter((s) => s.status === 'active').length || 0}
-          </p>
-        </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
-          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Pending
-          </p>
-          <p className="text-xl font-bold text-warning">
-            {salons?.filter((s) => s.status === 'pending').length || 0}
-          </p>
-        </div>
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
-          <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-1">
-            Inactive
-          </p>
-          <p className="text-xl font-bold text-text-light/60 dark:text-text-dark/60">
-            {salons?.filter((s) => s.status === 'inactive').length || 0}
-          </p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-3">
+        <StatCard label="Total Salons" value={salons?.length || 0} icon={Building2} color="text-blue-600" bg="bg-blue-500/10" />
+        <StatCard label="Active Salons" value={salons?.filter((s) => s.status === 'active').length || 0} icon={Check} color="text-green-600" bg="bg-green-500/10" />
+        <StatCard label="Pending Approval" value={salons?.filter((s) => s.status === 'pending').length || 0} icon={Clock} color="text-warning" bg="bg-warning/10" />
+        <StatCard label="Inactive" value={salons?.filter((s) => s.status === 'inactive').length || 0} icon={X} color="text-gray-600" bg="bg-gray-500/10" />
+      </div>
+
+      {/* Filters Toolbar */}
+      <div className="bg-white dark:bg-gray-950 rounded-xl p-0 mb-3">
+        <div className="flex flex-col lg:flex-row gap-2">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-white/40" />
+            <input
+              type="text"
+              placeholder="Search salons by name, city, owner..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-9 pr-4 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-lg text-gray-900 dark:text-white placeholder:text-gray-900/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-lg">
+               {['all', 'active', 'pending', 'inactive'].map((status) => (
+                 <button
+                   key={status}
+                   onClick={() => setStatusFilter(status)}
+                   className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+                     statusFilter === status
+                       ? 'bg-primary text-white shadow-sm'
+                       : 'text-gray-900/40 dark:text-white/40 hover:text-gray-900 dark:hover:text-white'
+                   }`}
+                 >
+                   {status}
+                 </button>
+               ))}
+             </div>
+
+             <div className="h-9 w-[1px] bg-gray-200 dark:bg-gray-800 mx-1 hidden lg:block" />
+
+             {/* View Toggle */}
+             <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-lg p-1 h-9">
+               <button
+                 onClick={() => setViewMode('cards')}
+                 className={`p-1 rounded-md transition ${
+                   viewMode === 'cards'
+                     ? 'bg-white dark:bg-gray-800 text-primary shadow-sm ring-1 ring-gray-200 dark:ring-gray-700'
+                     : 'text-gray-900/40 dark:text-white/40 hover:text-gray-900 dark:hover:text-white'
+                 }`}
+                 title="Card View"
+               >
+                 <LayoutGrid className="w-4 h-4" />
+               </button>
+               <button
+                 onClick={() => setViewMode('table')}
+                 className={`p-1 rounded-md transition ${
+                   viewMode === 'table'
+                     ? 'bg-white dark:bg-gray-800 text-primary shadow-sm ring-1 ring-gray-200 dark:ring-gray-700'
+                     : 'text-gray-900/40 dark:text-white/40 hover:text-gray-900 dark:hover:text-white'
+                 }`}
+                 title="Table View"
+               >
+                 <Table className="w-4 h-4" />
+               </button>
+             </div>
+          </div>
         </div>
       </div>
 
@@ -484,6 +473,21 @@ export default function SalonsPage() {
   );
 }
 
+// Stat Card Component
+function StatCard({ label, value, icon: Icon, color, bg }: { label: string; value: number; icon: any; color: string; bg: string }) {
+  return (
+    <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-3 flex items-center gap-2">
+      <div className={`p-2 rounded-lg ${bg}`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <div>
+        <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+        <p className="text-[10px] text-gray-900/60 dark:text-white/60 uppercase tracking-wider">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 const BUSINESS_ICONS: Record<string, any> = {
   hair_salon: Scissors,
   beauty_spa: Sparkles,
@@ -543,14 +547,12 @@ function SalonCard({
   return (
     <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/50 transition-all duration-300 hover:shadow-lg overflow-hidden">
       {/* Gradient Background on Hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:to-pink-500/5 transition-all duration-300" />
-
       <div className="relative">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center relative">
+              <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-primary/5 dark:bg-primary/10 flex items-center justify-center relative">
                 {salon.images?.[0] || salon.image ? (
                   <img
                     src={salon.images?.[0] || salon.image}
@@ -558,7 +560,7 @@ function SalonCard({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Building2 className="w-6 h-6 text-white" />
+                  <Building2 className="w-6 h-6 text-primary" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -806,37 +808,37 @@ function SalonsTable({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
+          <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800">
             <tr>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">
                 Salon
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">
                 Type & Clientele
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">
                 Location
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-right text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-light/50 dark:divide-border-dark/50">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {salons.map((salon) => (
-              <tr key={salon.id} className="hover:bg-primary/5 transition-colors group">
+              <tr key={salon.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group">
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <div className="w-9 h-9 flex-shrink-0 rounded-lg overflow-hidden bg-primary flex items-center justify-center text-white ring-1 ring-gray-200 dark:ring-gray-800">
                       {salon.images?.[0] || salon.image ? (
                         <img
                           src={salon.images?.[0] || salon.image}
@@ -844,73 +846,65 @@ function SalonsTable({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Building2 className="w-5 h-5 text-white" />
+                        <Building2 className="w-5 h-5" />
                       )}
                     </div>
                     <div>
                       <Link
                         href={`/salons/${salon.id}`}
-                        className="text-xs font-semibold text-text-light dark:text-text-dark hover:text-primary transition"
+                        className="text-sm font-bold text-gray-900 dark:text-white hover:text-primary transition"
                       >
                         {salon.name}
                       </Link>
-                      <div className="text-[10px] text-text-light/60 dark:text-text-dark/60">
+                      <div className="text-xs text-gray-500 font-medium">
                         {salon.owner?.fullName}
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {salon.settings?.businessTypes?.slice(0, 2).map((type) => {
                       const Icon = BUSINESS_ICONS[type] || Star;
                       return (
                         <span
                           key={type}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-[10px] font-bold text-gray-700 dark:text-white/80 uppercase"
                         >
                           <Icon className="w-3 h-3 text-primary" />
-                          <span className="capitalize">{type.replace('_', ' ')}</span>
+                          <span>{type.replace('_', ' ')}</span>
                         </span>
                       );
                     })}
-                    {!salon.settings?.businessTypes && salon.settings?.businessType && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80 capitalize">
-                        <Star className="w-3 h-3 text-primary" />
-                        {salon.settings.businessType.replace('_', ' ')}
-                      </span>
-                    )}
                     {salon.settings?.targetClientele && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-background-light dark:bg-background-dark text-[10px] text-text-light/80 dark:text-text-dark/80 capitalize">
-                        <User className="w-3 h-3" />
-                        {salon.settings.targetClientele}
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-[10px] font-bold text-gray-700 dark:text-white/80 uppercase">
+                        <User className="w-3 h-3 text-secondary" />
+                        <span>{salon.settings.targetClientele}</span>
                       </span>
                     )}
                   </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
-                    <MapPin className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+                  <div className="flex items-center gap-2 text-xs text-gray-700 dark:text-white/80">
+                    <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                     <div>
-                      <div className="text-text-light dark:text-text-dark">{salon.city}</div>
-                      <div className="text-[10px] text-text-light/60 dark:text-text-dark/60">
-                        {salon.district}
-                      </div>
+                      <div className="font-bold">{salon.city}</div>
+                      <div className="text-[10px] text-gray-500">{salon.district}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="space-y-0.5">
                     {salon.phone && (
-                      <div className="flex items-center gap-1.5 text-xs text-text-light dark:text-text-dark">
-                        <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                      <div className="flex items-center gap-2 text-xs font-semibold text-gray-900 dark:text-white">
+                        <Phone className="w-3.5 h-3.5 text-gray-400" />
                         {salon.phone}
                       </div>
                     )}
                     {salon.email && (
-                      <div className="flex items-center gap-1.5 text-xs text-text-light/80 dark:text-text-dark/80">
-                        <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
-                        <span className="truncate max-w-[120px]">{salon.email}</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Mail className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="truncate max-w-[140px]">{salon.email}</span>
                       </div>
                     )}
                   </div>
@@ -918,7 +912,7 @@ function SalonsTable({
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
                         statusColors[salon.status as keyof typeof statusColors] ||
                         statusColors.inactive
                       }`}
@@ -926,7 +920,7 @@ function SalonsTable({
                       {salon.status}
                     </span>
                     {isSalonOpen(salon.settings?.operatingHours) && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-success/10 text-success border border-success/20">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-600 border border-green-500/20 uppercase">
                         <Clock className="w-3 h-3" />
                         Open
                       </span>
@@ -937,36 +931,36 @@ function SalonsTable({
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link
                       href={`/salons/${salon.id}`}
-                      className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition"
+                      className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition"
                       title="View Details"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="w-4 h-4" />
                     </Link>
                     {canEditSalon(salon) && (
                       <button
                         onClick={() => onEdit(salon)}
-                        className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition"
+                        className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition"
                         title="Edit"
                       >
-                        <Edit className="w-3.5 h-3.5" />
+                        <Edit className="w-4 h-4" />
                       </button>
                     )}
                     {canManageSalons() && (
                       <Link
                         href={`/salons/${salon.id}/customers`}
-                        className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition"
+                        className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition"
                         title="View Customers"
                       >
-                        <Users className="w-3.5 h-3.5" />
+                        <Users className="w-4 h-4" />
                       </Link>
                     )}
                     {canDeleteSalon() && (
                       <button
                         onClick={() => onDelete(salon.id)}
-                        className="p-1.5 text-danger hover:bg-danger/10 rounded-lg transition"
+                        className="p-1.5 text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition"
                         title="Delete"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>

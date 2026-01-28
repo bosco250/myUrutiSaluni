@@ -213,9 +213,9 @@ function ReportsContent() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-[1600px] mx-auto px-4 py-2 sm:py-4 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
         <div>
           <h1 className="text-2xl font-bold text-text-light dark:text-text-dark tracking-tight">Reports & Analytics</h1>
           <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
@@ -223,13 +223,13 @@ function ReportsContent() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3 bg-surface-light dark:bg-surface-dark p-1 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div className="flex items-center gap-1 bg-surface-light dark:bg-surface-dark p-1 rounded-lg border border-border-light dark:border-border-dark shadow-sm">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+            <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/50 dark:text-text-dark/50" />
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value as any)}
-              className="h-9 pl-9 pr-8 text-sm bg-transparent border-0 rounded-lg text-text-light dark:text-text-dark focus:ring-0 cursor-pointer font-medium hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+              className="h-8 pl-8 pr-8 text-xs font-medium bg-transparent border-0 rounded-md text-text-light dark:text-text-dark focus:ring-0 cursor-pointer hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors outline-none appearance-none min-w-[110px]"
             >
               <option value="week">This Week</option>
               <option value="month">This Month</option>
@@ -238,45 +238,51 @@ function ReportsContent() {
             </select>
           </div>
           
-          <div className="w-px h-5 bg-border-light dark:bg-border-dark" />
+          <div className="w-px h-4 bg-border-light dark:bg-border-dark mx-1" />
           
           <Button
             onClick={handleExport}
             variant="outline"
             size="sm"
-            className="h-9 text-primary hover:bg-primary/5 hover:text-primary px-3 border-0"
+            className="h-8 text-xs font-medium text-text-light/70 dark:text-text-dark/70 hover:!text-primary hover:!bg-primary/5 px-3 gap-2 border-0 shadow-none"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-3.5 h-3.5" />
             Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Summary Cards - System Design */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <SummaryCard
           title="Total Revenue"
           value={`RWF ${summaryStats.totalRevenue.toLocaleString()}`}
           trend={summaryStats.revenueChange}
           icon={DollarSign}
-          color="text-green-600 dark:text-green-400"
-          bg="bg-green-500/10"
+          textColor="text-emerald-600 dark:text-emerald-400"
+          bgColor="bg-emerald-100 dark:bg-emerald-900/30"
+          borderColor="border-emerald-200 dark:border-emerald-800/50"
+          hoverBorder="hover:border-emerald-300 dark:hover:border-emerald-700"
         />
         <SummaryCard
           title="Total Sales"
           value={summaryStats.totalSales}
           trend={summaryStats.salesChange}
           icon={ShoppingCart}
-          color="text-blue-600 dark:text-blue-400"
-          bg="bg-blue-500/10"
+          textColor="text-blue-600 dark:text-blue-400"
+          bgColor="bg-blue-100 dark:bg-blue-900/30"
+          borderColor="border-blue-200 dark:border-blue-800/50"
+          hoverBorder="hover:border-blue-300 dark:hover:border-blue-700"
         />
         <SummaryCard
           title="Avg. Order Value"
           value={`RWF ${Math.round(summaryStats.averageSale).toLocaleString()}`}
           trend={summaryStats.avgOrderChange}
           icon={TrendingUp}
-          color="text-purple-600 dark:text-purple-400"
-          bg="bg-purple-500/10"
+          textColor="text-violet-600 dark:text-violet-400"
+          bgColor="bg-violet-100 dark:bg-violet-900/30"
+          borderColor="border-violet-200 dark:border-violet-800/50"
+          hoverBorder="hover:border-violet-300 dark:hover:border-violet-700"
         />
         <SummaryCard
           title="Appointments"
@@ -284,8 +290,10 @@ function ReportsContent() {
           subValue={`${summaryStats.completedAppointments} completed`}
           trend={summaryStats.aptChange}
           icon={Calendar}
-          color="text-orange-600 dark:text-orange-400"
-          bg="bg-orange-500/10"
+          textColor="text-orange-600 dark:text-orange-400"
+          bgColor="bg-orange-100 dark:bg-orange-900/30"
+          borderColor="border-orange-200 dark:border-orange-800/50"
+          hoverBorder="hover:border-orange-300 dark:hover:border-orange-700"
         />
       </div>
 
@@ -449,29 +457,27 @@ function ReportsContent() {
 
 // Components
 
-function SummaryCard({ title, value, subValue, trend, icon: Icon, color, bg }: any) {
+function SummaryCard({ title, value, subValue, trend, icon: Icon, textColor, bgColor, borderColor, hoverBorder }: any) {
   const isPositive = trend >= 0;
   
   return (
-    <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 flex flex-col justify-between h-[110px] relative overflow-hidden group">
-      <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
-        <div className={`p-2 rounded-lg ${bg}`}>
-          <Icon className={`w-5 h-5 ${color}`} />
+    <div className={`group relative bg-surface-light dark:bg-surface-dark border ${borderColor} rounded-xl p-3 ${hoverBorder} transition-all`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className={`text-[10px] uppercase tracking-wide font-bold ${textColor}`}>{title}</p>
+        <div className={`p-1 ${bgColor} rounded-md group-hover:scale-110 transition-transform`}>
+          <Icon className={`w-3 h-3 ${textColor}`} />
         </div>
       </div>
+      <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">
+        {value}
+      </p>
       
-      <div>
-        <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">{title}</p>
-        <h3 className="text-2xl font-bold text-text-light dark:text-text-dark mt-1 tracking-tight">{value}</h3>
-        {subValue && <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-0.5">{subValue}</p>}
-      </div>
-      
-      <div className="flex items-center gap-1.5 mt-auto">
-        <span className={`flex items-center text-xs font-semibold ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+      <div className="flex items-center gap-1.5 mt-1">
+        <span className={`flex items-center text-[10px] font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
           {isPositive ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
           {Math.abs(trend)}%
         </span>
-        <span className="text-[10px] text-text-light/40 dark:text-text-dark/40">vs last period</span>
+        <span className="text-[10px] text-text-light/50 dark:text-text-dark/50 font-medium">vs last period</span>
       </div>
     </div>
   );

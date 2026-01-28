@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Loader2,
   ArrowLeft,
+  ChevronDown,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -25,6 +26,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { canViewAllSalons } from '@/lib/permissions';
 import { format } from 'date-fns';
+import { useToast } from '@/components/ui/Toast';
 
 interface ProductWithStock {
   id: string;
@@ -245,75 +247,58 @@ function StockManagementContent() {
       </div>
 
  
-      {/* Stats Cards - Compacted */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <div className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                Products
-              </p>
-              <p className="text-lg font-bold text-text-light dark:text-text-dark mt-0.5">
-                {stats.totalProducts}
-              </p>
-            </div>
-            <div className="p-1.5 bg-background-secondary dark:bg-background-dark rounded-lg border border-border-light/50">
-              <Package className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+      {/* Stats Cards - Compacted & Flat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+        {/* Total Products */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-indigo-600 dark:text-indigo-400">Products</p>
+            <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Package className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.totalProducts}</p>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 dark:border-amber-500/30 rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                Low Stock
-              </p>
-              <p className="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                {stats.lowStock}
-              </p>
-            </div>
-            <div className="p-1.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg">
-              <AlertTriangle className="w-3.5 h-3.5 text-white" />
+        {/* Low Stock */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-orange-200 dark:border-orange-800/50 rounded-xl p-3 hover:border-orange-300 dark:hover:border-orange-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-orange-600 dark:text-orange-400">Low Stock</p>
+            <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <AlertTriangle className="w-3 h-3 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.lowStock}</p>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-rose-500/10 to-red-500/10 border border-rose-500/20 dark:border-rose-500/30 rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                Out of Stock
-              </p>
-              <p className="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5">
-                {stats.outOfStock}
-              </p>
-            </div>
-            <div className="p-1.5 bg-gradient-to-br from-rose-500 to-red-600 rounded-lg">
-              <XCircle className="w-3.5 h-3.5 text-white" />
+        {/* Out of Stock */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-rose-200 dark:border-rose-800/50 rounded-xl p-3 hover:border-rose-300 dark:hover:border-rose-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-rose-600 dark:text-rose-400">Out of Stock</p>
+            <div className="p-1 bg-rose-100 dark:bg-rose-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.outOfStock}</p>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 dark:border-emerald-500/30 rounded-xl p-3 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                Total Value
-              </p>
-              <p className="text-lg font-bold text-text-light dark:text-text-dark mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(stats.totalValue)}
-              </p>
-            </div>
-            <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg">
-              <TrendingUp className="w-3.5 h-3.5 text-white" />
+        {/* Total Value */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Total Value</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+            {stats.totalValue.toLocaleString()} RWF
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-1 mb-4">
+      {/* Tabs */}
+      <div className="mb-4">
         <div className="flex flex-wrap gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -442,31 +427,36 @@ function StockLevelsTab({
   return (
     <div>
       {/* Search and Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 mb-4">
+      {/* Search and Filters */}
+      {/* Search and Filters */}
+      <div className="mb-4">
         <div className="flex flex-col sm:flex-row gap-2">
-        <div className="flex-1 relative">
-          <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </div>
-        <select
-          value={stockFilter}
-          onChange={(e) => setStockFilter(e.target.value as 'all' | 'low' | 'out')}
-          className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <option value="all">All Stock</option>
-          <option value="low">Low Stock (&lt;10)</option>
-          <option value="out">Out of Stock</option>
-        </select>
-        <Button onClick={onRefresh} variant="secondary" size="sm" className="flex items-center gap-2 h-[34px]">
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
-        </Button>
+          <div className="flex-1 relative">
+            <Package className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-8 pr-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary hover:border-primary/50 transition-colors"
+            />
+          </div>
+          <div className="relative min-w-[200px]">
+             <select
+               value={stockFilter}
+               onChange={(e) => setStockFilter(e.target.value as 'all' | 'low' | 'out')}
+               className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary hover:border-primary/50 transition-colors appearance-none cursor-pointer"
+             >
+               <option value="all">All Stock</option>
+               <option value="low">Low Stock (&lt;10)</option>
+               <option value="out">Out of Stock</option>
+             </select>
+             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+          </div>
+          <Button onClick={onRefresh} variant="secondary" size="sm" className="flex items-center gap-2 h-9 px-3 text-xs">
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -476,27 +466,27 @@ function StockLevelsTab({
           <table className="w-full">
             <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
                   Product
                 </th>
                 {canViewAll && (
-                  <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
                     Salon
                   </th>
                 )}
-                <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
                   SKU
                 </th>
-                <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                  Level
+                <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
+                  Stock Level
                 </th>
-                <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                  Price
+                <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
+                  Unit Price
                 </th>
-                <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                  Value
+                <th className="px-3 py-2.5 text-left text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
+                  Total Value
                 </th>
-                <th className="px-4 py-2 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                <th className="px-3 py-2.5 text-right text-[10px] uppercase tracking-wide font-black text-text-light/50 dark:text-text-dark/50">
                   Status
                 </th>
               </tr>
@@ -504,13 +494,13 @@ function StockLevelsTab({
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {isLoading ? (
                 <tr>
-                   <td colSpan={7} className="px-4 py-6 text-center">
+                   <td colSpan={7} className="px-3 py-8 text-center">
                       <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" />
                    </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-xs text-text-light/60 dark:text-text-dark/60">
                     No products found matching criteria.
                   </td>
                 </tr>
@@ -525,48 +515,57 @@ function StockLevelsTab({
                     key={product.id}
                     className="hover:bg-background-light dark:hover:bg-background-dark transition-colors group"
                   >
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-text-light dark:text-text-dark">
-                        {product.name}
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-text-light dark:text-text-dark mb-0.5">
+                          {product.name}
+                        </span>
+                        {product.description && (
+                          <span className="text-[10px] text-text-light/40 dark:text-text-dark/40 max-w-[180px] truncate">
+                            {product.description}
+                          </span>
+                        )}
                       </div>
-                      {product.description && (
-                        <div className="text-xs text-text-light/50 dark:text-text-dark/50 max-w-[200px] truncate">
-                          {product.description}
-                        </div>
-                      )}
                     </td>
                     {canViewAll && (
-                      <td className="px-4 py-2.5 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60">
+                      <td className="px-3 py-2.5 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60">
                         {product.salon?.name || '-'}
                       </td>
                     )}
-                    <td className="px-4 py-2.5 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60 font-mono">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60 font-mono">
                       {product.sku || '-'}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                       <span className={`text-sm font-bold ${isOutOfStock ? 'text-red-500' : isLowStock ? 'text-amber-500' : 'text-emerald-500'}`}>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                       <span className={`text-xs font-bold ${isOutOfStock ? 'text-rose-500' : isLowStock ? 'text-amber-500' : 'text-emerald-500'}`}>
                           {product.stockLevel.toFixed(2)}
                        </span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60">
-                      {product.unitPrice
-                        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                            product.unitPrice
-                          )
-                        : '-'}
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60">
+                      {product.unitPrice && product.unitPrice > 0
+                        ? `${product.unitPrice.toLocaleString()} RWF`
+                        : <span className="text-text-light/30">-</span>}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-xs font-medium text-text-light dark:text-text-dark">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                        totalValue
-                      )}
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs font-medium text-text-light dark:text-text-dark">
+                      {totalValue > 0 
+                        ? `${totalValue.toLocaleString()} RWF`
+                        : <span className="text-text-light/30">-</span>}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-right">
                       {isOutOfStock ? (
-                        <Badge variant="destructive" size="sm" className="h-[20px] px-1.5 text-[10px]">Out</Badge>
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wide">Out</span>
+                        </div>
                       ) : isLowStock ? (
-                        <Badge variant="warning" size="sm" className="h-[20px] px-1.5 text-[10px]">Low</Badge>
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Low</span>
+                        </div>
                       ) : (
-                        <Badge variant="success" size="sm" className="h-[20px] px-1.5 text-[10px]">In Stock</Badge>
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">In Stock</span>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -580,7 +579,6 @@ function StockLevelsTab({
     </div>
   );
 }
-
 // Add Stock Tab
 function AddStockTab({
   salons,
@@ -593,6 +591,7 @@ function AddStockTab({
   canViewAll: boolean;
   onSuccess: () => void;
 }) {
+  const { success, error: errorToast } = useToast();
   const [formData, setFormData] = useState({
     salonId: selectedSalonId || salons[0]?.id || '',
     productId: '',
@@ -634,6 +633,7 @@ function AddStockTab({
     },
     onSuccess: () => {
       onSuccess();
+      success('Stock added successfully');
       setFormData({
         salonId: selectedSalonId || salons[0]?.id || '',
         productId: '',
@@ -644,7 +644,9 @@ function AddStockTab({
     },
     onError: (err: unknown) => {
       const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to add stock');
+      const errorMessage = maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to add stock';
+      setError(errorMessage);
+      errorToast(errorMessage);
       setLoading(false);
     },
   });
@@ -676,28 +678,31 @@ function AddStockTab({
       <form onSubmit={handleSubmit} className="space-y-3">
         {(salons.length > 1 || canViewAll) ? (
           <div>
-            <label htmlFor="add-stock-salon" className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+            <label htmlFor="add-stock-salon" className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
               SALON
             </label>
-            <select
-              id="add-stock-salon"
-              value={formData.salonId}
-              onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
-              className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              required
-            >
-              <option value="">Select Salon</option>
-              {salons.map((salon) => (
-                <option key={salon.id} value={salon.id}>
-                  {salon.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                id="add-stock-salon"
+                value={formData.salonId}
+                onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
+                className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none"
+                required
+              >
+                <option value="">Select Salon</option>
+                {salons.map((salon) => (
+                  <option key={salon.id} value={salon.id}>
+                    {salon.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+            </div>
           </div>
         ) : (
           <div>
-             <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">SALON</label>
-             <div className="w-full px-3 py-1.5 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light/60 dark:text-text-dark/60">
+             <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">SALON</label>
+             <div className="w-full h-9 px-3 flex items-center bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light/60 dark:text-text-dark/60">
                 {salons[0]?.name || 'Loading...'}
              </div>
           </div>
@@ -705,28 +710,31 @@ function AddStockTab({
 
         <div className="grid grid-cols-2 gap-3">
            <div className="col-span-2 sm:col-span-1">
-            <label htmlFor="add-stock-product" className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+            <label htmlFor="add-stock-product" className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                PRODUCT
             </label>
-            <select
-               id="add-stock-product"
-               value={formData.productId}
-               onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-               className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-               required
-               disabled={!formData.salonId || inventoryProducts.length === 0}
-            >
-               <option value="">Select Product</option>
-               {inventoryProducts.map((product) => (
-                  <option key={product.id} value={product.id}>
-                  {product.name} {product.sku ? `(${product.sku})` : ''}
-                  </option>
-               ))}
-            </select>
+            <div className="relative">
+              <select
+                 id="add-stock-product"
+                 value={formData.productId}
+                 onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                 className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none"
+                 required
+                 disabled={!formData.salonId || inventoryProducts.length === 0}
+              >
+                 <option value="">Select Product</option>
+                 {inventoryProducts.map((product) => (
+                    <option key={product.id} value={product.id}>
+                    {product.name} {product.sku ? `(${product.sku})` : ''}
+                    </option>
+                 ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+            </div>
            </div>
            
            <div className="col-span-2 sm:col-span-1">
-             <label htmlFor="add-stock-quantity" className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+             <label htmlFor="add-stock-quantity" className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                 QUANTITY
              </label>
              <input
@@ -736,14 +744,14 @@ function AddStockTab({
                 step="0.001"
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full h-9 px-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                 required
              />
            </div>
         </div>
 
         <div>
-          <label htmlFor="add-stock-notes" className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+          <label htmlFor="add-stock-notes" className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
             NOTES (OPTIONAL)
           </label>
           <textarea
@@ -751,7 +759,7 @@ function AddStockTab({
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             rows={2}
-            className="w-full px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none"
             placeholder="Add any notes about this purchase..."
           />
         </div>
@@ -763,7 +771,7 @@ function AddStockTab({
         )}
 
         <div className="pt-2">
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="w-full h-9 text-xs">
             {loading ? 'Adding...' : 'Add Stock'}
           </Button>
         </div>
@@ -846,16 +854,19 @@ function MovementsTab({
   return (
     <div>
       <div className="mb-4">
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as 'all' | 'purchase' | 'consumption' | 'adjustment')}
-          className="px-3 py-1.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <option value="all">All Movements</option>
-          <option value="purchase">Purchases</option>
-          <option value="consumption">Consumptions</option>
-          <option value="adjustment">Adjustments</option>
-        </select>
+        <div className="relative w-full sm:w-48">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as 'all' | 'purchase' | 'consumption' | 'adjustment')}
+            className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none cursor-pointer"
+          >
+            <option value="all">All Movements</option>
+            <option value="purchase">Purchases</option>
+            <option value="consumption">Consumptions</option>
+            <option value="adjustment">Adjustments</option>
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -920,6 +931,7 @@ function AdjustStockTab({
   canViewAll: boolean;
   onSuccess: () => void;
 }) {
+  const { success, error: errorToast } = useToast();
   const [formData, setFormData] = useState({
     salonId: selectedSalonId || salons[0]?.id || '',
     productId: '',
@@ -969,6 +981,7 @@ function AdjustStockTab({
     },
     onSuccess: () => {
       onSuccess();
+      success('Stock adjusted successfully');
       setFormData({
         salonId: selectedSalonId || salons[0]?.id || '',
         productId: '',
@@ -980,7 +993,9 @@ function AdjustStockTab({
     },
     onError: (err: unknown) => {
       const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to adjust stock');
+      const errorMessage = maybeAxios?.response?.data?.message || maybeAxios?.message || 'Failed to adjust stock';
+      setError(errorMessage);
+      errorToast(errorMessage);
       setLoading(false);
     },
   });
@@ -1041,27 +1056,30 @@ function AdjustStockTab({
       <form onSubmit={handleSubmit} className="space-y-4">
         {(salons.length > 1 || canViewAll) ? (
           <div>
-            <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+            <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
               SALON
             </label>
-            <select
-              value={formData.salonId}
-              onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
-              className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-              required
-            >
-              <option value="">Select Salon</option>
-              {salons.map((salon) => (
-                <option key={salon.id} value={salon.id}>
-                  {salon.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={formData.salonId}
+                onChange={(e) => setFormData({ ...formData, salonId: e.target.value, productId: '' })}
+                className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none"
+                required
+              >
+                <option value="">Select Salon</option>
+                {salons.map((salon) => (
+                  <option key={salon.id} value={salon.id}>
+                    {salon.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+            </div>
           </div>
         ) : (
           <div>
-            <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">SALON</label>
-            <div className="w-full px-3 py-2 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light/60 dark:text-text-dark/60">
+            <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">SALON</label>
+            <div className="w-full h-9 px-3 flex items-center bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light/60 dark:text-text-dark/60">
               {salons[0]?.name || 'Loading...'}
             </div>
           </div>
@@ -1069,51 +1087,54 @@ function AdjustStockTab({
 
         {/* Product Selection */}
         <div>
-           <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+           <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
              PRODUCT
            </label>
-           <select
-             value={formData.productId}
-             onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-             required
-             disabled={!formData.salonId || inventoryProducts.length === 0}
-           >
-             <option value="">Select Product to Adjust</option>
-             {inventoryProducts.map((product) => (
-               <option key={product.id} value={product.id}>
-                 {product.name} (Stock: {product.stockLevel.toFixed(2)})
-               </option>
-             ))}
-           </select>
+           <div className="relative">
+             <select
+               value={formData.productId}
+               onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+               className="w-full h-9 pl-3 pr-8 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none"
+               required
+               disabled={!formData.salonId || inventoryProducts.length === 0}
+             >
+               <option value="">Select Product to Adjust</option>
+               {inventoryProducts.map((product) => (
+                 <option key={product.id} value={product.id}>
+                   {product.name} (Stock: {product.stockLevel.toFixed(2)})
+                 </option>
+               ))}
+             </select>
+             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40 pointer-events-none" />
+           </div>
         </div>
 
         {/* Adjustment Type & Quantity */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
            <div>
-              <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+              <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                  ADJUSTMENT ACTION
               </label>
-              <div className="flex bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-1">
+              <div className="flex h-9 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg p-1">
                  <button
                     type="button"
                     onClick={() => setAdjustmentType('increase')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-all ${adjustmentType === 'increase' ? 'bg-emerald-500 text-white shadow-sm' : 'text-text-light/60 hover:bg-surface-accent-light'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all ${adjustmentType === 'increase' ? 'bg-emerald-500 text-white shadow-sm' : 'text-text-light/60 hover:bg-surface-accent-light'}`}
                  >
-                    <ArrowUp className="w-3.5 h-3.5" /> Increase
+                    <ArrowUp className="w-3 h-3" /> Increase
                  </button>
                  <button
                     type="button"
                     onClick={() => setAdjustmentType('decrease')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-all ${adjustmentType === 'decrease' ? 'bg-rose-500 text-white shadow-sm' : 'text-text-light/60 hover:bg-surface-accent-light'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all ${adjustmentType === 'decrease' ? 'bg-rose-500 text-white shadow-sm' : 'text-text-light/60 hover:bg-surface-accent-light'}`}
                  >
-                    <ArrowDown className="w-3.5 h-3.5" /> Decrease
+                    <ArrowDown className="w-3 h-3" /> Decrease
                  </button>
               </div>
            </div>
 
            <div>
-             <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+             <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
                QUANTITY
              </label>
              <input
@@ -1122,7 +1143,7 @@ function AdjustStockTab({
                min="0"
                value={formData.quantity}
                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-               className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+               className="w-full h-9 px-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                required
                placeholder="e.g. 5"
              />
@@ -1131,17 +1152,17 @@ function AdjustStockTab({
 
         {/* Stock Preview */}
         {selectedProduct && (
-           <div className="bg-background-light/50 dark:bg-background-dark/50 rounded-lg p-3 border border-border-light dark:border-border-dark flex items-center justify-between">
-              <div className="text-sm">
-                 <span className="text-text-light/60 dark:text-text-dark/60">Current Stock:</span> 
-                 <span className="font-bold text-text-light dark:text-text-dark ml-2">{selectedProduct.stockLevel.toFixed(2)}</span>
+           <div className="bg-background-light/50 dark:bg-background-dark/50 rounded-lg p-3 border border-border-light dark:border-border-dark flex items-center justify-between h-9">
+              <div className="text-xs">
+                 <span className="text-text-light/60 dark:text-text-dark/60">Current:</span> 
+                 <span className="font-bold text-text-light dark:text-text-dark ml-1">{selectedProduct.stockLevel.toFixed(2)}</span>
               </div>
               <div className="text-text-light/40 dark:text-text-dark/40">
-                 <ArrowUp className="w-4 h-4 rotate-90" />
+                 <ArrowUp className="w-3 h-3 rotate-90" />
               </div>
-              <div className="text-sm">
-                 <span className="text-text-light/60 dark:text-text-dark/60">New Stock:</span> 
-                 <span className={`font-bold ml-2 ${previewNewStock !== null && previewNewStock < 0 ? 'text-red-500' : 'text-primary'}`}>
+              <div className="text-xs">
+                 <span className="text-text-light/60 dark:text-text-dark/60">New:</span> 
+                 <span className={`font-bold ml-1 ${previewNewStock !== null && previewNewStock < 0 ? 'text-red-500' : 'text-primary'}`}>
                     {previewNewStock !== null ? previewNewStock.toFixed(2) : '-'}
                  </span>
               </div>
@@ -1149,14 +1170,14 @@ function AdjustStockTab({
         )}
 
         <div>
-           <label className="block text-xs font-bold text-text-light/60 dark:text-text-dark/60 mb-1">
+           <label className="mb-1 block text-[10px] uppercase font-bold text-text-light/50 dark:text-text-dark/50 tracking-wider">
              REASON (REQUIRED)
            </label>
            <textarea
              value={formData.notes}
              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
              rows={2}
-             className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+             className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs text-text-light dark:text-text-dark focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-none"
              placeholder={adjustmentType === 'decrease' ? "e.g., 'Broken bottle', 'Expired'" : "e.g., 'Found extra stock'"}
              required
            />
@@ -1169,7 +1190,7 @@ function AdjustStockTab({
         )}
 
         <div className="pt-2">
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="w-full h-9 text-xs uppercase tracking-wide font-bold">
             {loading ? 'Processing...' : `Confirm ${adjustmentType === 'increase' ? 'Increase' : 'Decrease'}`}
           </Button>
         </div>

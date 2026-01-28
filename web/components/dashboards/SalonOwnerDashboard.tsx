@@ -145,7 +145,9 @@ export default function SalonOwnerDashboard() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        return response.data || [];
+        // Unwrap TransformInterceptor envelope
+        const data = response.data?.data || response.data;
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         return [];
       }
@@ -198,7 +200,9 @@ export default function SalonOwnerDashboard() {
     queryFn: async () => {
       try {
         const response = await api.get('/appointments');
-        const allAppointments = response.data || [];
+        // Unwrap TransformInterceptor envelope
+        const data = response.data?.data || response.data;
+        const allAppointments = Array.isArray(data) ? data : [];
         // Filter today and upcoming
         const now = new Date();
         return allAppointments
@@ -275,7 +279,9 @@ export default function SalonOwnerDashboard() {
           api.get('/sales?page=1&limit=2000') // Reduced limit, optimized
         ]);
 
-        const allAppointments = appointmentsResponse.data || [];
+        // Unwrap TransformInterceptor envelopes
+        const appointmentsData = appointmentsResponse.data?.data || appointmentsResponse.data;
+        const allAppointments = Array.isArray(appointmentsData) ? appointmentsData : [];
         const salesData = salesResponse.data?.data || salesResponse.data || [];
         const allSales = Array.isArray(salesData) ? salesData : salesData.data || [];
 
@@ -453,8 +459,13 @@ export default function SalonOwnerDashboard() {
   // Note: loading.tsx handles the initial loading skeleton
   // We only show minimal inline loading for data refresh, not full-page loaders
 
-  // No membership application - prompt to apply
-  if (membershipStatus && !membershipStatus.application) {
+  // If user is already marked as a member, skip all membership prompts and show dashboard
+  // This handles cases where membershipStatus.application might be null but isMember is true
+  if (membershipStatus?.isMember) {
+    // User is a full member - proceed to check if they have salons
+    // (Skip all membership application prompts)
+  } else if (membershipStatus && !membershipStatus.application) {
+    // No membership application - prompt to apply
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="text-center mb-6">

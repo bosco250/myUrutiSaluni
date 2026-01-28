@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
+import { useToast } from '@/components/ui/Toast';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
@@ -83,6 +84,7 @@ export default function SalesHistoryPage() {
 function SalesHistoryContent() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all');
@@ -267,7 +269,9 @@ function SalesHistoryContent() {
         };
       } catch (err: unknown) {
         const errorData = (err as { response?: { data?: { message?: string } } })?.response?.data;
-        throw new Error(errorData?.message || (err as Error)?.message || 'Failed to load sales.');
+        const message = errorData?.message || (err as Error)?.message || 'Failed to load sales.';
+        toast.error(message);
+        throw new Error(message);
       }
     },
   });
@@ -536,56 +540,65 @@ function SalesHistoryContent() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Stats Cards - Compacted & Flat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Total Revenue */}
-        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total Revenue</span>
-            <div className="p-1.5 bg-green-500/20 rounded-lg">
-              <DollarSign className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Total Revenue</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-            RWF {stats.totalRevenue.toLocaleString()}
-          </p>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">RWF {stats.totalRevenue.toLocaleString()}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Gross sales volume
+             </span>
+          </div>
         </div>
 
-        {/* Total Sales */}
-        <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Transactions</span>
-            <div className="p-1.5 bg-blue-500/20 rounded-lg">
-              <Receipt className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+        {/* Transactions */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Transactions</p>
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Receipt className="w-3 h-3 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-            {stats.totalSales}
-          </p>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.totalSales}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+               Completed orders
+            </span>
+          </div>
         </div>
 
-        {/* Average Sale */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20 rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Average Value</span>
-            <div className="p-1.5 bg-purple-500/20 rounded-lg">
-              <TrendingUp className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+        {/* Average Value */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-purple-200 dark:border-purple-800/50 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-purple-600 dark:text-purple-400">Avg. Value</p>
+            <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-3 h-3 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-            RWF {stats.averageSale.toFixed(0)}
-          </p>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">RWF {stats.averageSale.toFixed(0)}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Per transaction
+             </span>
+          </div>
         </div>
 
         {/* Breakdown */}
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Breakdown</span>
-            <div className="p-1.5 bg-orange-500/20 rounded-lg">
-              <BarChart3 className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-orange-200 dark:border-orange-800/50 rounded-xl p-3 hover:border-orange-300 dark:hover:border-orange-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-orange-600 dark:text-orange-400">Breakdown</p>
+            <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <BarChart3 className="w-3 h-3 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
-          <div className="flex gap-3 mt-1.5">
+          <div className="flex gap-3 mt-2">
              <div className="flex items-center gap-1.5">
                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                <span className="text-[10px] font-medium text-text-light dark:text-text-dark">{stats.cashSales}</span>
@@ -603,7 +616,7 @@ function SalesHistoryContent() {
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-3">
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
           <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto scrollbar-hide">
             {quickFilters.map((f) => (
@@ -728,26 +741,24 @@ function SalesHistoryContent() {
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-background-light/50 dark:bg-background-dark/50 border-b border-border-light dark:border-border-dark">
+          <table className="w-full text-xs text-left">
+            <thead className="border-b border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Date</th>
-                <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">ID</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Date</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">ID</th>
                 {user?.role !== UserRole.CUSTOMER && (
-                  <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Customer</th>
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Customer</th>
                 )}
-                {user?.role !== UserRole.CUSTOMER && (
-                  <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Items</th>
-                )}
-                <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Amount</th>
-                <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Status</th>
-                <th className="px-6 py-3 text-xs font-medium text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide text-right">Actions</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Items</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Amount</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Status</th>
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-light/50 dark:divide-border-dark/50">
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {paginatedSales.length === 0 ? (
                  <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-text-light/40 dark:text-text-dark/40">
+                  <td colSpan={7} className="px-3 py-12 text-center text-text-light/40 dark:text-text-dark/40">
                     <div className="flex flex-col items-center gap-2">
                       <Receipt className="w-8 h-8 opacity-50" />
                       <p>No sales found</p>
@@ -756,47 +767,45 @@ function SalesHistoryContent() {
                 </tr>
               ) : (
                 paginatedSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-background-light/50 dark:hover:bg-background-dark/50 transition-colors group">
-                    <td className="px-6 py-3.5 text-xs text-text-light dark:text-text-dark whitespace-nowrap">
+                  <tr key={sale.id} className="hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
+                    <td className="px-3 py-2.5 text-text-light dark:text-text-dark whitespace-nowrap">
                        <div className="flex items-center gap-2">
                          <Calendar className="w-3.5 h-3.5 text-text-light/40" />
                          {formatDate(sale.createdAt)}
                        </div>
                     </td>
-                    <td className="px-6 py-3.5 text-xs font-mono text-text-light/60 dark:text-text-dark/60">
+                    <td className="px-3 py-2.5 font-mono text-text-light/60 dark:text-text-dark/60">
                       #{sale.id.slice(0, 8)}
                     </td>
                     {user?.role !== UserRole.CUSTOMER && (
-                      <td className="px-6 py-3.5 text-xs text-text-light dark:text-text-dark">
+                      <td className="px-3 py-2.5 text-text-light dark:text-text-dark">
                          <div className="flex items-center gap-2">
                            <User className="w-3.5 h-3.5 text-text-light/40" />
                            {sale.customer?.fullName || 'Walk-in Customer'}
                          </div>
                       </td>
                     )}
-                     {user?.role !== UserRole.CUSTOMER && (
-                      <td className="px-6 py-3.5 text-xs text-text-light/80 dark:text-text-dark/80 max-w-[200px] truncate">
-                         {sale.items?.map(i => i.service?.name || i.product?.name).join(', ') || 'No items'}
-                      </td>
-                    )}
-                    <td className="px-6 py-3.5 text-xs font-bold text-text-light dark:text-text-dark">
+                    <td className="px-3 py-2.5 text-text-light/80 dark:text-text-dark/80 max-w-[200px] truncate">
+                       {sale.items?.map(i => i.service?.name || i.product?.name).join(', ') || 'No items'}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-bold text-text-light dark:text-text-dark">
                       {sale.currency || 'RWF'} {Number(sale.totalAmount || 0).toLocaleString()}
                     </td>
-                    <td className="px-6 py-3.5">
+                    <td className="px-3 py-2.5 text-right">
                        <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${
                           sale.status === 'completed'
-                            ? 'bg-success/10 text-success border-success/20'
+                            ? 'bg-success/10 text-success'
                             : sale.status === 'pending'
-                            ? 'bg-warning/10 text-warning border-warning/20'
-                            : 'bg-error/10 text-error border-error/20'
+                            ? 'bg-warning/10 text-warning'
+                            : 'bg-error/10 text-error'
                         }`}
                       >
-                        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
+                        {sale.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-3 py-2.5 text-right">
+                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                          <Button
                             variant="outline"
                             size="sm"

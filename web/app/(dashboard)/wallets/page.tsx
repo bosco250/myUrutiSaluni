@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Button from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
 
 interface WalletData {
   id: string;
@@ -67,7 +68,7 @@ export default function WalletsPage() {
     queryKey: ['wallet'],
     queryFn: async () => {
       const response = await api.get('/wallets/me');
-      return response.data;
+      return response.data.data || response.data;
     },
   });
 
@@ -81,7 +82,7 @@ export default function WalletsPage() {
       const response = await api.get(
         `/wallets/${wallet.id}/transactions?page=${currentPage}&limit=${itemsPerPage}`
       );
-      return response.data;
+      return response.data.data || response.data;
     },
     enabled: !!wallet?.id,
   });
@@ -199,141 +200,116 @@ export default function WalletsPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Stats Cards - Compacted & Flat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Balance Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark opacity-90" />
-          <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(255,255,255,0.22),transparent_60%)]" />
-          <div className="relative text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/75">
-                  Current Balance
-                </p>
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-primary-200 dark:border-primary-800/50 rounded-xl p-3 hover:border-primary-300 dark:hover:border-primary-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+             <div className="flex items-center gap-2">
+                <p className="text-[10px] uppercase tracking-wide font-bold text-primary-600 dark:text-primary-400">Current Balance</p>
                 <button 
                   onClick={() => setShowBalance(!showBalance)}
-                  className="p-1 hover:bg-white/10 rounded-md transition-colors"
+                  className="p-0.5 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded transition-colors"
                   title={showBalance ? "Hide Balance" : "Show Balance"}
                 >
                   {showBalance ? (
-                    <EyeOff className="w-3 h-3 text-white/70" />
+                    <EyeOff className="w-3 h-3 text-primary-600 dark:text-primary-400" />
                   ) : (
-                    <Eye className="w-3 h-3 text-white/70" />
+                    <Eye className="w-3 h-3 text-primary-600 dark:text-primary-400" />
                   )}
                 </button>
-              </div>
-              <div className="h-8 w-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center">
-                <WalletIcon className="w-3.5 h-3.5" />
-              </div>
+             </div>
+            <div className="p-1 bg-primary-100 dark:bg-primary-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <WalletIcon className="w-3 h-3 text-primary-600 dark:text-primary-400" />
             </div>
-            <p className="text-xl font-black mt-2 transition-all duration-300">
-              {wallet?.currency || 'RWF'} {showBalance ? balance.toLocaleString() : '••••••'}
-            </p>
-            {balance < 1000 && (
-              <p className="text-[10px] text-white/60 mt-1">Min withdrawal: 1,000 RWF</p>
-            )}
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">
+             {wallet?.currency || 'RWF'} {showBalance ? balance.toLocaleString() : '••••••'}
+          </p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+               {balance < 1000 ? 'Min withdrawal: 1,000' : 'Available funds'}
+             </span>
           </div>
         </div>
 
         {/* Total Received */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-success/5" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
-                Total Received
-              </p>
-              <p className="text-lg font-black text-success mt-1.5">
-                +{deposits.toLocaleString()} <span className="text-xs font-normal">RWF</span>
-              </p>
-              <p className="text-[10px] text-text-light/50 mt-1">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Total Received</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <ArrowDown className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">+{deposits.toLocaleString()}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
                 Commissions & deposits
-              </p>
-            </div>
-            <div className="h-8 w-8 rounded-xl bg-success/10 text-success flex items-center justify-center">
-              <ArrowDown className="w-3.5 h-3.5" />
-            </div>
+             </span>
           </div>
         </div>
 
         {/* Total Withdrawn */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-danger/10 via-transparent to-danger/5" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
-                Total Withdrawn
-              </p>
-              <p className="text-lg font-black text-danger mt-1.5">
-                -{withdrawals.toLocaleString()} <span className="text-xs font-normal">RWF</span>
-              </p>
-              <p className="text-[10px] text-text-light/50 mt-1">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-red-200 dark:border-red-800/50 rounded-xl p-3 hover:border-red-300 dark:hover:border-red-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-red-600 dark:text-red-400">Total Withdrawn</p>
+            <div className="p-1 bg-red-100 dark:bg-red-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <ArrowUp className="w-3 h-3 text-red-600 dark:text-red-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">-{withdrawals.toLocaleString()}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
                 Payments & transfers
-              </p>
-            </div>
-            <div className="h-8 w-8 rounded-xl bg-danger/10 text-danger flex items-center justify-center">
-              <ArrowUp className="w-3.5 h-3.5" />
-            </div>
+             </span>
           </div>
         </div>
 
         {/* Transactions Count */}
-        <div className="relative overflow-hidden rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-3">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
-                Transactions
-              </p>
-              <p className="text-lg font-black text-text-light dark:text-text-dark mt-1.5">
-                {transactions.length}
-              </p>
-              {pendingCount > 0 && (
-                <p className="text-[10px] text-warning mt-1">
-                  {pendingCount} pending
-                </p>
-              )}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Transactions</p>
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Receipt className="w-3 h-3 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Receipt className="w-3.5 h-3.5" />
-            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{transactions.length}</p>
+          <div className="flex items-center gap-1 mt-1">
+             {pendingCount > 0 ? (
+               <span className="text-[10px] font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full">
+                 {pendingCount} pending
+               </span>
+             ) : (
+                <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                   All completed
+                </span>
+             )}
           </div>
         </div>
       </div>
 
       {/* Transactions Table */}
-      <div className="rounded-2xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark overflow-hidden">
-        <div className="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-black tracking-tight text-text-light dark:text-text-dark">
-              Transaction History
-            </h2>
-            <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
-              Your latest wallet activity
-            </p>
-          </div>
-        </div>
+      <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
         <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-background-light/60 dark:bg-background-dark/40">
+          <table className="w-full text-xs text-left">
+            <thead className="border-b border-border-light dark:border-border-dark">
               <tr>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                   Date
                 </th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                   Type
                 </th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                   Description
                 </th>
-                <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
                   Amount
                 </th>
-                <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
                   Balance
                 </th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-text-light/60 dark:text-text-dark/60">
+                <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
                   Status
                 </th>
               </tr>
@@ -341,13 +317,13 @@ export default function WalletsPage() {
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {txLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center">
+                  <td colSpan={6} className="px-3 py-8 text-center">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" />
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-text-light/40 dark:text-text-dark/40">
+                  <td colSpan={6} className="px-3 py-12 text-center text-text-light/40 dark:text-text-dark/40">
                     <WalletIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p>No transactions yet</p>
                   </td>
@@ -356,21 +332,27 @@ export default function WalletsPage() {
                 transactions.map((tx) => (
                   <tr
                     key={tx.id}
-                    className="hover:bg-background-light/50 dark:hover:bg-background-dark/30 transition-colors"
+                    className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
                   >
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-text-light dark:text-text-dark">
                       {format(new Date(tx.createdAt), 'MMM dd, yyyy')}
                       <div className="text-[10px] text-text-light/50">
                         {format(new Date(tx.createdAt), 'HH:mm')}
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getTransactionColor(tx.transactionType, tx.status)}`}>
-                        {getTransactionIcon(tx.transactionType)}
-                        {tx.transactionType.replace('_', ' ')}
-                      </span>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                         <span className={`flex items-center justify-center w-5 h-5 rounded-md ${
+                            getTransactionColor(tx.transactionType, tx.status).split(' ')[1]
+                         } ${getTransactionColor(tx.transactionType, tx.status).split(' ')[0]}`}>
+                            {getTransactionIcon(tx.transactionType)}
+                         </span>
+                         <span className="capitalize text-text-light dark:text-text-dark">
+                            {tx.transactionType.replace('_', ' ')}
+                         </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-text-light dark:text-text-dark max-w-xs truncate">
+                    <td className="px-3 py-2.5 text-text-light dark:text-text-dark max-w-xs truncate">
                       {tx.description}
                       {tx.metadata?.employeeName && (
                         <div className="text-[10px] text-text-light/50">
@@ -383,17 +365,17 @@ export default function WalletsPage() {
                         </div>
                       )}
                     </td>
-                    <td className={`px-4 py-3 whitespace-nowrap text-sm font-bold text-right ${
-                      isCredit(tx.transactionType) ? 'text-success' : 'text-danger'
+                    <td className={`px-3 py-2.5 whitespace-nowrap font-bold text-right ${
+                      isCredit(tx.transactionType) ? 'text-success' : 'text-text-light dark:text-text-dark'
                     }`}>
                       {isCredit(tx.transactionType) ? '+' : '-'}
                       {toNumber(tx.amount).toLocaleString()} RWF
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-text-light/70 dark:text-text-dark/70">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-right text-text-light/70 dark:text-text-dark/70">
                       {showBalance ? `${toNumber(tx.balanceAfter).toLocaleString()} RWF` : '••••••'}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                    <td className="px-3 py-2.5 whitespace-nowrap text-right">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${
                         tx.status === 'completed' ? 'bg-success/10 text-success' :
                         tx.status === 'failed' ? 'bg-danger/10 text-danger' :
                         'bg-warning/10 text-warning'
@@ -479,6 +461,7 @@ function WithdrawModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const toast = useToast();
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
@@ -493,13 +476,16 @@ function WithdrawModal({
     },
     onSuccess: () => {
       setSuccess(true);
+      toast.success('Withdrawal initiated successfully');
       setTimeout(() => {
         onSuccess();
       }, 2000);
     },
     onError: (err: unknown) => {
       const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(maybeAxios?.response?.data?.message || 'Failed to process withdrawal');
+      const message = maybeAxios?.response?.data?.message || 'Failed to process withdrawal';
+      setError(message);
+      toast.error(message);
     },
   });
 
@@ -691,6 +677,7 @@ function TopUpModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -709,11 +696,14 @@ function TopUpModal({
       queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
 
       setStep('success');
+      toast.success('Top up initiated successfully');
       setTimeout(() => onSuccess(), 2000);
     },
     onError: (err: unknown) => {
       const maybeAxios = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(maybeAxios?.response?.data?.message || 'Failed to initiate payment');
+      const message = maybeAxios?.response?.data?.message || 'Failed to initiate payment';
+      setError(message);
+      toast.error(message);
     },
   });
 

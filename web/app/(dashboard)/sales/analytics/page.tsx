@@ -15,6 +15,7 @@ import {
   Package,
   Scissors,
   Loader2,
+  BarChart3,
 } from 'lucide-react';
 import {
   LineChart,
@@ -168,59 +169,85 @@ function SalesAnalyticsContent() {
       </div>
 
       {/* Filters */}
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-3 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Total Revenue
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                RWF {analytics.summary.totalRevenue.toLocaleString()}
-              </p>
+      {/* Summary Cards - Compacted & Flat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {/* Total Revenue */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Total Revenue</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <DollarSign className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div className="p-1.5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
-              <DollarSign className="w-3.5 h-3.5 text-white" />
-            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">RWF {analytics.summary.totalRevenue.toLocaleString()}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Gross sales volume
+             </span>
           </div>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-3 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Total Sales
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                {analytics.summary.totalSales}
-              </p>
+        {/* Total Sales */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Total Sales</p>
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <ShoppingCart className="w-3 h-3 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-              <ShoppingCart className="w-3.5 h-3.5 text-white" />
-            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{analytics.summary.totalSales}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+               Completed transactions
+            </span>
           </div>
         </div>
 
-        <div className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-3 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 font-semibold uppercase tracking-wide">
-                Average Sale
-              </p>
-              <p className="text-xl font-bold text-text-light dark:text-text-dark mt-1">
-                RWF {analytics.summary.averageSale.toFixed(0)}
-              </p>
+        {/* Average Sale */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-purple-200 dark:border-purple-800/50 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-purple-600 dark:text-purple-400">Avg. Sale</p>
+            <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-3 h-3 text-purple-600 dark:text-purple-400" />
             </div>
-            <div className="p-1.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <TrendingUp className="w-3.5 h-3.5 text-white" />
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">RWF {analytics.summary.averageSale.toFixed(0)}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Per transaction
+             </span>
+          </div>
+        </div>
+
+        {/* Breakdown */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-orange-200 dark:border-orange-800/50 rounded-xl p-3 hover:border-orange-300 dark:hover:border-orange-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-orange-600 dark:text-orange-400">Sort by Method</p>
+            <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <BarChart3 className="w-3 h-3 text-orange-600 dark:text-orange-400" />
             </div>
+          </div>
+          <div className="flex gap-3 mt-2">
+             <div className="flex items-center gap-1.5">
+               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+               <span className="text-[10px] font-medium text-text-light dark:text-text-dark">{analytics.paymentMethods['cash'] || 0}</span>
+             </div>
+             <div className="flex items-center gap-1.5">
+               <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+               <span className="text-[10px] font-medium text-text-light dark:text-text-dark">{analytics.paymentMethods['card'] || 0}</span>
+             </div>
+             <div className="flex items-center gap-1.5">
+               <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+               <span className="text-[10px] font-medium text-text-light dark:text-text-dark">
+                 {(analytics.paymentMethods['mobile_money'] || 0) + (analytics.paymentMethods['airtel_money'] || 0) + (analytics.paymentMethods['wallet'] || 0)}
+               </span>
+             </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-2.5">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-2.5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {salons.length > 0 && (
             <div>

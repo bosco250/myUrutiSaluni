@@ -32,6 +32,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/components/ui/Toast';
 
 interface Commission {
   id: string;
@@ -195,7 +196,7 @@ function CommissionsContent() {
         if (dateRange.end) params.append('endDate', dateRange.end);
 
         const response = await api.get(`/commissions?${params.toString()}`);
-        return response.data || [];
+        return response.data.data || [];
       } catch (err: any) {
         throw new Error(err?.response?.data?.message || err?.message || 'Failed to load commissions');
       }
@@ -208,12 +209,12 @@ function CommissionsContent() {
     queryFn: async () => {
       try {
         const salonsResponse = await api.get('/salons');
-        const salons = salonsResponse.data || [];
+        const salons = salonsResponse.data.data || [];
         const allEmployees: any[] = [];
         for (const salon of salons) {
           try {
             const empResponse = await api.get(`/salons/${salon.id}/employees`);
-            allEmployees.push(...(empResponse.data || []));
+            allEmployees.push(...(empResponse.data.data || []));
           } catch {}
         }
         return allEmployees;
@@ -265,11 +266,63 @@ function CommissionsContent() {
     };
   }, [filteredCommissions]);
 
+  // Export CSV
+  const handleExportCSV = () => {
+    if (!filteredCommissions.length) return;
+
+    const headers = [
+      'Date',
+      'Time',
+      'Employee',
+      'Role',
+      'Source',
+      'Item',
+      'Sale Amount (RWF)',
+      'Rate (%)',
+      'Commission (RWF)',
+      'Status',
+      'Paid Date'
+    ];
+
+    const rows = filteredCommissions.map(c => {
+      const date = new Date(c.createdAt);
+      const source = c.metadata?.source || (c.saleItemId ? 'sale' : 'appointment');
+      
+      return [
+        date.toLocaleDateString(),
+        date.toLocaleTimeString(),
+        c.salonEmployee?.user?.fullName || 'Unknown',
+        c.salonEmployee?.roleTitle || '-',
+        source,
+        c.saleItem?.service?.name || c.saleItem?.product?.name || 'N/A',
+        toNumber(c.saleItem?.lineTotal || c.saleAmount),
+        toNumber(c.commissionRate),
+        toNumber(c.amount),
+        c.paid ? 'Paid' : 'Pending',
+        c.paidAt ? new Date(c.paidAt).toLocaleDateString() : '-'
+      ].map(field => `"${field}"`).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `commissions_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Payment Logic
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const { success, error: errorToast } = useToast();
 
   const markAsPaidMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -287,10 +340,12 @@ function CommissionsContent() {
       setShowPaymentModal(false);
       setSelectedCommission(null);
       setPaymentError(null);
+      success('Commission payment successful');
     },
     onError: (err: any) => {
       const message = err?.response?.data?.message || err?.message || 'Payment failed. Please try again.';
       setPaymentError(message);
+      errorToast(`Commission payment failed: ${message}`);
     },
   });
 
@@ -330,38 +385,99 @@ function CommissionsContent() {
             Track earnings, payments, and sales performance
           </p>
         </div>
-        {user?.role !== UserRole.SALON_EMPLOYEE && (
+        <div className="flex items-center gap-2">
           <Button
-            onClick={() => handlePayment()}
-            disabled={stats.unpaidCount === 0}
-            variant="primary"
+            variant="outline"
             size="sm"
-            className="flex items-center gap-1.5 text-xs"
+            onClick={handleExportCSV}
+            disabled={filteredCommissions.length === 0}
+            className="flex items-center gap-1.5 text-xs h-8"
           >
-            <CheckCircle className="w-3.5 h-3.5" />
-            Mark All Paid
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
-        )}
+
+          {user?.role !== UserRole.SALON_EMPLOYEE && (
+            <Button
+              onClick={() => handlePayment()}
+              disabled={stats.unpaidCount === 0}
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              Mark All Paid
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Stats Strip */}
-      <div className="flex items-center gap-0 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark divide-x divide-border-light dark:divide-border-dark overflow-x-auto">
-        {[
-          { label: 'Total Earnings', value: `${stats.total.toLocaleString()} RWF`, sub: `${stats.count} records` },
-          { label: 'Paid', value: `${stats.paid.toLocaleString()} RWF`, sub: `${stats.paidCount} transactions`, valueClass: 'text-success' },
-          { label: 'Pending', value: `${stats.unpaid.toLocaleString()} RWF`, sub: `${stats.unpaidCount} pending`, valueClass: 'text-warning' },
-          { label: 'Related Sales', value: `${stats.sales.toLocaleString()} RWF`, sub: 'Total sales value' },
-        ].map((stat) => (
-          <div key={stat.label} className="flex-1 min-w-0 px-4 py-3 text-center">
-            <p className="text-[10px] uppercase tracking-wide font-semibold text-text-light/50 dark:text-text-dark/50">
-              {stat.label}
-            </p>
-            <p className={`text-base font-bold mt-0.5 ${stat.valueClass || 'text-text-light dark:text-text-dark'}`}>
-              {stat.value}
-            </p>
-            <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 mt-0.5">{stat.sub}</p>
+      {/* Stats Cards - Compacted & Flat */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+        {/* Total Earnings Card */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-indigo-600 dark:text-indigo-400">Total Earnings</p>
+            <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <DollarSign className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+            </div>
           </div>
-        ))}
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.total.toLocaleString()} RWF</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-[10px] font-medium text-text-light/50 dark:text-text-dark/50">
+              {stats.count} records
+            </span>
+          </div>
+        </div>
+
+        {/* Paid Card */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Paid</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.paid.toLocaleString()} RWF</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-[10px] font-medium text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full">
+              {stats.paidCount} txns
+            </span>
+          </div>
+        </div>
+
+        {/* Pending Card */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-orange-200 dark:border-orange-800/50 rounded-xl p-3 hover:border-orange-300 dark:hover:border-orange-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-orange-600 dark:text-orange-400">Pending</p>
+            <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <AlertCircle className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.unpaid.toLocaleString()} RWF</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-[10px] font-medium text-orange-600 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full">
+              {stats.unpaidCount} pending
+            </span>
+          </div>
+        </div>
+
+        {/* Related Sales Card */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-purple-200 dark:border-purple-800/50 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-purple-600 dark:text-purple-400">Total Sales</p>
+            <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Receipt className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.sales.toLocaleString()} RWF</p>
+          <div className="flex items-center gap-1 mt-1">
+            <TrendingUp className="w-3 h-3 text-purple-500" />
+            <span className="text-[10px] font-medium text-text-light/50 dark:text-text-dark/50 truncate">
+              Original sales value
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -551,26 +667,50 @@ function CommissionsContent() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-3 py-2 border-t border-border-light dark:border-border-dark">
-            <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
-              Page {currentPage} of {totalPages}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+        {/* Pagination */}
+        {filteredCommissions.length > itemsPerPage && (
+          <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 py-3">
+            <div className="flex items-center gap-2 text-xs text-text-light/60 dark:text-text-dark/60">
+              <span>
+                Showing{' '}
+                <span className="font-medium text-text-light dark:text-text-dark">
+                  {(currentPage - 1) * itemsPerPage + 1}
+                </span>{' '}
+                to{' '}
+                <span className="font-medium text-text-light dark:text-text-dark">
+                  {Math.min(currentPage * itemsPerPage, filteredCommissions.length)}
+                </span>{' '}
+                of{' '}
+                <span className="font-medium text-text-light dark:text-text-dark">
+                  {filteredCommissions.length}
+                </span>{' '}
+                results
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1 rounded text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-30 transition-colors"
+                className="h-8 px-2 text-xs"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                Previous
+              </Button>
+              <div className="text-xs font-medium text-text-light dark:text-text-dark">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-30 transition-colors"
+                className="h-8 px-2 text-xs"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+                Next
+                <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
             </div>
           </div>
         )}

@@ -28,7 +28,13 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${cleanToken}`;
       logger.debug('Request with authentication', { url: config.url });
     } else {
-      logger.warn('No authentication token found', { url: config.url });
+      // Only warn if not an auth request
+      const url = String(config.url || '');
+      const isPublicEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/signin') || url.includes('/auth/signup');
+      
+      if (!isPublicEndpoint) {
+        logger.warn('No authentication token found', { url: config.url });
+      }
     }
   }
 

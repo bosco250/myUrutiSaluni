@@ -10,6 +10,8 @@ import { PayrollItem } from './entities/payroll-item.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 import { Commission } from '../commissions/entities/commission.entity';
 import { CommissionsService } from '../commissions/commissions.service';
+import { WalletsService } from '../wallets/wallets.service';
+import { WalletTransactionType } from '../wallets/entities/wallet-transaction.entity';
 
 @Injectable()
 export class PayrollService {
@@ -23,6 +25,7 @@ export class PayrollService {
     @InjectRepository(Commission)
     private commissionsRepository: Repository<Commission>,
     private commissionsService: CommissionsService,
+    private walletsService: WalletsService,
   ) {}
 
   /**
@@ -188,7 +191,7 @@ export class PayrollService {
   ): Promise<PayrollRun> {
     const payrollRun = await this.payrollRunsRepository.findOne({
       where: { id: payrollRunId },
-      relations: ['items'],
+      relations: ['items', 'items.salonEmployee', 'items.salonEmployee.user'],
     });
 
     if (!payrollRun) {
@@ -203,11 +206,43 @@ export class PayrollService {
 
     // Mark all items as paid
     for (const item of payrollRun.items) {
+      let txId = null;
+
+      // Handle Wallet Payment
+      if (paymentMethod === 'wallet' && item.salonEmployee?.user?.id) {
+        try {
+          const wallet = await this.walletsService.getOrCreateWallet(
+            item.salonEmployee.user.id,
+          );
+
+          const tx = await this.walletsService.createTransaction(
+            wallet.id,
+            WalletTransactionType.DEPOSIT,
+            Number(item.netPay),
+            `Payroll Payment: ${item.salonEmployee.roleTitle || 'Employee'}`,
+            'payroll_item',
+            item.id,
+            {
+              metadata: {
+                payrollRunId: payrollRun.id,
+                periodStart: payrollRun.periodStart,
+                periodEnd: payrollRun.periodEnd,
+              },
+            },
+          );
+          txId = tx.id;
+        } catch (error) {
+          throw new BadRequestException(
+            `Failed to credit wallet for ${item.salonEmployee.user.fullName || 'employee'}: ${error.message}`,
+          );
+        }
+      }
+
       item.paid = true;
       item.paidAt = new Date();
       item.paidById = paidById;
       item.paymentMethod = paymentMethod;
-      item.paymentReference = paymentReference || null;
+      item.paymentReference = txId || paymentReference || null;
 
       // Mark commissions as paid
       if (Number(item.commissionAmount) > 0) {

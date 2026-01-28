@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Eye,
   Calendar,
+  Pencil
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
@@ -45,7 +46,7 @@ interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  avatar?: string;
+  avatarUrl?: string;
   membershipNumber?: string;
 }
 
@@ -78,6 +79,7 @@ export default function UsersPage() {
 function UsersPageContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewingUser, setViewingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -127,7 +129,8 @@ function UsersPageContent() {
           statusFilter === 'all' || (statusFilter === 'active' ? user.isActive : !user.isActive);
 
         return matchesSearch && matchesRole && matchesStatus;
-      }) || []
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || []
     );
   }, [users, searchQuery, roleFilter, statusFilter]);
 
@@ -179,11 +182,11 @@ function UsersPageContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1600px] mx-auto p-4 md:p-6">
+      <div className="max-w-[1600px] mx-auto p-4 md:p-4">
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading users...</p>
+            <p className="text-sm text-gray-900/60 dark:text-white/60">Loading users...</p>
           </div>
         </div>
       </div>
@@ -192,12 +195,12 @@ function UsersPageContent() {
 
   if (error) {
     return (
-      <div className="max-w-[1600px] mx-auto p-4 md:p-6">
-        <div className="bg-error/10 border border-error rounded-xl p-6 flex items-start gap-4">
+      <div className="max-w-[1600px] mx-auto p-4 md:p-4">
+        <div className="bg-error/10 border border-error rounded-xl p-4 flex items-start gap-4">
           <AlertCircle className="w-6 h-6 text-error flex-shrink-0" />
           <div>
             <h3 className="font-semibold text-error mb-1">Error loading users</h3>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60">
+            <p className="text-sm text-gray-900/60 dark:text-white/60">
               {(error as any)?.response?.data?.message || 'Failed to load users. Please try again.'}
             </p>
             <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-3">
@@ -211,16 +214,16 @@ function UsersPageContent() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 md:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-[1600px] mx-auto p-4 md:p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
         <div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark tracking-tight">User Management</h1>
-          <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">User Management</h1>
+          <p className="text-sm text-gray-900/60 dark:text-white/60 mt-1">
             Manage user accounts, roles, and permissions
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} className="h-9" disabled={isFetching}>
             <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
             Refresh
@@ -235,7 +238,7 @@ function UsersPageContent() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-3">
         <StatCard label="Total Users" value={stats.total} icon={Users} color="text-blue-600" bg="bg-blue-500/10" />
         <StatCard label="Active" value={stats.active} icon={Check} color="text-green-600" bg="bg-green-500/10" />
         <StatCard label="Admins" value={stats.admins} icon={Shield} color="text-red-600" bg="bg-red-500/10" />
@@ -245,17 +248,17 @@ function UsersPageContent() {
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 mb-6">
-        <div className="flex flex-col lg:flex-row gap-3">
+      <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-3 mb-3">
+        <div className="flex flex-col lg:flex-row gap-2">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-white/40" />
             <input
               type="text"
               placeholder="Search by name, email, or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 pl-9 pr-4 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+              className="w-full h-9 pl-9 pr-4 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-lg text-gray-900 dark:text-white placeholder:text-gray-900/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
             />
           </div>
 
@@ -268,7 +271,7 @@ function UsersPageContent() {
                 className={`h-9 px-3 rounded-lg text-xs font-medium transition-all ${
                   roleFilter === role
                     ? 'bg-primary text-white'
-                    : 'bg-background-light dark:bg-background-dark text-text-light/60 dark:text-text-dark/60 hover:bg-background-light/80 dark:hover:bg-background-dark/80 border border-border-light dark:border-border-dark'
+                    : 'bg-gray-50 dark:bg-gray-900 text-gray-900/60 dark:text-white/60 hover:bg-gray-50/80 dark:hover:bg-background-dark/80 border border-gray-300 dark:border-gray-800'
                 }`}
               >
                 {role === 'all' ? 'All Roles' : roleLabels[role as UserRole]}
@@ -280,7 +283,7 @@ function UsersPageContent() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 px-3 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="h-9 px-3 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -291,27 +294,27 @@ function UsersPageContent() {
 
       {/* Users Table */}
       {filteredUsers.length === 0 ? (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
-          <UserIcon className="w-12 h-12 mx-auto mb-4 text-text-light/20 dark:text-text-dark/20" />
-          <p className="text-text-light/60 dark:text-text-dark/60 font-medium mb-2">
+        <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-12 text-center">
+          <UserIcon className="w-12 h-12 mx-auto mb-4 text-gray-900/20 dark:text-white/20" />
+          <p className="text-gray-900/60 dark:text-white/60 font-medium mb-1">
             {searchQuery || roleFilter !== 'all' || statusFilter !== 'all' ? 'No users match your filters' : 'No users found'}
           </p>
-          <p className="text-sm text-text-light/40 dark:text-text-dark/40">
+          <p className="text-sm text-gray-900/40 dark:text-white/40">
             Try adjusting your search or filter criteria
           </p>
         </div>
       ) : (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">User</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">Contact</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">Role</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">Joined</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">Actions</th>
+                  <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">User</th>
+                  <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Contact</th>
+                  <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Role</th>
+                  <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-1.5 text-left text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Joined</th>
+                  <th className="px-3 py-1.5 text-right text-[10px] font-semibold text-gray-900/60 dark:text-white/60 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -319,41 +322,41 @@ function UsersPageContent() {
                   const config = roleConfig[user.role];
                   const RoleIcon = config?.icon || UserIcon;
                   return (
-                    <tr key={user.id} className="hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {user.avatar ? (
-                              <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-lg" />
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-background-dark transition-colors group">
+                      <td className="px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 text-xs rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            {user.avatarUrl ? (
+                              <img src={user.avatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                             ) : (
                               user.fullName.charAt(0).toUpperCase()
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-text-light dark:text-text-dark truncate">{user.fullName}</p>
-                            <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 font-mono">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.fullName}</p>
+                            <p className="text-[10px] text-gray-900/40 dark:text-white/40 font-mono">
                               {user.membershipNumber || `ID: ${user.id.slice(0, 8)}`}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <div className="space-y-1">
                           {user.email && (
-                            <div className="flex items-center gap-1.5 text-xs text-text-light/70 dark:text-text-dark/70">
-                              <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 text-xs text-gray-900/70 dark:text-white/70">
+                              <Mail className="w-3 h-3 text-gray-900/40 dark:text-white/40 flex-shrink-0" />
                               <span className="truncate max-w-[180px]">{user.email}</span>
                             </div>
                           )}
                           {user.phone && (
-                            <div className="flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
-                              <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
+                            <div className="flex items-center gap-1.5 text-xs text-gray-900/60 dark:text-white/60">
+                              <Phone className="w-3 h-3 text-gray-900/40 dark:text-white/40 flex-shrink-0" />
                               {user.phone}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <RoleSelect
                           userId={user.id}
                           currentRole={user.role}
@@ -361,7 +364,7 @@ function UsersPageContent() {
                           disabled={user.id === currentUser?.id || !canManageUsers()}
                         />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <button
                           onClick={() => handleToggleActive(user)}
                           disabled={user.id === currentUser?.id || !canManageUsers()}
@@ -375,21 +378,30 @@ function UsersPageContent() {
                           {user.isActive ? 'Active' : 'Inactive'}
                         </button>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5 text-xs text-text-light/60 dark:text-text-dark/60">
+                      <td className="px-3 py-1.5">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-900/60 dark:text-white/60">
                           <Calendar className="w-3 h-3" />
                           {format(new Date(user.createdAt), 'MMM d, yyyy')}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => setViewingUser(user)}
-                            className="p-1.5 text-text-light/40 dark:text-text-dark/40 hover:text-primary hover:bg-primary/10 rounded-lg transition"
+                            className="p-1.5 text-gray-900/40 dark:text-white/40 hover:text-primary hover:bg-primary/10 rounded-lg transition"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {canManageUsers() && (
+                            <button
+                              onClick={() => setEditingUser(user)}
+                              className="p-1.5 text-gray-900/40 dark:text-white/40 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              title="Edit User"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
                           {canManageUsers() && user.id !== currentUser?.id && (
                             <button
                               onClick={() => {
@@ -397,7 +409,7 @@ function UsersPageContent() {
                                   deleteUserMutation.mutate(user.id);
                                 }
                               }}
-                              className="p-1.5 text-text-light/40 dark:text-text-dark/40 hover:text-error hover:bg-error/10 rounded-lg transition"
+                              className="p-1.5 text-gray-900/40 dark:text-white/40 hover:text-error hover:bg-error/10 rounded-lg transition"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -413,9 +425,9 @@ function UsersPageContent() {
           </div>
 
           {/* Pagination */}
-          <div className="px-4 py-3 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
+          <div className="px-3 py-1.5 border-t border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-xs text-gray-900/60 dark:text-white/60">
                 <span>
                   Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length}
                 </span>
@@ -425,7 +437,7 @@ function UsersPageContent() {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="h-7 px-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded text-xs focus:outline-none"
+                  className="h-7 px-2 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded text-xs focus:outline-none"
                 >
                   <option value="10">10</option>
                   <option value="20">20</option>
@@ -437,7 +449,7 @@ function UsersPageContent() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="p-1.5 rounded-lg hover:bg-surface-light dark:hover:bg-surface-dark disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-surface-dark disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -454,7 +466,7 @@ function UsersPageContent() {
                         className={`w-8 h-8 rounded-lg text-xs font-medium transition ${
                           currentPage === pageNum
                             ? 'bg-primary text-white'
-                            : 'hover:bg-surface-light dark:hover:bg-surface-dark text-text-light/60 dark:text-text-dark/60'
+                            : 'hover:bg-white dark:hover:bg-surface-dark text-gray-900/60 dark:text-white/60'
                         }`}
                       >
                         {pageNum}
@@ -464,7 +476,7 @@ function UsersPageContent() {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage >= totalPages}
-                    className="p-1.5 rounded-lg hover:bg-surface-light dark:hover:bg-surface-dark disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-surface-dark disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -490,6 +502,18 @@ function UsersPageContent() {
       {viewingUser && (
         <ViewUserModal user={viewingUser} onClose={() => setViewingUser(null)} />
       )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <EditUserModal 
+            user={editingUser} 
+            onClose={() => setEditingUser(null)} 
+            onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['users'] });
+                setEditingUser(null);
+            }}
+        />
+      )}
     </div>
   );
 }
@@ -497,13 +521,13 @@ function UsersPageContent() {
 // Stat Card Component
 function StatCard({ label, value, icon: Icon, color, bg }: { label: string; value: number; icon: any; color: string; bg: string }) {
   return (
-    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 flex items-center gap-3">
+    <div className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl p-3 flex items-center gap-2">
       <div className={`p-2 rounded-lg ${bg}`}>
         <Icon className={`w-4 h-4 ${color}`} />
       </div>
       <div>
-        <p className="text-xl font-bold text-text-light dark:text-text-dark">{value}</p>
-        <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 uppercase tracking-wider">{label}</p>
+        <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+        <p className="text-[10px] text-gray-900/60 dark:text-white/60 uppercase tracking-wider">{label}</p>
       </div>
     </div>
   );
@@ -551,56 +575,56 @@ function ViewUserModal({ user, onClose }: { user: User; onClose: () => void }) {
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-w-md w-full animate-in fade-in slide-in-from-bottom-4"
+          className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-xl shadow-2xl max-w-md w-full animate-in fade-in slide-in-from-bottom-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-6">
-            <div className="flex items-start gap-4 mb-6">
+          <div className="p-4">
+            <div className="flex items-start gap-4 mb-3">
               <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-2xl">
-                {user.avatar ? (
-                  <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-xl" />
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-full h-full object-cover rounded-xl" />
                 ) : (
                   user.fullName.charAt(0).toUpperCase()
                 )}
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-text-light dark:text-text-dark">{user.fullName}</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.fullName}</h2>
                 <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold mt-1 ${config?.bg} ${config?.color}`}>
                   <RoleIcon className="w-3 h-3" />
                   {roleLabels[user.role]}
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition">
-                <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+              <button onClick={onClose} className="p-2 hover:bg-gray-50 dark:hover:bg-background-dark rounded-lg transition">
+                <X className="w-5 h-5 text-gray-900/60 dark:text-white/60" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
-                <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <Mail className="w-4 h-4 text-gray-900/40 dark:text-white/40" />
                 <div>
-                  <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 uppercase">Email</p>
-                  <p className="text-sm text-text-light dark:text-text-dark">{user.email || 'Not provided'}</p>
+                  <p className="text-[10px] text-gray-900/40 dark:text-white/40 uppercase">Email</p>
+                  <p className="text-sm text-gray-900 dark:text-white">{user.email || 'Not provided'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
-                <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <Phone className="w-4 h-4 text-gray-900/40 dark:text-white/40" />
                 <div>
-                  <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 uppercase">Phone</p>
-                  <p className="text-sm text-text-light dark:text-text-dark">{user.phone || 'Not provided'}</p>
+                  <p className="text-[10px] text-gray-900/40 dark:text-white/40 uppercase">Phone</p>
+                  <p className="text-sm text-gray-900 dark:text-white">{user.phone || 'Not provided'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
-                <Calendar className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <Calendar className="w-4 h-4 text-gray-900/40 dark:text-white/40" />
                 <div>
-                  <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 uppercase">Joined</p>
-                  <p className="text-sm text-text-light dark:text-text-dark">{format(new Date(user.createdAt), 'MMMM d, yyyy')}</p>
+                  <p className="text-[10px] text-gray-900/40 dark:text-white/40 uppercase">Joined</p>
+                  <p className="text-sm text-gray-900 dark:text-white">{format(new Date(user.createdAt), 'MMMM d, yyyy')}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 {user.isActive ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-gray-400" />}
                 <div>
-                  <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 uppercase">Status</p>
+                  <p className="text-[10px] text-gray-900/40 dark:text-white/40 uppercase">Status</p>
                   <p className={`text-sm font-medium ${user.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
                     {user.isActive ? 'Active' : 'Inactive'}
                   </p>
@@ -663,32 +687,32 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-200" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+          className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-6 py-4 border-b border-border-light dark:border-border-dark bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="px-4 py-3 border-b border-gray-300 dark:border-gray-800 bg-gradient-to-r from-primary/5 to-transparent">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <UserPlus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Add New User</h2>
-                  <p className="text-xs text-text-light/50 dark:text-text-dark/50">Create a new account</p>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add New User</h2>
+                  <p className="text-xs text-gray-900/50 dark:text-white/50">Create a new account</p>
                 </div>
               </div>
               <button 
                 onClick={onClose} 
-                className="p-2 hover:bg-background-light dark:hover:bg-background-dark rounded-xl transition-colors"
+                className="p-2 hover:bg-gray-50 dark:hover:bg-background-dark rounded-xl transition-colors"
               >
-                <X className="w-5 h-5 text-text-light/60 dark:text-text-dark/60" />
+                <X className="w-5 h-5 text-gray-900/60 dark:text-white/60" />
               </button>
             </div>
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          <div className="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
             {error && (
               <div className="mb-5 p-3 bg-error/10 border border-error/20 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
@@ -699,20 +723,20 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {/* Full Name */}
               <div>
-                <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-2">
+                <label className="block text-xs font-semibold text-gray-900/70 dark:text-white/70 mb-1">
                   Full Name <span className="text-error">*</span>
                 </label>
                 <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-white/40" />
                   <input
                     type="text"
                     required
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    className="w-full h-11 pl-10 pr-4 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full h-9 pl-10 pr-4 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-900/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     placeholder="Enter full name"
                   />
                 </div>
@@ -721,32 +745,32 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               {/* Email & Phone - Two columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-2">
+                  <label className="block text-xs font-semibold text-gray-900/70 dark:text-white/70 mb-1">
                     Email <span className="text-error">*</span>
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-white/40" />
                     <input
                       type="email"
                       required
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full h-11 pl-10 pr-4 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      className="w-full h-9 pl-10 pr-4 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-900/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                       placeholder="user@example.com"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-2">
+                  <label className="block text-xs font-semibold text-gray-900/70 dark:text-white/70 mb-1">
                     Phone
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-white/40" />
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full h-11 pl-10 pr-4 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      className="w-full h-9 pl-10 pr-4 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-900/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                       placeholder="+250 7XX XXX XXX"
                     />
                   </div>
@@ -755,40 +779,40 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
               {/* Password */}
               <div>
-                <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-2">
+                <label className="block text-xs font-semibold text-gray-900/70 dark:text-white/70 mb-1">
                   Password <span className="text-error">*</span>
                 </label>
                 <div className="relative">
-                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-900/40 dark:text-white/40" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     minLength={6}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full h-11 pl-10 pr-12 text-sm bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    className="w-full h-9 pl-10 pr-12 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-900/30 dark:placeholder:text-text-dark/30 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     placeholder="Minimum 6 characters"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-background-light dark:hover:bg-background-dark rounded-lg transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-50 dark:hover:bg-background-dark rounded-lg transition-colors"
                   >
                     {showPassword ? (
-                      <Eye className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                      <Eye className="w-4 h-4 text-gray-900/40 dark:text-white/40" />
                     ) : (
-                      <Eye className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
+                      <Eye className="w-4 h-4 text-gray-900/40 dark:text-white/40" />
                     )}
                   </button>
                 </div>
-                <p className="mt-1.5 text-[10px] text-text-light/40 dark:text-text-dark/40 flex items-center gap-1">
+                <p className="mt-1.5 text-[10px] text-gray-900/40 dark:text-white/40 flex items-center gap-1">
                   <Check className="w-3 h-3" /> Must be at least 6 characters
                 </p>
               </div>
 
               {/* Role Selection - Chips */}
               <div>
-                <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-3">
+                <label className="block text-xs font-semibold text-gray-900/70 dark:text-white/70 mb-3">
                   User Role <span className="text-error">*</span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -804,7 +828,7 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                         className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all border ${
                           isSelected
                             ? `${config?.bg} ${config?.color} border-current ring-2 ring-current/20`
-                            : 'bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60 hover:border-primary/30'
+                            : 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-800 text-gray-900/60 dark:text-white/60 hover:border-primary/30'
                         }`}
                       >
                         <RoleIcon className="w-3.5 h-3.5" />
@@ -818,19 +842,19 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50">
+          <div className="px-4 py-3 border-t border-gray-300 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
             <div className="flex gap-3">
               <Button 
                 type="button" 
                 onClick={onClose} 
                 variant="outline" 
-                className="flex-1 h-11"
+                className="flex-1 h-9"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSubmit}
-                className="flex-1 h-11" 
+                className="flex-1 h-9" 
                 loading={loading} 
                 loadingText="Creating..."
               >
@@ -838,6 +862,200 @@ function CreateUserModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                 Create User
               </Button>
             </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Edit User Modal
+function EditUserModal({ user, onClose, onSuccess }: { user: User; onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    email: user.email || '',
+    fullName: user.fullName || '',
+    phone: user.phone || '',
+    role: user.role,
+    isActive: user.isActive
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await api.patch(`/users/${user.id}`, formData);
+      onSuccess();
+    } catch (err: any) {
+      const errorData = err.response?.data;
+      setError(errorData?.message || 'Failed to update user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-200" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10 backdrop-blur-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold overflow-hidden shadow-sm ring-2 ring-white dark:ring-gray-800">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm">{user.fullName.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit User</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Update account details</p>
+                </div>
+              </div>
+              <button 
+                onClick={onClose} 
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4">
+            {error && (
+              <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-600">Failed to update user</p>
+                  <p className="text-xs text-red-500 mt-0.5">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    required
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    className="w-full h-9 pl-10 pr-4 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Email & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full h-9 pl-10 pr-4 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Phone
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full h-9 pl-10 pr-4 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Role Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  User Role
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                   {Object.entries(roleLabels).map(([value, label]) => {
+                     const config = roleConfig[value as UserRole];
+                     const RoleIcon = config?.icon || UserIcon;
+                     const isSelected = formData.role === value;
+                     return (
+                       <button
+                         key={value}
+                         type="button"
+                         onClick={() => setFormData({...formData, role: value as UserRole})}
+                         className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+                           isSelected
+                             ? `${config?.bg} ${config?.color} border-current ring-1 ring-current`
+                             : 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-800 text-gray-500 hover:border-blue-500/50'
+                         }`}
+                       >
+                         <RoleIcon className="w-3.5 h-3.5" />
+                         <span className="truncate">{label}</span>
+                       </button>
+                     );
+                   })}
+                </div>
+              </div>
+
+              {/* Active Status */}
+              <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${formData.isActive ? 'bg-green-500/10 text-green-600' : 'bg-gray-200 text-gray-500'}`}>
+                          {formData.isActive ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                      </div>
+                      <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">Account Status</p>
+                          <p className="text-[10px] text-gray-500">{formData.isActive ? 'User can log in' : 'User access disabled'}</p>
+                      </div>
+                  </div>
+                  <button
+                      type="button"
+                      onClick={() => setFormData({...formData, isActive: !formData.isActive})}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                        formData.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'
+                      }`}
+                  >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+              </div>
+
+              {/* Submit */}
+              <div className="pt-2 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 mt-4">
+                 <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                    Cancel
+                 </Button>
+                 <Button type="submit" disabled={loading || !formData.fullName || !formData.email}>
+                    {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                    Save Changes
+                 </Button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

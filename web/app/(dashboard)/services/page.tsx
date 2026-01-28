@@ -280,57 +280,67 @@ function ServicesContent() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          {[
-            {
-              label: 'Total',
-              value: stats.total,
-              icon: Scissors,
-              gradient: 'from-blue-500 to-cyan-500',
-              border: 'hover:border-blue-500/50',
-            },
-            {
-              label: 'Active',
-              value: stats.active,
-              icon: Scissors,
-              gradient: 'from-emerald-500 to-green-600',
-              border: 'hover:border-emerald-500/50',
-            },
-            {
-              label: 'Avg Price',
-              value: `RWF ${Math.round(stats.avgPrice).toLocaleString()}`,
-              icon: DollarSign,
-              gradient: 'from-violet-500 to-purple-500',
-              border: 'hover:border-violet-500/50',
-            },
-            {
-              label: 'Avg Duration',
-              value: `${Math.round(stats.avgDuration)} min`,
-              icon: Clock,
-              gradient: 'from-amber-500 to-orange-600',
-              border: 'hover:border-amber-500/50',
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className={`group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-lg transition-all ${stat.border}`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className={`p-2 bg-gradient-to-br ${stat.gradient} rounded-lg`}>
-                  <stat.icon className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-[10px] uppercase tracking-wide font-semibold text-text-light/60 dark:text-text-dark/60">
-                  {stat.label}
-                </span>
-              </div>
-              <div className="flex items-end justify-between">
-                <span className="text-2xl font-bold text-text-light dark:text-text-dark leading-none">
-                  {stat.value}
-                </span>
+        {/* Stats Grid - Compacted & Flat */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {/* Total Services */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Total Services</p>
+              <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <Scissors className="w-3 h-3 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-          ))}
+            <p className="text-xl font-bold text-text-light dark:text-text-dark leading-tight">{stats.total}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">All salon offerings</span>
+            </div>
+          </div>
+
+          {/* Active Services */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Active</p>
+              <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark leading-tight">{stats.active}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-emerald-600/60 dark:text-emerald-400/60 font-medium">Currently bookable</span>
+            </div>
+          </div>
+
+          {/* Avg Price */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-violet-200 dark:border-violet-800/50 rounded-xl p-3 hover:border-violet-300 dark:hover:border-violet-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-violet-600 dark:text-violet-400">Avg. Price</p>
+              <div className="p-1 bg-violet-100 dark:bg-violet-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <DollarSign className="w-3 h-3 text-violet-600 dark:text-violet-400" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark leading-tight">
+              {Math.round(stats.avgPrice).toLocaleString()} <span className="text-[10px] font-normal opacity-50">RWF</span>
+            </p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">Base service average</span>
+            </div>
+          </div>
+
+          {/* Avg Duration */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 hover:border-amber-300 dark:hover:border-amber-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-amber-600 dark:text-amber-400">Avg. Time</p>
+              <div className="p-1 bg-amber-100 dark:bg-amber-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-text-light dark:text-text-dark leading-tight">
+              {Math.round(stats.avgDuration)} <span className="text-[10px] font-normal opacity-50">MIN</span>
+            </p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">Per appointment</span>
+            </div>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -403,32 +413,32 @@ function ServicesContent() {
           />
         </div>
       ) : (
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl overflow-hidden shadow-sm">
+        <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-light dark:divide-border-dark text-sm">
-              <thead className="bg-surface-accent-light dark:bg-surface-accent-dark">
+            <table className="w-full text-xs text-left">
+              <thead className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Service
                   </th>
-                   <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                   <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Code
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Duration
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Price
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                     Status
                   </th>
                   {(salons.length > 1 || canViewAll) && (
-                    <th className="px-4 py-3 text-left font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                       Salon
                     </th>
                   )}
-                  <th className="px-4 py-3 text-right font-semibold text-text-light/60 dark:text-text-dark/60 text-[10px] uppercase tracking-wider">
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
                     Actions
                   </th>
                 </tr>
@@ -437,12 +447,12 @@ function ServicesContent() {
                 {currentServices.map((service) => (
                   <tr
                     key={service.id}
-                    className="group hover:bg-background-secondary/50 dark:hover:bg-white/5 transition-colors"
+                    className="group hover:bg-background-light dark:hover:bg-white/5 transition-colors"
                   >
                     {/* Service Name & Image */}
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-surface-accent-light dark:bg-surface-accent-dark border border-border-light dark:border-border-dark flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-surface-accent-light dark:bg-surface-accent-dark border border-border-light dark:border-border-dark flex items-center justify-center flex-shrink-0 overflow-hidden relative">
                           {service.imageUrl ? (
                              // eslint-disable-next-line @next/next/no-img-element
                             <img 
@@ -451,16 +461,16 @@ function ServicesContent() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <Scissors className="w-4 h-4 text-text-light/30 dark:text-text-dark/30" />
+                            <Scissors className="w-3 h-3 text-text-light/30 dark:text-text-dark/30" />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-text-light dark:text-text-dark truncate">
+                          <div className="font-bold text-text-light dark:text-text-dark truncate">
                             {service.name}
                           </div>
-                          {service.description && (
-                            <div className="text-[11px] text-text-light/50 dark:text-text-dark/50 truncate max-w-[200px]">
-                              {service.description}
+                          {service.category && (
+                            <div className="text-[9px] uppercase font-bold text-primary/60 dark:text-primary/40 tracking-tight">
+                              {service.category}
                             </div>
                           )}
                         </div>
@@ -468,62 +478,61 @@ function ServicesContent() {
                     </td>
 
                     {/* Code */}
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                       <span className="font-mono text-[11px] text-text-light/60 dark:text-text-dark/60 bg-surface-accent-light dark:bg-surface-accent-dark px-1.5 py-0.5 rounded border border-border-light dark:border-border-dark">
+                    <td className="px-3 py-2.5">
+                       <span className="font-mono text-[10px] text-text-light/60 dark:text-text-dark/60">
                          {service.code || '—'}
                        </span>
                     </td>
 
                     {/* Duration */}
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 text-text-light/80 dark:text-text-dark/80">
-                        <Clock className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
-                        <span className="text-xs font-medium tabular-nums">{service.durationMinutes} m</span>
+                        <Clock className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                        <span className="font-bold tabular-nums">{service.durationMinutes}m</span>
                       </div>
                     </td>
 
                     {/* Price */}
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <div className="text-sm font-bold text-text-light dark:text-text-dark tabular-nums">
-                        {service.basePrice.toLocaleString()} <span className="text-[10px] font-normal text-text-light/50 dark:text-text-dark/50">RWF</span>
+                    <td className="px-3 py-2.5">
+                      <div className="font-bold text-text-light dark:text-text-dark tabular-nums">
+                        {service.basePrice.toLocaleString()} <span className="text-[9px] font-normal text-text-light/40">RWF</span>
                       </div>
                     </td>
 
                     {/* Status */}
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                       <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
+                    <td className="px-3 py-2.5">
+                       <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full ${
                           service.isActive 
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
-                            : 'bg-text-light/5 border-text-light/10 text-text-light/50 dark:bg-text-dark/5 dark:border-text-dark/10 dark:text-text-dark/50'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-text-light/5 text-text-light/50 dark:bg-text-dark/5 dark:text-text-dark/50'
                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${service.isActive ? 'bg-emerald-500' : 'bg-text-light/40 dark:bg-text-dark/40'}`} />
                           {service.isActive ? 'Active' : 'Inactive'}
-                       </div>
+                       </span>
                     </td>
 
                     {/* Salon (If multiple) */}
                     {(salons.length > 1 || canViewAll) && (
-                      <td className="px-4 py-2.5 whitespace-nowrap text-xs text-text-light/50 dark:text-text-dark/50">
+                      <td className="px-3 py-2.5 text-[10px] text-text-light/50 dark:text-text-dark/50 font-medium">
                         {service.salon?.name || '-'}
                       </td>
                     )}
 
                     {/* Actions */}
-                    <td className="px-4 py-2.5 whitespace-nowrap text-right">
+                    <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => {
                             setEditingService(service);
                             setShowModal(true);
                           }}
-                          className="p-1.5 text-text-light/40 hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                          className="h-7 w-7 flex items-center justify-center text-text-light/40 hover:text-primary hover:bg-primary/10 rounded transition-colors"
                           title="Edit"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setDeleteConfirmation(service)}
-                          className="p-1.5 text-text-light/40 hover:text-danger hover:bg-danger/10 rounded transition-colors"
+                          className="h-7 w-7 flex items-center justify-center text-text-light/40 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -765,32 +774,29 @@ function ServiceModal({
       <div
         className="absolute inset-0 bg-black/55 dark:bg-black/70 backdrop-blur-sm"
         onClick={onClose}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose();
-        }}
         role="button"
         tabIndex={-1}
         aria-label="Close modal"
       />
 
       <div
-        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-hidden flex flex-col"
+        className="relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        {/* Header - Clean aesthetics, no gradients */}
-        <div className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-4 min-w-0">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Scissors className="w-6 h-6 text-primary" />
+        {/* Header - Premium Compacted & Flat */}
+        <div className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                <Scissors className="w-5 h-5" />
               </div>
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold tracking-tight text-text-light dark:text-text-dark">
-                  {service ? 'Edit Service' : 'Create Service'}
+              <div>
+                <h2 className="text-lg font-black tracking-tight text-text-light dark:text-text-dark">
+                  {service ? 'Refine Service' : 'New Service Offering'}
                 </h2>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                  Configure service details, pricing, and duration.
+                <p className="text-[10px] uppercase font-bold tracking-widest text-text-light/40">
+                  Configure professional salon treatment
                 </p>
               </div>
             </div>
@@ -799,319 +805,245 @@ function ServiceModal({
               variant="secondary"
               size="sm"
               onClick={onClose}
-              className="h-8 w-8 p-0 rounded-full"
-              aria-label="Close"
+              className="h-8 w-8 p-0 rounded-full bg-background-light dark:bg-background-dark border-none"
             >
-              <XCircle className="w-5 h-5 opacity-60 hover:opacity-100" />
+              <XCircle className="w-5 h-5 opacity-60" />
             </Button>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="p-6 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar text-text-light dark:text-text-dark">
           {error && (
-            <div className="mb-6 p-4 bg-danger/10 border border-danger/20 text-danger rounded-xl flex items-start gap-3">
-              <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <p className="text-sm font-medium">{error}</p>
+            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+               <XCircle className="w-4 h-4 text-red-500" />
+               <p className="text-xs font-bold text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
-          <form id="service-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Basic Info */}
+          <form id="service-form" onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column: Basic Info & Categories */}
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-4 uppercase tracking-wide">
-                    Basic Information
-                  </h3>
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4">Core Identity</h3>
                   
                   <div className="space-y-4">
                     {/* Salon Selection */}
-                    {salons.length > 1 ? (
+                    {salons.length > 1 && (
                       <div>
-                        <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                          Salon *
+                        <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-1.5 ml-1">
+                          Salon Location
                         </label>
                         <select
                           required
                           value={formData.salonId}
                           onChange={(e) => setFormData({ ...formData, salonId: e.target.value })}
-                          className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                          className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 transition-all outline-none appearance-none cursor-pointer"
                         >
                           <option value="">Select salon</option>
                           {salons.map((salon) => (
-                            <option key={salon.id} value={salon.id}>
-                              {salon.name}
-                            </option>
+                            <option key={salon.id} value={salon.id}>{salon.name}</option>
                           ))}
                         </select>
                       </div>
-                    ) : null}
+                    )}
 
-                    {/* Service Name */}
-                    <div>
-                      <label htmlFor="service-name" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Service Name *
-                      </label>
-                      <input
-                        id="service-name"
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g., Haircut - Men"
-                        className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      />
-                    </div>
-
-                    {/* Service Code */}
-                    <div>
-                      <label htmlFor="service-code" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Service Code
-                      </label>
-                      <input
-                        id="service-code"
-                        type="text"
-                        value={formData.code}
-                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                        placeholder="e.g., SRV-HC-M"
-                        className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      />
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                      <label htmlFor="service-description" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Description
-                      </label>
-                      <textarea
-                        id="service-description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={3}
-                        placeholder="What's included? Any notes for staff/customers."
-                        className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition resize-none"
-                      />
-                    </div>
-
-                    {/* Category Selection - Multi Select */}
-                    <div>
-                      <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase flex items-center gap-1.5">
-                        <Tag className="w-3 h-3" />
-                        Service Categories
-                      </label>
-                      <p className="text-[10px] text-text-light/50 dark:text-text-dark/50 mb-2">
-                        Select all that apply
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: 'haircut', label: 'Haircut & Styling' },
-                          { id: 'coloring', label: 'Hair Coloring' },
-                          { id: 'treatment', label: 'Hair Treatment' },
-                          { id: 'braiding', label: 'Braiding & Weaving' },
-                          { id: 'nails', label: 'Nails & Manicure' },
-                          { id: 'makeup', label: 'Makeup & Beauty' },
-                          { id: 'facial', label: 'Facial & Skincare' },
-                          { id: 'massage', label: 'Massage & Spa' },
-                          { id: 'waxing', label: 'Waxing & Hair Removal' },
-                          { id: 'barber', label: 'Barber Services' },
-                        ].map((cat) => {
-                          const categories = formData.category ? formData.category.split(',') : [];
-                          const isSelected = categories.includes(cat.id);
-                          return (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => {
-                                let updated: string[];
-                                if (isSelected) {
-                                  updated = categories.filter((c) => c !== cat.id);
-                                } else {
-                                  updated = [...categories, cat.id];
-                                }
-                                setFormData({ ...formData, category: updated.join(',') });
-                              }}
-                              className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-medium transition ${
-                                isSelected
-                                  ? 'bg-primary/10 border-primary text-primary'
-                                  : 'bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark text-text-light/80 dark:text-text-dark/80 hover:border-primary/50'
-                              }`}
-                            >
-                              <span className="flex-1 text-left">{cat.label}</span>
-                              {isSelected && <Check className="w-3.5 h-3.5" />}
-                            </button>
-                          );
-                        })}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-1.5 ml-1">
+                          Service Name
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          placeholder="e.g., Signature Balayage"
+                          className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-1.5 ml-1">
+                          Code
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.code}
+                          onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                          placeholder="SRV-01"
+                          className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-xs font-mono focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                        />
                       </div>
                     </div>
 
-                    {/* Target Gender */}
                     <div>
-                      <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-2 uppercase flex items-center gap-1.5">
-                        <Users className="w-3 h-3" />
-                        Target Gender
+                      <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-1.5 ml-1">
+                        Description
                       </label>
-                      <div className="flex gap-2">
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows={3}
+                        placeholder="Detail the experience..."
+                        className="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4">Categories & Targeting</h3>
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { id: 'haircut', label: 'Haircut' },
+                        { id: 'coloring', label: 'Coloring' },
+                        { id: 'treatment', label: 'Treatment' },
+                        { id: 'braiding', label: 'Braiding' },
+                        { id: 'nails', label: 'Nails' },
+                        { id: 'makeup', label: 'Makeup' },
+                        { id: 'facial', label: 'Facial' },
+                        { id: 'massage', label: 'Massage' },
+                        { id: 'waxing', label: 'Waxing' },
+                      ].map((cat) => {
+                        const categories = formData.category ? formData.category.split(',') : [];
+                        const isSelected = categories.includes(cat.id);
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              const updated = isSelected 
+                                ? categories.filter((c) => c !== cat.id)
+                                : [...categories, cat.id];
+                              setFormData({ ...formData, category: updated.join(',') });
+                            }}
+                            className={`px-3 py-2 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
+                              isSelected
+                                ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
+                                : 'bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark text-text-light/50 dark:text-text-dark/40 hover:border-primary/50'
+                            }`}
+                          >
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div>
+                      <div className="flex bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark p-1 rounded-xl">
                         {[
                           { value: 'all', label: 'Everyone' },
                           { value: 'male', label: 'Men' },
                           { value: 'female', label: 'Women' },
-                        ].map((option) => {
-                          const isSelected = formData.targetGender === option.value;
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => setFormData({ ...formData, targetGender: option.value })}
-                              className={`flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-medium transition ${
-                                isSelected
-                                  ? 'bg-primary/10 border-primary text-primary'
-                                  : 'bg-background-light dark:bg-background-dark border-border-light dark:border-border-dark text-text-light/80 dark:text-text-dark/80 hover:border-primary/50'
-                              }`}
-                            >
-                              <span>{option.label}</span>
-                              {isSelected && <Check className="w-3.5 h-3.5" />}
-                            </button>
-                          );
-                        })}
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, targetGender: option.value })}
+                            className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                              formData.targetGender === option.value
+                                ? 'bg-surface-light dark:bg-surface-dark text-primary shadow-sm'
+                                : 'text-text-light/40 hover:text-text-light/60'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Pricing & Details */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-4 uppercase tracking-wide">
-                    Pricing & Details
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Price */}
-                      <div>
-                        <label htmlFor="service-price" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                          Price (RWF) *
-                        </label>
+              {/* Right Column: Pricing, Visuals & Status */}
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4">Investment & Duration</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-2xl">
+                      <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-2">Base Price</label>
+                       <div className="flex items-end gap-2">
                         <input
-                          id="service-price"
                           type="number"
                           required
-                          min="0"
-                          step="100"
                           value={formData.basePrice}
                           onChange={(e) => setFormData({ ...formData, basePrice: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                          placeholder="Enter price"
-                          className="w-full px-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                          className="w-full bg-transparent text-2xl font-black text-text-light dark:text-text-dark outline-none tabular-nums"
+                          placeholder="0"
                         />
-                      </div>
-
-                      {/* Duration */}
-                      <div>
-                        <label htmlFor="service-duration" className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                          Duration (min) *
-                        </label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
-                          <input
-                            id="service-duration"
-                            type="number"
-                            required
-                            min="1"
-                            value={formData.durationMinutes}
-                            onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 30 })}
-                            className="w-full pl-9 pr-3 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-semibold text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                          />
-                        </div>
+                        <span className="text-xs font-bold text-text-light/40 mb-1">RWF</span>
                       </div>
                     </div>
-
-                    {/* Image Upload */}
-                    <div>
-                      <label className="block text-xs font-semibold text-text-light/70 dark:text-text-dark/70 mb-1.5 uppercase">
-                        Service Images <span className="font-normal opacity-70">({imageUrls.length}/{MAX_IMAGES})</span>
-                      </label>
-                      
-                      {/* Hidden file input */}
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                      
-                      {/* Horizontal Image Gallery */}
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-                        {/* Add Photo Button */}
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading || imageUrls.length >= MAX_IMAGES}
-                          className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:border-primary/50 hover:bg-primary/5 transition flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {uploading ? (
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                          ) : (
-                            <>
-                              <Upload className="w-5 h-5 text-primary" />
-                              <span className="text-xs font-medium text-primary">Add Photo</span>
-                            </>
-                          )}
-                        </button>
-                        
-                        {/* Image Thumbnails */}
-                        {imageUrls.map((url, index) => (
-                          <div key={`${url}-${index}`} className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden group">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img 
-                              src={url} 
-                              alt={`Service image ${index + 1}`} 
-                              className="w-full h-full object-cover"
-                            />
-                            {/* Remove button */}
-                            <button
-                              type="button"
-                              onClick={() => removeImage(index)}
-                              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-danger flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                            >
-                              <XCircle className="w-4 h-4 text-white" />
-                            </button>
-                            {/* Primary badge */}
-                            {index === 0 && (
-                              <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-primary/90 text-white text-[9px] font-bold uppercase">
-                                Primary
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {imageUrls.length === 0 && !uploading && (
-                        <p className="text-xs text-text-light/50 dark:text-text-dark/50 mt-2 text-center">
-                          Add up to {MAX_IMAGES} photos for this service
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Active Toggle */}
-                    <div className="p-4 bg-background-light/50 dark:bg-background-dark/50 border border-border-light dark:border-border-dark rounded-xl flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-text-light dark:text-text-dark">Active Service</p>
-                        <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Visible for booking</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          checked={formData.isActive}
-                          onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                          className="sr-only peer" 
+                    <div className="p-4 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-2xl">
+                      <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-2">Duration</label>
+                       <div className="flex items-end gap-2">
+                        <input
+                          type="number"
+                          required
+                          value={formData.durationMinutes}
+                          onChange={(e) => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 0 })}
+                          className="w-full bg-transparent text-2xl font-black text-text-light dark:text-text-dark outline-none tabular-nums"
+                          placeholder="30"
                         />
-                        <div className="w-11 h-6 bg-border-light dark:bg-border-dark peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                      </label>
+                        <span className="text-xs font-bold text-text-light/40 mb-1">MIN</span>
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4">Media Portfolio</h3>
+                  <div className="grid grid-cols-4 gap-2">
+                     {imageUrls.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-border-light dark:border-border-dark group">
+                           <img src={url} alt="Service" className="w-full h-full object-cover" />
+                           <button
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                           >
+                              <Trash2 className="w-5 h-5 text-white" />
+                           </button>
+                        </div>
+                     ))}
+                     {imageUrls.length < MAX_IMAGES && (
+                       <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="aspect-square rounded-xl border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group"
+                          disabled={uploading}
+                       >
+                          <Upload className={`w-5 h-5 ${uploading ? 'animate-bounce text-primary' : 'text-text-light/20 group-hover:text-primary/50'}`} />
+                          <span className="text-[9px] font-black uppercase text-text-light/30">Add Media</span>
+                       </button>
+                     )}
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </div>
+
+                <div className="pt-4">
+                   <div 
+                    onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                      formData.isActive 
+                        ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-900 dark:text-emerald-400' 
+                        : 'bg-background-light dark:bg-background-dark border-border-light text-text-light/50'
+                    }`}
+                   >
+                      <div className="flex items-center gap-3">
+                         <div className={`p-2 rounded-lg ${formData.isActive ? 'bg-emerald-500 text-white' : 'bg-text-light/10 text-text-light/30'}`}>
+                            <Check className="w-4 h-4" />
+                         </div>
+                         <div>
+                            <p className="text-xs font-black uppercase tracking-wider">Service Status</p>
+                            <p className="text-[10px] font-bold opacity-60">Availability for bookings</p>
+                         </div>
+                      </div>
+                      <div className="font-black text-xs uppercase tracking-[0.1em]">
+                        {formData.isActive ? 'Active' : 'Inactive'}
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>
@@ -1119,17 +1051,26 @@ function ServiceModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={uploading}>
-            Cancel
+        <div className="px-6 py-4 bg-background-light/50 dark:bg-background-dark/50 border-t border-border-light dark:border-border-dark flex items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            className="px-4 text-[10px] font-black uppercase tracking-widest"
+          >
+            Discard
           </Button>
           <Button
             type="submit"
             form="service-form"
+            variant="primary"
+            size="sm"
             loading={loading || uploading}
-            loadingText={uploading ? 'Uploading...' : 'Saving...'}
+            loadingText="Syncing..."
+            className="px-6 shadow-lg shadow-primary/20 text-[10px] font-black uppercase tracking-widest"
           >
-            {service ? 'Save Value' : 'Create Service'}
+            {service ? 'Refine Service' : 'Rollout Service'}
           </Button>
         </div>
       </div>

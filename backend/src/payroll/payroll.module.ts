@@ -8,6 +8,7 @@ import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 import { Commission } from '../commissions/entities/commission.entity';
 import { CommissionsModule } from '../commissions/commissions.module';
 import { SalonsModule } from '../salons/salons.module';
+import { WalletsModule } from '../wallets/wallets.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SalonsModule } from '../salons/salons.module';
     ]),
     CommissionsModule,
     SalonsModule,
+    WalletsModule,
   ],
   controllers: [PayrollController],
   providers: [PayrollService],

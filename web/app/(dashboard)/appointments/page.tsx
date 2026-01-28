@@ -224,7 +224,7 @@ function AppointmentsContent() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        return (response.data || []) as Array<{ id: string; name: string }>;
+        return (response.data?.data || response.data || []) as Array<{ id: string; name: string }>;
       } catch (error) {
         return [];
       }
@@ -365,70 +365,93 @@ function AppointmentsContent() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Compacted & Flat */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-        {[
-          {
-            label: 'Total',
-            value: stats.total,
-            icon: Calendar,
-            gradient: 'from-blue-500 to-cyan-500',
-            border: 'hover:border-blue-500/50',
-          },
-          {
-            label: 'Today',
-            value: stats.today,
-            icon: Clock,
-            gradient: 'from-amber-500 to-orange-500',
-            border: 'hover:border-amber-500/50',
-            badge: stats.today > 0 ? { label: 'Action', class: 'text-amber-500 bg-amber-500/10' } : null,
-          },
-          {
-            label: 'Upcoming',
-            value: stats.upcoming,
-            icon: Calendar,
-            gradient: 'from-violet-500 to-purple-500',
-            border: 'hover:border-violet-500/50',
-          },
-          {
-            label: 'Confirmed',
-            value: stats.confirmed,
-            icon: CheckCircle2,
-            gradient: 'from-blue-500 to-indigo-500',
-            border: 'hover:border-indigo-500/50',
-          },
-          {
-            label: 'Completed',
-            value: stats.completed,
-            icon: CheckCircle2,
-            gradient: 'from-green-500 to-emerald-500',
-            border: 'hover:border-emerald-500/50',
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className={`group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 hover:shadow-lg transition-all ${stat.border}`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className={`p-2 bg-gradient-to-br ${stat.gradient} rounded-lg`}>
-                <stat.icon className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-[10px] uppercase tracking-wide font-semibold text-text-light/60 dark:text-text-dark/60">
-                {stat.label}
-              </span>
-            </div>
-            <div className="flex items-end justify-between">
-              <span className="text-2xl font-bold text-text-light dark:text-text-dark leading-none">
-                {stat.value}
-              </span>
-              {stat.badge && (
-                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${stat.badge.class}`}>
-                  {stat.badge.label}
-                </span>
-              )}
+        {/* Total */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Total</p>
+            <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Calendar className="w-3 h-3 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-        ))}
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.total}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                All appointments
+             </span>
+          </div>
+        </div>
+
+        {/* Today */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 hover:border-amber-300 dark:hover:border-amber-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-amber-600 dark:text-amber-400">Today</p>
+            <div className="p-1 bg-amber-100 dark:bg-amber-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.today}</p>
+          <div className="flex items-center gap-1 mt-1">
+             {stats.today > 0 ? (
+               <span className="text-[10px] font-medium text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">
+                 Action required
+               </span>
+             ) : (
+                <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                   No appointments today
+                </span>
+             )}
+          </div>
+        </div>
+
+        {/* Upcoming */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-purple-200 dark:border-purple-800/50 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-purple-600 dark:text-purple-400">Upcoming</p>
+            <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <Calendar className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.upcoming}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Scheduled future
+             </span>
+          </div>
+        </div>
+
+        {/* Confirmed */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-indigo-600 dark:text-indigo-400">Confirmed</p>
+            <div className="p-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <CheckCircle2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.confirmed}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Ready to serve
+             </span>
+          </div>
+        </div>
+
+        {/* Completed */}
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Completed</p>
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.completed}</p>
+          <div className="flex items-center gap-1 mt-1">
+             <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                Successfully done
+             </span>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -778,6 +801,7 @@ function AppointmentModal({
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     customerId: appointment?.customerId || appointment?.customer?.id || '',
     serviceId: appointment?.serviceId || appointment?.service?.id || '',
@@ -844,10 +868,13 @@ function AppointmentModal({
       }
     },
     onSuccess: () => {
+      toast.success(appointment ? 'Appointment updated successfully' : 'Appointment created successfully');
       onSuccess();
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
-      setError(err.response?.data?.message || 'Failed to save appointment');
+      const message = err.response?.data?.message || 'Failed to save appointment';
+      setError(message);
+      toast.error(message);
     },
   });
 

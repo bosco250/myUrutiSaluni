@@ -312,84 +312,85 @@ export default function CustomersPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Total
-                </p>
-                <p className="text-xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.total}
-                </p>
+        {/* Statistics Cards - Compacted & Flat */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Total */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Total</p>
+              <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <User className="w-3 h-3 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="h-8 w-8 flex items-center justify-center bg-primary/10 rounded-md">
-                <User className="w-4 h-4 text-primary" />
-              </div>
+            </div>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.total}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                  All users
+               </span>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Active
-                </p>
-                <p className="text-xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.activeCustomers}
-                </p>
+          {/* Active */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400">Active</p>
+              <div className="p-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div className="h-8 w-8 flex items-center justify-center bg-emerald-500/10 rounded-md">
-                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
+            </div>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.activeCustomers}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                  Returning
+               </span>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  VIP
-                </p>
-                <p className="text-xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.highValueCustomers}
-                </p>
+          {/* VIP */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-purple-200 dark:border-purple-800/50 rounded-xl p-3 hover:border-purple-300 dark:hover:border-purple-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-purple-600 dark:text-purple-400">VIP</p>
+              <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <Star className="w-3 h-3 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="h-8 w-8 flex items-center justify-center bg-purple-500/10 rounded-md">
-                <Star className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              </div>
+            </div>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.highValueCustomers}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                  High value
+               </span>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Points
-                </p>
-                <p className="text-xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.totalLoyaltyPoints.toLocaleString()}
-                </p>
+          {/* Points */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 hover:border-amber-300 dark:hover:border-amber-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-amber-600 dark:text-amber-400">Points</p>
+              <div className="p-1 bg-amber-100 dark:bg-amber-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <DollarSign className="w-3 h-3 text-amber-600 dark:text-amber-400" />
               </div>
-              <div className="h-8 w-8 flex items-center justify-center bg-amber-500/10 rounded-md">
-                <DollarSign className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
+            </div>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.totalLoyaltyPoints.toLocaleString()}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                  Total distributed
+               </span>
             </div>
           </div>
 
-          <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black text-text-light/50 dark:text-text-dark/50 uppercase tracking-widest">
-                  Avg
-                </p>
-                <p className="text-xl font-black text-text-light dark:text-text-dark mt-1">
-                  {stats.averageLoyaltyPoints}
-                </p>
+          {/* Avg */}
+          <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3 hover:border-blue-300 dark:hover:border-blue-700 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">Avg</p>
+              <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-md group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-3 h-3 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="h-8 w-8 flex items-center justify-center bg-blue-500/10 rounded-md">
-                <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
+            </div>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark leading-tight">{stats.averageLoyaltyPoints}</p>
+            <div className="flex items-center gap-1 mt-1">
+               <span className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                  Points / User
+               </span>
             </div>
           </div>
         </div>
@@ -465,145 +466,125 @@ export default function CustomersPage() {
 
         {/* Customer List */}
         {viewMode === 'table' ? (
-          <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+          <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border-light dark:divide-border-dark">
-                <thead className="bg-surface-light dark:bg-surface-dark">
+              <table className="w-full text-xs text-left">
+                <thead className="border-b border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
                   <tr>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                       Customer
                     </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
                       Contact
                     </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                      Loyalty Points
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                      Loyalty
                     </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
-                      Member Since
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">
+                      Joined
                     </th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wider">
+                    <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-surface-light dark:bg-surface-dark divide-y divide-border-light dark:divide-border-dark">
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8">
-                        <div className="flex items-center justify-center gap-3">
-                          <div className="w-5 h-5 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                          <span className="text-text-light/60 dark:text-text-dark/60">
-                            Loading customers...
-                          </span>
+                      <td colSpan={5} className="px-3 py-8 text-center text-text-light/60 dark:text-text-dark/60">
+                        <div className="flex items-center justify-center gap-2">
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            <span>Loading...</span>
                         </div>
                       </td>
                     </tr>
                   ) : filteredCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <User className="w-10 h-10 text-text-light/40 dark:text-text-dark/40 mb-1" />
-                          <p className="text-text-light/60 dark:text-text-dark/60 font-medium">
-                            No customers found
-                          </p>
-                          <p className="text-xs text-text-light/40 dark:text-text-dark/40">
-                            {searchQuery || filterType !== 'all'
-                              ? 'Try adjusting your search or filters'
-                              : 'Get started by adding your first customer'}
-                          </p>
-                        </div>
+                      <td colSpan={5} className="px-3 py-10 text-center text-text-light/60 dark:text-text-dark/60">
+                         No customers found
                       </td>
                     </tr>
                   ) : (
                     paginatedCustomers.map((customer) => (
                       <tr
                         key={customer.id}
-                        className="hover:bg-primary/5 transition group"
+                        className="hover:bg-background-light dark:hover:bg-background-dark/50 transition-colors"
                       >
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 font-semibold text-xs">
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 font-bold text-[10px]">
                               {customer.fullName.charAt(0).toUpperCase()}
                             </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-text-light dark:text-text-dark">
-                                {customer.fullName}
-                              </div>
-                              {customer.loyaltyPoints >= 1000 && (
-                                <div className="flex items-center mt-0.5">
+                            <div>
+                               <p className="font-medium text-text-light dark:text-text-dark leading-none">{customer.fullName}</p>
+                               {customer.loyaltyPoints >= 1000 && (
+                                <div className="flex items-center gap-0.5 mt-0.5">
                                   <Star className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500" />
-                                  <span className="text-[10px] text-text-light/60 dark:text-text-dark/60 ml-0.5">
-                                    VIP
-                                  </span>
+                                  <span className="text-[9px] text-text-light/50 dark:text-text-dark/50">VIP</span>
                                 </div>
-                              )}
+                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="text-xs text-text-light dark:text-text-dark flex items-center gap-1.5">
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="text-text-light dark:text-text-dark leading-tight flex items-center gap-1.5">
                             <Phone className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
                             {customer.phone}
                           </div>
                           {customer.email && (
-                            <div className="text-xs text-text-light/60 dark:text-text-dark/60 flex items-center gap-1.5 mt-0.5">
-                              <Mail className="w-3 h-3 text-text-light/40 dark:text-text-dark/40" />
+                            <div className="text-text-light/50 dark:text-text-dark/50 text-[10px] flex items-center gap-1.5 mt-0.5">
+                              <Mail className="w-3 h-3 text-text-light/30 dark:text-text-dark/30" />
                               {customer.email}
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${
-                              customer.loyaltyPoints >= 1000
-                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                                : customer.loyaltyPoints >= 500
-                                  ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                                  : customer.loyaltyPoints > 0
-                                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                    : 'bg-text-light/10 text-text-light/60 dark:text-text-dark/60'
-                            }`}
-                          >
-                            {customer.loyaltyPoints || 0} pts
-                          </span>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium leading-none ${
+                               customer.loyaltyPoints >= 1000
+                                 ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                 : customer.loyaltyPoints >= 500
+                                   ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                                   : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                             }`}>
+                             {customer.loyaltyPoints || 0} pts
+                           </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-xs text-text-light/60 dark:text-text-dark/60">
+                        <td className="px-3 py-2.5 whitespace-nowrap text-text-light/60 dark:text-text-dark/60">
                           {format(parseISO(customer.createdAt), 'MMM d, yyyy')}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              onClick={() => handleViewDetails(customer.id)}
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              title="View Details"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              onClick={() => handleEdit(customer)}
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              title="Edit"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                if (confirm('Are you sure you want to delete this customer?')) {
-                                  deleteMutation.mutate(customer.id);
-                                }
-                              }}
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 w-7 p-0 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                        <td className="px-3 py-2.5 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-1">
+                             <Button
+                               onClick={() => handleViewDetails(customer.id)}
+                               variant="secondary"
+                               size="sm"
+                               className="h-8 w-8 p-0 bg-transparent border-none shadow-none text-text-light/40 hover:text-primary hover:bg-primary/5"
+                               title="View Details"
+                             >
+                               <Eye className="w-4 h-4" />
+                             </Button>
+                             <Button
+                               onClick={() => handleEdit(customer)}
+                               variant="secondary"
+                               size="sm"
+                               className="h-8 w-8 p-0 bg-transparent border-none shadow-none text-text-light/40 hover:text-primary hover:bg-primary/5"
+                               title="Edit"
+                             >
+                               <Edit className="w-4 h-4" />
+                             </Button>
+                             <Button
+                               onClick={() => {
+                                 if (confirm('Are you sure you want to delete this customer?')) {
+                                   deleteMutation.mutate(customer.id);
+                                 }
+                               }}
+                               variant="secondary"
+                               size="sm"
+                               className="h-8 w-8 p-0 bg-transparent border-none shadow-none text-text-light/40 hover:text-red-500 hover:bg-red-500/10"
+                               title="Delete"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
                           </div>
                         </td>
                       </tr>
