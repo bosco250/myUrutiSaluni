@@ -79,7 +79,15 @@ function MembershipApplicationsContent() {
     queryFn: async () => {
       const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
       const response = await api.get(`/memberships/applications${params}`);
-      return response.data || [];
+      
+      const rawData = response.data;
+      
+      // Handle various response structures
+      if (Array.isArray(rawData)) return rawData;
+      if (rawData?.data && Array.isArray(rawData.data)) return rawData.data;
+      if (rawData?.items && Array.isArray(rawData.items)) return rawData.items;
+      
+      return [];
     },
   });
 

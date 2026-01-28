@@ -142,26 +142,31 @@ export default function AdminDashboard() {
           api.get('/loans').catch(() => ({ data: [] })),
         ]);
 
-        const users: User[] = Array.isArray(usersResponse.data)
-          ? usersResponse.data
-          : usersResponse.data?.data || [];
-        const salons: Salon[] = Array.isArray(salonsResponse.data)
-          ? salonsResponse.data
-          : salonsResponse.data?.data || [];
-        const applications: MembershipApplication[] = Array.isArray(
-          applicationsResponse.data
-        )
-          ? applicationsResponse.data
-          : applicationsResponse.data?.data || [];
-        const appointments: Appointment[] = Array.isArray(appointmentsResponse.data)
-          ? appointmentsResponse.data
-          : appointmentsResponse.data?.data || [];
-        const sales: Sale[] = Array.isArray(salesResponse.data)
-          ? salesResponse.data
-          : salesResponse.data?.data || [];
-        const loans: Loan[] = Array.isArray(loansResponse.data)
-          ? loansResponse.data
-          : loansResponse.data?.data || [];
+        // Helper to consistently extract array data from any response shape
+        const extractData = (response: any) => {
+          // If response is null/undefined
+          if (!response || !response.data) return [];
+          
+          const rawData = response.data;
+
+          // Case 1: Direct Array (e.g. from global interceptor or simple endpoint)
+          if (Array.isArray(rawData)) return rawData;
+          
+          // Case 2: Nested data property (legacy or non-interceptor)
+          if (rawData.data && Array.isArray(rawData.data)) return rawData.data;
+
+          // Case 3: Paginated response with 'items' (e.g. /sales)
+          if (rawData.items && Array.isArray(rawData.items)) return rawData.items;
+
+          return [];
+        };
+
+        const users: User[] = extractData(usersResponse);
+        const salons: Salon[] = extractData(salonsResponse);
+        const applications: MembershipApplication[] = extractData(applicationsResponse);
+        const appointments: Appointment[] = extractData(appointmentsResponse);
+        const sales: Sale[] = extractData(salesResponse);
+        const loans: Loan[] = extractData(loansResponse);
 
         const totalRevenue = sales.reduce((sum, sale) => {
           return sum + (parseFloat(String(sale.totalAmount)) || 0);

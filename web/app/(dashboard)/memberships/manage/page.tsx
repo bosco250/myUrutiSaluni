@@ -206,12 +206,31 @@ function MembershipManagementContent() {
     rejectionReason?: string;
   } | null>(null);
 
+  // Helper to consistently extract array data from any response shape
+  const extractData = (response: any) => {
+    // If response is null/undefined
+    if (!response || !response.data) return [];
+    
+    const rawData = response.data;
+
+    // Case 1: Direct Array
+    if (Array.isArray(rawData)) return rawData;
+    
+    // Case 2: Nested data property
+    if (rawData.data && Array.isArray(rawData.data)) return rawData.data;
+
+    // Case 3: Paginated response with 'items'
+    if (rawData.items && Array.isArray(rawData.items)) return rawData.items;
+
+    return [];
+  };
+
   // Fetch memberships
   const { data: memberships = [], isLoading: membershipsLoading } = useQuery<Membership[]>({
     queryKey: ['memberships'],
     queryFn: async () => {
       const response = await api.get('/memberships');
-      return response.data || [];
+      return extractData(response);
     },
   });
 
@@ -222,7 +241,7 @@ function MembershipManagementContent() {
     queryKey: ['membership-applications'],
     queryFn: async () => {
       const response = await api.get('/memberships/applications');
-      return response.data || [];
+      return extractData(response);
     },
   });
 
@@ -232,7 +251,7 @@ function MembershipManagementContent() {
     queryFn: async () => {
       try {
         const response = await api.get('/users?role=SALON_OWNER');
-        return response.data || [];
+        return extractData(response);
       } catch (error) {
         return [];
       }
@@ -245,13 +264,13 @@ function MembershipManagementContent() {
     queryFn: async () => {
       try {
         const salonsResponse = await api.get('/salons');
-        const salons = (salonsResponse.data || []) as Array<{ id: string; name: string }>;
+        const salons = extractData(salonsResponse) as Array<{ id: string; name: string }>;
         const allEmployees: SalonEmployee[] = [];
 
         for (const salon of salons) {
           try {
             const empResponse = await api.get(`/salons/${salon.id}/employees`);
-            const employees = (empResponse.data || []) as Array<
+            const employees = extractData(empResponse) as Array<
               Record<string, unknown> & { id: string }
             >;
             allEmployees.push(
@@ -275,11 +294,13 @@ function MembershipManagementContent() {
 
   // Fetch payment statuses for membership owners
   const { data: paymentStatuses = {} } = useQuery<Record<string, PaymentStatus>>({
-    queryKey: ['membership-payment-statuses', memberships.map(m => m.salon?.owner?.id).filter(Boolean)],
+    queryKey: ['membership-payment-statuses', Array.isArray(memberships) ? memberships.map(m => m.salon?.owner?.id).filter(Boolean) : []],
     queryFn: async () => {
       const currentYear = new Date().getFullYear();
       const statusMap: Record<string, PaymentStatus> = {};
       
+      if (!Array.isArray(memberships)) return {};
+
       // Get unique owner IDs from memberships
       const ownerIds = Array.from(new Set(memberships.map(m => m.salon?.owner?.id).filter(Boolean)));
       
@@ -304,7 +325,7 @@ function MembershipManagementContent() {
       
       return statusMap;
     },
-    enabled: memberships.length > 0,
+    enabled: Array.isArray(memberships) && memberships.length > 0,
   });
   // Mutations
   const activateMutation = useMutation({

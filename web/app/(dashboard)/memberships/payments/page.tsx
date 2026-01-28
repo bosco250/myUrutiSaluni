@@ -109,16 +109,35 @@ function MembershipPaymentsContent() {
     notes: '',
   });
 
+  // Helper to consistently extract array data from any response shape
+  const extractData = (response: any) => {
+    // If response is null/undefined
+    if (!response || !response.data) return [];
+    
+    const rawData = response.data;
+
+    // Case 1: Direct Array
+    if (Array.isArray(rawData)) return rawData;
+    
+    // Case 2: Nested data property
+    if (rawData.data && Array.isArray(rawData.data)) return rawData.data;
+
+    // Case 3: Paginated response with 'items'
+    if (rawData.items && Array.isArray(rawData.items)) return rawData.items;
+
+    return [];
+  };
+
   // Fetch payments - either for specific year or all payments
   const { data: fetchedPayments, isLoading } = useQuery<MembershipPayment[]>({
     queryKey: ['membership-payments', yearFilter],
     queryFn: async () => {
       if (yearFilter === 'all') {
         const response = await api.get('/memberships/payments/all');
-        return response.data || [];
+        return extractData(response);
       } else {
         const response = await api.get(`/memberships/payments/year/${yearFilter}`);
-        return response.data || [];
+        return extractData(response);
       }
     },
   });
