@@ -396,7 +396,7 @@ export default function MembershipApplicationForm({
             <h2 className="text-3xl md:text-5xl font-black text-text-light dark:text-text-dark mb-3 tracking-tighter leading-none">
               Join the <span className="text-primary italic">Association.</span>
             </h2>
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50 max-w-lg mx-auto font-bold leading-relaxed">
+            <p className="text-xs text-text-light/70 dark:text-text-dark/70 max-w-lg mx-auto font-bold leading-relaxed">
               Unlock your digital command center. Managed business, automated financing, and elite growth tools for professional salons.
             </p>
         </div>
@@ -421,7 +421,7 @@ export default function MembershipApplicationForm({
             <h4 className="text-xs font-black text-primary uppercase tracking-widest mb-1">
               Onboarding: Step 1 of 3
             </h4>
-            <p className="text-[11px] font-bold text-text-light/60 dark:text-text-dark/60 leading-relaxed">
+            <p className="text-[11px] font-bold text-text-light/80 dark:text-text-dark/80 leading-relaxed">
                 Provide your salon essentials below. After this, you'll secure your account and the system will instantly route your application for activation.
             </p>
           </div>
@@ -433,26 +433,26 @@ export default function MembershipApplicationForm({
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
           <div>
             <h4 className="text-sm font-black text-primary uppercase tracking-widest leading-none mb-1">Authenticating Data...</h4>
-            <p className="text-[10px] font-bold text-text-light/40 dark:text-text-dark/40">Securely routing your application to the association board.</p>
+            <p className="text-[10px] font-bold text-text-light/60 dark:text-text-dark/60">Securely routing your application to the association board.</p>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-10">
-        {/* Section 1: Business Core */}
-        <div className="space-y-6">
+      <form onSubmit={handleSubmit} className={`${compact ? 'space-y-6' : 'space-y-10'}`}>
+        {/* Combined Section 1: Business Identity & Connectivity */}
+        <div className="space-y-5">
           <div className="flex items-center gap-3 pb-3 border-b border-border-light dark:border-border-dark">
-            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">Business Identity</h3>
-              <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Core Information</p>
+              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide leading-none mb-1">Business Identity & Connectivity</h3>
+              <p className="text-[10px] font-black text-text-light/60 dark:text-text-dark/60 uppercase tracking-widest leading-none">Core profile and communication</p>
             </div>
           </div>
           
-          <div className={`grid gap-5 ${compact ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-12'}`}>
-            <div className="md:col-span-12 lg:col-span-5">
+          <div className={`grid gap-5 ${compact ? 'grid-cols-2 md:grid-cols-12' : 'grid-cols-1 md:grid-cols-12'}`}>
+            <div className="md:col-span-12 lg:col-span-6">
                 <InputGroup 
                     label="Business Name" 
                     name="businessName"
@@ -466,38 +466,75 @@ export default function MembershipApplicationForm({
             </div>
             <div className="md:col-span-6 lg:col-span-3">
                 <SelectGroup 
-                    label="Business Category" 
+                    label="Category" 
                     name="category"
                     value={formData.category}
                     onChange={(val: string) => updateField('category', val)}
                     options={['Hair Salon', 'Barbershop', 'Beauty Spa', 'Nail Salon', 'Mixed Services']}
                     error={errors.category}
-                    placeholder="Choose type..."
+                    placeholder="Type..."
+                    required
+                />
+            </div>
+            <div className="md:col-span-6 lg:col-span-3">
+                <InputGroup 
+                    label="National ID" 
+                    name="nationalId"
+                    value={formData.nationalId}
+                    onChange={(val: string) => updateField('nationalId', val)}
+                    placeholder="16 digits"
+                    icon={User}
+                />
+            </div>
+
+            <div className="md:col-span-6 lg:col-span-4">
+                <InputGroup 
+                    label="Contact Phone" 
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(val: string) => updateField('phone', val)}
+                    error={errors.phone}
+                    placeholder="+250..."
+                    icon={Phone}
                     required
                 />
             </div>
             <div className="md:col-span-6 lg:col-span-4">
                 <InputGroup 
-                    label="National ID (Owner)" 
-                    name="nationalId"
-                    value={formData.nationalId}
-                    onChange={(val: string) => updateField('nationalId', val)}
-                    placeholder="16 digits ID"
-                    icon={User}
+                    label="Official Email" 
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(val: string) => updateField('email', val)}
+                    error={errors.email}
+                    placeholder="contact@biz.rw"
+                    icon={Mail}
+                    required
+                />
+            </div>
+            <div className="md:col-span-6 lg:col-span-4">
+                <InputGroup 
+                    label="Website / Social" 
+                    name="website"
+                    value={formData.website}
+                    onChange={(val: string) => updateField('website', val)}
+                    placeholder="www.salon.rw"
+                    icon={Sparkles}
                 />
             </div>
 
-            <div className="md:col-span-6 lg:col-span-6">
+            <div className="md:col-span-6 lg:col-span-3">
                 <InputGroup 
-                    label="Registration Number" 
+                    label="Reg. Number" 
                     name="registrationNumber"
                     value={formData.registrationNumber}
                     onChange={(val: string) => updateField('registrationNumber', val)}
-                    placeholder="RCA-XXXX-2026"
+                    placeholder="RCA-XXXX"
                     icon={FileText}
                 />
             </div>
-            <div className="md:col-span-6 lg:col-span-6">
+            <div className="md:col-span-6 lg:col-span-3">
                 <InputGroup 
                     label="Tax ID / TIN" 
                     name="taxId"
@@ -507,44 +544,51 @@ export default function MembershipApplicationForm({
                     icon={Shield}
                 />
             </div>
-
-            <div className="col-span-full">
+            <div className="md:col-span-12 lg:col-span-6">
                 <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase tracking-widest font-black text-text-light/40 dark:text-text-dark/40 block ml-1">Business Vision / Description</label>
+                    <label className="text-[10px] uppercase tracking-widest font-black text-text-light/70 dark:text-text-dark/70 block ml-1 leading-none">Business Vision</label>
                     <textarea
                         value={formData.businessDescription}
                         onChange={(e) => updateField('businessDescription', e.target.value)}
-                        rows={3}
-                        className="w-full px-4 py-3 bg-gray-50/50 dark:bg-gray-950/50 border border-border-light dark:border-border-dark focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-xs font-bold text-text-light dark:text-text-dark placeholder:text-text-light/20 dark:placeholder:text-text-dark/20 transition-all resize-none outline-none"
-                        placeholder="Tell the association about your salon's legacy and objectives..."
+                        rows={1}
+                        className="w-full h-11 px-4 py-3 bg-gray-50/80 dark:bg-gray-950/80 border border-border-light/80 dark:border-border-dark/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-xs font-bold text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 transition-all resize-none outline-none"
+                        placeholder="Your mission in short..."
                     />
                 </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Physical Presence */}
-        <div className="space-y-6 pt-4 border-t border-dashed border-border-light dark:border-border-dark">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
-              <MapPin className="w-4 h-4" />
+        {/* Section 2: Physical Hub */}
+        <div className={`space-y-6 pt-6 border-t border-dashed border-border-light dark:border-border-dark`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
+                <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide leading-none mb-1">Physical Presence</h3>
+                <p className="text-[10px] font-black text-text-light/60 dark:text-text-dark/60 uppercase tracking-widest leading-none">Geographic Location</p>
+                </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">Physical Presence</h3>
-              <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Geographical data</p>
-            </div>
+            {locationError && (
+                 <div className="flex items-center gap-2 text-danger text-[10px] font-black uppercase tracking-widest bg-danger/5 px-3 py-1.5 rounded-full border border-danger/10">
+                   <AlertCircle className="w-3 h-3" />
+                   {locationError}
+                 </div>
+               )}
           </div>
 
-          <div className="grid gap-6">
-            <div className="relative rounded-[1.5rem] overflow-hidden border border-border-light dark:border-border-dark shadow-inner group">
-                <div className="grayscale group-hover:grayscale-0 transition-all duration-700 opacity-90 group-hover:opacity-100">
+          <div className={`grid gap-6 ${compact ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="relative rounded-[1.5rem] overflow-hidden border border-border-light dark:border-border-dark shadow-inner group h-[280px]">
+                <div className="grayscale group-hover:grayscale-0 transition-all duration-700 opacity-90 group-hover:opacity-100 h-full">
                     <LocationPicker
                         key={mapKey}
                         latitude={formData.latitude ? parseFloat(formData.latitude) : undefined}
                         longitude={formData.longitude ? parseFloat(formData.longitude) : undefined}
                         onLocationSelect={handleMapLocationSelect}
                         onReverseGeocode={handleMapLocationSelect}
-                        height="320px"
+                        height="280px"
                     />
                 </div>
                 {/* Float Action: Current Location */}
@@ -553,135 +597,92 @@ export default function MembershipApplicationForm({
                         type="button"
                         onClick={handleGetCurrentLocation}
                         disabled={locationLoading}
-                        className="flex items-center gap-2 px-4 h-10 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl hover:bg-white dark:hover:bg-gray-900 transition-all active:scale-95 disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 h-9 bg-white dark:bg-gray-900 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl hover:scale-105 transition-all active:scale-95 disabled:opacity-50"
                     >
                         {locationLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5 text-primary" />}
                         {locationLoading ? 'Pinpointing...' : 'Locate Me'}
                     </button>
                 </div>
             </div>
-            
-            {locationError && (
-                 <div className="flex items-center gap-2 text-danger text-[10px] font-black uppercase tracking-widest bg-danger/5 p-3 rounded-xl border border-danger/10 animate-in fade-in slide-in-from-top-1">
-                   <AlertCircle className="w-3.5 h-3.5" />
-                   {locationError}
-                 </div>
-               )}
 
-            <div className={`grid gap-4 ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-5'}`}>
-               <SelectGroup 
-                    label="Province" 
-                    name="province"
-                    value={formData.province}
-                    onChange={(val: string) => {
-                      updateField('province', val);
-                      setFormData(prev => ({ ...prev, district: '', sector: '', cell: '', village: '' }));
-                    }}
-                    options={Object.keys(rwandaData)}
-                    placeholder="Choose..."
-                    required
-               />
-               <SelectGroup 
-                    label="District" 
-                    name="district"
-                    value={formData.district}
-                    onChange={(val: string) => {
-                      updateField('district', val);
-                      setFormData(prev => ({ ...prev, sector: '', cell: '', village: '' }));
-                    }}
-                    options={formData.province ? Object.keys((rwandaData as any)[formData.province] || {}) : []}
-                    placeholder="Choose..."
-                    required
-               />
-               <SelectGroup 
-                    label="Sector" 
-                    name="sector"
-                    value={formData.sector}
-                    onChange={(val: string) => {
-                      updateField('sector', val);
-                      setFormData(prev => ({ ...prev, cell: '', village: '' }));
-                    }}
-                    options={(formData.province && formData.district) ? Object.keys((rwandaData as any)[formData.province][formData.district] || {}) : []}
-                    placeholder="Choose..."
-               />
-               <SelectGroup 
-                    label="Cell" 
-                    name="cell"
-                    value={formData.cell}
-                    onChange={(val: string) => {
-                      updateField('cell', val);
-                      setFormData(prev => ({ ...prev, village: '' }));
-                    }}
-                    options={(formData.province && formData.district && formData.sector) ? Object.keys((rwandaData as any)[formData.province][formData.district][formData.sector] || {}) : []}
-                    placeholder="Choose..."
-               />
-               <SelectGroup 
-                    label="Village" 
-                    name="village"
-                    value={formData.village}
-                    onChange={(val: string) => updateField('village', val)}
-                    options={(formData.province && formData.district && formData.sector && formData.cell) ? (rwandaData as any)[formData.province][formData.district][formData.sector][formData.cell] || [] : []}
-                    placeholder="Choose..."
-               />
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+               <div className="col-span-1">
+                    <SelectGroup 
+                        label="Province" 
+                        name="province"
+                        value={formData.province}
+                        onChange={(val: string) => {
+                        updateField('province', val);
+                        setFormData(prev => ({ ...prev, district: '', sector: '', cell: '', village: '' }));
+                        }}
+                        options={Object.keys(rwandaData)}
+                        placeholder="Choose..."
+                        required
+                    />
+               </div>
+               <div className="col-span-1">
+                    <SelectGroup 
+                        label="District" 
+                        name="district"
+                        value={formData.district}
+                        onChange={(val: string) => {
+                        updateField('district', val);
+                        setFormData(prev => ({ ...prev, sector: '', cell: '', village: '' }));
+                        }}
+                        options={formData.province ? Object.keys((rwandaData as any)[formData.province] || {}) : []}
+                        placeholder="Choose..."
+                        required
+                    />
+               </div>
+               <div className="col-span-1">
+                    <SelectGroup 
+                        label="Sector" 
+                        name="sector"
+                        value={formData.sector}
+                        onChange={(val: string) => {
+                        updateField('sector', val);
+                        setFormData(prev => ({ ...prev, cell: '', village: '' }));
+                        }}
+                        options={(formData.province && formData.district) ? Object.keys((rwandaData as any)[formData.province][formData.district] || {}) : []}
+                        placeholder="Choose..."
+                    />
+               </div>
+               <div className="col-span-1">
+                    <SelectGroup 
+                        label="Cell" 
+                        name="cell"
+                        value={formData.cell}
+                        onChange={(val: string) => {
+                        updateField('cell', val);
+                        setFormData(prev => ({ ...prev, village: '' }));
+                        }}
+                        options={(formData.province && formData.district && formData.sector) ? Object.keys((rwandaData as any)[formData.province][formData.district][formData.sector] || {}) : []}
+                        placeholder="Choose..."
+                    />
+               </div>
+               <div className="col-span-2">
+                    <SelectGroup 
+                        label="Village" 
+                        name="village"
+                        value={formData.village}
+                        onChange={(val: string) => updateField('village', val)}
+                        options={(formData.province && formData.district && formData.sector && formData.cell) ? (rwandaData as any)[formData.province][formData.district][formData.sector][formData.cell] || [] : []}
+                        placeholder="Choose Village..."
+                    />
+               </div>
                <div className="col-span-full">
                     <InputGroup 
-                        label="Exact Street / Landmark" 
+                        label="Street / Landmark" 
                         name="businessAddress"
                         value={formData.businessAddress}
                         onChange={(val: string) => updateField('businessAddress', val)}
                         error={errors.businessAddress}
-                        placeholder="Street No, Building Name, or Landmark"
+                        placeholder="Street No or Building Name"
                         icon={Navigation}
                         required
                     />
                </div>
             </div>
-          </div>
-        </div>
-
-        {/* Section 3: Connectivity */}
-        <div className="space-y-6 pt-4 border-t border-dashed border-border-light dark:border-border-dark">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
-              <Phone className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wide">Connectivity</h3>
-              <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Communication Protocols</p>
-            </div>
-          </div>
-
-          <div className={`grid gap-4 ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3'}`}>
-            <InputGroup 
-                label="Primary Phone" 
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(val: string) => updateField('phone', val)}
-                error={errors.phone}
-                placeholder="+250 788 000 000"
-                icon={Phone}
-                required
-            />
-            <InputGroup 
-                label="Official Email" 
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={(val: string) => updateField('email', val)}
-                error={errors.email}
-                placeholder="contact@biz.com"
-                icon={Mail}
-                required
-            />
-            <InputGroup 
-                label="Website / Social" 
-                name="website"
-                value={formData.website}
-                onChange={(val: string) => updateField('website', val)}
-                placeholder="www.salon.rw"
-                icon={Sparkles}
-            />
           </div>
         </div>
 
@@ -694,32 +695,52 @@ export default function MembershipApplicationForm({
           </div>
         )}
 
-        <div className="pt-8 border-t border-border-light dark:border-border-dark">
+        <div className="pt-8 border-t border-border-light dark:border-border-dark flex flex-col items-center">
           {isAuthenticated() ? (
-            <div className="flex flex-col items-center gap-4">
-                <Button
+            <div className="w-full flex flex-col items-center gap-4">
+                <button
                     type="submit"
                     disabled={createApplicationMutation.isPending}
-                    className="w-full h-14 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-3"
+                    className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-xl shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] disabled:opacity-70 group"
                 >
-                {createApplicationMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                {createApplicationMutation.isPending ? 'Propagating Application...' : 'Commit Application'}
-                </Button>
-                <p className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30 uppercase tracking-widest">Board review usually takes 24-48 hours</p>
+                    <span className="text-xs font-black uppercase tracking-[0.2em]">
+                        {createApplicationMutation.isPending ? 'Propagating System Data...' : 'Submit Enterprise Application'}
+                    </span>
+                    {createApplicationMutation.isPending ? (
+                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                       <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                    )}
+                </button>
+                <div className="flex items-center gap-2 opacity-40">
+                    <Shield className="w-3 h-3 text-primary" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-text-light dark:text-text-dark">Authenticated & Encrypted Transmission</span>
+                </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <Button
-                type="submit"
-                className="w-full h-14 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.98]"
-              >
-                Proceed to Identity Verification
-              </Button>
-              <div className="text-center">
-                 <Link href="/login?redirect=membership" className="text-[10px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest hover:text-primary transition-colors">
-                  Association Member? <span className="text-primary italic border-b border-primary/30 ml-1">Secure Sign In</span>
-                </Link>
-              </div>
+            <div className="w-full flex flex-col gap-6">
+                 <button
+                    type="submit"
+                    className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-xl shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] group"
+                >
+                    <span className="text-xs font-black uppercase tracking-[0.2em]">Save & Secure My Application</span>
+                    <Sparkles className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                </button>
+                
+                <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-4 w-full opacity-20">
+                        <div className="h-px flex-1 bg-text-light dark:bg-text-dark" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">Institutional Access</span>
+                        <div className="h-px flex-1 bg-text-light dark:bg-text-dark" />
+                    </div>
+
+                    <div className="flex items-center gap-3 px-6 py-3 bg-gray-50/50 dark:bg-gray-900/50 border border-border-light/50 dark:border-border-dark/50 rounded-2xl">
+                        <span className="text-[10px] font-bold text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest">Already an Association member?</span>
+                        <Link href="/login" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline underline-offset-8 decoration-2 decoration-primary/30 transition-all">
+                            Partner Sign In
+                        </Link>
+                    </div>
+                </div>
             </div>
           )}
         </div>
@@ -736,7 +757,7 @@ function InputGroup({ label, name, type = 'text', value, onChange, icon: Icon, d
     return (
         <div className="space-y-1.5 animate-in fade-in duration-500">
             <div className="flex justify-between items-center ml-1">
-                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-text-light/40 dark:text-text-dark/40 block">
+                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-text-light/70 dark:text-text-dark/70 block">
                     {label} {required && <span className="text-primary">*</span>}
                 </label>
                 {error && <span className="text-[9px] font-black text-danger uppercase tracking-widest">Required</span>}
@@ -744,7 +765,7 @@ function InputGroup({ label, name, type = 'text', value, onChange, icon: Icon, d
             <div className="relative group">
                 {Icon && (
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center border-r border-border-light dark:border-border-dark group-focus-within:border-primary transition-colors pr-2">
-                        <Icon className="w-3.5 h-3.5 text-text-light/30 dark:text-text-dark/30 group-focus-within:text-primary transition-colors" />
+                        <Icon className="w-3.5 h-3.5 text-text-light/60 dark:text-text-dark/60 group-focus-within:text-primary transition-colors" />
                     </div>
                 )}
                 <input
@@ -755,12 +776,12 @@ function InputGroup({ label, name, type = 'text', value, onChange, icon: Icon, d
                     disabled={disabled} 
                     placeholder={placeholder}
                     className={`
-                        w-full h-11 text-xs font-bold bg-gray-50/50 dark:bg-gray-950/50 
-                        border transition-all placeholder:text-text-light/20 dark:placeholder:text-text-dark/20 
+                        w-full h-11 text-xs font-bold bg-gray-50/80 dark:bg-gray-950/80 
+                        border transition-all placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 
                         text-text-light dark:text-text-dark shadow-sm rounded-xl outline-none
                         ${Icon ? 'pl-13 pr-4' : 'px-4'} 
                         ${disabled ? 'cursor-not-allowed opacity-60' : 'focus:ring-1 focus:ring-primary focus:border-primary'} 
-                        ${error ? 'border-danger/50 focus:border-danger' : 'border-border-light dark:border-border-dark'}
+                        ${error ? 'border-danger/70 focus:border-danger' : 'border-border-light/80 dark:border-border-dark/80'}
                         ${capitalize ? 'capitalize' : ''}
                     `}
                     style={{ paddingLeft: Icon ? '3.25rem' : '1rem' }}
@@ -773,7 +794,7 @@ function InputGroup({ label, name, type = 'text', value, onChange, icon: Icon, d
 function SelectGroup({ label, name, value, onChange, options, disabled, placeholder, required, error }: any) {
     return (
         <div className="space-y-1.5">
-            <label className="text-[10px] uppercase tracking-[0.15em] font-black text-text-light/40 dark:text-text-dark/40 block ml-1">
+            <label className="text-[10px] uppercase tracking-[0.15em] font-black text-text-light/70 dark:text-text-dark/70 block ml-1">
                 {label} {required && <span className="text-primary">*</span>}
             </label>
             <div className={`relative ${disabled ? 'opacity-50' : ''}`}>
@@ -783,17 +804,17 @@ function SelectGroup({ label, name, value, onChange, options, disabled, placehol
                   onChange={e => onChange(e.target.value)}
                   disabled={disabled}
                   className={`
-                    w-full h-11 px-4 text-xs font-bold bg-gray-50/50 dark:bg-gray-950/50 
-                    border border-border-light dark:border-border-dark rounded-xl 
+                    w-full h-11 px-4 text-xs font-bold bg-gray-50/80 dark:bg-gray-950/80 
+                    border border-border-light/80 dark:border-border-dark/80 rounded-xl 
                     focus:ring-1 focus:ring-primary focus:border-primary outline-none 
                     transition-all appearance-none cursor-pointer text-text-light dark:text-text-dark shadow-sm
-                    ${error ? 'border-danger/50' : ''}
+                    ${error ? 'border-danger/70' : ''}
                   `}
                 >
-                    <option value="" className="text-text-light/20">{placeholder || 'Select...'}</option>
+                    <option value="" className="text-text-light/50">{placeholder || 'Select...'}</option>
                     {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/30 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/60 pointer-events-none" />
             </div>
         </div>
     );
