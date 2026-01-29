@@ -1,7 +1,7 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
-import { useState, useMemo, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import api from '@/lib/api';
@@ -151,23 +151,13 @@ const DAYS_ORDER: (keyof WorkingHours)[] = [
 // --- Components ---
 
 export default function SalonDetailsPage() {
-  return (
-    <ProtectedRoute
-      requiredRoles={[
-        UserRole.CUSTOMER,
-        UserRole.SALON_EMPLOYEE,
-        UserRole.SALON_OWNER,
-        UserRole.SUPER_ADMIN,
-      ]}
-    >
-      <SalonDetailsContent />
-    </ProtectedRoute>
-  );
+  return <SalonDetailsContent />;
 }
 
 function SalonDetailsContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const salonId = params.id as string;
   const { user: authUser } = useAuthStore();
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -178,6 +168,7 @@ function SalonDetailsContent() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -228,6 +219,19 @@ function SalonDetailsContent() {
     },
     enabled: !!authUser?.id,
   });
+
+  // Auto-open booking modal if query param exists (e.g. returning from login)
+  useEffect(() => {
+    const bookServiceId = searchParams.get('bookService');
+    if (bookServiceId && services && !showBookingModal) {
+      const serviceToBook = services.find((s) => s.id === bookServiceId);
+      if (serviceToBook) {
+        setSelectedService(serviceToBook);
+        setServiceImageIndex(0);
+        setShowBookingModal(true);
+      }
+    }
+  }, [services, searchParams, showBookingModal]);
 
   // Derived State
   const activeServices = useMemo(() => services?.filter((s) => s.isActive) || [], [services]);
@@ -624,6 +628,16 @@ function SalonDetailsContent() {
                                   className="self-end px-3 h-7 text-[11px] font-semibold rounded-md mt-2 shadow-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (!authUser) {
+                                      if (typeof window !== 'undefined') {
+                                        sessionStorage.setItem('purchase_intent', JSON.stringify({
+                                          salonId: salon.id,
+                                          serviceId: service.id
+                                        }));
+                                      }
+                                      router.push('/login?redirect=purchase_intent');
+                                      return;
+                                    }
                                     setSelectedService(service);
                                     setServiceImageIndex(0);
                                     setShowBookingModal(true);
@@ -842,14 +856,47 @@ function SalonDetailsContent() {
             )}
 
             {/* ─── ABOUT ─── */}
-            <div className="border border-border-light dark:border-border-dark rounded-lg p-4">
-              <p className="text-xs text-text-light/70 dark:text-text-dark/70 leading-relaxed">
-                {salon.description || 'Welcome to our salon. We offer a range of beauty and wellness services tailored to your needs.'}
-              </p>
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+            <div className="border border-border-light dark:border-border-dark rounded-lg p-4 bg-surface-light dark:bg-surface-dark/50">
+              <h3 className="text-[11px] font-bold text-text-light dark:text-text-dark uppercase tracking-wider mb-2">About</h3>
+              <div className="relative">
+                <p className={`text-xs text-text-light/70 dark:text-text-dark/70 leading-relaxed transition-all duration-300 ${isDescriptionExpanded ? '' : 'line-clamp-3'}`}>
+                  {salon.description || 'Welcome to our salon. We offer a range of beauty and wellness services tailored to your needs.'}
+                </p>
+                {(salon.description?.length || 0) > 150 && (
+                  <button
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    className="text-[10px] font-semibold text-primary hover:underline mt-1 focus:outline-none"
+                  >
+                    {isDescriptionExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-3 mt-4 pt-3 border-t border-border-light dark:border-border-dark">
+                <div className="flex items-center gap-2">
+                   <div className="flex -space-x-1.5">
+                      {[...Array(Math.min(3, activeEmployees.length))].map((_, i) => (
+                        <div key={i} className="w-5 h-5 rounded-full border border-surface-light dark:border-surface-dark bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary z-0">
+                          {activeEmployees[i]?.user?.fullName?.charAt(0)}
+                        </div>
+                      ))}
+                      {activeEmployees.length > 3 && (
+                        <div className="w-5 h-5 rounded-full border border-surface-light dark:border-surface-dark bg-surface-secondary dark:bg-white/10 flex items-center justify-center text-[7px] text-text-light/60 dark:text-text-dark/60 font-bold z-10">
+                          +{activeEmployees.length - 3}
+                        </div>
+                      )}
+                   </div>
+                   <span className="text-[10px] font-medium text-text-light/50 dark:text-text-dark/50">
+                     {activeEmployees.length} stylists
+                   </span>
+                </div>
+                
+                <span className="text-[10px] text-text-light/30 dark:text-text-dark/30">•</span>
+                
                 <span className="text-[10px] font-medium text-text-light/50 dark:text-text-dark/50">
-                  {activeServices.length} services · {activeEmployees.length} stylists
+                  {activeServices.length} services
                 </span>
+
                 <div className="flex-1" />
                 {salon.phone && (
                   <button
@@ -1173,6 +1220,17 @@ function SalonDetailsContent() {
                 variant="primary"
                 className="flex-[2] h-10 text-sm font-bold rounded-lg"
                 onClick={() => {
+                  if (!authUser) {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('purchase_intent', JSON.stringify({
+                        salonId: salon.id,
+                        serviceId: selectedService.id
+                      }));
+                    }
+                    setShowServiceDetail(false);
+                    router.push('/login?redirect=purchase_intent');
+                    return;
+                  }
                   setShowServiceDetail(false);
                   setShowBookingModal(true);
                 }}
@@ -1191,11 +1249,25 @@ function SalonDetailsContent() {
           onClose={() => {
             setShowBookingModal(false);
             setSelectedService(null);
+            // Clear URL params to prevent auto-reopening
+            if (typeof window !== 'undefined' && searchParams.get('bookService')) {
+              const params = new URLSearchParams(window.location.search);
+              params.delete('bookService');
+              router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+            }
           }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['customer-appointments'] });
             setShowBookingModal(false);
             setSelectedService(null);
+            
+            // Clear URL params to prevent auto-reopening
+            if (typeof window !== 'undefined' && searchParams.get('bookService')) {
+              const params = new URLSearchParams(window.location.search);
+              params.delete('bookService');
+              router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+            }
+
             toast.success('🎉 Appointment booked successfully!', {
               title: 'Booking Confirmed',
               duration: 5000,

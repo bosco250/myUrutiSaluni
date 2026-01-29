@@ -70,18 +70,7 @@ type FilterCategory = 'all' | 'hair' | 'nails' | 'makeup' | 'spa' | 'barber';
 type ViewMode = 'grid' | 'list';
 
 export default function BrowseSalonsPage() {
-  return (
-    <ProtectedRoute
-      requiredRoles={[
-        UserRole.CUSTOMER,
-        UserRole.SALON_EMPLOYEE,
-        UserRole.SALON_OWNER,
-        UserRole.SUPER_ADMIN,
-      ]}
-    >
-      <BrowseSalonsContent />
-    </ProtectedRoute>
-  );
+  return <BrowseSalonsContent />;
 }
 
 function BrowseSalonsContent() {

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, In } from 'typeorm';
+import { Repository, ILike, In, Like } from 'typeorm';
 import { SalonsService } from '../salons/salons.service';
 import { ServicesService } from '../services/services.service';
 import { User, UserRole } from '../users/entities/user.entity';
@@ -37,8 +37,8 @@ export interface GlobalSearchResult {
 }
 
 interface SearchContext {
-  userId: string;
-  userRole: UserRole;
+  userId?: string;
+  userRole: UserRole | 'GUEST';
   salonIds?: string[];
 }
 
@@ -60,6 +60,14 @@ export class SearchService {
     @InjectRepository(Product)
     private productsRepository: Repository<Product>,
   ) {}
+
+  private get isPostgres(): boolean {
+    return this.appointmentsRepository.manager.connection.driver.options.type === 'postgres';
+  }
+
+  private get likeOperator(): string {
+    return this.isPostgres ? 'ILIKE' : 'LIKE';
+  }
 
   /**
    * Global search with role-based access control
@@ -169,17 +177,18 @@ export class SearchService {
 
   // --- Permission Checks ---
 
-  private canSearchSalons(role: UserRole): boolean {
+  private canSearchSalons(role: UserRole | 'GUEST'): boolean {
     return [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
       UserRole.DISTRICT_LEADER,
       UserRole.SALON_OWNER,
       UserRole.SALON_EMPLOYEE,
-    ].includes(role);
+      'GUEST',
+    ].includes(role as any);
   }
 
-  private canSearchServices(role: UserRole): boolean {
+  private canSearchServices(role: UserRole | 'GUEST'): boolean {
     return [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -187,10 +196,12 @@ export class SearchService {
       UserRole.SALON_OWNER,
       UserRole.SALON_EMPLOYEE,
       UserRole.CUSTOMER,
-    ].includes(role);
+      'GUEST',
+    ].includes(role as any);
   }
 
-  private canSearchCustomers(role: UserRole): boolean {
+  private canSearchCustomers(role: UserRole | 'GUEST'): boolean {
+    if (role === 'GUEST') return false;
     return [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -200,7 +211,8 @@ export class SearchService {
     ].includes(role);
   }
 
-  private canSearchProducts(role: UserRole): boolean {
+  private canSearchProducts(role: UserRole | 'GUEST'): boolean {
+    if (role === 'GUEST') return false;
     return [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -210,11 +222,13 @@ export class SearchService {
     ].includes(role);
   }
 
-  private canSearchUsers(role: UserRole): boolean {
+  private canSearchUsers(role: UserRole | 'GUEST'): boolean {
+    if (role === 'GUEST') return false;
     return [UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN].includes(role);
   }
 
-  private canSearchAppointments(role: UserRole): boolean {
+  private canSearchAppointments(role: UserRole | 'GUEST'): boolean {
+    if (role === 'GUEST') return false;
     return [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -224,7 +238,8 @@ export class SearchService {
     ].includes(role);
   }
 
-  private canSearchSales(role: UserRole): boolean {
+  private canSearchSales(role: UserRole | 'GUEST'): boolean {
+    if (role === 'GUEST') return false;
     return [
       UserRole.SUPER_ADMIN,
       UserRole.ASSOCIATION_ADMIN,
@@ -256,13 +271,15 @@ export class SearchService {
         }
       }
 
+      const isPublicView = context.userRole === 'GUEST' || context.userRole === UserRole.CUSTOMER;
+
       return filteredSalons.slice(0, 5).map((salon: any) => ({
         id: salon.id,
         type: 'salon' as const,
         title: salon.name,
         subtitle: salon.address || salon.district || 'Salon',
         description: salon.phone,
-        href: `/salons/${salon.id}`,
+        href: isPublicView ? `/salons/browse/${salon.id}` : `/salons/${salon.id}`,
         metadata: { status: salon.status },
       }));
     } catch (error) {
@@ -278,13 +295,17 @@ export class SearchService {
     try {
       const services = await this.servicesService.search(query);
 
+      const isPublicView = context.userRole === 'GUEST' || context.userRole === UserRole.CUSTOMER;
+
       return services.slice(0, 5).map((service: any) => ({
         id: service.id,
         type: 'service' as const,
         title: service.name,
         subtitle: `RWF ${Number(service.price || 0).toLocaleString()}`,
         description: service.description?.substring(0, 60),
-        href: `/services?highlight=${service.id}`,
+        href: isPublicView 
+          ? `/salons/browse/${service.salonId || (service.salon && service.salon.id)}?bookService=${service.id}`
+          : `/services?salonId=${service.salonId || (service.salon && service.salon.id)}&highlight=${service.id}`,
         metadata: { duration: service.duration, category: service.category },
       }));
     } catch (error) {
@@ -298,10 +319,11 @@ export class SearchService {
     context: SearchContext,
   ): Promise<SearchResultItem[]> {
     try {
+      const likeOp = this.isPostgres ? ILike : Like;
       const whereConditions: any = [
-        { fullName: ILike(`%${query}%`) },
-        { email: ILike(`%${query}%`) },
-        { phone: ILike(`%${query}%`) },
+        { fullName: likeOp(`%${query}%`) },
+        { email: likeOp(`%${query}%`) },
+        { phone: likeOp(`%${query}%`) },
       ];
 
       const customers = await this.customersRepository.find({
@@ -329,9 +351,10 @@ export class SearchService {
     context: SearchContext,
   ): Promise<SearchResultItem[]> {
     try {
+      const likeOp = this.isPostgres ? ILike : Like;
       const whereConditions: any = [
-        { name: ILike(`%${query}%`) },
-        { sku: ILike(`%${query}%`) },
+        { name: likeOp(`%${query}%`) },
+        { sku: likeOp(`%${query}%`) },
       ];
 
       let products: Product[];
@@ -379,11 +402,12 @@ export class SearchService {
     context: SearchContext,
   ): Promise<SearchResultItem[]> {
     try {
+      const likeOp = this.isPostgres ? ILike : Like;
       const users = await this.usersRepository.find({
         where: [
-          { fullName: ILike(`%${query}%`) },
-          { email: ILike(`%${query}%`) },
-          { phone: ILike(`%${query}%`) },
+          { fullName: likeOp(`%${query}%`) },
+          { email: likeOp(`%${query}%`) },
+          { phone: likeOp(`%${query}%`) },
         ],
         take: 5,
         order: { createdAt: 'DESC' },
@@ -415,8 +439,8 @@ export class SearchService {
         .leftJoinAndSelect('appointment.customer', 'customer')
         .leftJoinAndSelect('appointment.service', 'service')
         .leftJoinAndSelect('appointment.salon', 'salon')
-        .where('customer.fullName ILIKE :query', { query: `%${query}%` })
-        .orWhere('service.name ILIKE :query', { query: `%${query}%` })
+        .where(`customer.fullName ${this.likeOperator} :query`, { query: `%${query}%` })
+        .orWhere(`service.name ${this.likeOperator} :query`, { query: `%${query}%` })
         .orderBy('appointment.scheduledStart', 'DESC')
         .take(5);
 
@@ -460,8 +484,8 @@ export class SearchService {
         .createQueryBuilder('sale')
         .leftJoinAndSelect('sale.customer', 'customer')
         .leftJoinAndSelect('sale.salon', 'salon')
-        .where('customer.fullName ILIKE :query', { query: `%${query}%` })
-        .orWhere('sale.id::text ILIKE :query', { query: `%${query}%` })
+        .where(`customer.fullName ${this.likeOperator} :query`, { query: `%${query}%` })
+        .orWhere(this.isPostgres ? 'sale.id::text ILIKE :query' : 'sale.id LIKE :query', { query: `%${query}%` })
         .orderBy('sale.createdAt', 'DESC')
         .take(5);
 
@@ -494,7 +518,7 @@ export class SearchService {
     }
   }
 
-  private searchPages(query: string, userRole: UserRole): SearchResultItem[] {
+  private searchPages(query: string, userRole: UserRole | 'GUEST'): SearchResultItem[] {
     const pages: Array<{
       id: string;
       name: string;
@@ -502,15 +526,44 @@ export class SearchService {
       keywords: string[];
       requiredRoles?: UserRole[];
     }> = [
-      // Main
       {
         id: 'dashboard',
         name: 'Dashboard',
         href: '/dashboard',
         keywords: ['home', 'overview', 'stats'],
+        requiredRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ASSOCIATION_ADMIN,
+          UserRole.DISTRICT_LEADER,
+          UserRole.SALON_OWNER,
+          UserRole.SALON_EMPLOYEE,
+          UserRole.CUSTOMER,
+        ],
       },
-
-      // Management
+      {
+        id: 'browse-salons',
+        name: 'Browse Salons',
+        href: '/salons/browse',
+        keywords: ['find', 'book', 'salon', 'search', 'directory'],
+      },
+      {
+        id: 'roadmap',
+        name: 'Platform Roadmap',
+        href: '/#roadmap-section',
+        keywords: ['roadmap', 'journey', 'steps', 'process', 'partnership'],
+      },
+      {
+        id: 'ecosystem',
+        name: 'System Ecosystem',
+        href: '/#features-section',
+        keywords: ['features', 'ecosystem', 'capabilities', 'modules', 'tools'],
+      },
+      {
+        id: 'membership-apply',
+        name: 'Apply for Membership',
+        href: '/#membership-form',
+        keywords: ['membership', 'apply', 'application', 'join', 'partner', 'register'],
+      },
       {
         id: 'users',
         name: 'Users',
@@ -557,16 +610,8 @@ export class SearchService {
         ],
       },
 
-      // Membership Specific
       {
-        id: 'membership-apply',
-        name: 'Apply for Membership',
-        href: '/membership/apply',
-        keywords: ['membership', 'apply', 'application', 'join'],
-        requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_OWNER],
-      },
-      {
-        id: 'membership-applications',
+        id: 'membership-application-review',
         name: 'Review Applications',
         href: '/membership/applications',
         keywords: ['membership', 'applications', 'review', 'approve'],
@@ -731,7 +776,7 @@ export class SearchService {
         // Check role permission
         if (page.requiredRoles && page.requiredRoles.length > 0) {
           // If user role is NOT in required roles
-          if (!page.requiredRoles.includes(userRole)) {
+          if (!page.requiredRoles.includes(userRole as any)) {
             return false;
           }
         }

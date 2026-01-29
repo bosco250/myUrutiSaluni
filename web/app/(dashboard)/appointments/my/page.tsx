@@ -89,7 +89,9 @@ function MyAppointmentsContent() {
     queryKey: ['customer-by-user', authUser?.id],
     queryFn: async () => {
       const response = await api.get(`/customers/by-user/${authUser?.id}`);
-      return response.data;
+      // Handle response wrapping { data: Customer }
+      const body = response.data;
+      return body?.data || body;
     },
     enabled: !!authUser?.id,
   });
@@ -100,7 +102,12 @@ function MyAppointmentsContent() {
     queryFn: async () => {
       if (!customer?.id) return [];
       const response = await api.get(`/appointments/customer/${customer.id}`);
-      return (response.data || []) as Appointment[];
+      // Handle response wrapping { data: Appointment[] }
+      const body = response.data;
+      if (body?.data && Array.isArray(body.data)) {
+          return body.data;
+      }
+      return (Array.isArray(body) ? body : []) as Appointment[];
     },
     enabled: !!customer?.id,
   });

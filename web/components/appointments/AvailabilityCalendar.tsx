@@ -66,9 +66,11 @@ export default function AvailabilityCalendar({
   // Build availability map for quick lookup
   const availabilityMap = useMemo(() => {
     const map = new Map<string, DayAvailability>();
-    availability.forEach((day) => {
-      map.set(day.date, day);
-    });
+    if (Array.isArray(availability)) {
+      availability.forEach((day) => {
+        map.set(day.date, day);
+      });
+    }
     return map;
   }, [availability]);
 

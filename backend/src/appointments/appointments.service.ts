@@ -113,14 +113,23 @@ export class AppointmentsService {
       }
     }
 
-    // Send notification for new appointment
+    // Send notifications asynchronously
     if (result.customerId) {
-      try {
+      this.sendBookingNotifications(result.id, result.customerId).catch(err => 
+        this.logger.error(`Failed to trigger async notifications: ${err.message}`, err.stack)
+      );
+    }
+
+    return result;
+  }
+
+  private async sendBookingNotifications(appointmentId: string, customerId: string) {
+    try {
         this.logger.log(
-          `📧 Starting notification process for appointment ${result.id}`,
+          `📧 Starting notification process for appointment ${appointmentId}`,
         );
 
-        const appointment = await this.findOne(result.id);
+        const appointment = await this.findOne(appointmentId);
 
         // Debug log the appointment details
         this.logger.log(
@@ -129,26 +138,26 @@ export class AppointmentsService {
 
         if (!appointment) {
           this.logger.error(
-            `❌ Failed to load appointment ${result.id} for notification`,
+            `❌ Failed to load appointment ${appointmentId} for notification`,
           );
-          return result;
+          return;
         }
 
         // Notify customer
         this.logger.log(
-          `📬 Sending notification to customer ${result.customerId}`,
+          `📬 Sending notification to customer ${customerId}`,
         );
         await this.notificationOrchestrator.notify(
           NotificationType.APPOINTMENT_BOOKED,
           {
-            customerId: result.customerId,
-            appointmentId: result.id,
+            customerId: customerId,
+            appointmentId: appointment.id,
             recipientEmail: appointment.customer?.email,
             customerName: appointment.customer?.fullName,
             salonName: appointment.salon?.name,
             serviceName: appointment.service?.name,
-            appointmentDate: format(new Date(result.scheduledStart), 'PPP'),
-            appointmentTime: format(new Date(result.scheduledStart), 'p'),
+            appointmentDate: format(new Date(appointment.scheduledStart), 'PPP'),
+            appointmentTime: format(new Date(appointment.scheduledStart), 'p'),
             employeeName: appointment.salonEmployee?.user?.fullName,
           },
         );
@@ -166,13 +175,12 @@ export class AppointmentsService {
               {
                 userId: appointment.salon.ownerId,
                 recipientEmail: appointment.salon?.owner?.email,
-                // customerId: result.customerId, // Removed to prevent customer from seeing this notification
-                appointmentId: result.id,
+                appointmentId: appointment.id,
                 customerName: appointment.customer?.fullName,
                 salonName: appointment.salon?.name,
                 serviceName: appointment.service?.name,
-                appointmentDate: format(new Date(result.scheduledStart), 'PPP'),
-                appointmentTime: format(new Date(result.scheduledStart), 'p'),
+                appointmentDate: format(new Date(appointment.scheduledStart), 'PPP'),
+                appointmentTime: format(new Date(appointment.scheduledStart), 'p'),
                 employeeName: appointment.salonEmployee?.user?.fullName,
               },
             );
@@ -200,15 +208,14 @@ export class AppointmentsService {
               NotificationType.APPOINTMENT_BOOKED,
               {
                 userId: appointment.salonEmployee.userId,
-                // customerId: result.customerId, // Removed to prevent customer from seeing this notification
-                appointmentId: result.id,
+                appointmentId: appointment.id,
                 isEmployee: true,
                 recipientEmail: appointment.salonEmployee?.user?.email,
                 customerName: appointment.customer?.fullName,
                 salonName: appointment.salon?.name,
                 serviceName: appointment.service?.name,
-                appointmentDate: format(new Date(result.scheduledStart), 'PPP'),
-                appointmentTime: format(new Date(result.scheduledStart), 'p'),
+                appointmentDate: format(new Date(appointment.scheduledStart), 'PPP'),
+                appointmentTime: format(new Date(appointment.scheduledStart), 'p'),
                 employeeName: appointment.salonEmployee?.user?.fullName,
               },
             );
@@ -226,9 +233,6 @@ export class AppointmentsService {
           error.stack,
         );
       }
-    }
-
-    return result;
   }
 
   async findAll(salonId?: string): Promise<Appointment[]> {
@@ -357,13 +361,41 @@ export class AppointmentsService {
       ],
     });
 
-    // Handle status change notifications
-    if (existingAppointment.status !== updateData.status && updateData.status) {
+    // Handle status change side effects asynchronously
+    // This includes notifications, sale creation, visit recording, and loyalty points
+    this.processStatusChangeSideEffects(
+      existingAppointment,
+      updatedAppointment,
+      updateData,
+    ).catch((error) => {
+      this.logger.error(
+        `❌ Error processing appointment status change side effects: ${error.message}`,
+        error.stack,
+      );
+    });
+    
+    return updatedAppointment;
+  }
+
+  /**
+   * Process side effects of an appointment update asynchronously
+   * This prevents slow operations (notifications, sale creation) from blocking the API response
+   */
+  private async processStatusChangeSideEffects(
+    existingAppointment: Appointment,
+    updatedAppointment: Appointment,
+    updateData: any,
+  ): Promise<void> {
+    const { status } = updateData;
+    const { skipSaleCreation } = updateData;
+
+    // 1. Handle status change notifications
+    if (existingAppointment.status !== status && status) {
       try {
         await this.handleAppointmentStatusChange(
           existingAppointment,
           updatedAppointment,
-          updateData.status,
+          status,
         );
       } catch (error) {
         this.logger.warn(
@@ -372,14 +404,15 @@ export class AppointmentsService {
       }
     }
 
-    // Record visit and create commission when appointment status changes to completed
+    // 2. Handle completion logic (Sale, Visit, Commission, Loyalty Points)
     if (
       !skipSaleCreation &&
       existingAppointment.status !== 'completed' &&
-      updateData.status === 'completed' &&
+      status === 'completed' &&
       updatedAppointment.customerId &&
       updatedAppointment.salonId
     ) {
+      const id = updatedAppointment.id;
       try {
         // Use scheduled_start as visit date, or current time if not available
         const visitDate = updatedAppointment.scheduledStart || new Date();
@@ -403,21 +436,12 @@ export class AppointmentsService {
               this.logger.debug(
                 `Found service price ${serviceAmount} for appointment ${updatedAppointment.id}, service: ${service.name}`,
               );
-            } else {
-              this.logger.warn(
-                `Service ${updatedAppointment.serviceId} not found or has no basePrice for appointment ${updatedAppointment.id}`,
-              );
             }
           } catch (serviceError) {
             this.logger.error(
               `Could not fetch service price for appointment ${updatedAppointment.id}: ${serviceError.message}`,
-              serviceError.stack,
             );
           }
-        } else {
-          this.logger.debug(
-            `Appointment ${updatedAppointment.id} has no serviceId, skipping service price`,
-          );
         }
 
         // Update appointment with service amount if available
@@ -425,86 +449,43 @@ export class AppointmentsService {
           await this.appointmentsRepository.update(id, { serviceAmount });
         }
 
-        // Get employee ID from multiple sources
+        // Get employee ID
         let employeeId =
           updatedAppointment.salonEmployeeId || updateData.salonEmployeeId;
 
-        // If no direct employee ID, check metadata for preferredEmployeeId
+        // Check metadata for preferredEmployeeId if not found
         if (!employeeId && updatedAppointment.metadata) {
           try {
-            // Handle metadata as string (JSON) or object
-            // TypeORM's simple-json should already parse it, but handle both cases
             let metadata = updatedAppointment.metadata;
             if (typeof metadata === 'string') {
-              try {
                 metadata = JSON.parse(metadata);
-              } catch (parseError) {
-                this.logger.warn(
-                  `Failed to parse metadata string for appointment ${updatedAppointment.id}: ${parseError.message}`,
-                );
-                metadata = {};
-              }
             }
-
-            // Check for preferredEmployeeId in metadata
             employeeId = metadata?.preferredEmployeeId;
 
-            this.logger.debug(
-              `Checking metadata for appointment ${updatedAppointment.id}: metadata=${JSON.stringify(metadata)}, preferredEmployeeId=${employeeId}`,
-            );
-
-            // If we found preferredEmployeeId in metadata, update the salonEmployeeId field
-            // This ensures proper linking for future queries
             if (employeeId && !updatedAppointment.salonEmployeeId) {
               await this.appointmentsRepository.update(id, {
                 salonEmployeeId: employeeId,
               });
-              // Reload to get updated appointment
-              const reloadedAppointment = await this.findOne(id);
-              if (reloadedAppointment) {
-                updatedAppointment.salonEmployeeId = employeeId;
-                updatedAppointment.salonEmployee =
-                  reloadedAppointment.salonEmployee;
-              }
-              this.logger.log(
-                `✅ Updated appointment ${updatedAppointment.id} with salonEmployeeId from metadata: ${employeeId}`,
-              );
+              // Update local object for consistency
+              updatedAppointment.salonEmployeeId = employeeId;
             }
-          } catch (metadataError) {
-            this.logger.error(
-              `Failed to process metadata for appointment ${updatedAppointment.id}: ${metadataError.message}`,
-              metadataError.stack,
-            );
+          } catch (e) {
+            this.logger.warn(`Failed to process metadata for employee lookup: ${e.message}`);
           }
         }
 
-        // Log current state for debugging
-        this.logger.debug(
-          `Appointment ${updatedAppointment.id} completion: employeeId=${employeeId}, serviceAmount=${serviceAmount}, serviceId=${updatedAppointment.serviceId}`,
-        );
-
-        // CREATE SALE RECORD when appointment is completed
-        // This records the appointment as a sale and handles commission through the sale flow
+        // Create Sale Record
         if (serviceAmount > 0) {
           try {
             this.logger.log(
               `📦 Creating sale record for completed appointment ${updatedAppointment.id}`,
             );
 
-            // Get service details for the sale item
-            const service =
-              updatedAppointment.service ||
-              (updatedAppointment.serviceId
-                ? await this.servicesService.findOne(
-                    updatedAppointment.serviceId,
-                  )
-                : null);
-
             const saleData = {
               salonId: updatedAppointment.salonId,
               customerId: updatedAppointment.customerId,
               totalAmount: serviceAmount,
-              paymentMethod: PaymentMethod.CASH, // Default to cash, can be updated later
+              paymentMethod: PaymentMethod.CASH,
               status: 'completed',
               metadata: {
                 appointmentId: updatedAppointment.id,
@@ -516,7 +497,7 @@ export class AppointmentsService {
             const saleItems = [
               {
                 serviceId: updatedAppointment.serviceId,
-                salonEmployeeId: employeeId || null, // Employee who performed the service
+                salonEmployeeId: employeeId || null,
                 unitPrice: serviceAmount,
                 quantity: 1,
                 discountAmount: 0,
@@ -525,27 +506,15 @@ export class AppointmentsService {
             ];
 
             const sale = await this.salesService.create(saleData, saleItems);
-
-            this.logger.log(
-              `✅ Created sale ${sale.id} for completed appointment ${updatedAppointment.id} - Amount: RWF ${serviceAmount}, Service: ${service?.name || 'N/A'}, Employee: ${employeeId || 'None'}`,
-            );
-
-            // Note: Commission is now created through the sale flow in SalesService.processCommissions()
-            // This prevents duplicate commission creation
+            this.logger.log(`✅ Created sale ${sale.id} for appointment ${updatedAppointment.id}`);
           } catch (saleError) {
-            // Log but don't fail appointment update if sale creation fails
             this.logger.error(
               `❌ Failed to create sale for appointment ${updatedAppointment.id}: ${saleError.message}`,
-              saleError.stack,
             );
-
-            // Fallback: If sale creation fails, still try to create commission directly
-            // This ensures employees still get paid even if sale recording fails
+            
+            // Fallback commission
             if (employeeId) {
               try {
-                this.logger.warn(
-                  `⚠️ Attempting fallback commission creation for appointment ${updatedAppointment.id}`,
-                );
                 await this.commissionsService.createCommission(
                   employeeId,
                   null,
@@ -556,36 +525,24 @@ export class AppointmentsService {
                     serviceId: updatedAppointment.serviceId,
                   },
                 );
-                this.logger.log(
-                  `✅ Fallback commission created for appointment ${updatedAppointment.id}`,
-                );
-              } catch (commissionError) {
-                this.logger.error(
-                  `❌ Fallback commission also failed: ${commissionError.message}`,
-                );
+              } catch (e) {
+                this.logger.error(`Fallback commission also failed: ${e.message}`);
               }
             }
           }
-        } else {
-          this.logger.warn(
-            `⚠️ Skipping sale creation for appointment ${updatedAppointment.id}: serviceAmount is ${serviceAmount}`,
-          );
         }
 
+        // Record Visit
         await this.salonCustomerService.recordAppointmentVisit(
           updatedAppointment.salonId,
           updatedAppointment.customerId,
           visitDate,
           serviceAmount,
         );
-        this.logger.log(
-          `✅ Recorded appointment visit for customer ${updatedAppointment.customerId} at salon ${updatedAppointment.salonId} - Visit count incremented, Amount added: RWF ${serviceAmount}`,
-        );
 
-        // Award loyalty points for completed appointment
+        // Award Loyalty Points
         if (updatedAppointment.customerId && serviceAmount > 0) {
           try {
-            // Get rewards config for the salon (defaults to 0.01 if not configured)
             const rewardsConfig = await this.rewardsConfigService.getOrCreate(
               updatedAppointment.salonId,
             );
@@ -601,31 +558,18 @@ export class AppointmentsService {
                 {
                   sourceType: LoyaltyPointSourceType.APPOINTMENT,
                   sourceId: updatedAppointment.id,
-                  description: `Points earned from appointment ${updatedAppointment.id.slice(0, 8)} - Service: ${updatedAppointment.service?.name || 'N/A'}, Amount: RWF ${serviceAmount.toLocaleString()}`,
+                  description: `Points earned from appointment ${updatedAppointment.id.slice(0, 8)}`,
                 },
-              );
-              this.logger.log(
-                `Awarded ${pointsEarned} loyalty points to customer ${updatedAppointment.customerId} for appointment ${updatedAppointment.id}`,
               );
             }
           } catch (error) {
-            // Log but don't fail appointment update if points awarding fails
-            this.logger.warn(
-              `Failed to award loyalty points for appointment: ${error.message}`,
-              error.stack,
-            );
+            this.logger.warn(`Failed to award loyalty points: ${error.message}`);
           }
         }
       } catch (error) {
-        // Log but don't fail appointment update if visit tracking fails
-        this.logger.warn(
-          `Failed to record appointment visit: ${error.message}`,
-          error.stack,
-        );
+        this.logger.warn(`Failed to record appointment visit side effects: ${error.message}`);
       }
     }
-
-    return updatedAppointment;
   }
 
   private async handleAppointmentStatusChange(

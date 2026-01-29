@@ -21,6 +21,7 @@ import { MembershipsService } from '../memberships/memberships.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateSalonDto } from './dto/create-salon.dto';
@@ -104,19 +105,17 @@ export class SalonsController {
   }
 
   @Get()
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.DISTRICT_LEADER,
-    UserRole.SALON_OWNER,
-    UserRole.SALON_EMPLOYEE,
-    UserRole.CUSTOMER,
-  )
-  @ApiOperation({ summary: 'Get all salons' })
+  @Public()
+  @ApiOperation({ summary: 'Get all salons (Public)' })
   async findAll(
     @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
+    // If no user is logged in, return all salons (public browsing)
+    if (!user) {
+      return this.salonsService.findAll();
+    }
+
     const isBrowseMode = browse === 'true';
 
     // Customers can see all active salons (public browsing)
@@ -211,14 +210,7 @@ export class SalonsController {
   }
 
   @Get(':id/employees')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.DISTRICT_LEADER,
-    UserRole.SALON_OWNER,
-    UserRole.SALON_EMPLOYEE,
-    UserRole.CUSTOMER,
-  )
+  @Public()
   @ApiOperation({ summary: 'Get salon employees' })
   async getEmployees(
     @Param('id') id: string,
@@ -229,9 +221,9 @@ export class SalonsController {
       const salon = await this.salonsService.findOne(id);
       const isBrowseMode = browse === 'true';
 
-      // Customers can view employees for booking purposes (public browsing)
-      if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
-        // Return only active employees for customers
+      // Public users (unauthenticated) and Customers can view employees for booking purposes
+      if (!user || user.role === UserRole.CUSTOMER || user.role === 'customer') {
+        // Return only active employees for customers/public
         const allEmployees = await this.salonsService.getSalonEmployees(id);
         return allEmployees.filter((emp: any) => emp.isActive !== false);
       }
@@ -633,21 +625,20 @@ export class SalonsController {
   // ==================== Generic Routes (MUST come after specific routes) ====================
 
   @Get(':id')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.DISTRICT_LEADER,
-    UserRole.SALON_OWNER,
-    UserRole.SALON_EMPLOYEE,
-    UserRole.CUSTOMER,
-  )
-  @ApiOperation({ summary: 'Get a salon by ID' })
+  @Public()
+  @ApiOperation({ summary: 'Get a salon by ID (Public)' })
   async findOne(
     @Param('id') id: string,
     @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
     const salon = await this.salonsService.findOne(id);
+    
+    // Public access if no user
+    if (!user) {
+      return salon;
+    }
+
     const isBrowseMode = browse === 'true';
     const userRole = user.role?.toLowerCase();
 

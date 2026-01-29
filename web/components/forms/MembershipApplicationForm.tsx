@@ -29,23 +29,23 @@ export default function MembershipApplicationForm({
   const { user, isAuthenticated } = useAuthStore();
   const [formData, setFormData] = useState({
     businessName: '',
-    businessAddress: '',
-    province: '',
+    businessAddress: '', // Street/Landmark
+    city: '',
     district: '',
-    sector: '',
-    cell: '',
-    village: '',
-    city: '', // Used for Province in backend compatibility
     phone: '',
     email: '',
-    website: '',
+    website: '', // Metadata
     businessDescription: '',
     registrationNumber: '',
     taxId: '',
-    nationalId: '', // Owner/Applicant ID
-    category: '', // Salon, Barbershop, etc.
     latitude: '',
     longitude: '',
+    // Metadata fields
+    province: '',
+    sector: '',
+    cell: '',
+    village: '',
+    category: '', 
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
@@ -56,7 +56,7 @@ export default function MembershipApplicationForm({
   const createApplicationMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       // Prepare data for API
-      const { latitude, longitude, province, sector, cell, village, category, website, nationalId, ...restData } = data;
+      const { latitude, longitude, province, sector, cell, village, category, website, ...restData } = data;
       
       // Map extra fields into metadata to avoid backend changes
       const apiData: any = { 
@@ -68,7 +68,6 @@ export default function MembershipApplicationForm({
           village,
           category,
           website,
-          nationalId,
           applied_at: new Date().toISOString()
         }
       };
@@ -106,11 +105,8 @@ export default function MembershipApplicationForm({
     if (!formData.businessAddress.trim()) {
       newErrors.businessAddress = 'Business address is required';
     }
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-    }
     if (!formData.district.trim()) {
-      newErrors.district = 'Required';
+      newErrors.district = 'District is required';
     }
     if (!formData.category.trim()) {
       newErrors.category = 'Required';
@@ -232,7 +228,6 @@ export default function MembershipApplicationForm({
           setErrors(prev => ({
             ...prev,
             businessAddress: '',
-            city: '',
             district: '',
           }));
         } catch (error: any) {
@@ -274,7 +269,7 @@ export default function MembershipApplicationForm({
       sector: geocoded.sector || prev.sector || '',
       cell: geocoded.cell || prev.cell || '',
       village: geocoded.village || prev.village || '',
-      city: foundProv // Mapping province to city for backend compatibility
+      city: geocoded.city || prev.city || '',
     }));
   };
 
@@ -396,8 +391,10 @@ export default function MembershipApplicationForm({
             <h2 className="text-3xl md:text-5xl font-black text-text-light dark:text-text-dark mb-3 tracking-tighter leading-none">
               Join the <span className="text-primary italic">Association.</span>
             </h2>
-            <p className="text-xs text-text-light/70 dark:text-text-dark/70 max-w-lg mx-auto font-bold leading-relaxed">
-              Unlock your digital command center. Managed business, automated financing, and elite growth tools for professional salons.
+            <p className="text-xs text-text-light/70 dark:text-text-dark/70 max-w-xl mx-auto font-medium leading-relaxed">
+              Complete this application to register your salon. We need these details to verify your business, 
+              configure your booking location, and set up your financial dashboard. 
+              Review takes less than 24 hours.
             </p>
         </div>
       )}
@@ -441,7 +438,7 @@ export default function MembershipApplicationForm({
       <form onSubmit={handleSubmit} className={`${compact ? 'space-y-6' : 'space-y-10'}`}>
         {/* Combined Section 1: Business Identity & Connectivity */}
         <div className="space-y-5">
-          <div className="flex items-center gap-3 pb-3 border-b border-border-light dark:border-border-dark">
+          <div className="flex items-center gap-3 pb-3">
             <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border-light dark:border-border-dark flex items-center justify-center text-primary shadow-sm">
               <Building2 className="w-4 h-4" />
             </div>
@@ -464,7 +461,7 @@ export default function MembershipApplicationForm({
                     required
                 />
             </div>
-            <div className="md:col-span-6 lg:col-span-3">
+            <div className="md:col-span-6 lg:col-span-6">
                 <SelectGroup 
                     label="Category" 
                     name="category"
@@ -474,16 +471,6 @@ export default function MembershipApplicationForm({
                     error={errors.category}
                     placeholder="Type..."
                     required
-                />
-            </div>
-            <div className="md:col-span-6 lg:col-span-3">
-                <InputGroup 
-                    label="National ID" 
-                    name="nationalId"
-                    value={formData.nationalId}
-                    onChange={(val: string) => updateField('nationalId', val)}
-                    placeholder="16 digits"
-                    icon={User}
                 />
             </div>
 

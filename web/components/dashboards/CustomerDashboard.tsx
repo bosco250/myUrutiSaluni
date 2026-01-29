@@ -70,7 +70,8 @@ export default function CustomerDashboard() {
     queryFn: async () => {
       try {
         const response = await api.get(`/customers/by-user/${authUser?.id}`);
-        return response.data || null;
+        const body = response.data;
+        return body?.data || body || null;
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'response' in error) {
           const axiosError = error as { response?: { status?: number } };
@@ -103,7 +104,8 @@ export default function CustomerDashboard() {
     queryKey: ['customer-statistics', customerId],
     queryFn: async () => {
       const response = await api.get(`/sales/customer/${customerId}/statistics`);
-      return response.data;
+      const body = response.data;
+      return body?.data || body;
     },
     enabled: !!customerId,
   });
@@ -113,7 +115,12 @@ export default function CustomerDashboard() {
     queryKey: ['customer-sales', customerId],
     queryFn: async () => {
       const response = await api.get(`/sales/customer/${customerId}?page=1&limit=5`);
-      return response.data;
+      let body = response.data;
+      // Handle response wrapping { statusCode: 200, data: { data: Sale[], total: number } }
+      if (body?.data && typeof body.data === 'object' && 'data' in body.data) {
+          body = body.data;
+      }
+      return body;
     },
     enabled: !!customerId,
   });
@@ -123,7 +130,11 @@ export default function CustomerDashboard() {
     queryKey: ['customer-appointments', customerId],
     queryFn: async () => {
       const response = await api.get(`/appointments/customer/${customerId}`);
-      return response.data || [];
+      const body = response.data;
+      if (body?.data && Array.isArray(body.data)) {
+          return body.data;
+      }
+      return body?.data || body || [];
     },
     enabled: !!customerId,
   });

@@ -51,19 +51,48 @@ export default function LoginPage() {
       setToken(response.access_token);
 
       // Check if user came from membership form
+      // Check if user came from membership form or other protected route
       const urlParams = new URLSearchParams(window.location.search);
       const redirect = urlParams.get('redirect');
 
-      if (redirect === 'membership') {
-        const hasFormData =
-          typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
-        if (hasFormData) {
-          router.push('/membership/complete');
+      if (redirect) {
+        if (redirect === 'membership') {
+          const hasFormData =
+            typeof window !== 'undefined' && sessionStorage.getItem('membershipFormData');
+          if (hasFormData) {
+            router.push('/membership/complete');
+          } else {
+            router.push('/dashboard');
+          }
+        } else if (redirect === 'purchase_intent') {
+          const purchaseIntentStr =
+            typeof window !== 'undefined' && sessionStorage.getItem('purchase_intent');
+          if (purchaseIntentStr) {
+            try {
+              const { salonId, serviceId } = JSON.parse(purchaseIntentStr);
+              // Redirect to salon page with bookService param to auto-open modal
+              router.push(`/salons/browse/${salonId}?bookService=${serviceId}`);
+            } catch (e) {
+              router.push('/salons/browse');
+            }
+            // Clear intent after use
+            sessionStorage.removeItem('purchase_intent');
+          } else {
+            router.push('/salons/browse');
+          }
+        } else if (redirect.startsWith('/')) {
+          // General redirect to protected path
+          router.push(redirect);
         } else {
-          router.push('/dashboard');
+           // Fallback if redirect is invalid (not relative)
+           if (response.user.role === 'customer') {
+             router.push('/salons/browse');
+           } else {
+             router.push('/dashboard');
+           }
         }
       } else {
-        // Route customer users to salons browse, others to dashboard
+        // Default routing if no redirect param
         if (response.user.role === 'customer') {
           router.push('/salons/browse');
         } else {
@@ -226,7 +255,7 @@ export default function LoginPage() {
         <p className="text-center c-secondary text-text-light/60 dark:text-text-dark/60 mt-1">
           Don&apos;t have an account?{' '}
           <Link
-            href="/register"
+            href={`/register${typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('redirect') ? `?redirect=${encodeURIComponent(new URLSearchParams(window.location.search).get('redirect')!)}` : ''}`}
             className="font-bold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 group"
           >
             Create an account

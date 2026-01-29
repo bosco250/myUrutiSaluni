@@ -78,7 +78,6 @@ const allNavItems: NavItem[] = [
     name: 'Browse Salons',
     href: '/salons/browse',
     icon: Search,
-    requiredRoles: [UserRole.CUSTOMER, UserRole.SALON_EMPLOYEE],
   },
   {
     name: 'Customers',
@@ -277,9 +276,8 @@ function FloatingNavComponent() {
               const isActive = isMatch && !isExcluded && !isOpen;
 
               return (
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full">
+                  <motion.div key={item.href} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full">
                   <Link
-                    key={item.href}
                     href={item.href}
                     onMouseEnter={() => setHoveredId(item.href)}
                     onMouseLeave={() => setHoveredId(null)}

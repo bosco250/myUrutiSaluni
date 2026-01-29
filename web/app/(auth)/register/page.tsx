@@ -52,14 +52,35 @@ export default function RegisterPage() {
 
       // Handle redirects
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('redirect') === 'membership') {
-        if (sessionStorage.getItem('membershipFormData')) {
-          router.push('/membership/complete');
+      const redirect = urlParams.get('redirect');
+
+      if (redirect) {
+        if (redirect === 'membership') {
+          if (sessionStorage.getItem('membershipFormData')) {
+            router.push('/membership/complete');
+          } else {
+            router.push('/dashboard');
+          }
+        } else if (redirect === 'purchase_intent') {
+          const purchaseIntentStr = sessionStorage.getItem('purchase_intent');
+          if (purchaseIntentStr) {
+            try {
+              const { salonId, serviceId } = JSON.parse(purchaseIntentStr);
+              router.push(`/salons/browse/${salonId}?bookService=${serviceId}`);
+            } catch (e) {
+              router.push('/salons/browse');
+            }
+            sessionStorage.removeItem('purchase_intent');
+          } else {
+            router.push('/salons/browse');
+          }
+        } else if (redirect.startsWith('/')) {
+          router.push(redirect);
         } else {
-          router.push('/dashboard');
+          router.push(response.user.role === 'customer' ? '/salons/browse' : '/dashboard');
         }
       } else {
-        router.push('/dashboard');
+        router.push(response.user.role === 'customer' ? '/salons/browse' : '/dashboard');
       }
     } catch (err: unknown) {
       const maybeAxios = err as { response?: { data?: { message?: string } } };
@@ -269,7 +290,7 @@ export default function RegisterPage() {
         <p className="text-center c-secondary text-text-light/60 dark:text-text-dark/60 mt-2">
           Already have an account?{' '}
           <Link 
-            href="/login" 
+            href={`/login${typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('redirect') ? `?redirect=${encodeURIComponent(new URLSearchParams(window.location.search).get('redirect')!)}` : ''}`} 
             className="font-bold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 group"
           >
             Sign in

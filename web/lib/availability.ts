@@ -80,15 +80,51 @@ export async function getEmployeeAvailability(
     startDate,
     endDate,
   });
-  
+
   if (serviceId) params.append('serviceId', serviceId);
   if (duration) params.append('duration', duration.toString());
+
+  console.log('[Availability API] Fetching availability for employee:', employeeId);
+  console.log('[Availability API] URL:', `/appointments/availability/${employeeId}?${params.toString()}`);
+
+
 
   const response = await api.get(
     `/appointments/availability/${employeeId}?${params.toString()}`
   );
+
+  console.log('[Availability API] Raw response:', response);
   
-  return response.data?.data || response.data || [];
+  // Robust extraction of the array
+  let availability = response.data;
+  
+  // If wrapped in { data: ... } (NestJS common response)
+  if (availability && typeof availability === 'object' && 'data' in availability && !Array.isArray(availability)) {
+    availability = availability.data;
+  }
+  
+  // Check if it's still wrapped (double wrapping case provided by some generic interceptors)
+  if (availability && typeof availability === 'object' && 'data' in availability && !Array.isArray(availability)) {
+     availability = availability.data;
+  }
+
+  // Ensure it's an array
+  if (!Array.isArray(availability)) {
+    console.warn('[Availability API] Expected array but got:', typeof availability, availability);
+    return [];
+  }
+
+  console.log('[Availability API] Final extracted availability array length:', availability.length);
+  
+
+  // Log summary of availability statuses
+  const statusCounts = availability.reduce((acc: Record<string, number>, day: DayAvailability) => {
+    acc[day.status] = (acc[day.status] || 0) + 1;
+    return acc;
+  }, {});
+  console.log('[Availability API] Status summary:', statusCounts);
+
+  return availability;
 }
 
 /**
@@ -109,10 +145,28 @@ export async function getTimeSlots(
     `/appointments/availability/${employeeId}/slots?${params.toString()}`
   );
   
-  const data = response.data || {};
+  let body = response.data;
+
+  // Case 1: Wrapped via Interceptor -> { data: { data: [], meta: {} } }
+  if (body?.data?.data && Array.isArray(body.data.data)) {
+      return {
+          slots: body.data.data,
+          meta: body.data.meta || { totalSlots: 0, availableSlots: 0 }
+      };
+  }
+
+  // Case 2: No Interceptor/Direct -> { data: [], meta: {} }
+  if (body?.data && Array.isArray(body.data)) {
+      return {
+          slots: body.data,
+          meta: body.meta || { totalSlots: 0, availableSlots: 0 }
+      };
+  }
+  
+  console.warn('[Availability API] Unexpected slots response structure:', body);
   return {
-    slots: data.data || [],
-    meta: data.meta || { totalSlots: 0, availableSlots: 0 },
+    slots: [],
+    meta: { totalSlots: 0, availableSlots: 0 },
   };
 }
 
@@ -123,7 +177,22 @@ export async function validateBooking(
   data: ValidateBookingRequest
 ): Promise<ValidateBookingResponse> {
   const response = await api.post('/appointments/availability/validate', data);
-  return response.data || { valid: false, reason: 'Unknown error' };
+  
+  let body = response.data;
+  
+  // Case 1: Double wrapped { data: { valid: boolean... } }
+  if (body?.data && typeof body.data === 'object' && 'valid' in body.data) {
+     return body.data;
+  }
+  
+  // Case 2: Direct or Single wrapped { valid: boolean... }
+  if (body && typeof body === 'object' && 'valid' in body) {
+      return body;
+  }
+  
+  // Fallback - if structure is unknown, try to return body (maybe valid is optional?) 
+  // but the interface says valid is boolean.
+  return body || { valid: false, reason: 'Unknown error' };
 }
 
 /**

@@ -122,7 +122,8 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     queryKey: ['global-search', debouncedQuery],
     queryFn: async () => {
       const response = await api.get('/search', { params: { q: debouncedQuery } });
-      return response.data;
+      const body = response.data;
+      return body?.data || body;
     },
     enabled: isOpen, // Always fetch when open (empty query returns defaults)
     staleTime: 30000,
@@ -233,7 +234,7 @@ export default function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                   setQuery(e.target.value);
                   setSelectedIndex(0);
                 }}
-                placeholder="Search customers, sales, appointments, products..."
+                placeholder="Search salons, services, or navigate to pages..."
                 className="flex-1 bg-transparent text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 outline-none text-base"
                 autoComplete="off"
               />

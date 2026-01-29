@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ModernHeader from '@/components/layout/ModernHeader';
 import FloatingNav from '@/components/navigation/FloatingNav';
 import { useAuthStore } from '@/store/auth-store';
@@ -16,6 +16,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Compute authentication status as a boolean
   const isAuthenticated = !!(user && token);
 
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isPublicRoute = pathname ? pathname.startsWith('/salons') : false;
+
   // Ensure we only check authentication after client-side hydration
   useEffect(() => {
     setMounted(true);
@@ -23,10 +27,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     // Only redirect if we've mounted AND the store has finished hydrating
-    if (mounted && _hasHydrated && !isAuthenticated) {
-      router.push('/login');
+    // AND NOT authenticated AND NOT a public route
+    // AND pathname is available (to avoid premature redirects)
+    if (mounted && _hasHydrated && !isAuthenticated && !isPublicRoute && pathname) {
+      const currentQuery = searchParams?.toString();
+      const fullUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+      router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
     }
-  }, [mounted, _hasHydrated, isAuthenticated, router]);
+  }, [mounted, _hasHydrated, isAuthenticated, router, isPublicRoute, pathname, searchParams]);
 
   // During SSR and initial render, show a loading state to prevent hydration mismatch
   // Also wait for hydration to complete
@@ -43,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isPublicRoute) {
     return null;
   }
 

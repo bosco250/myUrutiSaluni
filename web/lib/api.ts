@@ -67,7 +67,8 @@ api.interceptors.response.use(
       clearAllSessionData();
 
       // Redirect to login
-      window.location.href = '/login';
+      const currentPath = window.location.pathname + window.location.search;
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
     }
 
     // Log error using logger

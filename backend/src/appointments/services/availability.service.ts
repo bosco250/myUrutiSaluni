@@ -81,6 +81,8 @@ export class AvailabilityService {
   ): Promise<DayAvailability[]> {
     const { employeeId, startDate, endDate, serviceId, duration } = query;
 
+
+
     // Get service details for duration
     let serviceDuration = duration || 30; // Default 30 minutes
     if (serviceId) {
@@ -94,7 +96,6 @@ export class AvailabilityService {
 
     // Get employee working hours
     const workingHours = await this.getEmployeeWorkingHours(employeeId);
-
     // Get availability rules
     const rules = await this.getEmployeeAvailabilityRules(employeeId);
 
@@ -134,6 +135,10 @@ export class AvailabilityService {
     serviceId?: string,
     duration?: number,
   ): Promise<TimeSlot[]> {
+    const slotDateStr = format(date, 'yyyy-MM-dd');
+    const dayOfWeek = date.getDay();
+    const dayName = this.dayNames[dayOfWeek];
+
     // Get service details
     let serviceDuration = duration || 30;
     let servicePrice: number | undefined;
@@ -151,7 +156,6 @@ export class AvailabilityService {
     }
 
     // Get employee working hours for this day
-    const dayOfWeek = date.getDay();
     let workingHours = await this.workingHoursRepository.findOne({
       where: { employeeId, dayOfWeek, isActive: true },
     });
@@ -166,9 +170,6 @@ export class AvailabilityService {
 
     // If still no working hours (day is closed), return empty slots
     if (!workingHours) {
-      this.logger.debug(
-        `No working hours for employee ${employeeId} on day ${dayOfWeek} - day is closed`,
-      );
       return [];
     }
 
@@ -496,7 +497,17 @@ export class AvailabilityService {
       relations: ['salon'],
     });
 
-    if (!employee?.salonId) {
+    if (!employee) {
+      this.logger.warn(
+        `Employee ${employeeId} not found when getting salon operating hours`,
+      );
+      return this.getDefaultWorkingHours(employeeId, dayOfWeek);
+    }
+
+    if (!employee.salonId) {
+      this.logger.warn(
+        `Employee ${employeeId} has no salonId when getting salon operating hours`,
+      );
       return this.getDefaultWorkingHours(employeeId, dayOfWeek);
     }
 
@@ -504,26 +515,58 @@ export class AvailabilityService {
       where: { id: employee.salonId },
     });
 
+    if (!salon) {
+      this.logger.warn(
+        `Salon ${employee.salonId} not found for employee ${employeeId}`,
+      );
+      return this.getDefaultWorkingHours(employeeId, dayOfWeek);
+    }
+
     // Check multiple places for operating hours
     let operatingHours: any = null;
 
+    // First, handle the case where settings itself might be a string (double-serialized JSON)
+    let settings = salon.settings;
+    if (typeof settings === 'string') {
+      try {
+        settings = JSON.parse(settings);
+        this.logger.debug(
+          `Parsed salon settings from string for salon ${salon.id}`,
+        );
+      } catch (e) {
+        this.logger.warn(
+          `Failed to parse salon settings string for salon ${salon.id}: ${e.message}`,
+        );
+        return this.getDefaultWorkingHours(employeeId, dayOfWeek);
+      }
+    }
+
     // Check settings.operatingHours
-    if (salon?.settings?.operatingHours) {
+    if (settings?.operatingHours) {
       operatingHours =
-        typeof salon.settings.operatingHours === 'string'
-          ? JSON.parse(salon.settings.operatingHours)
-          : salon.settings.operatingHours;
+        typeof settings.operatingHours === 'string'
+          ? JSON.parse(settings.operatingHours)
+          : settings.operatingHours;
+      this.logger.debug(
+        `Found operatingHours in settings for salon ${salon.id}`,
+      );
     }
     // Check settings.workingHours (used by mobile app)
-    else if ((salon?.settings as any)?.workingHours) {
-      const workingHours = (salon.settings as any).workingHours;
+    else if (settings?.workingHours) {
+      const workingHours = settings.workingHours;
       operatingHours =
         typeof workingHours === 'string'
           ? JSON.parse(workingHours)
           : workingHours;
+      this.logger.debug(
+        `Found workingHours in settings for salon ${salon.id}`,
+      );
     }
 
     if (!operatingHours) {
+      this.logger.debug(
+        `No operating hours found in salon ${salon.id} settings. Settings keys: ${Object.keys(settings || {}).join(', ')}`,
+      );
       return this.getDefaultWorkingHours(employeeId, dayOfWeek);
     }
 
@@ -556,6 +599,10 @@ export class AvailabilityService {
           breaks: dayHours.breaks || [],
           isActive: true,
         } as EmployeeWorkingHours;
+      } else {
+        this.logger.warn(
+          `Missing start/end time for ${dayName} in salon ${salon.id}. Found: startTime=${startTime}, endTime=${endTime}`,
+        );
       }
     } catch (error) {
       this.logger.warn(
@@ -632,13 +679,18 @@ export class AvailabilityService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _appointments: Appointment[],
   ): Promise<DayAvailability> {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayOfWeek = date.getDay();
+    const dayName = this.dayNames[dayOfWeek];
+
     // Note: We don't check dayWorkingHours here anymore
     // getTimeSlots will apply default 9:00-18:00 if no working hours are configured
 
     // Check blackout dates
-    if (rules?.blackoutDates?.includes(format(date, 'yyyy-MM-dd'))) {
+    if (rules?.blackoutDates?.includes(dateStr)) {
+
       return {
-        date: format(date, 'yyyy-MM-dd'),
+        date: dateStr,
         status: 'unavailable',
         totalSlots: 0,
         availableSlots: 0,
@@ -664,8 +716,10 @@ export class AvailabilityService {
       status = 'available';
     }
 
+
+
     return {
-      date: format(date, 'yyyy-MM-dd'),
+      date: dateStr,
       status,
       totalSlots,
       availableSlots,

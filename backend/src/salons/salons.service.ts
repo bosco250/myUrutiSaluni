@@ -274,12 +274,15 @@ export class SalonsService {
   }
 
   async search(query: string): Promise<Salon[]> {
+    const isPostgres = this.salonsRepository.manager.connection.driver.options.type === 'postgres';
+    const operator = isPostgres ? 'ILIKE' : 'LIKE';
+
     return this.salonsRepository
       .createQueryBuilder('salon')
       .leftJoinAndSelect('salon.owner', 'owner')
-      .where('salon.name ILIKE :query', { query: `%${query}%` })
-      .orWhere('salon.address ILIKE :query', { query: `%${query}%` })
-      .orWhere('salon.city ILIKE :query', { query: `%${query}%` })
+      .where(`salon.name ${operator} :query`, { query: `%${query}%` })
+      .orWhere(`salon.address ${operator} :query`, { query: `%${query}%` })
+      .orWhere(`salon.city ${operator} :query`, { query: `%${query}%` })
       .getMany();
   }
 }

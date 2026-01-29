@@ -92,6 +92,7 @@ export default function CustomerBookingModal({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string>('');
   const [validationResult, setValidationResult] = useState<any>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -103,6 +104,7 @@ export default function CustomerBookingModal({
       setNotes('');
       setError('');
       setValidationResult(null);
+      setIsSuccess(false);
     }
   }, [isOpen]);
 
@@ -118,30 +120,20 @@ export default function CustomerBookingModal({
 
   // Parse operating hours from salon data (matching salon detail page logic)
   const parseOperatingHours = (): WorkingHours | null => {
-    console.log('[BookingModal] Parsing hours from:', {
-      salonProp: salon,
-      salonDataFromApi: salonData,
-      salonSettings: salonData?.settings,
-    });
-    
     // Check direct salon properties first (from salon object prop - may exist at runtime)
     const salonAny = salon as any;
     if (salonAny?.operatingHours) {
-      console.log('[BookingModal] Found salon.operatingHours:', salonAny.operatingHours);
       return salonAny.operatingHours as WorkingHours;
     }
     if (salonAny?.businessHours) {
-      console.log('[BookingModal] Found salon.businessHours:', salonAny.businessHours);
       return salonAny.businessHours as WorkingHours;
     }
     
     // Check salonData from API call
     if (salonData?.operatingHours) {
-      console.log('[BookingModal] Found salonData.operatingHours:', salonData.operatingHours);
       return salonData.operatingHours as WorkingHours;
     }
     if (salonData?.businessHours) {
-      console.log('[BookingModal] Found salonData.businessHours:', salonData.businessHours);
       return salonData.businessHours as WorkingHours;
     }
     
@@ -149,7 +141,6 @@ export default function CustomerBookingModal({
     if (salonData?.settings?.workingHours) {
       try {
         const hours = salonData.settings.workingHours;
-        console.log('[BookingModal] Found settings.workingHours:', hours);
         if (typeof hours === 'string') {
           return JSON.parse(hours) as WorkingHours;
         }
@@ -163,7 +154,6 @@ export default function CustomerBookingModal({
     if (salonData?.settings?.operatingHours) {
       try {
         const hours = salonData.settings.operatingHours;
-        console.log('[BookingModal] Found settings.operatingHours:', hours);
         if (typeof hours === 'string') {
           return JSON.parse(hours) as WorkingHours;
         }
@@ -173,12 +163,10 @@ export default function CustomerBookingModal({
       }
     }
     
-    console.log('[BookingModal] No working hours found!');
     return null;
   };
 
   const operatingHours = parseOperatingHours();
-  console.log('[BookingModal] Final operatingHours:', operatingHours);
 
   const getDayName = (date: Date): keyof WorkingHours => {
     const day = date.getDay();
@@ -218,16 +206,21 @@ export default function CustomerBookingModal({
         if (employees.length > 0) {
           const startDate = format(new Date(), 'yyyy-MM-dd');
           const endDate = format(addDays(new Date(), 30), 'yyyy-MM-dd');
-          
+
+          console.log('[BookingModal] Fetching availability for employee:', employees[0].id, 'startDate:', startDate, 'endDate:', endDate);
+
           // Fetch availability for first employee to get date range structure
           const firstEmpAvailability = await getEmployeeAvailability(
-            employees[0].id, 
-            startDate, 
-            endDate, 
-            service.id, 
+            employees[0].id,
+            startDate,
+            endDate,
+            service.id,
             service.durationMinutes
           );
-          
+
+          console.log('[BookingModal] First employee availability response:', firstEmpAvailability);
+          console.log('[BookingModal] Available days count:', firstEmpAvailability.filter(d => d.status === 'available' || d.status === 'partially_booked').length);
+
           // Create a map for aggregation
           const dateMap = new Map<string, DayAvailability>();
           firstEmpAvailability.forEach(day => {
@@ -337,53 +330,36 @@ export default function CustomerBookingModal({
       if (isAnyEmployee || !queryEmployeeId) {
         // If we have employees, check their combined availability
         if (employees.length > 0) {
-          const allBookedSlots = new Set<string>();
-          const allAvailableSlots = new Set<string>();
+          const availabilityMap = new Map<string, TimeSlot>();
           
           // Query each employee's availability
-          for (const emp of employees) {
+          // Limit to first 5 employees to avoid excessive parallel requests
+          await Promise.all(employees.slice(0, 5).map(async (emp) => {
             try {
-              const response = await api.get(`/appointments/employee/${emp.id}/slots?date=${selectedDateStr}&duration=${service.durationMinutes}`);
-              const data = response.data || {};
+              const { slots: empSlots } = await getTimeSlots(
+                emp.id,
+                selectedDateStr,
+                service.id,
+                service.durationMinutes
+              );
               
-              // Add available slots
-              (data.availableSlots || []).forEach((slot: string) => allAvailableSlots.add(slot));
-              // Track booked slots
-              (data.bookedSlots || []).forEach((slot: string) => allBookedSlots.add(slot));
+              empSlots.forEach(slot => {
+                const existing = availabilityMap.get(slot.startTime);
+                // Initialize if not exists
+                // If existing is UNAVAILABLE but new slot IS AVAILABLE, overwrite (because Any employee can take it)
+                if (!existing || (slot.available && !existing.available)) {
+                   availabilityMap.set(slot.startTime, slot);
+                }
+              });
             } catch (err) {
               console.error(`Failed to fetch slots for employee ${emp.id}:`, err);
             }
-          }
+          }));
           
-          // Build final slots list - a slot is available if ANY employee has it available
-          const slots: TimeSlot[] = [];
-          const allSlots = [...Array.from(allAvailableSlots), ...Array.from(allBookedSlots)];
-          const uniqueSlots = Array.from(new Set(allSlots)).sort();
-          
-          uniqueSlots.forEach((startTime) => {
-            const [hour, min] = startTime.split(':').map(Number);
-            const slotMinutes = hour * 60 + min;
-            const endMinutes = slotMinutes + service.durationMinutes;
-            const endHour = Math.floor(endMinutes / 60);
-            const endMin = endMinutes % 60;
-            const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
-            
-            const isPastSlot = isToday && slotMinutes <= currentMinutesOfDay;
-            const isAvailableWithAnyEmployee = allAvailableSlots.has(startTime);
-            
-            let available = true;
-            let reason: string | undefined;
-            
-            if (isPastSlot) {
-              available = false;
-              reason = 'Past time slot';
-            } else if (!isAvailableWithAnyEmployee) {
-              available = false;
-              reason = 'Already booked';
-            }
-            
-            slots.push({ startTime, endTime, available, reason });
-          });
+          // Build final slots list from map
+          const slots = Array.from(availabilityMap.values()).sort((a, b) => 
+            a.startTime.localeCompare(b.startTime)
+          );
           
           const availableSlotsCount = slots.filter(s => s.available).length;
           return { slots, meta: { totalSlots: slots.length, availableSlots: availableSlotsCount } };
@@ -430,44 +406,15 @@ export default function CustomerBookingModal({
         return { slots, meta: { totalSlots: slots.length, availableSlots } };
       }
 
-      // For specific employee - use the backend API
+      // For specific employee - use the unified availability API
       try {
-        const response = await api.get(`/appointments/employee/${queryEmployeeId}/slots?date=${selectedDateStr}&duration=${service.durationMinutes}`);
-        const data = response.data || {};
-        
-        const bookedSlotsSet = new Set<string>(data.bookedSlots || []);
-        const availableSlotsArr: string[] = data.availableSlots || [];
-        
-        // Combine all slots
-        const allSlots = Array.from(new Set([...availableSlotsArr, ...Array.from(bookedSlotsSet)])).sort();
-        
-        const slots: TimeSlot[] = allSlots.map((startTime) => {
-          const [hour, min] = startTime.split(':').map(Number);
-          const slotMinutes = hour * 60 + min;
-          const endMinutes = slotMinutes + service.durationMinutes;
-          const endHour = Math.floor(endMinutes / 60);
-          const endMin = endMinutes % 60;
-          const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
-          
-          const isPastSlot = isToday && slotMinutes <= currentMinutesOfDay;
-          const isBooked = bookedSlotsSet.has(startTime);
-          
-          let available = true;
-          let reason: string | undefined;
-          
-          if (isPastSlot) {
-            available = false;
-            reason = 'Past time slot';
-          } else if (isBooked) {
-            available = false;
-            reason = 'Already booked';
-          }
-          
-          return { startTime, endTime, available, reason };
-        });
-        
-        const availableSlotsCount = slots.filter(s => s.available).length;
-        return { slots, meta: { totalSlots: slots.length, availableSlots: availableSlotsCount } };
+        const result = await getTimeSlots(
+          queryEmployeeId,
+          selectedDateStr,
+          service.id,
+          service.durationMinutes
+        );
+        return result;
       } catch (err) {
         console.error('Failed to fetch employee slots:', err);
         return { slots: [], meta: { totalSlots: 0, availableSlots: 0 } };
@@ -483,7 +430,7 @@ export default function CustomerBookingModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-appointments'] });
-      onSuccess();
+      setIsSuccess(true);
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'Failed to create appointment');
@@ -528,12 +475,24 @@ export default function CustomerBookingModal({
     setError('');
 
     const [startHour, startMinute] = selectedSlot.startTime.split(':').map(Number);
-    const scheduledStart = new Date(selectedDate);
-    scheduledStart.setHours(startHour, startMinute, 0, 0);
+    // Hardcoded offset for Rwanda (UTC+2) to match backend logic
+    // We send time as UTC-2 so backend (UTC+2) sees the correct wall clock time
+    const scheduledStart = new Date(Date.UTC(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      startHour - 2, // Shift to UTC from Rwanda time
+      startMinute
+    ));
 
     const [endHour, endMinute] = selectedSlot.endTime.split(':').map(Number);
-    const scheduledEnd = new Date(selectedDate);
-    scheduledEnd.setHours(endHour, endMinute, 0, 0);
+    const scheduledEnd = new Date(Date.UTC(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      endHour - 2, // Shift to UTC from Rwanda time
+      endMinute
+    ));
 
     if (!isAnyEmployee && queryEmployeeId) {
       try {
@@ -547,12 +506,14 @@ export default function CustomerBookingModal({
         setValidationResult(validation);
 
         if (!validation.valid) {
+          console.warn('[BookingModal] Validation failed:', validation);
           setError(validation.reason || 'This time slot is no longer available');
           refetchAvailability();
           refetchSlots();
           return;
         }
       } catch (err: any) {
+        console.error('[BookingModal] Validation error:', err);
         setError('Failed to validate booking. Please try again.');
         return;
       }
@@ -696,6 +657,7 @@ export default function CustomerBookingModal({
                   <Calendar className="w-3.5 h-3.5 text-primary" />
                   Select Date
                 </h4>
+
                 <AvailabilityCalendar
                   availability={availability}
                   selectedDate={selectedDate}
@@ -738,8 +700,37 @@ export default function CustomerBookingModal({
             </div>
           </div>
         );
-
       case 'confirm':
+      default:
+        if (isSuccess) {
+          return (
+            <div className="flex flex-col items-center justify-center py-6 animate-in zoom-in-95 duration-300">
+              <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-10 h-10 text-success" />
+              </div>
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1">Booking Confirmed!</h3>
+              <p className="text-xs text-text-light/60 dark:text-text-dark/60 text-center max-w-[240px]">
+                Your appointment at <span className="font-semibold text-primary">{salon.name}</span> has been successfully scheduled.
+              </p>
+              
+              <div className="mt-6 w-full bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-3 space-y-2">
+                 <div className="flex justify-between text-[11px]">
+                   <span className="text-text-light/50 dark:text-text-dark/50">Service</span>
+                   <span className="font-semibold text-text-light dark:text-text-dark">{service.name}</span>
+                 </div>
+                 <div className="flex justify-between text-[11px]">
+                   <span className="text-text-light/50 dark:text-text-dark/50">Date</span>
+                   <span className="font-semibold text-text-light dark:text-text-dark">{selectedDate && format(selectedDate, 'EEE, MMM d')}</span>
+                 </div>
+                 <div className="flex justify-between text-[11px]">
+                   <span className="text-text-light/50 dark:text-text-dark/50">Time</span>
+                   <span className="font-semibold text-text-light dark:text-text-dark">{selectedSlot?.startTime} - {selectedSlot?.endTime}</span>
+                 </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-3 animate-fadeIn">
             <div className="text-center mb-3">
@@ -841,7 +832,12 @@ export default function CustomerBookingModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 py-3">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4 py-3"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
         {/* Header */}
         <div className="px-4 py-3 border-b border-border-light dark:border-border-dark">
@@ -900,46 +896,54 @@ export default function CustomerBookingModal({
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between gap-3">
-          {currentStep !== 'employee' ? (
-            <Button variant="outline" onClick={goBack} size="sm" className="flex items-center gap-1.5 text-xs">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back
+          {isSuccess ? (
+            <Button variant="primary" onClick={onSuccess} size="sm" className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold h-9 rounded-xl">
+              Done
             </Button>
           ) : (
-            <Button variant="outline" onClick={onClose} size="sm" className="text-xs">Cancel</Button>
-          )}
-
-          {currentStep === 'confirm' ? (
-            <Button
-              variant="primary"
-              onClick={handleConfirmBooking}
-              disabled={createAppointmentMutation.isPending}
-              size="sm"
-              className="flex-1 md:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold"
-            >
-              {createAppointmentMutation.isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Processing...
-                </>
+            <>
+              {currentStep !== 'employee' ? (
+                <Button variant="outline" onClick={goBack} size="sm" className="flex items-center gap-1.5 text-xs">
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Back
+                </Button>
               ) : (
-                <>
-                  Confirm Booking
-                  <Sparkles className="w-3.5 h-3.5" />
-                </>
+                <Button variant="outline" onClick={onClose} size="sm" className="text-xs">Cancel</Button>
               )}
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              onClick={goNext}
-              disabled={!canGoNext()}
-              size="sm"
-              className="flex-1 md:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold"
-            >
-              Continue
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Button>
+
+              {currentStep === 'confirm' ? (
+                <Button
+                  variant="primary"
+                  onClick={handleConfirmBooking}
+                  disabled={createAppointmentMutation.isPending}
+                  size="sm"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold"
+                >
+                  {createAppointmentMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Confirm Booking
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={goNext}
+                  disabled={!canGoNext()}
+                  size="sm"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold"
+                >
+                  Continue
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

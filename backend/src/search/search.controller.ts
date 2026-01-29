@@ -9,10 +9,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SearchService, GlobalSearchResult } from './search.service';
 import { UserRole } from '../users/entities/user.entity';
 import { SalonsService } from '../salons/salons.service';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Search')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('search')
 export class SearchController {
   constructor(
@@ -20,6 +20,7 @@ export class SearchController {
     private readonly salonsService: SalonsService,
   ) {}
 
+  @Public()
   @Get()
   @ApiOperation({
     summary: 'Global search across all entities with role-based access',
@@ -37,25 +38,31 @@ export class SearchController {
 
     // Get user's accessible salon IDs for filtering
     let salonIds: string[] = [];
+    let userId: string | undefined = undefined;
+    let userRole: any = 'GUEST';
 
-    try {
-      if (user.role === UserRole.SALON_OWNER) {
-        const salons = await this.salonsService.findByOwnerId(user.id);
-        salonIds = salons.map((s) => s.id);
-      } else if (user.role === UserRole.SALON_EMPLOYEE) {
-        // Get salons where user is an employee
-        const employees = await this.salonsService.findAllEmployeesByUserId(
-          user.id,
-        );
-        salonIds = employees.map((e) => e.salonId).filter(Boolean) as string[];
+    if (user) {
+      userId = user.id;
+      userRole = user.role;
+      try {
+        if (user.role === UserRole.SALON_OWNER) {
+          const salons = await this.salonsService.findByOwnerId(user.id);
+          salonIds = salons.map((s) => s.id);
+        } else if (user.role === UserRole.SALON_EMPLOYEE) {
+          // Get salons where user is an employee
+          const employees = await this.salonsService.findAllEmployeesByUserId(
+            user.id,
+          );
+          salonIds = employees.map((e) => e.salonId).filter(Boolean) as string[];
+        }
+      } catch (error) {
+        // If salon lookup fails, continue without salon filtering
       }
-    } catch (error) {
-      // If salon lookup fails, continue without salon filtering
     }
 
     return this.searchService.globalSearch(query, {
-      userId: user.id,
-      userRole: user.role as UserRole,
+      userId,
+      userRole,
       salonIds: salonIds.length > 0 ? salonIds : undefined,
     });
   }

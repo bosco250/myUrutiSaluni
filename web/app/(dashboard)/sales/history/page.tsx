@@ -172,16 +172,18 @@ function SalesHistoryContent() {
     dateRange.start ||
     dateRange.end;
 
-  const { data: customer } = useQuery({
+  const { data: customer, isLoading: isLoadingCustomer, error: customerError } = useQuery({
     queryKey: ['customer-by-user', user?.id],
     queryFn: async () => {
       if (user?.role === 'customer') {
         const response = await api.get(`/customers/by-user/${user.id}`);
-        return response.data;
+        // Handle response wrapping { data: Customer }
+        const body = response.data;
+        return body?.data || body;
       }
       return null;
     },
-    enabled: user?.role === 'customer',
+    enabled: !!user?.id && user?.role === 'customer',
   });
 
   const {
@@ -209,71 +211,57 @@ function SalesHistoryContent() {
     ],
     queryFn: async () => {
       try {
-        if (user?.role === 'customer' && customer?.id) {
-          const params = new URLSearchParams();
-          params.append('page', hasClientSideFilters ? '1' : currentPage.toString());
-          params.append('limit', hasClientSideFilters ? '10000' : itemsPerPage.toString());
-          const response = await api.get(`/sales/customer/${customer.id}?${params.toString()}`);
-          return response.data;
-        }
         const params = new URLSearchParams();
-        if (salonFilter !== 'all') params.append('salonId', salonFilter);
-        if (dateRange.start) params.append('startDate', dateRange.start);
-        if (dateRange.end) params.append('endDate', dateRange.end);
         params.append('page', hasClientSideFilters ? '1' : currentPage.toString());
         params.append('limit', hasClientSideFilters ? '10000' : itemsPerPage.toString());
-        const response = await api.get(`/sales?${params.toString()}`);
-        let responseData = response.data;
-        if (
-          response.data &&
-          typeof response.data === 'object' &&
-          'statusCode' in response.data &&
-          'data' in response.data
-        ) {
-          responseData = response.data.data;
+
+        let url = '/sales';
+        if (user?.role === 'customer' && customer?.id) {
+          url = `/sales/customer/${customer.id}`;
+        } else {
+          if (salonFilter !== 'all') params.append('salonId', salonFilter);
+          if (dateRange.start) params.append('startDate', dateRange.start);
+          if (dateRange.end) params.append('endDate', dateRange.end);
         }
-        if (!responseData || typeof responseData !== 'object')
-          return { data: [], total: 0, page: 1, limit: 10, totalPages: 0 };
-        if (Array.isArray(responseData))
+
+        const response = await api.get(`${url}?${params.toString()}`);
+        let responseData = response.data;
+
+        // Standard unwrapping for NestJS wrapped responses
+        if (responseData && typeof responseData === 'object' && 'data' in responseData && 'statusCode' in responseData) {
+          responseData = responseData.data;
+        }
+
+        // Handle case where data might be direct array (unlikely with pagination)
+        if (Array.isArray(responseData)) {
           return {
             data: responseData,
             total: responseData.length,
-            page: currentPage,
-            limit: itemsPerPage,
-            totalPages: Math.ceil(responseData.length / itemsPerPage),
+            page: 1,
+            limit: 10000,
+            totalPages: 1
           };
-        if (!('data' in responseData) || !('total' in responseData)) {
-          if (Array.isArray(responseData.data))
-            return {
-              data: responseData.data,
-              total: responseData.total || responseData.data.length,
-              page: responseData.page || 1,
-              limit: responseData.limit || itemsPerPage,
-              totalPages:
-                responseData.totalPages ||
-                Math.ceil(
-                  (responseData.total || responseData.data.length) /
-                    (responseData.limit || itemsPerPage)
-                ),
-            };
-          return { data: [], total: 0, page: 1, limit: 10, totalPages: 0 };
         }
+
+        // Handle standard pagination structure { data: Sale[], total: number, ... }
         return {
-          data: responseData.data || [],
-          total: responseData.total || 0,
-          page: responseData.page || 1,
-          limit: responseData.limit || itemsPerPage,
-          totalPages:
-            responseData.totalPages ||
-            Math.ceil((responseData.total || 0) / (responseData.limit || itemsPerPage)),
+          data: responseData?.data || [],
+          total: responseData?.total || 0,
+          page: responseData?.page || 1,
+          limit: responseData?.limit || itemsPerPage,
+          totalPages: responseData?.totalPages || Math.ceil((responseData?.total || 0) / itemsPerPage)
         };
       } catch (err: unknown) {
         const errorData = (err as { response?: { data?: { message?: string } } })?.response?.data;
         const message = errorData?.message || (err as Error)?.message || 'Failed to load sales.';
-        toast.error(message);
+        // Only toast error if it's not a loading state issue
+        if (user?.role !== 'customer' || customer?.id) {
+            toast.error(message);
+        }
         throw new Error(message);
       }
     },
+    enabled: !!user?.role && (user.role !== 'customer' || !!customer?.id),
   });
 
   const { sales, totalSales } = useMemo(() => {
@@ -431,7 +419,9 @@ function SalesHistoryContent() {
   };
 
   // Loading State
-  if (isLoading) {
+  const isActuallyLoading = isLoading || (user?.role === 'customer' && isLoadingCustomer);
+  
+  if (isActuallyLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -442,14 +432,15 @@ function SalesHistoryContent() {
   }
 
   // Error State
-  if (error) {
+  const combinedError = error || customerError;
+  if (combinedError) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="bg-error/10 border border-error/20 rounded-xl p-6 text-center">
           <X className="w-10 h-10 text-error mx-auto mb-3" />
           <h3 className="text-lg font-bold text-error mb-2">Failed to load sales history</h3>
           <p className="text-sm text-error/80 mb-4">
-            {(error as Error)?.message || 'Unknown error'}
+            {(combinedError as Error)?.message || 'Unknown error'}
           </p>
           <Button
             onClick={() => refetch()}

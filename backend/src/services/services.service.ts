@@ -49,11 +49,14 @@ export class ServicesService {
   }
 
   async search(query: string): Promise<Service[]> {
+    const isPostgres = this.servicesRepository.manager.connection.driver.options.type === 'postgres';
+    const operator = isPostgres ? 'ILIKE' : 'LIKE';
+
     return this.servicesRepository
       .createQueryBuilder('service')
       .leftJoinAndSelect('service.salon', 'salon')
-      .where('service.name ILIKE :query', { query: `%${query}%` })
-      .orWhere('service.description ILIKE :query', { query: `%${query}%` })
+      .where(`service.name ${operator} :query`, { query: `%${query}%` })
+      .orWhere(`service.description ${operator} :query`, { query: `%${query}%` })
       .getMany();
   }
 }

@@ -17,6 +17,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { EmployeePermissionGuard } from '../auth/guards/employee-permission.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RequireEmployeePermission } from '../auth/decorators/require-employee-permission.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -94,20 +95,17 @@ export class ServicesController {
   }
 
   @Get()
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.DISTRICT_LEADER,
-    UserRole.SALON_OWNER,
-    UserRole.SALON_EMPLOYEE,
-    UserRole.CUSTOMER,
-  )
-  @ApiOperation({ summary: 'Get all services' })
+  @Public()
+  @ApiOperation({ summary: 'Get all services (Public)' })
   async findAll(
     @Query('salonId') salonId: string | undefined,
     @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
+    if (!user) {
+      return this.servicesService.findAll(salonId);
+    }
+
     const isBrowseMode = browse === 'true';
 
     // Customers can see all services (public browsing)
@@ -157,21 +155,18 @@ export class ServicesController {
   }
 
   @Get(':id')
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.ASSOCIATION_ADMIN,
-    UserRole.DISTRICT_LEADER,
-    UserRole.SALON_OWNER,
-    UserRole.SALON_EMPLOYEE,
-    UserRole.CUSTOMER,
-  )
-  @ApiOperation({ summary: 'Get a service by ID' })
+  @Public()
+  @ApiOperation({ summary: 'Get a service by ID (Public)' })
   async findOne(
     @Param('id') id: string,
     @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
     const service = await this.servicesService.findOne(id);
+    if (!user) {
+      return service;
+    }
+
     const isBrowseMode = browse === 'true';
 
     // Customers can view any service (public browsing)
