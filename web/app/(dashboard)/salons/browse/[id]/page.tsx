@@ -19,6 +19,8 @@ import {
   Scissors,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Users,
   Tag,
   MessageCircle,
@@ -27,6 +29,8 @@ import {
   CheckCircle2,
   X,
   ZoomIn,
+  Search,
+  Filter,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -169,6 +173,9 @@ function SalonDetailsContent() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -362,20 +369,47 @@ function SalonDetailsContent() {
     return allGalleryImages.filter((img) => !failedImages.has(img.src));
   }, [allGalleryImages, failedImages]);
 
-  // Categorized services
+  // Available categories for filtering
+  const allCategories = useMemo(() => {
+    const cats = new Set<string>();
+    activeServices.forEach(s => cats.add(s.category || 'General'));
+    return ['All', ...Array.from(cats).sort()];
+  }, [activeServices]);
+
+  // Categorized services with filtering
   const categorizedServices = useMemo(() => {
-    return Object.entries(
-      activeServices.reduce(
-        (acc, service) => {
-          const cat = service.category || 'General';
+    const term = searchTerm.toLowerCase().trim();
+    
+    // Group and filter
+    const groups = activeServices.reduce(
+      (acc, service) => {
+        const cat = service.category || 'General';
+        
+        // Search matches name, description or category
+        const matchesSearch = !term || 
+          service.name.toLowerCase().includes(term) || 
+          service.description?.toLowerCase().includes(term) ||
+          cat.toLowerCase().includes(term);
+
+        if (matchesSearch) {
           if (!acc[cat]) acc[cat] = [];
           acc[cat].push(service);
-          return acc;
-        },
-        {} as Record<string, Service[]>,
-      ),
+        }
+        return acc;
+      },
+      {} as Record<string, Service[]>,
     );
-  }, [activeServices]);
+
+    // Sort categories
+    let result = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+
+    // Category pill filter (only when not searching)
+    if (activeCategory !== 'All' && !searchTerm) {
+      result = result.filter(([cat]) => cat === activeCategory);
+    }
+
+    return result;
+  }, [activeServices, searchTerm, activeCategory]);
 
   // Loading & Error States
   if (isLoadingSalon) {
@@ -479,186 +513,142 @@ function SalonDetailsContent() {
 
 
 
-            {/* ─── SERVICES (ABOVE THE FOLD) ─── */}
-            <section>
-              <div className="flex items-baseline justify-between mb-4">
-                <h2 className="text-sm font-bold text-text-light dark:text-text-dark uppercase tracking-wider">
-                  Services
-                </h2>
-                <span className="text-[11px] text-text-light/50 dark:text-text-dark/50 font-medium">
-                  {activeServices.length} available
-                </span>
+            {/* ─── SERVICES TOOLBAR (STICKY) ─── */}
+            <section id="services-section" className="relative">
+              <div className="sticky top-14 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md -mx-4 px-4 py-3 mb-6 border-b border-border-light/40 dark:border-border-dark/40 transition-all duration-300">
+                <div className="flex items-center justify-between gap-4">
+                  
+                  {/* Default State: Categories + Search Button */}
+                  {!isSearchExpanded ? (
+                    <>
+                      <div className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                        {allCategories.map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => setActiveCategory(cat)}
+                            className={`shrink-0 px-4 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                              activeCategory === cat
+                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                : 'bg-black/[0.03] dark:bg-white/[0.03] text-text-light/50 dark:text-text-dark/50 hover:bg-black/[0.06] dark:hover:bg-white/[0.06]'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button 
+                        onClick={() => setIsSearchExpanded(true)}
+                        className="w-10 h-10 shrink-0 flex items-center justify-center rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] text-text-light/50 dark:text-text-dark/50 hover:bg-primary hover:text-white transition-all duration-300"
+                        title="Search services"
+                      >
+                        <Search className="w-5 h-5" />
+                      </button>
+                    </>
+                  ) : (
+                    /* Search State: Compact & Centered */
+                    <div className="flex-1 flex justify-center animate-in fade-in zoom-in-95 duration-300">
+                      <div className="flex items-center gap-2 w-full max-w-sm">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/30 dark:text-text-dark/30" />
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder="Search..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-8 py-2 bg-black/[0.04] dark:bg-white/[0.04] border-none rounded-xl text-[13px] focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-light/20 dark:placeholder:text-text-dark/20 font-medium"
+                          />
+                          {searchTerm && (
+                            <button 
+                              onClick={() => setSearchTerm('')}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+                            >
+                              <X className="w-3 h-3 text-text-light/40" />
+                            </button>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setIsSearchExpanded(false);
+                            setSearchTerm('');
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors group"
+                          title="Close search"
+                        >
+                          <X className="w-4 h-4 text-text-light/40 group-hover:text-primary" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Desktop Count Indicator (only when not searching) */}
+                  {!isSearchExpanded && (
+                    <div className="hidden lg:block shrink-0 px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+                        {activeServices.length} Total
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {isLoadingServices ? (
-                <div className="flex items-center justify-center py-6">
-                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : activeServices.length > 0 ? (
-                <div className="space-y-5">
-                  {categorizedServices.map(([category, catServices]) => (
-                    <div key={category}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[11px] font-semibold text-text-light/50 dark:text-text-dark/50 uppercase tracking-wide">
-                          {category}
-                        </span>
-                        <div className="flex-1 h-px bg-border-light dark:bg-border-dark" />
-                        <span className="text-[10px] text-text-light/40 dark:text-text-dark/40">
-                          {catServices.length}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {catServices.map((service, idx) => {
-                          const serviceImage = service.images?.[0] || service.imageUrl;
-                          const genderLabel =
-                            service.targetGender === 'men'
-                              ? 'Men'
-                              : service.targetGender === 'women'
-                                ? 'Women'
-                                : service.targetGender === 'kids'
-                                  ? 'Kids'
-                                  : null;
-                          const isRecommended = idx === 0;
-
-                          return (
-                            <div
-                              key={service.id}
-                              role="button"
-                              tabIndex={0}
-                              aria-label={`View details for ${service.name}`}
-                              className="group bg-white dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark hover:border-primary/30 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full ring-1 ring-black/5 dark:ring-white/5"
-                              onClick={() => {
-                                setSelectedService(service);
-                                setServiceImageIndex(0);
-                                setShowServiceDetail(true);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  setSelectedService(service);
-                                  setServiceImageIndex(0);
-                                  setShowServiceDetail(true);
-                                }
-                              }}
-                            >
-                              {/* Image Section - Only render if image exists */}
-                              {serviceImage && (
-                                <div className="relative h-32 overflow-hidden bg-gray-100 dark:bg-gray-800">
-                                  <Image
-                                    src={serviceImage}
-                                    alt={service.name}
-                                    fill
-                                    className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                                  />
-                                  
-                                  {/* Gradient overlay */}
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                                  {/* Top badges */}
-                                  <div className="absolute top-2 left-2 flex gap-1">
-                                    {isRecommended && (
-                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold bg-primary text-white tracking-wide">
-                                        Top Pick
-                                      </span>
-                                    )}
-                                    {genderLabel && (
-                                      <span className="px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold bg-white/90 text-black tracking-wide">
-                                        {genderLabel}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* Name + price overlay on image */}
-                                  <div className="absolute bottom-2 left-2 right-2 text-white">
-                                    <h4 className="text-[12px] font-bold leading-tight line-clamp-1">{service.name}</h4>
-                                    <div className="flex items-center justify-between mt-0.5">
-                                      <span className="text-[10px] text-white/80 flex items-center gap-0.5">
-                                        <Clock className="w-3 h-3" />
-                                        {service.durationMinutes} min
-                                      </span>
-                                      <span className="text-[11px] font-bold">
-                                        {service.basePrice.toLocaleString()} <span className="text-[9px] font-normal text-white/70">RWF</span>
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Content Body */}
-                              <div className="p-2.5 flex-1 flex flex-col">
-                                {/* Fallback Header for No Image */}
-                                {!serviceImage && (
-                                  <div className="mb-3">
-                                    <div className="flex gap-1 mb-1.5">
-                                      {isRecommended && (
-                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold bg-primary/10 text-primary tracking-wide border border-primary/20">
-                                          Top Pick
-                                        </span>
-                                      )}
-                                      {genderLabel && (
-                                        <span className="px-1.5 py-0.5 rounded-md text-[9px] uppercase font-bold bg-black/5 dark:bg-white/10 text-text-light/70 dark:text-text-dark/70 tracking-wide">
-                                          {genderLabel}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <h4 className="text-sm font-bold text-text-light dark:text-text-dark leading-tight mb-1">{service.name}</h4>
-                                    <div className="flex items-center justify-between text-xs pb-2 border-b border-border-light dark:border-border-dark border-dashed">
-                                      <span className="text-text-light/60 dark:text-text-dark/60 flex items-center gap-1">
-                                         <Clock className="w-3.5 h-3.5" /> {service.durationMinutes} min
-                                      </span>
-                                      <span className="font-bold text-primary">{service.basePrice.toLocaleString()} RWF</span>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {service.description ? (
-                                  <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 line-clamp-1 leading-relaxed flex-1">
-                                    {service.description}
-                                  </p>
-                                ) : (
-                                  <p className="text-[10px] text-text-light/30 dark:text-text-dark/30 italic flex-1">
-                                    Tap for details
-                                  </p>
-                                )}
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  aria-label={`Book ${service.name}`}
-                                  className="self-end px-3 h-7 text-[11px] font-semibold rounded-md mt-2 shadow-sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!authUser) {
-                                      if (typeof window !== 'undefined') {
-                                        sessionStorage.setItem('purchase_intent', JSON.stringify({
-                                          salonId: salon.id,
-                                          serviceId: service.id
-                                        }));
-                                      }
-                                      router.push('/login?redirect=purchase_intent');
-                                      return;
-                                    }
-                                    setSelectedService(service);
-                                    setServiceImageIndex(0);
-                                    setShowBookingModal(true);
-                                  }}
-                                >
-                                  Book
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+              ) : categorizedServices.length > 0 ? (
+                <div className="space-y-6">
+                  {categorizedServices.map(([category, catServices], index) => (
+                    <ServiceCategoryGroup 
+                      key={category} 
+                      category={category} 
+                      services={catServices} 
+                      isInitiallyExpanded={index === 0 || !!searchTerm}
+                      forceOpen={!!searchTerm}
+                      hideAccordion={categorizedServices.length === 1 && !searchTerm}
+                      onBook={(service) => {
+                        if (!authUser) {
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('purchase_intent', JSON.stringify({
+                              salonId: salon.id,
+                              serviceId: service.id
+                            }));
+                          }
+                          router.push('/login?redirect=purchase_intent');
+                          return;
+                        }
+                        setSelectedService(service);
+                        setServiceImageIndex(0);
+                        setShowBookingModal(true);
+                      }}
+                      onDetail={(service) => {
+                        setSelectedService(service);
+                        setServiceImageIndex(0);
+                        setShowServiceDetail(true);
+                      }}
+                    />
                   ))}
+                </div>
+              ) : searchTerm ? (
+                <div className="py-20 text-center bg-surface-light dark:bg-surface-dark border border-dashed border-border-light dark:border-border-dark rounded-3xl">
+                  <div className="w-16 h-16 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-6 h-6 text-text-light/20 dark:text-text-dark/20" />
+                  </div>
+                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark">No services found</h3>
+                  <p className="text-[11px] text-text-light/40 dark:text-text-dark/40 mt-1">
+                    Try adjusting your search for "{searchTerm}"
+                  </p>
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="mt-4 text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+                  >
+                    Clear search
+                  </button>
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <Tag className="w-8 h-8 text-text-light/15 dark:text-text-dark/15 mx-auto mb-2" />
-                  <p className="text-xs text-text-light/50 dark:text-text-dark/50">
-                    No services available at this time.
-                  </p>
+                  <p className="text-sm text-text-light/40 dark:text-text-dark/40">No services available at the moment.</p>
                 </div>
               )}
             </section>
@@ -1244,44 +1234,46 @@ function SalonDetailsContent() {
 
       {/* ─── BOOKING MODAL ─── */}
       {showBookingModal && selectedService && (
-        <CustomerBookingModal
-          isOpen={showBookingModal}
-          onClose={() => {
-            setShowBookingModal(false);
-            setSelectedService(null);
-            // Clear URL params to prevent auto-reopening
-            if (typeof window !== 'undefined' && searchParams.get('bookService')) {
-              const params = new URLSearchParams(window.location.search);
-              params.delete('bookService');
-              router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
-            }
-          }}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['customer-appointments'] });
-            setShowBookingModal(false);
-            setSelectedService(null);
-            
-            // Clear URL params to prevent auto-reopening
-            if (typeof window !== 'undefined' && searchParams.get('bookService')) {
-              const params = new URLSearchParams(window.location.search);
-              params.delete('bookService');
-              router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
-            }
+        <div className="relative z-[200]">
+          <CustomerBookingModal
+            isOpen={showBookingModal}
+            onClose={() => {
+              setShowBookingModal(false);
+              setSelectedService(null);
+              // Clear URL params to prevent auto-reopening
+              if (typeof window !== 'undefined' && searchParams.get('bookService')) {
+                const params = new URLSearchParams(window.location.search);
+                params.delete('bookService');
+                router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+              }
+            }}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['customer-appointments'] });
+              setShowBookingModal(false);
+              setSelectedService(null);
+              
+              // Clear URL params to prevent auto-reopening
+              if (typeof window !== 'undefined' && searchParams.get('bookService')) {
+                const params = new URLSearchParams(window.location.search);
+                params.delete('bookService');
+                router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+              }
 
-            toast.success('🎉 Appointment booked successfully!', {
-              title: 'Booking Confirmed',
-              duration: 5000,
-            });
-          }}
-          salon={{ id: salon.id, name: salon.name, address: salon.address }}
-          service={{
-            id: selectedService.id,
-            name: selectedService.name,
-            durationMinutes: selectedService.durationMinutes || 30,
-            basePrice: Number(selectedService.basePrice) || 0,
-          }}
-          customerId={customer?.id}
-        />
+              toast.success('🎉 Appointment booked successfully!', {
+                title: 'Booking Confirmed',
+                duration: 5000,
+              });
+            }}
+            salon={{ id: salon.id, name: salon.name, address: salon.address }}
+            service={{
+              id: selectedService.id,
+              name: selectedService.name,
+              durationMinutes: selectedService.durationMinutes || 30,
+              basePrice: Number(selectedService.basePrice) || 0,
+            }}
+            customerId={customer?.id}
+          />
+        </div>
       )}
 
       {/* ─── LIGHTBOX MODAL ─── */}
@@ -1369,6 +1361,204 @@ function SalonDetailsContent() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// --- Helper Components ---
+
+function ServiceCategoryGroup({ 
+  category, 
+  services, 
+  onBook,
+  onDetail,
+  isInitiallyExpanded = false,
+  hideAccordion = false,
+  forceOpen = false
+}: { 
+  category: string; 
+  services: Service[]; 
+  onBook: (service: Service) => void;
+  onDetail: (service: Service) => void;
+  isInitiallyExpanded?: boolean;
+  hideAccordion?: boolean;
+  forceOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(isInitiallyExpanded);
+  const [isShowingMore, setIsShowingMore] = useState(false);
+
+  useEffect(() => {
+    if (forceOpen) setIsOpen(true);
+  }, [forceOpen]);
+
+  const truncationLimit = 6;
+  const shouldTruncate = services.length > truncationLimit;
+  const visibleServices = (isShowingMore || !shouldTruncate) ? services : services.slice(0, truncationLimit);
+
+  if (hideAccordion) {
+    return (
+      <div className="mb-10 last:mb-0">
+        <div className="flex items-center gap-3 mb-5 px-1">
+          <div className="w-1 h-5 bg-primary rounded-full" />
+          <h3 className="text-lg font-black text-text-light dark:text-text-dark tracking-tight">{category}</h3>
+          <div className="h-px flex-1 bg-gradient-to-r from-border-light to-transparent dark:from-border-dark opacity-20" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {services.map((service, idx) => (
+            <ServiceCard 
+              key={service.id} 
+              service={service} 
+              onBook={() => onBook(service)} 
+              onDetail={() => onDetail(service)}
+              isPopular={idx === 0 && services.length > 5}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3 last:mb-0 border border-border-light dark:border-border-dark rounded-2xl overflow-hidden bg-white dark:bg-surface-dark transition-all duration-300">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isOpen ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
+            <Tag className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-[15px] font-bold text-text-light dark:text-text-dark tracking-tight">{category}</h3>
+            <p className="text-[10px] text-text-light/40 dark:text-text-dark/40 font-bold uppercase tracking-wider">
+              {services.length} {services.length === 1 ? 'Service' : 'Services'}
+            </p>
+          </div>
+        </div>
+        <div className={`p-1.5 rounded-lg transition-all duration-300 ${isOpen ? 'rotate-180 text-primary' : 'text-text-light/30'}`}>
+          <ChevronDown className="w-4 h-4" />
+        </div>
+      </button>
+
+      <div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[8000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
+        <div className="p-2 sm:p-3 border-t border-border-light/40 dark:border-border-dark/40 bg-black/[0.01] dark:bg-white/[0.01]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {visibleServices.map((service, idx) => (
+              <ServiceCard 
+                key={service.id} 
+                service={service} 
+                onBook={() => onBook(service)} 
+                onDetail={() => onDetail(service)}
+                isPopular={idx === 0 && services.length > 3}
+              />
+            ))}
+          </div>
+          
+          {shouldTruncate && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsShowingMore(!isShowingMore);
+              }}
+              className="mt-6 w-full py-3 rounded-xl border border-dashed border-border-light dark:border-border-dark text-[10px] font-black uppercase tracking-[0.2em] text-text-light/40 hover:text-primary hover:border-primary/50 transition-all bg-black/[0.01] dark:bg-white/[0.01]"
+            >
+              {isShowingMore ? 'Show Less' : `View ${services.length - truncationLimit} More Services`}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceCard({ 
+  service, 
+  onBook, 
+  onDetail,
+  isPopular 
+}: { 
+  service: Service; 
+  onBook: () => void; 
+  onDetail: () => void;
+  isPopular?: boolean;
+}) {
+  const serviceImage = service.images?.[0] || service.imageUrl;
+
+  return (
+    <div 
+      onClick={onDetail}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onDetail();
+        }
+      }}
+      className="group relative flex items-center gap-3 pl-2 rounded-2xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/40 hover:bg-primary/[0.01] transition-all duration-500 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-primary/5"
+    >
+      {/* Visual Indicator/Image */}
+      <div className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group-hover:border-primary/20 transition-all duration-500">
+        {serviceImage ? (
+          <Image src={serviceImage} alt={service.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-black/[0.02] dark:bg-white/[0.02]">
+            <Scissors className="w-8 h-8 text-text-light/10 dark:text-text-dark/10 group-hover:text-primary/20 transition-colors" />
+          </div>
+        )}
+        {isPopular && (
+           <div className="absolute inset-x-0 top-0 bg-primary/80 backdrop-blur-md text-white text-[8px] font-black uppercase py-1 text-center tracking-widest">
+             Top Pick
+           </div>
+        )}
+      </div>
+
+      {/* Main Info */}
+      <div className="flex-1 min-w-0 py-1">
+        <h4 className="text-[16px] font-black text-text-light dark:text-text-dark leading-tight group-hover:text-primary transition-colors truncate">
+          {service.name}
+        </h4>
+        <p className="text-[12px] text-text-light/50 dark:text-text-dark/50 line-clamp-2 mt-1 font-medium leading-relaxed">
+          {service.description || 'Exclusive boutique service.'}
+        </p>
+        
+        <div className="flex items-center gap-6 mt-4">
+          <div className="flex flex-col">
+            <span className="text-[9px] font-bold text-text-light/20 dark:text-text-dark/20 uppercase tracking-widest">Price</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-base font-black text-text-light dark:text-text-dark">{service.basePrice.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30">RWF</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <span className="text-[9px] font-bold text-text-light/20 dark:text-text-dark/20 uppercase tracking-widest">Duration</span>
+            <div className="flex items-center gap-1 text-[13px] font-black text-text-light dark:text-text-dark">
+              <span>{service.durationMinutes}</span>
+              <span className="text-[10px] font-bold text-text-light/30 dark:text-text-dark/30">MIN</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Area */}
+      <div className="flex flex-col items-end gap-2 pr-4 py-4 self-stretch justify-between">
+         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+           <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center">
+             <ChevronRight className="w-4 h-4 text-primary" />
+           </div>
+         </div>
+
+         <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook();
+            }}
+            className="px-4 py-2 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
+         >
+            Book
+         </button>
+      </div>
     </div>
   );
 }

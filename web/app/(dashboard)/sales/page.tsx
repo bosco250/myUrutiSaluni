@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
+import { usePermissions } from '@/hooks/usePermissions';
 import Button from '@/components/ui/Button';
 import {
   ShoppingCart,
@@ -122,11 +123,16 @@ interface Salon {
   id: string;
   name: string;
   ownerId: string;
+  owner?: {
+    id: string;
+    fullName: string;
+  };
 }
 
 function POSInterface() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { canViewAllSalons } = usePermissions();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'services' | 'products' | 'appointments'>('services');
@@ -147,13 +153,21 @@ function POSInterface() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        const allSalons = response.data || [];
-        // Filter to user's salons if they're a salon owner/employee
-        if (user?.role === 'salon_owner' || user?.role === 'salon_employee') {
-          return allSalons.filter((s: Salon) => s.ownerId === user.id);
+        const salonsData = response.data?.data || response.data || [];
+        const allSalons = Array.isArray(salonsData) ? salonsData : [];
+        
+        // If user can view all salons (Admin/District Leader), return all
+        if (canViewAllSalons()) {
+          return allSalons;
         }
-        return allSalons;
+        
+        // Otherwise, filter to only salons owned by the user
+        // (Note: Employees might need different logic, but standardizing on ownership for now)
+        return allSalons.filter((s: Salon) => 
+          s.ownerId === user?.id || s.owner?.id === user?.id
+        );
       } catch (error) {
+        console.error('Error fetching salons for POS:', error);
         return [];
       }
     },
@@ -173,12 +187,16 @@ function POSInterface() {
   const { data: services = [], isLoading: isLoadingServices } = useQuery<Service[]>({
     queryKey: ['services', salonId],
     queryFn: async () => {
+      // For non-admins, salonId IS REQUIRED to fetch services
+      if (!salonId && !canViewAllSalons()) {
+        return [];
+      }
       const response = await api.get(`/services${salonId ? `?salonId=${salonId}` : ''}`);
       return response.data?.data || response.data || [];
     },
-    enabled: !!salonId || salons.length === 0, // Wait for salonId if salons exist
+    enabled: !!user && (!!salonId || canViewAllSalons()),
     staleTime: 30000,
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (formerly cacheTime)
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
   });
@@ -241,7 +259,8 @@ function POSInterface() {
     queryKey: ['customers'],
     queryFn: async () => {
       const response = await api.get('/customers');
-      return response.data?.data || response.data || [];
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -251,7 +270,8 @@ function POSInterface() {
     queryFn: async () => {
       if (!salonId) return [];
       const response = await api.get(`/salons/${salonId}/employees`);
-      return response.data || [];
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!salonId,
   });
@@ -263,7 +283,8 @@ function POSInterface() {
       const response = await api.get('/appointments', {
         params: { salonId, status: 'confirmed' },
       });
-      return response.data.data || response.data || [];
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!salonId && activeTab === 'appointments',
   });

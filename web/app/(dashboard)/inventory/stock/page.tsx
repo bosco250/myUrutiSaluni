@@ -97,7 +97,18 @@ function StockManagementContent() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        return response.data?.data || response.data || [];
+        const salonsData = response.data?.data || response.data || [];
+        const allSalons = Array.isArray(salonsData) ? salonsData : [];
+
+        // If user can view all salons (Admin/District Leader), return all
+        if (canViewAllSalons(user?.role)) {
+          return allSalons;
+        }
+
+        // Otherwise, filter to only salons owned by the user
+        return allSalons.filter((s: any) => 
+          s.ownerId === user?.id || s.owner?.id === user?.id
+        );
       } catch (error) {
         return [];
       }
@@ -127,9 +138,18 @@ function StockManagementContent() {
     queryFn: async (): Promise<ProductWithStock[]> => {
       if (!user) return [];
       try {
-        const params = selectedSalonId ? { salonId: selectedSalonId } : {};
+        const params: any = selectedSalonId ? { salonId: selectedSalonId } : {};
         const response = await api.get('/inventory/stock-levels', { params });
-        return response.data || [];
+        const stockData = response.data?.data || response.data || [];
+        let stockArray = Array.isArray(stockData) ? stockData : [];
+
+        // Extra safety: for non-admins, ensure the stock returned belong to their salons
+        if (!canViewAll && !selectedSalonId && salons.length > 0) {
+          const ownedSalonIds = new Set(salons.map(s => s.id));
+          stockArray = stockArray.filter((p: any) => ownedSalonIds.has(p.salonId));
+        }
+
+        return stockArray;
       } catch (error) {
         return [];
       }
@@ -144,9 +164,18 @@ function StockManagementContent() {
     queryFn: async (): Promise<InventoryMovement[]> => {
       if (!user) return [];
       try {
-        const params = selectedSalonId ? { salonId: selectedSalonId } : {};
+        const params: any = selectedSalonId ? { salonId: selectedSalonId } : {};
         const response = await api.get('/inventory/movements', { params });
-        return response.data || [];
+        const movementData = response.data?.data || response.data || [];
+        let movementsArray = Array.isArray(movementData) ? movementData : [];
+
+        // Extra safety: for non-admins, ensure the movements returned belong to their salons
+        if (!canViewAll && !selectedSalonId && salons.length > 0) {
+          const ownedSalonIds = new Set(salons.map(s => s.id));
+          movementsArray = movementsArray.filter((m: any) => ownedSalonIds.has(m.salonId));
+        }
+
+        return movementsArray;
       } catch (error) {
         return [];
       }
@@ -157,10 +186,11 @@ function StockManagementContent() {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const totalProducts = productsWithStock.length;
-    const lowStock = productsWithStock.filter((p) => p.stockLevel < 10).length;
-    const outOfStock = productsWithStock.filter((p) => p.stockLevel <= 0).length;
-    const totalValue = productsWithStock.reduce(
+    const productsArray = Array.isArray(productsWithStock) ? productsWithStock : [];
+    const totalProducts = productsArray.length;
+    const lowStock = productsArray.filter((p) => p.stockLevel < 10).length;
+    const outOfStock = productsArray.filter((p) => p.stockLevel <= 0).length;
+    const totalValue = productsArray.reduce(
       (sum, p) => sum + (p.stockLevel * (p.unitPrice || 0)),
       0
     );
@@ -931,6 +961,7 @@ function AdjustStockTab({
   canViewAll: boolean;
   onSuccess: () => void;
 }) {
+  const { user } = useAuthStore();
   const { success, error: errorToast } = useToast();
   const [formData, setFormData] = useState({
     salonId: selectedSalonId || salons[0]?.id || '',
@@ -952,18 +983,20 @@ function AdjustStockTab({
   }
 
   const { data: products = [] } = useQuery<ProductOption[]>({
-    queryKey: ['stock-levels', formData.salonId],
+    queryKey: ['stock-levels', formData.salonId, user?.id],
     queryFn: async () => {
       if (!formData.salonId) return [];
       const response = await api.get('/inventory/stock-levels', {
         params: { salonId: formData.salonId },
       });
-      return response.data || [];
+      const responseData = response.data?.data || response.data || [];
+      return Array.isArray(responseData) ? responseData : [];
     },
     enabled: !!formData.salonId,
   });
 
-  const inventoryProducts = products.filter((p) => p.isInventoryItem);
+  const productsArray = Array.isArray(products) ? products : [];
+  const inventoryProducts = productsArray.filter((p) => p.isInventoryItem);
   const selectedProduct = inventoryProducts.find((p) => p.id === formData.productId);
 
   const mutation = useMutation({

@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { UserRole } from '@/lib/permissions';
+import { UserRole, canViewAllSalons } from '@/lib/permissions';
+import { useAuthStore } from '@/store/auth-store';
 import Button from '@/components/ui/Button';
 import {
   Calculator,
@@ -102,12 +103,29 @@ function PayrollContent() {
   }, [searchParams]);
 
   // Fetch user's salons
+  const { user } = useAuthStore();
   const { data: salons = [] } = useQuery<Salon[]>({
-    queryKey: ['salons'],
+    queryKey: ['salons', user?.id],
     queryFn: async () => {
-      const response = await api.get('/salons');
-      return response.data?.data || response.data || [];
+      try {
+        const response = await api.get('/salons');
+        const salonsData = response.data?.data || response.data || [];
+        const allSalons = Array.isArray(salonsData) ? salonsData : [];
+
+        // If user can view all salons (Admin/District Leader), return all
+        if (canViewAllSalons(user?.role)) {
+          return allSalons;
+        }
+
+        // Otherwise, filter to only salons owned by the user
+        return allSalons.filter((s: any) => 
+          s.ownerId === user?.id || s.owner?.id === user?.id
+        );
+      } catch (error) {
+        return [];
+      }
     },
+    enabled: !!user,
   });
 
   // Set default salon if only one

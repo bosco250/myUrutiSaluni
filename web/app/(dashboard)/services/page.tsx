@@ -74,6 +74,27 @@ function ServicesContent() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedSalonId, setSelectedSalonId] = useState<string>('');
   
+  // Resolve image URLs
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') && 
+        typeof window !== 'undefined' && 
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+    
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -84,7 +105,18 @@ function ServicesContent() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        return response.data?.data || response.data || [];
+        const salonsData = response.data?.data || response.data || [];
+        const allSalons = Array.isArray(salonsData) ? salonsData : [];
+
+        // If user can view all salons (Admin/District Leader), return all
+        if (canViewAllSalons(user?.role)) {
+          return allSalons;
+        }
+
+        // Otherwise, filter to only salons owned by the user
+        return allSalons.filter((s: any) => 
+          s.ownerId === user?.id || s.owner?.id === user?.id
+        );
       } catch (error) {
         return [];
       }
@@ -113,7 +145,7 @@ function ServicesContent() {
   }, [salons, selectedSalonId, salonsLoading, canViewAll]);
 
   // Fetch services - only for selected salon or all owned salons (or all salons for admins)
-  const servicesQueryKey = ['services', selectedSalonId || (canViewAll ? 'all' : 'all-owned')];
+  const servicesQueryKey = ['services', selectedSalonId || (canViewAll ? 'all' : 'all-owned'), user?.id];
   const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
     queryKey: servicesQueryKey,
     queryFn: async (): Promise<Service[]> => {
@@ -121,27 +153,42 @@ function ServicesContent() {
         return [];
       }
       try {
-        // If salon is selected, filter by that salon
-        // For admins: if no salon selected, get all services
-        // For salon owners: if no salon selected, backend returns all their salons' services
-        const params = selectedSalonId ? { salonId: selectedSalonId } : {};
+        // Build query params
+        const params: any = {};
+        
+        if (selectedSalonId) {
+          params.salonId = selectedSalonId;
+        } else if (!canViewAll) {
+          // If no specific salon selected and not an admin, we still need to filter by the user's salons
+          // In some backends, this is handled automatically if salonId is omitted, 
+          // but we ensure consistency here.
+          const ownedSalonIds = salons.map(s => s.id);
+          if (ownedSalonIds.length > 0) {
+            // For now, if no salon selected, let the backend handle the 'all owned' case
+            // or we could potentially fetch them one by one (less efficient).
+            // We'll stick to the current backend behavior but make it safer.
+          }
+        }
+
         const response = await api.get('/services', { params });
         const data = response.data?.data || response.data;
         // Ensure we always return an array
-        const servicesArray = Array.isArray(data) ? data : [];
+        let servicesArray = Array.isArray(data) ? data : [];
+
+        // Extra safety: for non-admins, ensure the services returned belong to their salons
+        if (!canViewAll && !selectedSalonId && salons.length > 0) {
+          const ownedSalonIds = new Set(salons.map(s => s.id));
+          servicesArray = servicesArray.filter(s => ownedSalonIds.has(s.salonId));
+        }
+
         return servicesArray;
       } catch (error) {
-        // Always return an array, never undefined
         return [];
       }
     },
-    enabled: !!user && (salons.length > 0 || canViewAll) && !salonsLoading, // Wait for salons to load (or allow admins to view all)
-    // Don't use initialData - let it fetch from server
-    // Refetch on window focus to catch new services
+    enabled: !!user && (salons.length > 0 || canViewAll) && !salonsLoading,
     refetchOnWindowFocus: true,
-    // Keep data in cache for 5 minutes
     staleTime: 5 * 60 * 1000,
-    // Cache data for 10 minutes
     gcTime: 10 * 60 * 1000,
   });
 
@@ -453,10 +500,10 @@ function ServicesContent() {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-lg bg-surface-accent-light dark:bg-surface-accent-dark border border-border-light dark:border-border-dark flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                          {service.imageUrl ? (
+                          {service.imageUrl || (service.images && service.images.length > 0) ? (
                              // eslint-disable-next-line @next/next/no-img-element
                             <img 
-                              src={service.imageUrl} 
+                              src={getImageUrl(service.imageUrl || service.images?.[0])} 
                               alt={service.name}
                               className="w-full h-full object-cover"
                             />
@@ -585,6 +632,7 @@ function ServicesContent() {
         <ServiceModal
           service={editingService}
           salons={salons}
+          getImageUrl={getImageUrl}
           onClose={() => {
             setShowModal(false);
             setEditingService(null);
@@ -628,16 +676,36 @@ function ServiceModal({
   salons,
   onClose,
   onSuccess,
+  getImageUrl,
 }: {
   service?: Service | null;
   salons: Salon[];
   onSuccess: () => void;
   onClose: () => void;
+  getImageUrl: (url?: string) => string;
 }) {
-  // Initialize images array from service data
-  const initialImages = service?.images?.length 
-    ? service.images 
-    : (service?.imageUrl ? [service.imageUrl] : []);
+  // Initialize images array from service data correctly
+  const initialImages = useMemo(() => {
+    if (!service) return [];
+    
+    const urls: string[] = [];
+    
+    // Add primary image if exists
+    if (service.imageUrl) {
+      urls.push(service.imageUrl);
+    }
+    
+    // Add other images if they exist and aren't duplicates
+    if (service.images && Array.isArray(service.images)) {
+      service.images.forEach(img => {
+        if (img && !urls.includes(img)) {
+          urls.push(img);
+        }
+      });
+    }
+    
+    return urls;
+  }, [service]);
   
   const [formData, setFormData] = useState({
     salonId: service?.salonId || salons[0]?.id || '',
@@ -655,6 +723,11 @@ function ServiceModal({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Keep state in sync with prop changes
+  useEffect(() => {
+    setImageUrls(initialImages);
+  }, [initialImages]);
   
   const MAX_IMAGES = 5;
 
@@ -704,23 +777,28 @@ function ServiceModal({
       uploadFormData.append('file', file);
 
       const response = await api.post('/uploads/service', uploadFormData, {
-        headers: {
-          'Content-Type': undefined, // Let browser set boundary
-        },
+        headers: { 'Content-Type': undefined },
       });
 
-      if (response.data && response.data.url) {
-        setImageUrls((prev) => [...prev, response.data.url]);
+      const resData = response.data;
+      const fileRef = resData?.url || resData?.id || resData?.data?.url || resData?.data?.id;
+
+      if (fileRef) {
+        const finalUrl = (typeof fileRef === 'string' && fileRef.startsWith('http')) 
+          ? fileRef 
+          : (resData?.url || `/uploads/${resData?.id || resData?.data?.id}`);
+          
+        setImageUrls((prev) => [...prev, finalUrl]);
+      } else {
+        throw new Error('Invalid server response format');
       }
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError('Failed to upload image. Please try again.');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to upload image';
+      setError(errorMsg);
+      console.error('Image upload failed:', err);
     } finally {
       setUploading(false);
-      // Reset input so same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -996,8 +1074,17 @@ function ServiceModal({
                   <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4">Media Portfolio</h3>
                   <div className="grid grid-cols-4 gap-2">
                      {imageUrls.map((url, idx) => (
-                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-border-light dark:border-border-dark group">
-                           <img src={url} alt="Service" className="w-full h-full object-cover" />
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-border-light dark:border-border-dark group bg-black/[0.02] dark:bg-white/[0.02]">
+                           <img 
+                              src={getImageUrl(url)} 
+                              alt="Service" 
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                           />
+                           {idx === 0 && imageUrls.length > 0 && (
+                             <div className="absolute top-1 left-1 bg-primary text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm z-10">
+                               Primary
+                             </div>
+                           )}
                            <button
                               type="button"
                               onClick={() => removeImage(idx)}

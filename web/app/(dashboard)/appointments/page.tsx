@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { UserRole } from '@/lib/permissions';
+import { UserRole, canViewAllSalons } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import {
   Calendar,
@@ -220,15 +220,27 @@ function AppointmentsContent() {
   });
 
   const { data: salons = [] } = useQuery({
-    queryKey: ['salons'],
+    queryKey: ['salons', user?.id],
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        return (response.data?.data || response.data || []) as Array<{ id: string; name: string }>;
+        const salonsData = response.data?.data || response.data || [];
+        const allSalons = Array.isArray(salonsData) ? salonsData : [];
+
+        // If user can view all salons (Admin/District Leader), return all
+        if (canViewAllSalons(user?.role)) {
+          return allSalons;
+        }
+
+        // Otherwise, filter to only salons owned by the user
+        return allSalons.filter((s: any) => 
+          s.ownerId === user?.id || s.owner?.id === user?.id
+        );
       } catch (error) {
         return [];
       }
     },
+    enabled: !!user,
   });
 
   // Filter appointments

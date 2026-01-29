@@ -53,7 +53,7 @@ export default function SalonsPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
-  const { isSalonOwner, canManageSalons, hasAnyRole, user } = usePermissions();
+  const { isSalonOwner, canManageSalons, canViewAllSalons, hasAnyRole, user } = usePermissions();
   const router = useRouter();
 
   const statusColors: Record<string, string> = {
@@ -143,6 +143,16 @@ export default function SalonsPage() {
   // Filter salons
   const filteredSalons =
     salons?.filter((salon) => {
+      // Role-based filtering: Non-admin users (like salon owners) should only see their own salons
+      const canViewAll = canViewAllSalons();
+      const isOwner =
+        salon.ownerId === user?.id ||
+        salon.owner?.id === user?.id;
+
+      if (!canViewAll && !isOwner) {
+        return false;
+      }
+
       const matchesSearch =
         salon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         salon.city.toLowerCase().includes(searchQuery.toLowerCase()) ||

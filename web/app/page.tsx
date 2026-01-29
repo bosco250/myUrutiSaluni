@@ -108,40 +108,40 @@ export default function Home() {
 
           {/* Center Links */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/salons/browse" className="text-[10px] font-black uppercase tracking-widest text-text-light/40 hover:text-primary transition-colors">
-              Directory
+            <Link href="/salons/browse" className="text-[10px] font-black uppercase tracking-widest text-text-light/40 dark:text-text-dark/40 hover:text-primary transition-colors">
+              Find a Salon
             </Link>
             <button 
               onClick={() => document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' })}
-              className="text-[10px] font-black uppercase tracking-widest text-text-light/40 hover:text-primary transition-colors"
+              className="text-[10px] font-black uppercase tracking-widest text-text-light/40 dark:text-text-dark/40 hover:text-primary transition-colors"
             >
-              Features
+              Explore Tools
             </button>
             <button 
               onClick={() => document.getElementById('roadmap-section')?.scrollIntoView({ behavior: 'smooth' })}
-              className="text-[10px] font-black uppercase tracking-widest text-text-light/40 hover:text-primary transition-colors"
+              className="text-[10px] font-black uppercase tracking-widest text-text-light/40 dark:text-text-dark/40 hover:text-primary transition-colors"
             >
-              Roadmap
+              Future Journey
             </button>
           </div>
 
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowSearch(true)}
-              className="p-2 text-text-light/40 hover:text-primary transition-colors"
+              className="p-2 text-text-light/40 dark:text-text-dark/40 hover:text-primary transition-colors"
               title="Search (⌘K)"
             >
               <Search className="w-4 h-4" />
             </button>
             <div className="w-px h-4 bg-border-light dark:border-border-dark hidden md:block" />
-            <Link href="/login" className="text-[10px] font-black uppercase tracking-widest text-text-light/50 hover:text-primary transition-colors">
-              Sign In
+            <Link href="/login" className="text-[10px] font-black uppercase tracking-widest text-text-light/50 dark:text-text-dark/50 hover:text-primary transition-colors">
+              Portal Access
             </Link>
             <Button
               onClick={() => document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' })}
               className="bg-primary hover:bg-primary/90 text-white text-[11px] font-bold px-5 h-9 rounded-xl border-none transition-all active:scale-95"
             >
-              Apply Now
+              Partner with Us
             </Button>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function Home() {
                 className="h-12 px-8 rounded-sm text-sm font-bold bg-slate-950 dark:bg-white text-white dark:text-slate-950 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5"
               >
                 <BookOpen className="w-5 h-5" />
-                Book Service
+                Find an Appointment
               </Button>
               <Button
                 variant="outline"
@@ -187,7 +187,7 @@ export default function Home() {
                 className="h-12 px-8 rounded-sm text-sm border-[1px] font-bold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5"
               >
                 <UserPlus className="w-5 h-5" />
-                Join Membership
+                Register Salon
               </Button>
             </div>
 
@@ -195,12 +195,12 @@ export default function Home() {
             <div className="flex items-center gap-8 pt-4">
               <div className="flex flex-col">
                 <span className="text-2xl font-black tracking-tighter">2.4k+</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-text-light/30">Active Salons</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-text-light/30 dark:text-text-dark/30">Active Salons</span>
               </div>
               <div className="w-px h-8 bg-border-light dark:border-border-dark" />
               <div className="flex flex-col">
                 <span className="text-2xl font-black tracking-tighter">98%</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-text-light/30">Client Joy</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-text-light/30 dark:text-text-dark/30">Client Joy</span>
               </div>
             </div>
 
@@ -306,7 +306,7 @@ export default function Home() {
                 <h3 className="text-xl font-black text-text-light dark:text-text-dark tracking-tight mb-3">{feature.title}</h3>
                 <p className="text-xs font-medium text-text-light/50 dark:text-text-dark/50 leading-relaxed min-h-[4.5em]">{feature.desc}</p>
                 <div className="mt-4 flex items-center gap-2 text-primary opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Learn more</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">See how it works</span>
                   <ChevronRight className="w-3 h-3" />
                 </div>
               </div>
@@ -319,7 +319,7 @@ export default function Home() {
               <div className="relative z-10 flex-1 text-center md:text-left space-y-4">
                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 dark:bg-slate-900/10 rounded-full border border-white/20 dark:border-slate-900/20 w-fit mx-auto md:mx-0">
                     <Zap className="w-3 h-3 text-white dark:text-slate-900" />
-                    <span className="text-[9px] font-black text-white dark:text-slate-900 uppercase tracking-widest">Instant Activation</span>
+                    <span className="text-[9px] font-black text-white dark:text-slate-900 uppercase tracking-widest">Simple Setup</span>
                  </div>
                  <h3 className="text-2xl md:text-3xl font-black text-white dark:text-slate-950 tracking-tighter">
                     Ready to modernize your salon?
@@ -334,7 +334,7 @@ export default function Home() {
                     onClick={() => document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' })}
                     className="bg-white dark:bg-slate-950 text-slate-950 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-900 text-sm font-bold px-10 h-14 rounded-2xl border-none transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
                   >
-                    <span>Start Application</span>
+                    <span>Begin My Application</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
               </div>
@@ -368,7 +368,7 @@ export default function Home() {
             <div className="max-w-2xl text-center lg:text-left">
                <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mb-4">
                   <CheckCircle2 className="w-3 h-3 text-primary" />
-                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">Beyond the Application</span>
+                  <span className="text-[9px] font-black text-primary uppercase tracking-widest">What Happens Next?</span>
                </div>
                <h2 className="text-3xl md:text-5xl font-black text-text-light dark:text-text-dark tracking-tighter mb-4 leading-none">
                   Your Journey to <span className="text-primary italic">Digital Excellence.</span>
@@ -381,11 +381,11 @@ export default function Home() {
             <div className="hidden lg:flex items-center gap-12 pb-2">
                 <div className="text-center group">
                   <p className="text-3xl font-black tracking-tighter text-text-light dark:text-text-dark group-hover:text-primary transition-colors">24h</p>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-text-light/30">Review Time</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-text-light/30 dark:text-text-dark/30">Review Time</p>
                 </div>
                 <div className="text-center group">
                   <p className="text-3xl font-black tracking-tighter text-text-light dark:text-text-dark group-hover:text-primary transition-colors">100%</p>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-text-light/30">Secure Data</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-text-light/30 dark:text-text-dark/30">Secure Data</p>
                 </div>
             </div>
           </div>

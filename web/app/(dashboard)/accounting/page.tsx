@@ -48,6 +48,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useEmployeePermissions } from '@/hooks/useEmployeePermissions';
 import { EmployeePermission } from '@/lib/employee-permissions';
 import { useToast } from '@/components/ui/Toast';
+import { canViewAllSalons } from '@/lib/permissions';
 
 // --- Types ---
 interface FinancialSummary {
@@ -279,11 +280,18 @@ export default function AccountingPage() {
     queryFn: async () => {
       try {
         const response = await api.get('/salons');
-        const allSalons = response.data || [];
-        if (user?.role === 'salon_owner') {
-          return allSalons.filter((s: Salon) => s.ownerId === user.id);
+        const salonsData = response.data?.data || response.data || [];
+        const allSalons = Array.isArray(salonsData) ? salonsData : [];
+
+        // If user can view all salons (Admin/District Leader), return all
+        if (canViewAllSalons(user?.role)) {
+          return allSalons;
         }
-        return allSalons;
+
+        // Otherwise, filter to only salons owned by the user
+        return allSalons.filter((s: any) => 
+          s.ownerId === user?.id || s.owner?.id === user?.id
+        );
       } catch (error) {
         console.error("Error fetching salons", error);
         return [];
@@ -308,10 +316,15 @@ export default function AccountingPage() {
   const { data: categories = [] } = useQuery<ExpenseCategory[]>({
     queryKey: ['expense-categories', salonId],
     queryFn: async () => {
-      const res = await api.get('/accounting/expense-categories', {
-        params: { salonId },
-      });
-      return res.data;
+      try {
+        const res = await api.get('/accounting/expense-categories', {
+          params: { salonId },
+        });
+        const categoriesData = res.data?.data || res.data || [];
+        return Array.isArray(categoriesData) ? categoriesData : [];
+      } catch (error) {
+        return [];
+      }
     },
     enabled: !!salonId,
   });
@@ -320,12 +333,23 @@ export default function AccountingPage() {
   const { data: summary, isLoading: isLoadingSummary } = useQuery<FinancialSummary>({
     queryKey: ['financial-summary', salonId, dateRange, filterType, filterCategoryId],
     queryFn: async () => {
-       const params: any = { salonId, ...dateRange };
-       if (filterType !== 'all') params.type = filterType;
-       if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
+       try {
+         const params: any = { salonId, ...dateRange };
+         if (filterType !== 'all') params.type = filterType;
+         if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
 
-       const res = await api.get('/accounting/financial-summary', { params });
-       return res.data;
+         const res = await api.get('/accounting/financial-summary', { params });
+         // Handle wrapped response { data: { ... } } or direct { ... }
+         return res.data?.data || res.data || { 
+           totalRevenue: 0, 
+           totalExpenses: 0, 
+           netIncome: 0, 
+           salesCount: 0, 
+           expenseCount: 0 
+         };
+       } catch (error) {
+         return { totalRevenue: 0, totalExpenses: 0, netIncome: 0, salesCount: 0, expenseCount: 0 };
+       }
     },
     enabled: !!salonId
   });
@@ -576,7 +600,7 @@ export default function AccountingPage() {
                   onChange={(e) => setFilterCategoryId(e.target.value)}
                 >
                   <option value="all">All Categories</option>
-                  {categories.map((c: ExpenseCategory) => (
+                  {Array.isArray(categories) && categories.map((c: ExpenseCategory) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                </select>
@@ -678,8 +702,13 @@ function FinancialCharts({ salonId, dateRange }: { salonId: string; dateRange: a
   const { data: chartData, isLoading } = useQuery({
      queryKey: ['financial-charts', salonId, dateRange],
      queryFn: async () => {
-         const res = await api.get('/accounting/charts/daily', { params: { salonId, ...dateRange }});
-         return res.data || [];
+         try {
+           const res = await api.get('/accounting/charts/daily', { params: { salonId, ...dateRange }});
+           const data = res.data?.data || res.data || [];
+           return Array.isArray(data) ? data : [];
+         } catch (error) {
+            return [];
+         }
       },
       enabled: !!salonId
   });
@@ -803,8 +832,12 @@ function OverviewTab({
   const { data: expenseSummary } = useQuery({
     queryKey: ['expense-summary', salonId, dateRange],
     queryFn: async () => {
-       const res = await api.get('/accounting/expense-summary', { params: { salonId, ...dateRange }});
-       return res.data;
+       try {
+         const res = await api.get('/accounting/expense-summary', { params: { salonId, ...dateRange }});
+         return res.data?.data || res.data || { byCategory: [] };
+       } catch (error) {
+          return { byCategory: [] };
+       }
     },
     enabled: !!salonId
   });
@@ -914,24 +947,60 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
   const { data: expensesData, isLoading } = useQuery({
     queryKey: ['expenses', salonId, dateRange, selectedCategory, page],
     queryFn: async () => {
-      const p = { 
-        salonId, 
-        ...dateRange, 
-        page, 
-        limit,
-        ...(selectedCategory && { categoryId: selectedCategory })
-      };
-      const res = await api.get('/accounting/expenses', { params: p });
-      return res.data;
+      try {
+        const p = { 
+          salonId, 
+          ...dateRange, 
+          page, 
+          limit,
+          ...(selectedCategory && { categoryId: selectedCategory })
+        };
+        console.log('[DEBUG] Fetching expenses with params:', p);
+        const res = await api.get('/accounting/expenses', { params: p });
+        
+        const raw = res.data;
+        console.log('[DEBUG] Expenses raw response:', raw);
+        
+        // Normalize response to { data: [], total: 0 }
+        let list: Expense[] = [];
+        let total = 0;
+
+        if (Array.isArray(raw)) {
+            list = raw;
+            total = raw.length;
+        } else if (raw?.data?.data && Array.isArray(raw.data.data)) {
+             // Case: { data: { data: [Array], ... } } - This matches your log
+             list = raw.data.data;
+             total = raw.data.total || raw.data.count || raw.data.meta?.total || list.length;
+        } else if (raw?.data && Array.isArray(raw.data)) {
+             // Case: { data: [Array] }
+             list = raw.data;
+             total = raw.total || raw.count || raw.meta?.total || list.length;
+        } else if (raw?.expenses && Array.isArray(raw.expenses)) {
+             list = raw.expenses;
+             total = raw.total || raw.count || raw.meta?.total || raw.expenses.length;
+        }
+        
+        console.log('[DEBUG] Normalized expenses list:', list);
+        return { data: list, total };
+      } catch (error) {
+        console.error('[DEBUG] Error fetching expenses:', error);
+        return { data: [], total: 0 };
+      }
     },
     enabled: !!salonId
   });
 
-  const { data: categories } = useQuery<ExpenseCategory[]>({
+  const { data: categories = [] } = useQuery<ExpenseCategory[]>({
      queryKey: ['expense-categories', salonId],
      queryFn: async () => {
-        const res = await api.get('/accounting/expense-categories', { params: { salonId } });
-        return res.data;
+       try {
+         const res = await api.get('/accounting/expense-categories', { params: { salonId } });
+         const categoriesData = res.data?.data || res.data || [];
+         return Array.isArray(categoriesData) ? categoriesData : [];
+       } catch (error) {
+         return [];
+       }
      },
      enabled: !!salonId
   });
@@ -999,7 +1068,7 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                className="w-full rounded-xl border border-border-light bg-surface-light px-3 py-2 text-xs font-bold text-text-light transition focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/10 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark sm:w-auto outline-none"
              >
                 <option value="">All Categories</option>
-                {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {Array.isArray(categories) && categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
              </select>
           </div>
 
@@ -1141,7 +1210,7 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
                       <label htmlFor="expense-category" className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Category *</label>
                       <select id="expense-category" name="categoryId" required className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark outline-none">
                          <option value="">Select...</option>
-                         {categories?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                         {Array.isArray(categories) && categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                    </div>
 
@@ -1200,11 +1269,16 @@ function AccountsTab({ salonId }: { salonId: string }) {
     },
   });
 
-  const { data: categories, isLoading } = useQuery<ExpenseCategory[]>({
+  const { data: categories = [], isLoading } = useQuery<ExpenseCategory[]>({
       queryKey: ['expense-categories', salonId],
       queryFn: async () => {
-         const res = await api.get('/accounting/expense-categories', { params: { salonId } });
-         return res.data;
+         try {
+            const res = await api.get('/accounting/expense-categories', { params: { salonId } });
+            const categoriesData = res.data?.data || res.data || [];
+            return Array.isArray(categoriesData) ? categoriesData : [];
+         } catch (error) {
+            return [];
+         }
       },
       enabled: !!salonId
   });
@@ -1225,7 +1299,7 @@ function AccountsTab({ salonId }: { salonId: string }) {
          </div>
        ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-             {categories?.map((cat) => (
+             {Array.isArray(categories) && categories.map((cat) => (
                 <div key={cat.id} className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition-all">
                    <div className="flex items-center justify-between mb-3">
                       <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
