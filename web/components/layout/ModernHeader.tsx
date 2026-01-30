@@ -46,7 +46,7 @@ function ModernHeaderComponent() {
 
   return (
     <>
-      <header className="sticky top-0 z-[100] bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-b border-border-light dark:border-border-dark">
+      <header className="sticky top-0 z-[50] bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-b border-border-light dark:border-border-dark">
         <div className="px-6 sm:px-10 py-2.5">
           <div className="flex items-center justify-between gap-6">
             {/* Left: Logo & Search */}

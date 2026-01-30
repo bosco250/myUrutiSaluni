@@ -49,6 +49,12 @@ export class WalletsController {
     });
   }
 
+  @Get(':walletId/summary')
+  @ApiOperation({ summary: 'Get wallet summary stats' })
+  async getSummary(@Param('walletId') walletId: string) {
+    return this.walletsService.getWalletSummary(walletId);
+  }
+
   @Get('transactions/:transactionId')
   @ApiOperation({ summary: 'Get wallet transaction by ID' })
   getTransactionById(@Param('transactionId') transactionId: string) {

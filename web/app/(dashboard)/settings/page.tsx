@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore } from '@/store/auth-store';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   User, 
   Bell, 
@@ -549,54 +550,104 @@ function SelectGroup({ label, name, defaultValue, value, onChange, options, disa
 }
 
 function NotificationSettings() {
-  const { success } = useToast();
-  // Mock state - in real app, fetch from backend
-  const [settings, setSettings] = useState({
-    email_appointments: true,
-    sms_appointments: true,
-    email_payments: true,
-    sms_security: true,
-    email_updates: false,
-    push_marketing: false
+  const { success, error: toastError } = useToast();
+  const { user } = useAuthStore();
+  const [isTesting, setIsTesting] = useState(false);
+
+  // Fetch real preferences from backend
+  const { data: preferences = [], isLoading, refetch } = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: async () => {
+      const response = await api.get('/notifications/preferences');
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      return Array.isArray(resData) ? resData : [];
+    }
   });
 
-  const toggle = (key: keyof typeof settings) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
-    success('Preference updated');
+  const updatePreferenceMutation = useMutation({
+    mutationFn: async ({ type, channel, enabled }: { type: string, channel: string, enabled: boolean }) => {
+      await api.patch('/notifications/preferences', { type, channel, enabled });
+    },
+    onSuccess: () => {
+      success('Preference updated');
+      refetch();
+    },
+    onError: (err: any) => {
+      toastError(err.response?.data?.message || 'Failed to update preference');
+    }
+  });
+
+  const isEnabled = (type: string, channel: string) => {
+    const pref = preferences.find((p: any) => p.type === type && p.channel === channel);
+    // Default to true if no preference exists yet (opt-in by default)
+    return pref ? pref.enabled : true;
+  };
+
+  const handleToggle = (type: string, channel: string) => {
+    updatePreferenceMutation.mutate({
+      type,
+      channel,
+      enabled: !isEnabled(type, channel)
+    });
+  };
+
+  const handleTestNotification = async () => {
+    setIsTesting(true);
+    try {
+      await api.post('/notifications/test-all-channels');
+      success('Test notification sent! Check your inbox, phone, and bell.');
+    } catch (error: any) {
+      console.error('Failed to send test notification:', error);
+      toastError('Failed to send test notification');
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const sections = [
     {
+      title: 'Global Preferences',
+      icon: BellRing,
+      items: [
+        { type: 'system_alert', channel: 'in_app', label: 'In-App Notifications', desc: 'Receive real-time updates in the dashboard' },
+        { type: 'system_alert', channel: 'push', label: 'Push Notifications', desc: 'Get alerts on your mobile device' },
+        { type: 'system_alert', channel: 'email', label: 'System Alerts (Email)', desc: 'Receive critical system announcements via email' }
+      ]
+    },
+    {
       title: 'Activity & Scheduling',
       icon: CalendarDays,
       items: [
-        { key: 'email_appointments', label: 'Appointment Reminders', desc: 'Get notified via email for upcoming bookings', type: 'email' },
-        { key: 'sms_appointments', label: 'SMS Alerts', desc: 'Receive instant text messages for urgent changes', type: 'sms' }
+        { type: 'appointment_reminder', channel: 'email', label: 'Appointment Reminders (Email)', desc: 'Get notified via email for upcoming bookings' },
+        { type: 'appointment_reminder', channel: 'sms', label: 'Appointment Reminders (SMS)', desc: 'Receive instant text messages for urgent changes' },
+        { type: 'appointment_booked', channel: 'in_app', label: 'New Bookings', desc: 'Alert when a new appointment is scheduled' }
       ]
     },
     {
       title: 'Financial Alerts',
       icon: CreditCard,
       items: [
-        { key: 'email_payments', label: 'Payment Confirmations', desc: 'Receipts and transaction updates', type: 'email' }
-      ]
-    },
-    {
-      title: 'Security',
-      icon: Shield,
-      items: [
-        { key: 'sms_security', label: '2FA & Login Alerts', desc: 'Protect your account with login notifications', type: 'sms' }
+        { type: 'payment_received', channel: 'email', label: 'Payment Confirmations', desc: 'Receipts and transaction updates via email' },
+        { type: 'commission_earned', channel: 'in_app', label: 'Commissions', desc: 'Alert when you earn a new commission' }
       ]
     },
     {
       title: 'App Updates',
       icon: Megaphone,
       items: [
-        { key: 'email_updates', label: 'Product News', desc: 'New features and system improvements', type: 'email' },
-        { key: 'push_marketing', label: 'Promotions', desc: 'Occasional offers and discounts', type: 'push' }
+        { type: 'salon_update', channel: 'email', label: 'Product News', desc: 'New features and system improvements' }
       ]
     }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-text-light/60 dark:text-text-dark/60 font-medium">Loading your preferences...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -606,8 +657,18 @@ function NotificationSettings() {
                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Notification Preferences</h2>
                <p className="text-xs text-gray-500 max-w-md">Manage how you receive updates. Critical security alerts will always be sent.</p>
            </div>
-           {/* Mock Save Button */}
-           <Button variant="outline" size="sm" className="hidden md:flex">Reset to Default</Button>
+           <div className="flex items-center gap-2">
+             <Button 
+               variant="outline" 
+               size="sm" 
+               onClick={handleTestNotification} 
+               disabled={isTesting}
+               className="text-[10px] font-bold h-8"
+             >
+               {isTesting ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Megaphone className="w-3 h-3 mr-2" />}
+               Send Test
+             </Button>
+           </div>
        </div>
 
        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -621,14 +682,15 @@ function NotificationSettings() {
                    </div>
                    <div className="space-y-3">
                        {section.items.map((item) => (
-                           <div key={item.key} className="flex items-center justify-between group">
+                           <div key={`${item.type}-${item.channel}`} className="flex items-center justify-between group">
                                <div className="pr-4">
                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">{item.label}</p>
                                    <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">{item.desc}</p>
                                </div>
                                <Switch 
-                                  checked={(settings as any)[item.key]} 
-                                  onChange={() => toggle(item.key as any)} 
+                                  checked={isEnabled(item.type, item.channel)} 
+                                  onChange={() => handleToggle(item.type, item.channel)} 
+                                  disabled={updatePreferenceMutation.isPending}
                                />
                            </div>
                        ))}
@@ -664,18 +726,42 @@ function Switch({ checked, onChange, disabled }: any) {
 }
 
 function SecuritySettings() {
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const handleSubmit = (e: React.FormEvent) => { 
-    e.preventDefault(); 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { 
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const oldPassword = formData.get('oldPassword') as string;
+    const newPassword = formData.get('newPassword') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    if (!newPassword || newPassword.length < 8) {
+      toastError('New password must be at least 8 characters long');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toastError('New passwords do not match');
+      return;
+    }
+
     setIsLoading(true); 
-    // Mock API call
-    setTimeout(() => {
-        setIsLoading(false);
-        success('Password updated successfully');
-    }, 1000); 
+    try {
+      await api.post('/auth/change-password', {
+        oldPassword,
+        newPassword
+      });
+      success('Password updated successfully');
+      // Reset form
+      e.currentTarget.reset();
+    } catch (error: any) {
+      console.error('Failed to update password:', error);
+      toastError(error?.response?.data?.message || 'Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -694,7 +780,7 @@ function SecuritySettings() {
               <div className="bg-white dark:bg-gray-950/50 border border-gray-300 dark:border-gray-800 rounded-xl p-6 shadow-sm">
                   <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800/50">
                       <div className="p-2 bg-primary/10 rounded-full text-primary">
-                          <Key className="w-5 h-5" />
+                           <Key className="w-5 h-5" />
                       </div>
                       <div>
                           <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide">Change Password</h3>
@@ -706,22 +792,28 @@ function SecuritySettings() {
                     <div className="space-y-4">
                         <InputGroup 
                            label="Current Password" 
+                           name="oldPassword"
                            type={showPassword ? 'text' : 'password'} 
                            icon={Key} 
                            placeholder="Enter current password"
+                           required
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <InputGroup 
                               label="New Password" 
+                              name="newPassword"
                               type={showPassword ? 'text' : 'password'} 
                               icon={Shield} 
                               placeholder="Min 8 chars"
+                              required
                            />
                            <InputGroup 
                               label="Confirm Password" 
+                              name="confirmPassword"
                               type={showPassword ? 'text' : 'password'} 
                               icon={Shield} 
                               placeholder="Repeat password"
+                              required
                            />
                         </div>
                     </div>
@@ -773,33 +865,88 @@ function SecuritySettings() {
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                       <Laptop className="w-4 h-4 text-gray-400" /> Active Sessions
                   </h3>
-                  <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
-                          <div className="flex items-center gap-3">
-                              <Laptop className="w-4 h-4 text-primary" />
-                              <div>
-                                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100">Windows PC</p>
-                                  <p className="text-[10px] text-gray-400">Kigali, RW • Current Session</p>
-                              </div>
-                          </div>
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 opacity-60">
-                          <div className="flex items-center gap-3">
-                              <Smartphone className="w-4 h-4 text-gray-500" />
-                              <div>
-                                  <p className="text-xs font-bold text-gray-900 dark:text-gray-100">iPhone 14</p>
-                                  <p className="text-[10px] text-gray-400">Kigali, RW • 2h ago</p>
-                              </div>
-                          </div>
-                          <Button variant="outline" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"><LogOut className="w-3.5 h-3.5" /></Button>
-                      </div>
-                  </div>
+                  
+                  <ActiveSessionsList />
               </div>
           </div>
        </div>
     </div>
   );
+}
+
+function ActiveSessionsList() {
+    const { success, error: toastError } = useToast();
+    
+    const { data: sessions = [], isLoading, refetch } = useQuery({
+        queryKey: ['active-sessions'],
+        queryFn: async () => {
+            const response = await api.get('/auth/sessions');
+            const resData = response.data.data !== undefined ? response.data.data : response.data;
+            return Array.isArray(resData) ? resData : [];
+        }
+    });
+
+    const revokeMutation = useMutation({
+        mutationFn: async (sessionId: string) => {
+            await api.delete(`/auth/sessions/${sessionId}`);
+        },
+        onSuccess: () => {
+            success('Session revoked and logged out');
+            refetch();
+        },
+        onError: (err: any) => {
+            toastError(err.response?.data?.message || 'Failed to revoke session');
+        }
+    });
+
+    if (isLoading) {
+        return (
+            <div className="space-y-4">
+                {[1, 2].map(i => (
+                    <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+                ))}
+            </div>
+        );
+    }
+
+    if (sessions.length === 0) {
+        return (
+            <div className="text-center py-6 border border-dashed border-gray-200 dark:border-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 font-medium">No other active sessions</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            {sessions.map((session: any) => (
+                <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                        {session.deviceType?.toLowerCase().includes('mobile') ? 
+                            <Smartphone className="w-4 h-4 text-primary" /> : 
+                            <Laptop className="w-4 h-4 text-primary" />
+                        }
+                        <div>
+                            <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{session.deviceType}</p>
+                            <p className="text-[10px] text-gray-400">
+                                {session.browser} • {session.ipAddress} • {new Date(session.lastActive).toLocaleDateString()}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={revokeMutation.isPending}
+                        onClick={() => revokeMutation.mutate(session.id)}
+                        className="h-7 px-2 text-[10px] font-bold text-gray-500 hover:text-red-500"
+                    >
+                        {revokeMutation.isPending ? '...' : <LogOut className="w-3.5 h-3.5" />}
+                    </Button>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 function SystemConfigurations() {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PayrollService } from './payroll.service';
 import { PayrollController } from './payroll.controller';
@@ -9,6 +9,7 @@ import { Commission } from '../commissions/entities/commission.entity';
 import { CommissionsModule } from '../commissions/commissions.module';
 import { SalonsModule } from '../salons/salons.module';
 import { WalletsModule } from '../wallets/wallets.module';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { WalletsModule } from '../wallets/wallets.module';
     CommissionsModule,
     SalonsModule,
     WalletsModule,
+    forwardRef(() => AccountingModule),
   ],
   controllers: [PayrollController],
   providers: [PayrollService],

@@ -1,0 +1,558 @@
+URUTI SALUNI - FUNCTIONAL REQUIREMENTS
+========================================
+Version 1.0 | January 2026 | Production-Ready
+
+================================================================================
+USER ROLES & PERMISSIONS
+================================================================================
+
+FRS-001: The system SHALL implement a hierarchical role structure with the following roles in descending order of authority: SUPER_ADMIN (Level 1), ASSOCIATION_ADMIN (Level 2), DISTRICT_LEADER (Level 3), SALON_OWNER (Level 4), SALON_EMPLOYEE (Level 5), CUSTOMER (Level 6).
+
+FRS-002: Guest users SHALL be able to browse the public salon directory, view salon detail pages, view service listings and prices, view salon location on map, access login and registration pages, and verify membership numbers publicly.
+
+FRS-003: Guest users SHALL NOT be able to book appointments, add salons to favorites, access any dashboard features, or view customer-specific information.
+
+FRS-004: Customers SHALL be able to perform all guest actions, book appointments at any salon, view personal appointment history, manage favorite salons, update personal profile, and view and manage notification preferences.
+
+FRS-005: Customers SHALL NOT be able to access salon management features, view other customers' data, manage employees or services, or access financial reports.
+
+FRS-006: Salon employees SHALL be able to view assigned salon's appointment schedule, update appointment status for assigned appointments, view customer information for their salon, and record service completion.
+
+FRS-007: Salon employees SHALL NOT be able to create or delete services, manage other employees, access financial data, or modify salon settings.
+
+FRS-008: Salon owners SHALL be able to manage their owned salon(s), create/edit/delete services, manage employees (add/edit/remove), view and manage all appointments, access salon financial reports, manage customer records, apply for association membership, and configure salon settings.
+
+FRS-009: Salon owners SHALL NOT be able to access other salon owners' data, approve membership applications, manage system-wide settings, or access loan product configuration.
+
+FRS-010: District leaders SHALL be able to view all salons within their assigned district, generate district-level reports, review loan applications for their district, and monitor compliance within their region.
+
+FRS-011: Association admins SHALL be able to manage all salons in the association, approve/reject membership applications, manage users and roles, configure loan products, access all financial reports, and manage system notifications.
+
+FRS-012: Super admins SHALL have unrestricted access to all system features including all association admin capabilities, system configuration, multi-association oversight, and user role assignment at any level.
+
+FRS-013: The system SHALL implement permission inheritance where higher roles automatically inherit all permissions of lower roles.
+
+FRS-014: The system SHALL prevent users from assigning roles higher than their own level.
+
+================================================================================
+AUTHENTICATION & AUTHORIZATION
+================================================================================
+
+FRS-015: The registration form SHALL require Full Name (minimum 2 characters), Email (valid format, unique in system), Phone (optional, valid format), Password (minimum 6 characters), and Role Selection (customer, salon_owner, or salon_employee).
+
+FRS-016: Upon successful registration, the system SHALL create the user account, generate authentication token, automatically log in the user, redirect customer role to salon browse page, and redirect other roles to dashboard.
+
+FRS-017: The system SHALL display an error message if email already exists in the system, password does not meet minimum requirements, or required fields are empty.
+
+FRS-018: The login form SHALL require Email and Password fields.
+
+FRS-019: Upon successful login, the system SHALL generate and store authentication token, store user session data, and redirect based on user role (Customers to /salons/browse, all other roles to /dashboard).
+
+FRS-020: The system SHALL support redirect parameters for post-login navigation when users attempt to access protected resources while unauthenticated.
+
+FRS-021: The forgot password flow SHALL accept user email address, validate email exists in system, send password reset email with secure token, and display confirmation message.
+
+FRS-022: The reset password page SHALL validate the reset token, require new password entry, require password confirmation, display error if token is invalid or expired, and redirect to login upon successful reset.
+
+FRS-023: Password reset tokens SHALL expire after 1 hour.
+
+FRS-024: The system SHALL maintain user session using JWT tokens stored in browser localStorage.
+
+FRS-025: The system SHALL automatically inject authentication tokens in all API requests.
+
+FRS-026: When receiving a 401 (Unauthorized) response, the system SHALL clear all session data, redirect user to login page, and display session expired message.
+
+FRS-027: The logout function SHALL clear authentication token, clear user data from storage, and redirect to home page.
+
+FRS-028: The system SHALL display appropriate error messages: "Invalid email or password" for invalid credentials, "Your account has been disabled" for disabled accounts, "No account found with this email" for email not found, "Unable to connect. Please try again." for network errors.
+
+================================================================================
+SALON BROWSING & DISCOVERY
+================================================================================
+
+FRS-029: The salon browse page SHALL be accessible without authentication at /salons/browse.
+
+FRS-030: The system SHALL display salons in three view modes: Grid (4 columns desktop, 2 tablet, 1 mobile - 12 items per page), List (single column with thumbnails - 8 items per page), Map (interactive map with markers - all visible in viewport).
+
+FRS-031: The view mode toggle SHALL persist the user's selection within the session.
+
+FRS-032: The search bar SHALL filter salons across salon name, description, address, city, district, country, phone number, email, website, service names, service descriptions, and service categories.
+
+FRS-033: Search filtering SHALL be case-insensitive.
+
+FRS-034: Search SHALL filter results in real-time as the user types.
+
+FRS-035: The search bar SHALL expand with animation when focused, display a clear button when text is entered, and collapse when empty and unfocused.
+
+FRS-036: The system SHALL provide category filter buttons: All, Hair, Nails, Makeup, Spa, Barber.
+
+FRS-037: Category filtering SHALL filter based on service categories within each salon.
+
+FRS-038: Only one category MAY be selected at a time.
+
+FRS-039: The location dropdown SHALL display "All Locations" as default option, list all unique cities from available salons, and sort cities alphabetically.
+
+FRS-040: Selecting a location SHALL filter salons to only those in the selected city.
+
+FRS-041: The system SHALL provide sort options: Trending Now ((reviewCount x 0.3) + (rating x 10) descending), Trending Today, Highest Rated, Most Reviewed, Newest (creation date descending), Name (A-Z alphabetical).
+
+FRS-042: Favorited salons SHALL always appear before non-favorited salons, regardless of the selected sort option.
+
+FRS-043: Each salon card in grid view SHALL display primary image (or placeholder), salon name, location (district, city), distance from user (if location available), rating with star icon, review count, status badges (Top Rated, New, Trending), favorite heart button, service preview (up to 2 services), and "Explore & Book" button.
+
+FRS-044: The "Top Rated" badge SHALL appear when salon rating is 4.5 or higher.
+
+FRS-045: The "New" badge SHALL appear when salon was created within the last 30 days.
+
+FRS-046: Distance SHALL be calculated using the Haversine formula when user location is available.
+
+FRS-047: Pagination SHALL display page numbers (maximum 5 visible at once), provide Previous/Next navigation buttons, disable Previous on first page, disable Next on last page, and reset to page 1 when filters change.
+
+FRS-048: Clicking the heart icon on a salon card SHALL require authentication (redirect to login if not authenticated), toggle favorite status, update UI immediately (optimistic update), and sync with server.
+
+FRS-049: Favorited salons SHALL display a filled red heart icon.
+
+FRS-050: Non-favorited salons SHALL display an outlined heart icon.
+
+FRS-051: While loading salons, the system SHALL display a loading spinner with "Loading salons..." message.
+
+FRS-052: When no salons match the current filters, the system SHALL display empty state icon, "No salons found" or "No matches found" message, contextual help text, and "Clear filters" button.
+
+FRS-053: If an error occurs loading salons, the system SHALL display error message and "Retry" button.
+
+================================================================================
+MAP VIEW FUNCTIONALITY
+================================================================================
+
+FRS-054: The map view SHALL use OpenStreetMap tiles via Leaflet.
+
+FRS-055: The map SHALL have responsive height: Mobile 75vh, Tablet 80vh, Desktop calc(100vh - 200px).
+
+FRS-056: The default map center SHALL be Kigali, Rwanda (coordinates: -1.9441, 30.0619).
+
+FRS-057: The default zoom level SHALL be 12.
+
+FRS-058: Each salon with valid coordinates SHALL be represented by a marker on the map.
+
+FRS-059: Markers SHALL display pill-shaped badge with salon name, colored dot indicator, and pointer arrow indicating exact location.
+
+FRS-060: Selected markers SHALL be visually distinguished with darker background color and slight scale increase (1.08x).
+
+FRS-061: Marker names longer than 16 characters SHALL be truncated with ellipsis.
+
+FRS-062: When markers overlap, the system SHALL cluster them into a single cluster marker.
+
+FRS-063: Cluster markers SHALL display the count of contained salons.
+
+FRS-064: Clicking a cluster SHALL expand it to show individual markers (spiderfy behavior).
+
+FRS-065: Maximum cluster radius SHALL be 60 pixels.
+
+FRS-066: If the user grants location permission, their location SHALL be displayed as a blue circle marker.
+
+FRS-067: User location marker SHALL display "Your location" in a popup when clicked.
+
+FRS-068: Clicking a salon marker SHALL open the salon preview panel.
+
+FRS-069: Clicking anywhere on the map (not on a marker) SHALL close the preview panel.
+
+FRS-070: On desktop (viewport >= 1024px), the preview panel SHALL slide in from the right edge, have a width of 380 pixels, display full height of the map container, and use spring animation (damping: 25, stiffness: 300).
+
+FRS-071: On mobile (viewport < 1024px), the preview panel SHALL appear as a bottom sheet, have a maximum height of 70vh, include a drag handle at the top, and slide up with spring animation.
+
+FRS-072: The preview panel SHALL display salon image (or placeholder), close button, favorite button, salon name, rating with review count, location and distance, short description (3 lines max), phone number (if available), service count, service list (up to 4-5 services), and "View Details & Book" button.
+
+FRS-073: Clicking "View Details & Book" SHALL navigate to the salon detail page.
+
+FRS-074: Salons without valid coordinates SHALL NOT appear on the map.
+
+FRS-075: The system SHALL display a count of hidden salons: "X salon(s) not shown (missing location)".
+
+FRS-076: If no salons have coordinates, the system SHALL display an empty state message.
+
+================================================================================
+SALON DETAIL PAGE
+================================================================================
+
+FRS-077: The salon detail page SHALL be accessible at /salons/browse/[id] without authentication.
+
+FRS-078: If the salon ID is invalid, the system SHALL display a "Salon not found" error.
+
+FRS-079: The sticky header SHALL display back button (returns to browse page), salon name (truncated if necessary), location information, business type badge, target clientele badge, rating with review count, open/closed status indicator, share button (desktop), and favorite button (desktop).
+
+FRS-080: The Open/Closed status SHALL be calculated in real-time based on current day of week, current time, and salon operating hours configuration.
+
+FRS-081: On desktop, the page SHALL use a two-column layout: Left (8/12 width) for Services, Team, Gallery; Right (4/12 width) for Photos, About, Contact, Hours, Map.
+
+FRS-082: On mobile, the layout SHALL stack vertically.
+
+FRS-083: The services section SHALL include a sticky toolbar with category filter pills (horizontal scrollable), search input (expandable), and service count indicator.
+
+FRS-084: Services SHALL be grouped by category in accordion sections.
+
+FRS-085: Each accordion section SHALL display category icon, category name, service count, and expand/collapse indicator.
+
+FRS-086: The first category accordion SHALL be expanded by default; others collapsed.
+
+FRS-087: When search is active, all accordions SHALL expand automatically.
+
+FRS-088: Each service card SHALL display service image (96x96 pixels), service name, description (2 lines maximum), price in RWF, duration in minutes, and "Book" button.
+
+FRS-089: The first service in a category with 3+ services MAY display a "Top Pick" badge.
+
+FRS-090: Clicking the service image or name SHALL open the service detail modal.
+
+FRS-091: Clicking "Book" SHALL open the booking modal for that service.
+
+FRS-092: The service detail modal SHALL display large hero image, image navigation (if multiple images), category badge, target gender badge, service name, price, duration, description, image thumbnails, salon information with rating, "Book Appointment" button, and close button.
+
+FRS-093: The team section SHALL display employees in a horizontal scrollable layout.
+
+FRS-094: Each employee card SHALL display avatar with initials, verification badge (if applicable), employee name, role title, rating, and skills (up to 2 visible).
+
+FRS-095: The gallery SHALL display images in a masonry grid: first image 2x2 grid cells, remaining images 1x1 grid cells, maximum 8 images visible.
+
+FRS-096: If more than 8 images exist, a "+N More" button SHALL appear.
+
+FRS-097: Clicking any image SHALL open the lightbox viewer.
+
+FRS-098: The lightbox SHALL display full-screen dark background, show current image centered, provide navigation arrows, display image counter (e.g., "3 / 12"), show thumbnail strip at bottom, support keyboard navigation (arrows, Escape), and close when clicking outside the image.
+
+FRS-099: The about section SHALL display salon description (expandable), "Read more/less" toggle for text >150 characters, employee count with avatars, service count, WhatsApp button (if phone available), and email button.
+
+FRS-100: The contact section SHALL display (when available): Phone (opens phone dialer), Email (opens email client), Website (opens in new tab), Address (static text display).
+
+FRS-101: Working hours SHALL display for all 7 days of the week.
+
+FRS-102: The current day SHALL be highlighted with different background color and "Today" badge.
+
+FRS-103: Each day SHALL display day name and open/close times, OR "Closed" if not operating.
+
+FRS-104: If no hours are configured, display: "Contact salon for hours".
+
+FRS-105: The embedded map SHALL show salon marker at exact coordinates, display popup with salon name and address, provide "Directions" link to Google Maps, and provide "Open in OpenStreetMap" link.
+
+================================================================================
+SERVICES & CATEGORIES
+================================================================================
+
+FRS-106: Each service SHALL have attributes: ID (String, required), Name (String, required), Description (String, optional), Base Price (Number, required), Duration in minutes (Number, required), Is Active (Boolean, required), Salon ID (String, required), Category (String, optional), Target Gender (String, optional), Images (Array, optional).
+
+FRS-107: Services without a category SHALL be grouped under "General".
+
+FRS-108: Categories SHALL be displayed alphabetically.
+
+FRS-109: Each category SHALL show the count of services within it.
+
+FRS-110: Services SHALL be filterable by category (single selection), search term (name, description, category), and active status (only active services shown to customers).
+
+FRS-111: Prices SHALL be displayed in Rwandan Francs (RWF) format.
+
+FRS-112: Duration SHALL be displayed in minutes.
+
+================================================================================
+BOOKING & APPOINTMENTS
+================================================================================
+
+FRS-113: The booking process SHALL consist of 3 steps: Select Stylist, Select Date & Time, Review & Confirm.
+
+FRS-114: A progress indicator SHALL display the current step and completion status.
+
+FRS-115: The stylist selection screen SHALL display service name being booked, "No Preference" option (maximizes availability), and list of available employees.
+
+FRS-116: Each employee option SHALL display avatar with initials, full name, role title, and selection indicator.
+
+FRS-117: Selecting "No Preference" SHALL aggregate availability from all employees.
+
+FRS-118: The date and time selection SHALL display calendar for date selection and time slots grid for selected date.
+
+FRS-119: Calendar dates SHALL show availability status: Available (normal display), Partially Booked (partial indicator), Fully Booked (disabled/grayed), Unavailable (disabled/grayed).
+
+FRS-120: Time slots SHALL be displayed in 30-minute intervals.
+
+FRS-121: Unavailable time slots SHALL be disabled and show the reason (e.g., "Past time slot").
+
+FRS-122: Changing the selected date SHALL reset the time slot selection.
+
+FRS-123: The confirmation screen SHALL display service name and icon, selected date and time, selected stylist name (or "Any Available"), service duration, price in RWF, and notes textarea (optional).
+
+FRS-124: The "Confirm Booking" button SHALL validate the selected slot is still available, create the appointment, display success confirmation, and provide alternative time suggestions if slot was taken.
+
+FRS-125: Users MUST be authenticated to complete a booking.
+
+FRS-126: If unauthenticated, the system SHALL store booking intent in session storage, redirect to login page, and resume booking after successful login.
+
+FRS-127: Upon successful booking, the system SHALL display success icon (green checkmark), service name, date and time, confirmation message, and "Done" button to close modal.
+
+FRS-128: Availability SHALL be fetched for a 30-day window.
+
+FRS-129: Time slots in the past SHALL be unavailable.
+
+FRS-130: Time slots outside salon operating hours SHALL be unavailable.
+
+FRS-131: Time slots with existing bookings SHALL be unavailable for the assigned employee.
+
+================================================================================
+DASHBOARD - CUSTOMER
+================================================================================
+
+FRS-132: Customers accessing /dashboard SHALL be shown the customer dashboard view.
+
+FRS-133: The customer dashboard SHALL display upcoming appointments summary, quick booking access, recent appointment history, favorite salons, and profile completion status.
+
+FRS-134: Customers SHALL be able to view their appointment history with service name, salon name, date and time, status, and price paid.
+
+FRS-135: The "My Appointments" page SHALL display list of all customer appointments, filter by status (upcoming, completed, cancelled), sort by date, and appointment details on click.
+
+================================================================================
+DASHBOARD - SALON OWNER
+================================================================================
+
+FRS-136: Salon owners accessing /dashboard SHALL be shown the salon owner dashboard view.
+
+FRS-137: The dashboard SHALL provide quick access to: Bookings (manage appointments), Staff (employee management), Customers (customer management), Payroll (staff compensation), Inventory (stock management), Services (service catalog), Sales (transaction history), Finance (financial reports), Settings (salon configuration).
+
+FRS-138: The dashboard SHALL display total employee count, total customer count, service offerings count, new customers (30-day), revenue metrics, and appointment statistics.
+
+FRS-139: Salon owners with multiple salons SHALL be able to switch between salons.
+
+FRS-140: Each salon's data SHALL be isolated and displayed separately.
+
+================================================================================
+DASHBOARD - ADMINISTRATOR
+================================================================================
+
+FRS-141: Administrators (Super Admin, Association Admin) accessing /dashboard SHALL be shown the admin dashboard view.
+
+FRS-142: The admin dashboard SHALL display total user count, active user count, user distribution by role, total salon count, membership statistics, and system health indicators.
+
+FRS-143: Administrators SHALL have quick access to user management, membership management, system settings, reports, and loan management.
+
+================================================================================
+SALON MANAGEMENT
+================================================================================
+
+FRS-144: Creating a salon SHALL require: Name (minimum 2 characters), Description (optional, max 1000 chars), Address (optional), Phone (optional, valid format), Email (optional, valid format), Website (optional, valid URL), Business Type (required, predefined types), Target Clientele (required: men, women, or both).
+
+FRS-145: The system SHALL support business types: Hair Salon, Beauty Spa, Nail Salon, Barbershop, Full Service, Mobile Salon.
+
+FRS-146: Operating hours SHALL be configurable for each day of the week.
+
+FRS-147: Each day SHALL have open/closed toggle, opening time, and closing time.
+
+FRS-148: Salon location SHALL include latitude coordinate, longitude coordinate, city, district, and street address.
+
+FRS-149: Salons SHALL have one of the following statuses: Active (visible and operational), Inactive (hidden from public), Pending (awaiting approval).
+
+FRS-150: Salons SHALL support multiple images for gallery display.
+
+FRS-151: Images SHALL have a maximum file size of 10MB each.
+
+================================================================================
+SERVICE MANAGEMENT
+================================================================================
+
+FRS-152: Salon owners SHALL be able to create services with: Name (minimum 2 characters), Code (optional, unique within salon), Description (optional, max 500 chars), Duration (positive integer in minutes), Base Price (non-negative number in RWF), Category (predefined or custom), Target Gender (everyone, men, women), Images (max 5, 10MB each), Status (Active/Inactive).
+
+FRS-153: The system SHALL provide predefined categories: Haircut, Coloring, Treatment, Braiding, Nails, Makeup, Facial, Massage, Waxing.
+
+FRS-154: Custom categories MAY be created.
+
+FRS-155: Only active services SHALL be displayed to customers.
+
+FRS-156: Services SHALL be sortable by name, price, and duration.
+
+FRS-157: The service management page SHALL display total service count, active service count, average price, and average duration.
+
+================================================================================
+EMPLOYEE MANAGEMENT
+================================================================================
+
+FRS-158: Adding an employee SHALL require: User selection (required), Professional title (required), Skills/Specializations (optional), Employment type (required), Hire date (optional).
+
+FRS-159: The system SHALL support employment types: Full-time, Part-time, Contract.
+
+FRS-160: Employee compensation SHALL support: Commission Only (commission rate %), Salary Only (base salary RWF, pay frequency), Salary + Commission (base salary, commission rate, pay frequency).
+
+FRS-161: The system SHALL provide predefined titles: Stylist, Senior Stylist, Master Stylist, Colorist, Nail Technician, Makeup Artist, Esthetician, Barber, Receptionist, Manager.
+
+FRS-162: Employees SHALL have Active or Inactive status.
+
+FRS-163: Inactive employees SHALL NOT appear in booking stylist selection.
+
+================================================================================
+CUSTOMER MANAGEMENT
+================================================================================
+
+FRS-164: Customer profiles SHALL include full name, phone number, email address, loyalty points, VIP status indicator, appointment history, and purchase history.
+
+FRS-165: The system SHALL support filtering customers by: All (no filter), High-Value (loyalty points >= 1000), Loyal (loyalty points >= 500), Recent (joined within 30 days), Inactive (no appointments in 90 days).
+
+FRS-166: The customer management page SHALL display total customer count, active customer count, high-value customer count, average loyalty points, and new customers (30-day).
+
+================================================================================
+APPOINTMENT MANAGEMENT
+================================================================================
+
+FRS-167: Appointments SHALL have statuses: Pending (awaiting confirmation), Booked (confirmed booking), Confirmed (appointment confirmed by salon), In Progress (service being delivered), Completed (service finished), Cancelled (appointment cancelled), No Show (customer did not arrive).
+
+FRS-168: Valid status transitions SHALL be: Pending -> Booked -> Confirmed -> In Progress -> Completed; with Cancelled possible from Pending/Booked/Confirmed/In Progress; No Show possible from Pending/Booked.
+
+FRS-169: Appointments SHALL be viewable in calendar view (monthly/weekly/daily), list view (grouped by date), and table view (sortable columns).
+
+FRS-170: Appointments SHALL be filterable by status, date range (today, tomorrow, upcoming, past), employee, customer, and service.
+
+FRS-171: Each appointment SHALL display customer name and contact, service name, employee assigned, date and time, duration, price, status, and notes.
+
+FRS-172: Salon staff SHALL be able to update appointment status, reassign employee, modify date/time, add notes, and cancel with reason.
+
+================================================================================
+MEMBERSHIP SYSTEM
+================================================================================
+
+FRS-173: Salon owners SHALL be able to apply for association membership.
+
+FRS-174: Membership application SHALL require salon information, owner identification, business documentation, and membership tier selection.
+
+FRS-175: The system SHALL support membership tiers: Basic, Premium, Enterprise.
+
+FRS-176: Membership applications SHALL follow workflow: Submitted -> Under Review -> Approved/Rejected.
+
+FRS-177: Salon owners SHALL be able to check membership status at /membership/status.
+
+FRS-178: Membership numbers SHALL be publicly verifiable at /verify/membership/[membershipNumber].
+
+================================================================================
+FINANCIAL MANAGEMENT
+================================================================================
+
+FRS-179: The POS system SHALL support recording sales for services rendered, products sold, and packages.
+
+FRS-180: The system SHALL support payment methods: Cash, Card, Mobile Money, Airtel Money, Bank Transfer.
+
+FRS-181: The system SHALL automatically calculate employee commissions based on services performed, commission rate configured, and sales amount.
+
+FRS-182: Salon owners SHALL be able to view daily/weekly/monthly revenue, payment method breakdown, service revenue distribution, and employee performance.
+
+================================================================================
+LOAN MANAGEMENT
+================================================================================
+
+FRS-183: Administrators SHALL be able to configure loan products with product name, interest rate, maximum amount, repayment period, and eligibility criteria.
+
+FRS-184: Eligible salon owners SHALL be able to apply for loans.
+
+FRS-185: Loan applications SHALL require loan amount requested, purpose of loan, and repayment plan selection.
+
+FRS-186: Loans SHALL have statuses: Pending (application submitted), Approved (approved for disbursement), Disbursed (funds released), Active (repayment in progress), Paid (fully repaid), Defaulted (missed payments).
+
+================================================================================
+USER MANAGEMENT
+================================================================================
+
+FRS-187: Administrators SHALL be able to create users with role assignment, view user details, update user information, change user roles, activate/deactivate accounts, and delete users (with confirmation).
+
+FRS-188: Creating a user SHALL require Full Name, Email, Phone (optional), Password, and Role.
+
+FRS-189: User management SHALL support search by name/email/phone, filter by role, and filter by status (active/inactive).
+
+FRS-190: The user management page SHALL display total users, active users, and count per role.
+
+FRS-191: Administrators SHALL NOT be able to delete their own account or assign roles higher than their own level.
+
+================================================================================
+SETTINGS & CONFIGURATION
+================================================================================
+
+FRS-192: All users SHALL be able to manage full name, email address, phone number, avatar image, and password.
+
+FRS-193: Users MAY provide additional information: date of birth, gender, nationality, national ID, address details, emergency contact, and bank account details.
+
+FRS-194: Users SHALL be able to configure notifications: Email appointment reminders (default: On), SMS alerts (default: Off), Payment confirmations (default: On), Security alerts (default: On), Product updates (default: Off), Promotional emails (default: Off).
+
+FRS-195: Users SHALL be able to change password (requires current password), enable/disable 2FA, view active sessions, and terminate other sessions.
+
+FRS-196: System administrators SHALL be able to configure: Maintenance Mode (enable/disable site), Registration (enable/disable new registrations), Feature Modules (enable/disable loans, payroll, inventory), Commission Rate (default percentage), Tax Rate (default percentage), Session Timeout (minutes until auto-logout), Max Login Attempts (before account lockout).
+
+================================================================================
+NOTIFICATIONS
+================================================================================
+
+FRS-197: The system SHALL display in-app notifications for: New appointment (to salon owner, employee), Appointment cancelled (to salon owner, employee), Appointment reminder (to customer), Membership approved (to salon owner), Loan status change (to salon owner).
+
+FRS-198: The system SHALL send email notifications for: Registration (to new user), Password reset (to user), Appointment confirmation (to customer), Appointment reminder 24h (to customer), Membership decision (to salon owner).
+
+FRS-199: Users SHALL be able to view all notifications, mark notifications as read, delete notifications, and filter by type.
+
+================================================================================
+UI/UX FUNCTIONAL RULES
+================================================================================
+
+FRS-200: All pages SHALL be fully responsive across Mobile (<640px), Tablet (640px-1024px), and Desktop (>1024px).
+
+FRS-201: The system SHALL support dark mode with manual toggle in settings, persisted preference in localStorage, and consistent theming across all components.
+
+FRS-202: All data-loading operations SHALL display loading spinner or skeleton, appropriate loading text, and disabled interaction during load.
+
+FRS-203: Buttons SHALL display appropriate states: Default (normal appearance), Hover (slight color change), Active (pressed appearance), Loading (spinner icon, disabled), Disabled (grayed out, no interaction).
+
+FRS-204: Form validation SHALL validate on blur for individual fields, validate all fields on submit, display inline error messages, highlight invalid fields with red border, and prevent submission until valid.
+
+FRS-205: Toast notifications SHALL appear in top-right corner, auto-dismiss after 5 seconds, support types (success green, error red, info blue, warning yellow), and be dismissible by clicking.
+
+FRS-206: Modal dialogs SHALL center on screen, have dark overlay background, close on Escape key, close on overlay click (unless destructive action), and trap focus within modal.
+
+FRS-207: Destructive actions SHALL require confirmation with clear description of action, consequences explanation, cancel button, and confirm button (styled as danger).
+
+================================================================================
+ERROR HANDLING & EDGE CASES
+================================================================================
+
+FRS-208: When network is unavailable, the system SHALL display "Unable to connect" message, provide retry option, and preserve user input where possible.
+
+FRS-209: For server errors (5xx), the system SHALL display user-friendly error message, log error details for debugging, and provide retry option.
+
+FRS-210: For 404 errors, the system SHALL display "Page not found" or "Resource not found" message and provide navigation to home or back.
+
+FRS-211: When accessing unauthorized resources, the system SHALL redirect to login page (if unauthenticated) or display "Access denied" message (if authenticated but unauthorized).
+
+FRS-212: When session expires, the system SHALL clear local session data, redirect to login page, display "Session expired" message, and preserve the intended destination for post-login redirect.
+
+FRS-213: Form validation errors SHALL display specific error message per field, scroll to first error if off-screen, and maintain other valid field values.
+
+FRS-214: Empty lists/tables SHALL display relevant icon, "No items found" message, and helpful action (e.g., "Create first item").
+
+FRS-215: If rate limited, the system SHALL display "Too many requests" message and indicate when to retry.
+
+================================================================================
+NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+FRS-216: Page load time SHALL be under 3 seconds on standard broadband connection.
+
+FRS-217: API responses SHALL be received within 5 seconds.
+
+FRS-218: Animations SHALL run at 60fps without jank.
+
+FRS-219: The application SHALL function correctly on Chrome, Firefox, Safari, and Edge (latest 2 versions each).
+
+FRS-220: Authentication tokens SHALL be stored securely in localStorage.
+
+FRS-221: Passwords SHALL be transmitted over HTTPS only.
+
+FRS-222: Sensitive data SHALL NOT be logged to browser console in production.
+
+FRS-223: Form inputs SHALL be sanitized to prevent XSS attacks.
+
+FRS-224: Interactive elements SHALL be keyboard accessible.
+
+FRS-225: Images SHALL have appropriate alt text.
+
+FRS-226: Color contrast SHALL meet WCAG AA standards.
+
+FRS-227: Focus indicators SHALL be visible for keyboard navigation.
+
+================================================================================
+END OF FUNCTIONAL REQUIREMENTS
+================================================================================
+Total: 227 Functional Requirements

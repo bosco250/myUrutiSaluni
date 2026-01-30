@@ -380,7 +380,7 @@ function FloatingNavComponent() {
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 10, scale: 0.8 }}
                     transition={{ type: "spring", stiffness: 600, damping: 30 }}
-                    className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 hidden md:flex items-center pointer-events-none z-[100]"
+                    className="absolute right-[calc(100%+14px)] top-1/2 -translate-y-1/2 hidden md:flex items-center pointer-events-none z-[40]"
                   >
                     <div className="bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 px-2.5 py-1 rounded-lg shadow-xl border border-white/10 dark:border-black/10 backdrop-blur-md">
                       <span className="text-[10px] font-bold tracking-wide whitespace-nowrap">Applications</span>
@@ -402,7 +402,7 @@ function FloatingNavComponent() {
             className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-40 animate-in fade-in duration-300"
             onClick={closeMenu}
           />
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 md:left-auto md:right-20 md:translate-x-0 md:top-auto md:bottom-8 z-50 animate-in fade-in slide-in-from-bottom-8 md:slide-in-from-right-8 zoom-in-95 duration-200 origin-bottom md:origin-bottom-right">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:right-20 md:translate-x-0 md:top-1/2 md:-translate-y-1/2 md:bottom-auto z-50 animate-in fade-in slide-in-from-bottom-8 md:slide-in-from-right-8 zoom-in-95 duration-200 origin-bottom md:origin-center-right">
             <div className="bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-xl border border-border-light dark:border-border-dark rounded-2xl shadow-2xl p-4 w-[calc(100vw-5.5rem)] max-w-[320px]">
               
               <div className="flex items-center justify-between mb-4 pl-1">

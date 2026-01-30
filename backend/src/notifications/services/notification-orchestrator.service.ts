@@ -450,11 +450,14 @@ export class NotificationOrchestratorService {
     userId?: string,
     customerId?: string,
   ): Promise<boolean> {
+    const where: any[] = [];
+    if (userId) where.push({ userId, type, channel });
+    if (customerId) where.push({ customerId, type, channel });
+
+    if (where.length === 0) return true;
+
     const preference = await this.preferencesRepository.findOne({
-      where: [
-        { userId, type, channel },
-        { customerId, type, channel },
-      ],
+      where,
     });
 
     // If preference exists and is disabled, don't send

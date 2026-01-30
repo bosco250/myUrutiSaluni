@@ -32,14 +32,15 @@ export default function NotificationBell() {
     queryFn: async () => {
       try {
         const response = await api.get('/notifications/unread-count');
-        // Backend returns { count: number }
-        if (response.data && typeof response.data === 'object' && 'count' in response.data) {
-          const count = Number(response.data.count);
+        const resData = response.data.data !== undefined ? response.data.data : response.data;
+        
+        if (resData && typeof resData === 'object' && 'count' in resData) {
+          const count = Number(resData.count);
           return isNaN(count) ? 0 : count;
         }
         // Fallback: if it's already a number
-        if (typeof response.data === 'number') {
-          return response.data;
+        if (typeof resData === 'number') {
+          return resData;
         }
         return 0;
       } catch (error: any) {
@@ -61,13 +62,17 @@ export default function NotificationBell() {
     queryFn: async () => {
       try {
         const response = await api.get('/notifications?limit=10&unreadOnly=false');
-        // Backend returns { data: Notification[], total: number }
-        if (response.data?.data && Array.isArray(response.data.data)) {
-          return response.data.data;
+        // Backend returns { data: { data: Notification[], total: number } } or { data: Notification[], ... }
+        // Axios response.data is the body. The interceptor wraps it in { data: ... }
+        const resData = response.data.data !== undefined ? response.data.data : response.data;
+        
+        // Handle double wrapping or directly list-wrapped objects
+        if (resData?.data && Array.isArray(resData.data)) {
+          return resData.data;
         }
         // Fallback: if data is directly an array
-        if (Array.isArray(response.data)) {
-          return response.data;
+        if (Array.isArray(resData)) {
+          return resData;
         }
         return [];
       } catch (error: any) {

@@ -72,6 +72,16 @@ export default function WalletsPage() {
     },
   });
 
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ['wallet-summary', wallet?.id],
+    queryFn: async () => {
+      if (!wallet?.id) return { totalReceived: 0, totalSent: 0, pendingCount: 0 };
+      const response = await api.get(`/wallets/${wallet.id}/summary`);
+      return response.data.data || response.data;
+    },
+    enabled: !!wallet?.id,
+  });
+
   const { data: txResponse, isLoading: txLoading } = useQuery<{
     data: WalletTransaction[];
     meta: { total: number; page: number; limit: number; totalPages: number };
@@ -93,13 +103,9 @@ export default function WalletsPage() {
   // Calculate stats
   const toNumber = (val: unknown) => Number(val) || 0;
   const balance = toNumber(wallet?.balance);
-  const deposits = transactions
-    .filter((t) => ['deposit', 'commission', 'refund'].includes(t.transactionType))
-    .reduce((sum, t) => sum + toNumber(t.amount), 0);
-  const withdrawals = transactions
-    .filter((t) => ['withdrawal', 'transfer'].includes(t.transactionType))
-    .reduce((sum, t) => sum + toNumber(t.amount), 0);
-  const pendingCount = transactions.filter((t) => t.status === 'pending').length;
+  const deposits = toNumber(summary?.totalReceived);
+  const withdrawals = toNumber(summary?.totalSent);
+  const pendingCount = toNumber(summary?.pendingCount);
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -108,11 +114,14 @@ export default function WalletsPage() {
       case 'withdrawal':
         return <ArrowUpRight className="w-4 h-4" />;
       case 'commission':
+      case 'loan_disbursement':
         return <Banknote className="w-4 h-4" />;
       case 'transfer':
         return <Send className="w-4 h-4" />;
       case 'refund':
         return <Receipt className="w-4 h-4" />;
+      case 'loan_repayment':
+        return <ArrowUp className="w-4 h-4" />;
       default:
         return <TrendingUp className="w-4 h-4" />;
     }
@@ -126,16 +135,19 @@ export default function WalletsPage() {
       case 'deposit':
       case 'commission':
       case 'refund':
+      case 'loan_disbursement':
         return 'text-success bg-success/10';
       case 'withdrawal':
       case 'transfer':
+      case 'loan_repayment':
+      case 'fee':
         return 'text-danger bg-danger/10';
       default:
         return 'text-primary bg-primary/10';
     }
   };
 
-  const isCredit = (type: string) => ['deposit', 'commission', 'refund'].includes(type);
+  const isCredit = (type: string) => ['deposit', 'commission', 'refund', 'loan_disbursement'].includes(type);
 
   if (walletLoading) {
     return (

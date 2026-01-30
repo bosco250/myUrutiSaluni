@@ -7,6 +7,7 @@ import { SalonsModule } from '../salons/salons.module';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { WalletsModule } from '../wallets/wallets.module';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { WalletsModule } from '../wallets/wallets.module';
     forwardRef(() => SalonsModule),
     forwardRef(() => NotificationsModule),
     WalletsModule,
+    forwardRef(() => AccountingModule),
   ],
   controllers: [CommissionsController],
   providers: [CommissionsService],

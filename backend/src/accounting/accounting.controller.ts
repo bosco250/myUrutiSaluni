@@ -11,6 +11,7 @@ import {
   Request,
   Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -200,12 +201,150 @@ export class AccountingController {
     return this.accountingService.createJournalEntry(createEntryDto);
   }
 
+  @Get('journal-entries')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Get journal entries' })
+  @ApiQuery({ name: 'salonId', required: true })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  async getJournalEntries(
+    @Query('salonId') salonId: string,
+    @Query('startDate') startDate: string | undefined,
+    @Query('endDate') endDate: string | undefined,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.accountingService.getJournalEntries(
+      salonId,
+      startDate,
+      endDate,
+      page,
+      limit,
+    );
+  }
+
+  @Get('accounts')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Get all chart of accounts (Assets, Liabilities, etc.)' })
+  @ApiQuery({ name: 'salonId', required: true })
+  @ApiQuery({ name: 'type', required: false })
+  async getAccounts(
+    @Query('salonId') salonId: string,
+    @Query('type') type: string | undefined,
+  ) {
+    return this.accountingService.getAccounts(salonId, type);
+  }
+  
+  @Get('reports/accounts')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Get all chart of accounts report' })
+  @ApiQuery({ name: 'salonId', required: true })
+  async getAccountsReport(@Query('salonId') salonId: string) {
+    const assets = await this.accountingService.getAccounts(salonId, 'asset');
+    const liabilities = await this.accountingService.getAccounts(salonId, 'liability');
+    const equity = await this.accountingService.getAccounts(salonId, 'equity');
+    const revenue = await this.accountingService.getAccounts(salonId, 'revenue');
+    const expenses = await this.accountingService.getAccounts(salonId, 'expense');
+
+    return {
+      assets,
+      liabilities,
+      equity,
+      revenue,
+      expenses
+    };
+  }
+
+  @Get('reports/balance-sheet/pdf')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Export Balance Sheet to PDF' })
+  @ApiQuery({ name: 'salonId', required: true })
+  @ApiQuery({ name: 'asOfDate', required: true })
+  async exportBalanceSheetPdf(
+    @Query('salonId') salonId: string,
+    @Query('asOfDate') asOfDate: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.accountingService.exportBalanceSheetToPdf(salonId, asOfDate);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=balance-sheet-${asOfDate}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
+  }
+
+  @Get('reports/profit-loss/pdf')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Export Profit & Loss to PDF' })
+  @ApiQuery({ name: 'salonId', required: true })
+  @ApiQuery({ name: 'startDate', required: true })
+  @ApiQuery({ name: 'endDate', required: true })
+  async exportProfitLossPdf(
+    @Query('salonId') salonId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.accountingService.exportProfitAndLossToPdf(salonId, startDate, endDate);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=profit-loss-${endDate}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
+  }
+
+  @Get('reports/accounts/pdf')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Export Chart of Accounts to PDF' })
+  @ApiQuery({ name: 'salonId', required: true })
+  async exportAccountsPdf(
+    @Query('salonId') salonId: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.accountingService.exportChartOfAccountsToPdf(salonId);
+    
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=chart-of-accounts.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
+  }
+
+  @Patch('accounts/:id')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Update an account' })
+  async updateAccount(@Param('id') id: string, @Body() updates: Partial<CreateAccountDto>) {
+    return this.accountingService.updateAccount(id, updates);
+  }
+
   @Post('invoices')
   @RequirePermission(EmployeePermission.MANAGE_EXPENSES) // Assumption: restricted
   @ApiOperation({ summary: 'Create an invoice' })
   createInvoice(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.accountingService.createInvoice(createInvoiceDto);
   }
+  @Get('reports/balance-sheet')
+  @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
+  @ApiOperation({ summary: 'Get Balance Sheet Report' })
+  @ApiQuery({ name: 'salonId', required: true })
+  @ApiQuery({ name: 'asOfDate', required: true })
+  async getBalanceSheet(
+    @Query('salonId') salonId: string,
+    @Query('asOfDate') asOfDate: string,
+  ) {
+    return this.accountingService.getBalanceSheetReport(salonId, asOfDate);
+  }
+
   @Get('charts/daily')
   @RequireAnyPermission(
     EmployeePermission.VIEW_EXPENSE_REPORTS,

@@ -86,7 +86,8 @@ export default function CalendarBookingModal({
     queryKey: ['salons'],
     queryFn: async () => {
       const response = await api.get('/salons');
-      return response.data?.data || response.data || [];
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      return resData?.data || resData || [];
     },
     enabled: isOpen,
   });
@@ -97,7 +98,8 @@ export default function CalendarBookingModal({
       const response = await api.get('/services', {
         params: { salonId: selectedSalonId },
       });
-      return response.data?.data || response.data || [];
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      return resData?.data || resData || [];
     },
     enabled: isOpen && !!selectedSalonId,
   });
@@ -107,7 +109,8 @@ export default function CalendarBookingModal({
     queryFn: async () => {
       if (!selectedSalonId) return [];
       const response = await api.get(`/salons/${selectedSalonId}/employees`);
-      const employees = response.data?.data || response.data || [];
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      const employees = resData?.data || resData || [];
       return (Array.isArray(employees) ? employees : []).filter((emp: any) => emp.isActive !== false);
     },
     enabled: isOpen && !!selectedSalonId,
@@ -117,7 +120,8 @@ export default function CalendarBookingModal({
     queryKey: ['customers'],
     queryFn: async () => {
       const response = await api.get('/customers');
-      return response.data?.data || response.data || [];
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      return resData?.data || resData || [];
     },
     enabled: isOpen && currentStep === 'confirm',
   });

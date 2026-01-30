@@ -110,6 +110,9 @@ interface AdminStats {
   salesData: Sale[];
   appointmentsData: Appointment[];
   loansData: Loan[];
+  appointmentConfirmationRate: number;
+  monthRevenue: number;
+  avgTransactionValue: number;
   userGrowth: { date: string; count: number }[];
   revenueGrowth: { date: string; amount: number }[];
 }
@@ -235,7 +238,22 @@ export default function AdminDashboard() {
             date: format(date, 'MMM d'),
             amount,
           };
+
         });
+
+        // Calculate Monthly Revenue
+        const now = new Date();
+        const startOfCurrentMonth = startOfMonth(now);
+        const monthRevenue = sales
+          .filter(s => new Date(s.createdAt) >= startOfCurrentMonth)
+          .reduce((sum, s) => sum + (parseFloat(String(s.totalAmount)) || 0), 0);
+
+        // Calculate Avg Transaction Value
+        const avgTransactionValue = sales.length > 0 ? totalRevenue / sales.length : 0;
+        
+        // Calculate Appointment Confirmation Rate
+        const confirmedAppointments = appointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length;
+        const appointmentConfirmationRate = appointments.length > 0 ? (confirmedAppointments / appointments.length) * 100 : 0;
 
         return {
           totalUsers: users.length,
@@ -251,6 +269,9 @@ export default function AdminDashboard() {
           salesData: sales,
           appointmentsData: appointments,
           loansData: loans,
+          appointmentConfirmationRate,
+          monthRevenue,
+          avgTransactionValue,
           userGrowth,
           revenueGrowth,
         };
@@ -270,6 +291,9 @@ export default function AdminDashboard() {
           salesData: [],
           appointmentsData: [],
           loansData: [],
+          appointmentConfirmationRate: 0,
+          monthRevenue: 0,
+          avgTransactionValue: 0,
           userGrowth: [],
           revenueGrowth: [],
         };
@@ -356,8 +380,8 @@ export default function AdminDashboard() {
       bgColor: 'bg-success/10',
     },
     {
-      title: 'Total Revenue',
-      value: stats?.totalRevenue || 0,
+      title: 'Monthly Revenue',
+      value: stats?.monthRevenue || 0,
       icon: DollarSign,
       change: `${revenueChange.isPositive ? '+' : '-'}${revenueChange.value}%`,
       trend: revenueChange.isPositive ? ('up' as const) : ('down' as const),
@@ -389,13 +413,13 @@ export default function AdminDashboard() {
       bgColor: 'bg-primary/10',
     },
     {
-      title: 'Inventory Items',
-      value: 0,
-      icon: Package,
-      change: 'N/A',
+      title: 'Avg. Transaction',
+      value: stats?.avgTransactionValue || 0,
+      icon: ShoppingCart,
+      change: `${stats?.salesData?.length || 0} sales`,
       trend: 'up' as const,
-      format: (val: number) => val.toLocaleString(),
-      link: '/inventory',
+      format: (val: number) => `RWF ${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+      link: '/accounting',
       color: 'text-primary',
       bgColor: 'bg-primary/10',
     },

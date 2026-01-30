@@ -325,7 +325,7 @@ function UsersPageContent() {
                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-background-dark transition-colors group">
                       <td className="px-3 py-1.5">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 text-xs rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          <div className="w-7 h-7 text-xs rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold  flex-shrink-0">
                             {user.avatarUrl ? (
                               <img src={user.avatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                             ) : (

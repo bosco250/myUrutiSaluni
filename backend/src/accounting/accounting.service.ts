@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { ChartOfAccount } from './entities/chart-of-account.entity';
+import { ChartOfAccount, AccountType } from './entities/chart-of-account.entity';
 import { JournalEntry } from './entities/journal-entry.entity';
 import { JournalEntryLine } from './entities/journal-entry-line.entity';
 import { Invoice } from './entities/invoice.entity';
@@ -13,6 +13,7 @@ import {
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { QueryExpensesDto } from './dto/query-expenses.dto';
+import { JournalEntryStatus } from './entities/journal-entry.entity';
 import { ReportsService } from '../reports/reports.service';
 import { SalonsService } from '../salons/salons.service'; // Needed for salon name fetch
 
@@ -31,6 +32,7 @@ export class AccountingService {
     private expensesRepository: Repository<Expense>,
     private dataSource: DataSource,
     private reportsService: ReportsService,
+    private salonsService: SalonsService,
   ) {}
 
   // ==================== EXPENSE METHODS ====================
@@ -53,7 +55,240 @@ export class AccountingService {
       createdById,
     });
     const saved = await this.expensesRepository.save(expense);
-    return Array.isArray(saved) ? saved[0] : saved;
+    const finalExpense = Array.isArray(saved) ? saved[0] : saved;
+
+    // AUTOMATIC ACCOUNTING: Create Journal Entry for the expense
+    try {
+      await this.createExpenseJournalEntry(finalExpense);
+    } catch (error) {
+      console.error('Failed to create automatic journal entry for expense:', error.message);
+      // We don't fail the expense creation if journal entry fails, 
+      // but in a production system we might want atomic transactions.
+    }
+
+    return finalExpense;
+  }
+
+  async createPayrollJournalEntry(payrollRun: any): Promise<void> {
+    const salonId = payrollRun.salonId;
+    const entryDate = new Date();
+    const entryNumber = `PAY-${payrollRun.id.slice(0, 8).toUpperCase()}-${Date.now()}`;
+
+    // DETERMINING ACCOUNT BASED ON PAYMENT METHOD
+    let accountCode = '1010';
+    let accountName = 'Cash';
+    
+    // Check first item for payment method
+    if (payrollRun.items?.[0]?.paymentMethod === 'bank_transfer') {
+      accountCode = '1030';
+      accountName = 'Bank';
+    } else if (payrollRun.items?.[0]?.paymentMethod === 'mobile_money') {
+      accountCode = '1040';
+      accountName = 'Mobile Money';
+    }
+
+    const paymentAccount = await this.getOrCreateAccount(
+      salonId,
+      accountCode,
+      accountName,
+      AccountType.ASSET,
+    );
+
+    const wagesAccount = await this.getOrCreateAccount(
+      salonId,
+      '6010',
+      'Wages & Salaries',
+      AccountType.EXPENSE,
+    );
+
+    const lines: any[] = [];
+
+    // Debit: Wages Expense
+    lines.push({
+      accountId: wagesAccount.id,
+      debitAmount: payrollRun.totalAmount,
+      creditAmount: 0,
+      description: `Payroll Payment for period ${new Date(payrollRun.periodStart).toLocaleDateString()} - ${new Date(payrollRun.periodEnd).toLocaleDateString()}`,
+      referenceType: 'payroll',
+      referenceId: payrollRun.id,
+    });
+
+    // Credit: Cash
+    lines.push({
+      accountId: paymentAccount.id,
+      debitAmount: 0,
+      creditAmount: payrollRun.totalAmount,
+      description: `Payment of payroll ${payrollRun.id.slice(0, 8)}`,
+      referenceType: 'payroll',
+      referenceId: payrollRun.id,
+    });
+
+    await this.createJournalEntry({
+      salonId,
+      entryNumber,
+      entryDate,
+      description: `Payroll disbursement recorded`,
+      status: JournalEntryStatus.POSTED,
+      createdById: payrollRun.processedById,
+      lines,
+    });
+  }
+
+  async createCommissionJournalEntry(commission: any): Promise<void> {
+    const salonId = commission.salonEmployee?.salonId || commission.salonId;
+    if (!salonId) return;
+
+    const entryDate = new Date();
+    const entryNumber = `COMM-${commission.id.slice(0, 8).toUpperCase()}-${Date.now()}`;
+
+    // DETERMINING ACCOUNT BASED ON PAYMENT METHOD
+    let accountCode = '1010';
+    let accountName = 'Cash';
+    
+    if (commission.paymentMethod === 'bank_transfer') {
+      accountCode = '1030';
+      accountName = 'Bank';
+    } else if (commission.paymentMethod === 'mobile_money') {
+      accountCode = '1040';
+      accountName = 'Mobile Money';
+    }
+
+    const paymentAccount = await this.getOrCreateAccount(
+      salonId,
+      accountCode,
+      accountName,
+      AccountType.ASSET,
+    );
+
+    const commissionAccount = await this.getOrCreateAccount(
+      salonId,
+      '6020',
+      'Commission Expense',
+      AccountType.EXPENSE,
+    );
+
+    const lines: any[] = [];
+
+    // Debit: Commission Expense
+    lines.push({
+      accountId: commissionAccount.id,
+      debitAmount: commission.amount,
+      creditAmount: 0,
+      description: `Commission Payment to ${commission.salonEmployee?.user?.fullName || 'Employee'}`,
+      referenceType: 'commission',
+      referenceId: commission.id,
+    });
+
+    // Credit: Cash
+    lines.push({
+      accountId: paymentAccount.id,
+      debitAmount: 0,
+      creditAmount: commission.amount,
+      description: `Payment of commission ${commission.id.slice(0, 8)}`,
+      referenceType: 'commission',
+      referenceId: commission.id,
+    });
+
+    await this.createJournalEntry({
+      salonId,
+      entryNumber,
+      entryDate,
+      description: `Commission payment recorded`,
+      status: JournalEntryStatus.POSTED,
+      createdById: commission.paidById,
+      lines,
+    });
+  }
+
+  async createExpenseJournalEntry(expense: Expense): Promise<void> {
+    const salonId = expense.salonId;
+    const entryDate = new Date(expense.expenseDate);
+    const entryNumber = `EXP-${expense.id.slice(0, 8).toUpperCase()}-${Date.now()}`;
+
+    // 1. Get the credit account (where money is coming from)
+    let accountCode = '1010';
+    let accountName = 'Cash';
+    
+    if (expense.paymentMethod === 'bank_transfer') {
+      accountCode = '1030';
+      accountName = 'Bank';
+    } else if (expense.paymentMethod === 'mobile_money') {
+      accountCode = '1040';
+      accountName = 'Mobile Money';
+    }
+
+    const paymentAccount = await this.getOrCreateAccount(
+      salonId,
+      accountCode,
+      accountName,
+      AccountType.ASSET,
+    );
+
+    // 2. Get the debit account (the expense category)
+    // If categoryId is missing (unlikely per UI), we use a fallback 'Miscellaneous Expense'
+    let expenseAccount: ChartOfAccount | null = null;
+    if (expense.categoryId) {
+      expenseAccount = await this.chartOfAccountsRepository.findOne({ where: { id: expense.categoryId } });
+    }
+
+    if (!expenseAccount) {
+      expenseAccount = await this.getOrCreateAccount(
+        salonId,
+        '6999',
+        'Miscellaneous Expense',
+        AccountType.EXPENSE,
+      );
+    }
+
+    const lines: any[] = [];
+
+    // Debit: Expense Account (Increases Expense)
+    lines.push({
+      accountId: expenseAccount.id,
+      debitAmount: expense.amount,
+      creditAmount: 0,
+      description: `Expense: ${expense.description || expenseAccount.name}`,
+      referenceType: 'expense',
+      referenceId: expense.id,
+    });
+
+    // Credit: Cash/Payment Account (Decreases Asset)
+    lines.push({
+      accountId: paymentAccount.id,
+      debitAmount: 0,
+      creditAmount: expense.amount,
+      description: `Payment for expense: ${expense.description || expenseAccount.name}`,
+      referenceType: 'expense',
+      referenceId: expense.id,
+    });
+
+    await this.createJournalEntry({
+      salonId,
+      entryNumber,
+      entryDate,
+      description: `expense recording: ${expense.description}`,
+      status: JournalEntryStatus.POSTED,
+      createdById: expense.createdById,
+      lines,
+    });
+  }
+
+  private async getOrCreateAccount(
+    salonId: string,
+    code: string,
+    name: string,
+    accountType: AccountType,
+  ): Promise<ChartOfAccount> {
+    const existing = await this.findAccountByCode(code, salonId);
+    if (existing) return existing;
+
+    return this.createAccount({
+      code,
+      name,
+      accountType,
+      salonId,
+      isActive: true,
+    });
   }
 
   async getExpenses(
@@ -484,6 +719,43 @@ export class AccountingService {
     });
   }
 
+  async getJournalEntries(
+    salonId: string,
+    startDate?: string,
+    endDate?: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ data: JournalEntry[]; total: number; page: number; limit: number }> {
+    const qb = this.journalEntriesRepository
+      .createQueryBuilder('entry')
+      .leftJoinAndSelect('entry.lines', 'line')
+      .leftJoinAndSelect('line.account', 'account')
+      .where('entry.salonId = :salonId', { salonId });
+
+    if (startDate) {
+      qb.andWhere('entry.entryDate >= :startDate', { startDate: new Date(startDate) });
+    }
+    if (endDate) {
+      qb.andWhere('entry.entryDate <= :endDate', { endDate: new Date(endDate) });
+    }
+
+    qb.orderBy('entry.entryDate', 'DESC');
+    qb.addOrderBy('entry.createdAt', 'DESC');
+
+    const total = await qb.getCount();
+    const data = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
   async findJournalEntriesByReference(
     referenceType: string,
     referenceId: string,
@@ -547,6 +819,24 @@ export class AccountingService {
     });
     const saved = await this.invoicesRepository.save(invoice);
     return Array.isArray(saved) ? saved[0] : saved;
+  }
+
+  async getAccounts(salonId: string, type?: string): Promise<ChartOfAccount[]> {
+    const where: any = { salonId, isActive: true };
+    if (type) {
+      where.accountType = type;
+    }
+    return this.chartOfAccountsRepository.find({
+      where,
+      order: { accountType: 'ASC', code: 'ASC' },
+    });
+  }
+
+  async updateAccount(id: string, updates: Partial<ChartOfAccount>): Promise<ChartOfAccount> {
+    const account = await this.chartOfAccountsRepository.findOne({ where: { id } });
+    if (!account) throw new NotFoundException('Account not found');
+    Object.assign(account, updates);
+    return this.chartOfAccountsRepository.save(account);
   }
 
   async getExpenseCategories(salonId: string): Promise<ChartOfAccount[]> {
@@ -1009,5 +1299,242 @@ export class AccountingService {
 
     // 4. Generate
     return this.reportsService.generatePnlReport(reportData);
+  }
+
+  async getBalanceSheetReport(salonId: string, asOfDate: string): Promise<any> {
+    const date = new Date(asOfDate);
+    date.setHours(23, 59, 59, 999);
+
+    // 1. Get Accounts
+    const accounts = await this.chartOfAccountsRepository.find({
+      where: [
+        { salonId, accountType: 'ASSET' as any },
+        { salonId, accountType: 'LIABILITY' as any },
+        { salonId, accountType: 'EQUITY' as any }
+      ],
+    });
+
+    // 2. Calculate Balances for each account
+    const report: any = {
+      assets: [],
+      liabilities: [],
+      equity: [],
+      totalAssets: 0,
+      totalLiabilities: 0,
+      totalEquity: 0,
+    };
+
+    for (const account of accounts) {
+      const qb = this.journalEntryLinesRepository
+        .createQueryBuilder('line')
+        .innerJoin('line.journalEntry', 'entry')
+        .where('line.accountId = :accountId', { accountId: account.id })
+        .andWhere('entry.entryDate <= :date', { date })
+        .andWhere("entry.status = 'posted'");
+
+      const result = await qb
+        .select('SUM(CAST(line.debitAmount AS NUMERIC))', 'debit')
+        .addSelect('SUM(CAST(line.creditAmount AS NUMERIC))', 'credit')
+        .getRawOne();
+
+      const debit = parseFloat(result?.debit || '0');
+      const credit = parseFloat(result?.credit || '0');
+      let balance = 0;
+
+      // Asset: Debit increases (+), Credit decreases (-)
+      // Liability/Equity: Credit increases (+), Debit decreases (-)
+      if (account.accountType === AccountType.ASSET) {
+        balance = debit - credit;
+      } else {
+        balance = credit - debit;
+      }
+
+      const item = {
+        id: account.id,
+        name: account.name,
+        code: account.code,
+        balance,
+      };
+
+      if (account.accountType === AccountType.ASSET) {
+        report.assets.push(item);
+        report.totalAssets += balance;
+      } else if (account.accountType === AccountType.LIABILITY) {
+        report.liabilities.push(item);
+        report.totalLiabilities += balance;
+      } else {
+        report.equity.push(item);
+        report.totalEquity += balance;
+      }
+    }
+
+    // Include Net Income from P&L in Equity (Retained Earnings)
+    // For simplicity, we calculate net income from beginning of time until asOfDate
+    // Passing undefined for startDate ensures we capture ALL history up to endDate
+    const pnl = await this.getFinancialSummary(salonId, undefined, asOfDate);
+
+    const netIncome = pnl.netIncome;
+    report.equity.push({ id: 'retained-earnings', name: 'Net Income (Retained Earnings)', code: 'EQUITY-RET', balance: netIncome });
+    report.totalEquity += netIncome;
+
+    // --- AUTO-BALANCE LOGIC ---
+    // Since we don't force double-entry for every POS sale (we just record Revenue),
+    // we must assume the difference sits in "Cash/Bank".
+    // Formula: Implied Cash = (Total Liabilities + Total Equity) - (Total Assets excluding manual cash)
+    
+    const discrepancy = (report.totalLiabilities + report.totalEquity) - report.totalAssets;
+
+    if (discrepancy > 0) {
+      report.assets.push({
+        id: 'implied-cash',
+        name: 'Cash on Hand (Calculated)',
+        code: 'ASSET-CASH-AUTO',
+        balance: discrepancy,
+        isSystem: true
+      });
+      report.totalAssets += discrepancy;
+    }
+
+    return report;
+  }
+
+
+  async exportBalanceSheetToPdf(salonId: string, asOfDate: string): Promise<any> {
+    const report = await this.getBalanceSheetReport(salonId, asOfDate);
+    const salon = await this.salonsService.findOne(salonId);
+
+    const formatMoney = (amount: number) => {
+      return new Intl.NumberFormat('en-RW', {
+        style: 'currency',
+        currency: 'RWF',
+      }).format(amount);
+    };
+
+    const formatItem = (item: any) => ({
+      ...item,
+      formattedBalance: formatMoney(item.balance)
+    });
+
+    const reportData = {
+      salonName: salon?.name || 'Salon',
+      asOfDate: new Date(asOfDate).toLocaleDateString(),
+      assets: report.assets.map(formatItem),
+      liabilities: report.liabilities.map(formatItem),
+      equity: report.equity.map(formatItem),
+      formattedTotalAssets: formatMoney(report.totalAssets),
+      formattedTotalLiabilities: formatMoney(report.totalLiabilities),
+      formattedTotalEquity: formatMoney(report.totalEquity),
+      formattedTotalLiabEquity: formatMoney(report.totalLiabilities + report.totalEquity)
+    };
+
+    return this.reportsService.generateBalanceSheetReport(reportData);
+  }
+
+  async exportProfitAndLossToPdf(salonId: string, startDate: string, endDate: string): Promise<any> {
+    const summary = await this.getFinancialSummary(salonId, startDate, endDate);
+    const salon = await this.salonsService.findOne(salonId);
+
+    const formatMoney = (amount: number) => {
+      return new Intl.NumberFormat('en-RW', {
+        style: 'currency',
+        currency: 'RWF',
+      }).format(amount);
+    };
+
+    // We need breakdown of revenue/expenses. 
+    // getFinancialSummary currently returns totals.
+    // For a detailed P&L, we would ideally want account-level details.
+    // For now, we will use the totals but structure it as a simple P&L.
+    // In a real P&L, we would iterate through Income and Expense accounts.
+    
+    // FETCH DETAILED ACCOUNTS FOR P&L (Improvement over just summary)
+    const revenueAccounts = await this.chartOfAccountsRepository.find({ where: { salonId, accountType: 'REVENUE' as any } });
+    
+    // Get decentralized expense breakdown
+    const expenseSummary = await this.getExpenseSummary(salonId, startDate, endDate);
+
+    // Calculate GL balances for revenue accounts
+    const getAccountBalance = async (accountId: string) => {
+       const qb = this.journalEntryLinesRepository
+        .createQueryBuilder('line')
+        .innerJoin('line.journalEntry', 'entry')
+        .where('line.accountId = :accountId', { accountId })
+        .andWhere('entry.entryDate >= :startDate', { startDate: new Date(startDate) })
+        .andWhere('entry.entryDate <= :endDate', { endDate: new Date(endDate) })
+        .andWhere("entry.status = 'posted'");
+
+      const result = await qb
+        .select('SUM(CAST(line.creditAmount AS NUMERIC))', 'credit')
+        .addSelect('SUM(CAST(line.debitAmount AS NUMERIC))', 'debit')
+        .getRawOne();
+      
+      const credit = parseFloat(result?.credit || '0');
+      const debit = parseFloat(result?.debit || '0');
+      return { credit, debit };
+    };
+
+    const revenueWithBalances = await Promise.all(revenueAccounts.map(async (acc) => {
+      const { credit, debit } = await getAccountBalance(acc.id);
+      const balance = credit - debit;
+      return { name: acc.name, balance, formattedAmount: formatMoney(balance) };
+    }));
+
+    // For expenses, we use the detailed breakdown from getExpenseSummary
+    const activeExpenses = expenseSummary.byCategory.map(cat => ({
+      name: cat.categoryName,
+      balance: cat.total,
+      formattedAmount: formatMoney(cat.total)
+    }));
+
+    // Filter out zero balance accounts for revenue
+    const activeRevenue = revenueWithBalances.filter(r => Math.abs(r.balance) > 0);
+    
+    let totalRev = activeRevenue.reduce((sum, r) => sum + r.balance, 0);
+    // If POS sales are not in GL, add them as a fallback (using the summary data)
+    if (totalRev < summary.totalRevenue) {
+      const diff = summary.totalRevenue - totalRev;
+      if (diff > 0) {
+        activeRevenue.push({ name: 'Sales Revenue (POS)', balance: diff, formattedAmount: formatMoney(diff) });
+        totalRev = summary.totalRevenue;
+      }
+    }
+    
+    const totalExp = expenseSummary.totalExpenses;
+    const netIncome = totalRev - totalExp;
+
+
+    const reportData = {
+      salonName: salon?.name || 'Salon',
+      dateRange: `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`,
+      revenue: activeRevenue,
+      expenses: activeExpenses,
+      formattedTotalRevenue: formatMoney(totalRev),
+      formattedTotalExpenses: formatMoney(totalExp),
+      formattedNetIncome: formatMoney(netIncome),
+      netIncome // for styling logic
+    };
+
+    return this.reportsService.generateProfitAndLossReport(reportData);
+  }
+  async exportChartOfAccountsToPdf(salonId: string): Promise<any> {
+    const accounts = await this.chartOfAccountsRepository.find({
+      where: { salonId },
+      order: { code: 'ASC' },
+      relations: ['parent']
+    });
+    const salon = await this.salonsService.findOne(salonId);
+
+    const reportData = {
+      salonName: salon?.name || 'Salon',
+      date: new Date().toLocaleDateString(),
+      accounts: accounts.map(acc => ({
+        code: acc.code,
+        name: acc.name,
+        accountType: acc.accountType.toUpperCase(),
+        category: (acc.metadata as any)?.category || (acc.parent ? acc.parent.name : acc.accountType.charAt(0).toUpperCase() + acc.accountType.slice(1))
+      }))
+    };
+
+    return this.reportsService.generateChartOfAccountsReport(reportData);
   }
 }

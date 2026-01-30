@@ -63,7 +63,12 @@ export class WalletsService {
     },
   ): Promise<WalletTransaction> {
     return this.dataSource.transaction(async (manager) => {
-      const wallet = await manager.findOne(Wallet, { where: { id: walletId } });
+      // Use pessimistic lock to prevent balance race conditions
+      const wallet = await manager.findOne(Wallet, { 
+        where: { id: walletId },
+        lock: { mode: 'pessimistic_write' }
+      });
+
       if (!wallet) {
         throw new NotFoundException('Wallet not found');
       }
@@ -80,15 +85,16 @@ export class WalletsService {
       const balanceAfter =
         type === WalletTransactionType.DEPOSIT ||
         type === WalletTransactionType.COMMISSION ||
-        type === WalletTransactionType.REFUND
+        type === WalletTransactionType.REFUND ||
+        type === WalletTransactionType.LOAN_DISBURSEMENT
           ? balanceBefore + transactionAmount
           : balanceBefore - transactionAmount;
 
       if (balanceAfter < 0) {
-        throw new Error('Insufficient balance');
+        throw new BadRequestException('Insufficient balance');
       }
 
-      // Update wallet balance with proper number conversion
+      // Update wallet balance
       await manager.update(Wallet, { id: walletId }, { balance: balanceAfter });
 
       const transaction = manager.create(WalletTransaction, {
@@ -107,6 +113,26 @@ export class WalletsService {
 
       return manager.save(transaction);
     });
+  }
+
+  async getWalletSummary(walletId: string): Promise<{
+    totalReceived: number;
+    totalSent: number;
+    pendingCount: number;
+  }> {
+    const result = await this.transactionsRepository
+      .createQueryBuilder('tx')
+      .select('SUM(CASE WHEN tx.transaction_type IN (\'deposit\', \'commission\', \'refund\', \'loan_disbursement\') AND tx.status = \'completed\' THEN CAST(tx.amount AS NUMERIC) ELSE 0 END)', 'totalReceived')
+      .addSelect('SUM(CASE WHEN tx.transaction_type IN (\'withdrawal\', \'transfer\', \'loan_repayment\', \'fee\') AND tx.status = \'completed\' THEN CAST(tx.amount AS NUMERIC) ELSE 0 END)', 'totalSent')
+      .addSelect('COUNT(CASE WHEN tx.status = \'pending\' THEN 1 END)', 'pendingCount')
+      .where('tx.wallet_id = :walletId', { walletId })
+      .getRawOne();
+
+    return {
+      totalReceived: parseFloat(result.totalReceived || '0'),
+      totalSent: parseFloat(result.totalSent || '0'),
+      pendingCount: parseInt(result.pendingCount || '0', 10),
+    };
   }
 
   async getWalletTransactions(

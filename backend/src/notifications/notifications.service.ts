@@ -12,6 +12,7 @@ import { NotificationPreference } from './entities/notification-preference.entit
 import { Customer } from '../customers/entities/customer.entity';
 import { EmailService } from './services/email.service';
 import { SmsService } from './services/sms.service';
+import { User } from '../users/entities/user.entity';
 import { PushNotificationService } from './services/push-notification.service';
 import { InAppNotificationService } from './services/in-app-notification.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
@@ -29,6 +30,8 @@ export class NotificationsService {
     private preferencesRepository: Repository<NotificationPreference>,
     @InjectRepository(Customer)
     private customersRepository: Repository<Customer>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     private emailService: EmailService,
     private smsService: SmsService,
     private pushService: PushNotificationService,
@@ -79,20 +82,25 @@ export class NotificationsService {
   async processNotification(notification: Notification): Promise<boolean> {
     try {
       // Check if user/customer has this notification type enabled
-      const preference = await this.preferencesRepository.findOne({
-        where: [
-          {
-            userId: notification.userId,
-            type: notification.type,
-            channel: notification.channel,
-          },
-          {
-            customerId: notification.customerId,
-            type: notification.type,
-            channel: notification.channel,
-          },
-        ],
-      });
+      const prefWhere: any[] = [];
+      if (notification.userId) {
+        prefWhere.push({
+          userId: notification.userId,
+          type: notification.type,
+          channel: notification.channel,
+        });
+      }
+      if (notification.customerId) {
+        prefWhere.push({
+          customerId: notification.customerId,
+          type: notification.type,
+          channel: notification.channel,
+        });
+      }
+
+      const preference = prefWhere.length > 0 
+        ? await this.preferencesRepository.findOne({ where: prefWhere }) 
+        : null;
 
       if (preference && !preference.enabled) {
         this.logger.log(
@@ -415,13 +423,21 @@ export class NotificationsService {
     try {
       this.logger.log(`🧪 Sending test notification to user ${userId}`);
 
+      // Fetch user email
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      const recipientEmail = user?.email;
+
+      if (!recipientEmail) {
+        this.logger.warn(`Could not find email for user ${userId}, skipping email test`);
+      }
+
       // Send via orchestrator to test all channels
       await this.orchestrator.notify(
         NotificationType.SYSTEM_ALERT,
         {
           userId,
           message: body,
-          recipientEmail: 'test@example.com', // This will be replaced with actual user email
+          recipientEmail,
         },
         {
           channels: [
@@ -434,7 +450,7 @@ export class NotificationsService {
       );
 
       this.logger.log(
-        `✅ Test notification sent successfully to user ${userId}`,
+        `✅ Test notification sent successfully to user ${userId} (${recipientEmail})`,
       );
     } catch (error) {
       this.logger.error(

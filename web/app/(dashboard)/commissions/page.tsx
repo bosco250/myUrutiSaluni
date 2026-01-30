@@ -759,7 +759,7 @@ function CommissionPaymentModal({
     queryKey: ['my-wallet'],
     queryFn: async () => {
       const response = await api.get('/wallets/me');
-      return response.data;
+      return response.data.data || response.data;
     },
   });
 

@@ -113,7 +113,8 @@ export default function CustomerBookingModal({
     queryKey: ['salon-details-booking', salon.id],
     queryFn: async () => {
       const response = await api.get(`/salons/${salon.id}?browse=true`);
-      return response.data?.data || response.data;
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      return resData;
     },
     enabled: isOpen && !!salon.id,
   });
@@ -182,7 +183,8 @@ export default function CustomerBookingModal({
     queryKey: ['salon-employees-booking', salon.id],
     queryFn: async () => {
       const response = await api.get(`/salons/${salon.id}/employees?browse=true`);
-      const employeesData = response.data?.data || response.data || [];
+      const resData = response.data.data !== undefined ? response.data.data : response.data;
+      const employeesData = resData?.data || resData || [];
       return Array.isArray(employeesData)
         ? employeesData.filter((emp: any) => emp.isActive !== false)
         : [];

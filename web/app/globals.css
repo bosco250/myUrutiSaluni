@@ -344,3 +344,177 @@
   height: var(--btn-height-lg);
 }
 
+/* ============================================
+   MAP MARKER & CLUSTER STYLES
+   ============================================ */
+
+/* Custom salon marker styles */
+.custom-salon-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Modern pill-style marker */
+.salon-marker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.salon-marker-pill:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.salon-marker-pill.selected {
+  background: #1F2937;
+  border-color: #1F2937;
+  box-shadow: 0 4px 14px rgba(31, 41, 55, 0.35);
+  transform: scale(1.08);
+}
+
+.marker-dot {
+  width: 8px;
+  height: 8px;
+  background: #C89B68;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.salon-marker-pill.selected .marker-dot {
+  background: #C89B68;
+}
+
+.marker-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1F2937;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+
+.salon-marker-pill.selected .marker-text {
+  color: white;
+}
+
+/* Pointer/arrow below the pill */
+.marker-pointer {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+  margin: -1px auto 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.marker-pointer.selected {
+  border-top-color: #1F2937;
+}
+
+/* Dark mode marker styles */
+.dark .salon-marker-pill {
+  background: #374151;
+  border-color: #4B5563;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .salon-marker-pill .marker-text {
+  color: #F9FAFB;
+}
+
+.dark .salon-marker-pill.selected {
+  background: #C89B68;
+  border-color: #C89B68;
+}
+
+.dark .salon-marker-pill.selected .marker-text {
+  color: #1F2937;
+}
+
+.dark .salon-marker-pill.selected .marker-dot {
+  background: #1F2937;
+}
+
+.dark .marker-pointer {
+  border-top-color: #374151;
+}
+
+.dark .marker-pointer.selected {
+  border-top-color: #C89B68;
+}
+
+/* Cluster marker styles */
+.custom-cluster-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.salon-cluster-marker {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border: 2px solid #C89B68;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1F2937;
+  font-weight: 700;
+  font-size: 15px;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.salon-cluster-marker:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: #C89B68;
+  color: white;
+}
+
+/* Dark mode cluster styles */
+.dark .salon-cluster-marker {
+  background: #374151;
+  border-color: #C89B68;
+  color: #F9FAFB;
+}
+
+.dark .salon-cluster-marker:hover {
+  background: #C89B68;
+  color: #1F2937;
+}
+
+/* Leaflet popup overrides for dark mode */
+.dark .leaflet-popup-content-wrapper {
+  background: #1F2937;
+  color: #FFFFFF;
+}
+
+.dark .leaflet-popup-tip {
+  background: #1F2937;
+}
+
+/* Hide default Leaflet cluster styles */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: transparent !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: transparent !important;
+}
+

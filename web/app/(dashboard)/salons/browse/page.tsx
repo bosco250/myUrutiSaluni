@@ -26,10 +26,12 @@ import {
   Grid3x3,
   List,
   Navigation,
+  Map,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
+import SalonMapView from '@/components/salons/SalonMapView';
 
 // Updated interface with all Salon entity fields
 interface Salon {
@@ -67,7 +69,7 @@ interface Service {
 
 type SortOption = 'name' | 'rating' | 'reviews' | 'newest' | 'trending' | 'trending_today';
 type FilterCategory = 'all' | 'hair' | 'nails' | 'makeup' | 'spa' | 'barber';
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'grid' | 'list' | 'map';
 
 export default function BrowseSalonsPage() {
   return <BrowseSalonsContent />;
@@ -85,7 +87,7 @@ function BrowseSalonsContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const itemsPerPage = viewMode === 'grid' ? 12 : 8;
+  const itemsPerPage = viewMode === 'list' ? 8 : 12;
 
 
 
@@ -247,6 +249,20 @@ function BrowseSalonsContent() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Extract unique locations (cities) from salons
+  const locations = useMemo(() => {
+    if (!salons) return [];
+    // Normalize cities: trim whitespace and filter out empty strings
+    const cities = new Set(
+      salons
+        .map((salon) => salon.city?.trim())
+        .filter((city): city is string => !!city)
+    );
+    return Array.from(cities).sort();
+  }, [salons]);
+
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+
   const salonsWithServices = useMemo(() => {
     if (!salons || !allServices) return salons || [];
     return salons.map((salon) => ({
@@ -271,6 +287,12 @@ function BrowseSalonsContent() {
             service.name?.toLowerCase().includes(categoryLower)
         );
       });
+    }
+
+    if (selectedLocation !== 'all') {
+      filtered = filtered.filter((salon) => 
+        salon.city?.trim().toLowerCase() === selectedLocation.toLowerCase()
+      );
     }
 
     if (searchQuery?.trim()) {
@@ -327,7 +349,7 @@ function BrowseSalonsContent() {
     });
 
     return sorted;
-  }, [salonsWithServices, searchQuery, selectedCategory, sortBy, stableFavIds]);
+  }, [salonsWithServices, searchQuery, selectedCategory, sortBy, stableFavIds, selectedLocation]);
 
   const totalPages = Math.ceil(filteredAndSortedSalons.length / itemsPerPage);
   const paginatedSalons = useMemo(() => {
@@ -522,8 +544,31 @@ function BrowseSalonsContent() {
               ))}
             </div>
 
+            {/* Location Filter Dropdown */}
+            {locations.length > 0 && (
+               <div className="relative shrink-0 border-l border-primary/20 pl-3 ml-1">
+                 <select
+                   value={selectedLocation}
+                   onChange={(e) => {
+                     setSelectedLocation(e.target.value);
+                     setCurrentPage(1);
+                   }}
+                   className="appearance-none pl-8 pr-8 py-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-medium text-text-light dark:text-text-dark hover:border-primary/30 transition-colors h-[32px] focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer max-w-[140px] truncate"
+                 >
+                   <option value="all">All Locations</option>
+                   {locations.map((loc) => (
+                     <option key={loc} value={loc}>
+                       {loc}
+                     </option>
+                   ))}
+                 </select>
+                 <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-light/60 dark:text-text-dark/60 pointer-events-none" />
+                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-light/60 dark:text-text-dark/60 pointer-events-none" />
+               </div>
+            )}
+
             {/* Sort Dropdown (Moved from below) */}
-            <div className="relative shrink-0 border-l border-primary/20 pl-3 ml-1">
+            <div className={`relative shrink-0 ${locations.length > 0 ? '' : 'border-l border-primary/20 pl-3 ml-1'}`}>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 px-3 py-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-xs font-medium text-text-light dark:text-text-dark hover:border-primary/30 transition-colors h-[32px]"
@@ -580,124 +625,185 @@ function BrowseSalonsContent() {
                 </>
               )}
             </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center border border-border-light dark:border-border-dark rounded-lg overflow-hidden shrink-0">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-primary text-white'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:bg-primary/5'
+                }`}
+                aria-label="Grid view"
+                title="Grid view"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-primary text-white'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:bg-primary/5'
+                }`}
+                aria-label="List view"
+                title="List view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('map')}
+                className={`p-2 transition-colors ${
+                  viewMode === 'map'
+                    ? 'bg-primary text-white'
+                    : 'text-text-light/60 dark:text-text-dark/60 hover:bg-primary/5'
+                }`}
+                aria-label="Map view"
+                title="Map view"
+              >
+                <Map className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <div className={`mx-auto space-y-8 ${viewMode === 'map' ? 'max-w-none px-2 sm:px-4 py-4' : 'max-w-7xl px-4 sm:px-6 py-8'}`}>
         {/* TOP STATS & CONTROLS */}
 
-
-        {/* SALONS GRID/LIST */}
-        {paginatedSalons.length > 0 ? (
-          <>
-            <div
-              className={
-                viewMode === 'grid'
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
-                  : 'space-y-4'
+        {/* MAP VIEW */}
+        {viewMode === 'map' ? (
+          <SalonMapView
+            salons={filteredAndSortedSalons}
+            userLocation={userLocation}
+            favorites={favorites}
+            onToggleFavorite={(salonId) => {
+              if (!user) {
+                router.push('/login');
+                return;
               }
-            >
-              {paginatedSalons.map((salon) => (
-                <SalonCard
-                  key={salon.id}
-                  salon={salon}
-                  isFavorited={favorites.includes(salon.id)}
-                  onToggleFavorite={(id) => {
-                    if (!user) {
-                      // Redirect to login or show auth modal
-                      router.push('/login');
-                      return;
-                    }
-                    toggleFavoriteMutation.mutate({ 
-                      salonId: id, 
-                      isFavorited: favorites.includes(id) 
-                    });
-                  }}
-                  onViewDetails={() => router.push(`/salons/browse/${salon.id}`)}
-                  viewMode={viewMode}
-                  userLocation={userLocation}
-                />
-              ))}
-            </div>
-
-            {/* PAGINATION */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-8 border-t border-border-light dark:border-border-dark">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
+              toggleFavoriteMutation.mutate({
+                salonId,
+                isFavorited: favorites.includes(salonId),
+              });
+            }}
+          />
+        ) : (
+          /* SALONS GRID/LIST */
+          <>
+            {paginatedSalons.length > 0 ? (
+              <>
+                <div
+                  className={
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
+                      : 'space-y-4'
+                  }
                 >
-                  ← Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-2 rounded-lg transition-all ${
-                          currentPage === pageNum
-                            ? 'bg-primary text-white shadow-lg'
-                            : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:border-primary/30'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
+                  {paginatedSalons.map((salon) => (
+                    <SalonCard
+                      key={salon.id}
+                      salon={salon}
+                      isFavorited={favorites.includes(salon.id)}
+                      onToggleFavorite={(id) => {
+                        if (!user) {
+                          // Redirect to login or show auth modal
+                          router.push('/login');
+                          return;
+                        }
+                        toggleFavoriteMutation.mutate({
+                          salonId: id,
+                          isFavorited: favorites.includes(id)
+                        });
+                      }}
+                      onViewDetails={() => router.push(`/salons/browse/${salon.id}`)}
+                      viewMode={viewMode}
+                      userLocation={userLocation}
+                    />
+                  ))}
                 </div>
+
+                {/* PAGINATION */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-8 border-t border-border-light dark:border-border-dark">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      ← Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-3 py-2 rounded-lg transition-all ${
+                              currentPage === pageNum
+                                ? 'bg-primary text-white shadow-lg'
+                                : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark border border-border-light dark:border-border-dark hover:border-primary/30'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next →
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-dashed border-border-light dark:border-border-dark">
+                <div className="p-3 bg-primary/5 rounded-full mb-3">
+                  <Search className="w-5 h-5 text-primary/60" />
+                </div>
+
+                <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">
+                  {searchQuery ? 'No matches found' : 'No salons found'}
+                </h3>
+
+                <p className="text-xs text-text-light/50 dark:text-text-dark/50 text-center max-w-xs mb-4">
+                  {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Try adjusting your filters'}
+                </p>
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                    setSelectedLocation('all');
+                    setCurrentPage(1);
+                  }}
+                  className="h-8 text-xs border-dashed"
                 >
-                  Next →
+                  Clear filters
                 </Button>
               </div>
             )}
           </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl bg-surface-light dark:bg-surface-dark border border-dashed border-border-light dark:border-border-dark">
-            <div className="p-3 bg-primary/5 rounded-full mb-3">
-              <Search className="w-5 h-5 text-primary/60" />
-            </div>
-            
-            <h3 className="text-sm font-semibold text-text-light dark:text-text-dark mb-1">
-              {searchQuery ? 'No matches found' : 'No salons found'}
-            </h3>
-            
-            <p className="text-xs text-text-light/50 dark:text-text-dark/50 text-center max-w-xs mb-4">
-              {searchQuery ? `We couldn't find anything for "${searchQuery}"` : 'Try adjusting your filters'}
-            </p>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setCurrentPage(1);
-              }}
-              className="h-8 text-xs border-dashed"
-            >
-              Clear filters
-            </Button>
-          </div>
         )}
       </div>
     </div>
@@ -716,7 +822,7 @@ function SalonCard({
   isFavorited?: boolean;
   onToggleFavorite?: (id: string) => void;
   onViewDetails: () => void;
-  viewMode?: ViewMode;
+  viewMode?: 'grid' | 'list';
   userLocation?: { lat: number; lng: number } | null;
 }) {
   const hasImage = salon.images && salon.images.length > 0 && salon.images[0];

@@ -49,18 +49,20 @@ export default function NotificationsPage() {
         }
 
         const response = await api.get(`/notifications?${params.toString()}`);
-        // Backend returns { data: Notification[], total: number }
-        if (response.data?.data && Array.isArray(response.data.data)) {
+        // Backend returns { data: { data: Notification[], total: number } } or { data: Notification[], ... }
+        const resData = response.data.data !== undefined ? response.data.data : response.data;
+        
+        if (resData?.data && Array.isArray(resData.data)) {
           return {
-            data: response.data.data,
-            total: response.data.total || response.data.data.length,
+            data: resData.data,
+            total: resData.total || resData.data.length,
           };
         }
         // Fallback: if data is directly an array
-        if (Array.isArray(response.data)) {
+        if (Array.isArray(resData)) {
           return {
-            data: response.data,
-            total: response.data.length,
+            data: resData,
+            total: resData.length,
           };
         }
         return {
@@ -85,14 +87,16 @@ export default function NotificationsPage() {
     queryFn: async () => {
       try {
         const response = await api.get('/notifications/unread-count');
+        const resData = response.data.data !== undefined ? response.data.data : response.data;
+
         // Backend returns { count: number }
-        if (response.data && typeof response.data === 'object' && 'count' in response.data) {
-          const count = Number(response.data.count);
+        if (resData && typeof resData === 'object' && 'count' in resData) {
+          const count = Number(resData.count);
           return isNaN(count) ? 0 : count;
         }
         // Fallback: if it's already a number
-        if (typeof response.data === 'number') {
-          return response.data;
+        if (typeof resData === 'number') {
+          return resData;
         }
         return 0;
       } catch (error: any) {

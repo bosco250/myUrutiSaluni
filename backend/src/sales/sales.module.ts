@@ -18,7 +18,7 @@ import { AppointmentsModule } from '../appointments/appointments.module';
     forwardRef(() => SalonsModule),
     InventoryModule,
     forwardRef(() => AccountingModule),
-    CommissionsModule,
+    forwardRef(() => CommissionsModule),
     forwardRef(() => CustomersModule),
     forwardRef(() => NotificationsModule),
     forwardRef(() => AppointmentsModule),

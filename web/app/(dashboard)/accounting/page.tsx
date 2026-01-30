@@ -49,6 +49,7 @@ import { useEmployeePermissions } from '@/hooks/useEmployeePermissions';
 import { EmployeePermission } from '@/lib/employee-permissions';
 import { useToast } from '@/components/ui/Toast';
 import { canViewAllSalons } from '@/lib/permissions';
+import { formatCurrency } from '@/lib/currency';
 
 // --- Types ---
 interface FinancialSummary {
@@ -59,10 +60,19 @@ interface FinancialSummary {
   expenseCount: number;
 }
 
+enum AccountType {
+  ASSET = 'asset',
+  LIABILITY = 'liability',
+  EQUITY = 'equity',
+  REVENUE = 'revenue',
+  EXPENSE = 'expense',
+}
+
 interface ExpenseCategory {
   id: string;
   code: string;
   name: string;
+  accountType: AccountType;
 }
 
 interface Expense {
@@ -76,6 +86,28 @@ interface Expense {
   vendorName?: string;
   status: string;
   createdAt: string;
+}
+
+interface JournalEntryLine {
+  id: string;
+  accountId: string;
+  accountName?: string;
+  accountCode?: string;
+  debitAmount: string | number;
+  creditAmount: string | number;
+  description?: string;
+  account?: { code: string; name: string };
+}
+
+interface JournalEntry {
+  id: string;
+  entryNumber: string;
+  entryDate: string;
+  description: string;
+  status: 'draft' | 'posted';
+  totaldebit: string | number;
+  totalcredit: string | number;
+  lines: JournalEntryLine[];
 }
 
 interface ExpenseFormData {
@@ -95,14 +127,7 @@ interface Salon {
 }
 
 // --- Helper Functions ---
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+
 
 // --- Sub-Components ---
 
@@ -369,7 +394,9 @@ export default function AccountingPage() {
     }
     
     if (can(EmployeePermission.MANAGE_EXPENSES)) {
-      t.push({ id: 'accounts', name: 'Accounts', icon: BookOpen });
+      t.push({ id: 'reports', name: 'Reports', icon: TrendingUp });
+      t.push({ id: 'accounts', name: 'Chart of Accounts', icon: BookOpen });
+      t.push({ id: 'journal', name: 'Journal', icon: FileText });
     }
     return t;
   }, [can]);
@@ -507,7 +534,7 @@ export default function AccountingPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 pb-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 pb-10">
       {/* Header Section */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
@@ -685,10 +712,12 @@ export default function AccountingPage() {
       <TabNav tabs={tabs} activeString={activeTab} onChange={setActiveTab} />
 
       {/* Main Content Area */}
-      <div className="min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="min-h-[300px] animate-in fade-in slide-in-from-bottom-4 duration-500">
         {activeTab === 'overview' && <OverviewTab salonId={salonId} dateRange={dateRange} summary={summary} />}
         {activeTab === 'expenses' && <ExpensesTab salonId={salonId} dateRange={dateRange} />}
+        {activeTab === 'reports' && <ReportsTab salonId={salonId} dateRange={dateRange} />}
         {activeTab === 'accounts' && <AccountsTab salonId={salonId} />}
+        {activeTab === 'journal' && <JournalEntriesTab salonId={salonId} dateRange={dateRange} />}
       </div>
     </div>
   );
@@ -738,6 +767,7 @@ function FinancialCharts({ salonId, dateRange }: { salonId: string; dateRange: a
                      There are no approved expenses or completed sales for the selected period.
                   </p>
                </div>
+
             </div>
         </div>
       );
@@ -1250,15 +1280,17 @@ function ExpensesTab({ salonId, dateRange }: { salonId: string; dateRange: { sta
 
 // --- TAB 3: ACCOUNTS ---
 
+// --- TAB 3: CATEGORIES (formerly ACCOUNTS) ---
+
 function AccountsTab({ salonId }: { salonId: string }) {
   const queryClient = useQueryClient();
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const createCategoryMutation = useMutation({
-    mutationFn: async (data: { code: string; name: string }) => {
+    mutationFn: async (data: { code: string; name: string; accountType: AccountType }) => {
       return api.post('/accounting/accounts', {
         code: data.code,
         name: data.name,
-        accountType: 'expense',
+        accountType: data.accountType,
         salonId,
         isActive: true,
       });
@@ -1269,13 +1301,13 @@ function AccountsTab({ salonId }: { salonId: string }) {
     },
   });
 
-  const { data: categories = [], isLoading } = useQuery<ExpenseCategory[]>({
-      queryKey: ['expense-categories', salonId],
+  const { data: accounts = [], isLoading } = useQuery<ExpenseCategory[]>({
+      queryKey: ['all-accounts', salonId],
       queryFn: async () => {
          try {
-            const res = await api.get('/accounting/expense-categories', { params: { salonId } });
-            const categoriesData = res.data?.data || res.data || [];
-            return Array.isArray(categoriesData) ? categoriesData : [];
+            const res = await api.get('/accounting/accounts', { params: { salonId } });
+            const data = res.data?.data || res.data || [];
+            return Array.isArray(data) ? data : [];
          } catch (error) {
             return [];
          }
@@ -1283,13 +1315,53 @@ function AccountsTab({ salonId }: { salonId: string }) {
       enabled: !!salonId
   });
 
+  const accountsByType = useMemo(() => {
+    const grouped: Record<string, ExpenseCategory[]> = {};
+    accounts.forEach(acc => {
+      const type = acc.accountType || 'EXPENSE';
+      if (!grouped[type]) grouped[type] = [];
+      grouped[type].push(acc);
+    });
+    return grouped;
+  }, [accounts]);
+
+  const [editingAccount, setEditingAccount] = useState<ExpenseCategory | null>(null);
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async (data: { id: string; code: string; name: string; accountType: AccountType }) => {
+      return api.patch(`/accounting/accounts/${data.id}`, {
+        code: data.code,
+        name: data.name,
+        accountType: data.accountType,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-accounts', salonId] });
+      setShowCreateCategory(false);
+      setEditingAccount(null);
+    },
+  });
+
+  const handleEdit = (account: ExpenseCategory) => {
+    setEditingAccount(account);
+    setShowCreateCategory(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowCreateCategory(false);
+    setEditingAccount(null);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Chart of Accounts</h2>
-          <Button variant="outline" size="sm" onClick={() => setShowCreateCategory(true)} className="h-9 px-3 text-sm font-semibold">
+          <div>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Chart of Accounts</h2>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">Manage your financial accounts and categories</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { setEditingAccount(null); setShowCreateCategory(true); }} className="h-9 px-3 text-sm font-semibold">
             <Plus className="mr-2 h-4 w-4" />
-            Add Category
+            Add Account
           </Button>
        </div>
        
@@ -1298,39 +1370,52 @@ function AccountsTab({ salonId }: { salonId: string }) {
             {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="h-24 rounded-xl border border-border-light/60 bg-background-light/60 animate-pulse dark:border-border-dark/60 dark:bg-background-dark/40" />)}
          </div>
        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-             {Array.isArray(categories) && categories.map((cat) => (
-                <div key={cat.id} className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition-all">
-                   <div className="flex items-center justify-between mb-3">
-                      <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
-                         <BookOpen className="w-4 h-4 text-primary" />
-                      </div>
-                      <span className="text-[9px] font-mono font-black uppercase text-text-light/30 tracking-tighter bg-text-light/5 px-1.5 py-0.5 rounded">{cat.code}</span>
+          <div className="space-y-8">
+             {Object.keys(accountsByType).length === 0 && (
+                <EmptyState 
+                  title="No Accounts Found" 
+                  description="Start by creating your first account."
+                  icon={<BookOpen className="w-12 h-12 text-gray-300" />}
+                />
+             )}
+             
+             {['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'].map((type) => {
+               const typeAccounts = accountsByType[type.toLowerCase()] || accountsByType[type] || [];
+               if (typeAccounts.length === 0) return null;
+
+               return (
+                 <div key={type}>
+                   <h3 className="text-xs font-black uppercase tracking-widest text-text-light/40 mb-3 border-b border-border-light dark:border-border-dark pb-1">{type}S</h3>
+                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                      {typeAccounts.map((cat) => (
+                         <div 
+                           key={cat.id} 
+                           onClick={() => handleEdit(cat)}
+                           className="group relative bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer"
+                         >
+                            <div className="flex items-center justify-between mb-3">
+                               <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
+                                  <BookOpen className="w-4 h-4 text-primary" />
+                               </div>
+                               <span className="text-[9px] font-mono font-black uppercase text-text-light/30 tracking-tighter bg-text-light/5 px-1.5 py-0.5 rounded">{cat.code}</span>
+                            </div>
+                            <div>
+                               <h3 className="text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-1">{cat.accountType}</h3>
+                               <p className="text-sm font-black text-text-light dark:text-text-dark leading-tight">{cat.name}</p>
+                            </div>
+                         </div>
+                      ))}
                    </div>
-                   <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-1">Expense Category</h3>
-                      <p className="text-sm font-black text-text-light dark:text-text-dark leading-tight">{cat.name}</p>
-                   </div>
-                </div>
-             ))}
-             {/* Add New Card - Refined */}
-             <button
-                type="button"
-                onClick={() => setShowCreateCategory(true)}
-                className="group p-4 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border-light/50 hover:border-primary/30 hover:bg-primary/5 transition-all"
-               >
-                <div className="p-2 rounded-full border border-border-light group-hover:bg-primary group-hover:text-white transition-all">
-                   <Plus className="h-5 w-5 text-text-light/40 group-hover:text-white" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-text-light/30 group-hover:text-primary transition-colors">Rollout Category</span>
-             </button>
+                 </div>
+               );
+             })}
           </div>
        )}
 
        <Modal
          isOpen={showCreateCategory}
-         onClose={() => setShowCreateCategory(false)}
-         title="New Expense Category"
+         onClose={handleCloseModal}
+         title={editingAccount ? "Edit Account" : "New Account"}
        >
          <form
            onSubmit={(e) => {
@@ -1338,8 +1423,14 @@ function AccountsTab({ salonId }: { salonId: string }) {
              const fd = new FormData(e.currentTarget);
              const code = String(fd.get('code') || '').trim();
              const name = String(fd.get('name') || '').trim();
+             const accountType = (fd.get('accountType') as AccountType) || AccountType.EXPENSE;
              if (!code || !name) return;
-             createCategoryMutation.mutate({ code, name });
+             
+             if (editingAccount) {
+               updateCategoryMutation.mutate({ id: editingAccount.id, code, name, accountType });
+             } else {
+               createCategoryMutation.mutate({ code, name, accountType });
+             }
            }}
            className="space-y-5"
          >
@@ -1355,6 +1446,7 @@ function AccountsTab({ salonId }: { salonId: string }) {
                   id="account-code"
                   name="code"
                   type="text"
+                  defaultValue={editingAccount?.code || ''}
                   placeholder="e.g. EXP-NEW"
                   className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
                   required
@@ -1371,23 +1463,639 @@ function AccountsTab({ salonId }: { salonId: string }) {
                   id="account-name"
                   name="name"
                   type="text"
+                  defaultValue={editingAccount?.name || ''}
                   placeholder="e.g. Insurance"
                   className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
                   required
                 />
              </div>
+             <div className="md:col-span-2">
+                <label
+                   htmlFor="account-type"
+                  className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2"
+                >
+                  Type
+                </label>
+                <select
+                  id="account-type"
+                  name="accountType"
+                  defaultValue={editingAccount?.accountType || AccountType.EXPENSE}
+                  className="w-full rounded-2xl border border-border-light bg-surface-light px-4 py-3 text-sm font-bold text-text-light focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary/5 dark:border-border-dark dark:bg-surface-dark dark:text-text-dark outline-none"
+                  required
+                >
+                  {Object.values(AccountType).map((t) => (
+                    <option key={t} value={t} className="uppercase">{t}</option>
+                  ))}
+                </select>
+             </div>
            </div>
            
            <div className="flex justify-end gap-3 pt-4">
-             <Button type="button" variant="secondary" onClick={() => setShowCreateCategory(false)} className="px-6 text-[10px] font-black uppercase tracking-widest">
+             <Button type="button" variant="secondary" onClick={handleCloseModal} className="px-6 text-[10px] font-black uppercase tracking-widest">
                Discard
              </Button>
-             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending} className="px-8 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-               {createCategoryMutation.isPending ? 'Syncing...' : 'Rollout Category'}
+             <Button type="submit" variant="primary" disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending} className="px-8 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+               {createCategoryMutation.isPending || updateCategoryMutation.isPending ? 'Syncing...' : (editingAccount ? 'Update Account' : 'Rollout Account')}
              </Button>
            </div>
          </form>
        </Modal>
     </div>
+  );
+}
+
+// --- TAB 4: REPORTS ---
+
+function ReportsTab({ salonId, dateRange }: { salonId: string; dateRange: { startDate: string; endDate: string } }) {
+  const { success, error, info } = useToast();
+  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+
+  const { data: balanceSheet, isLoading } = useQuery({
+    queryKey: ['balance-sheet', salonId, dateRange.endDate],
+    queryFn: async () => {
+      const res = await api.get('/accounting/reports/balance-sheet', { params: { salonId, asOfDate: dateRange.endDate }});
+      return res.data?.data || res.data || { assets: [], liabilities: [], equity: [], totalAssets: 0, totalLiabilities: 0, totalEquity: 0 };
+    },
+    enabled: !!salonId
+  });
+
+  const isBalanced = balanceSheet ? Math.abs(balanceSheet.totalAssets - (balanceSheet.totalLiabilities + balanceSheet.totalEquity)) < 1.0 : false;
+
+  const AccountSection = ({ title, accounts, total, color = "text-text-light" }: any) => (
+    <div className="rounded-xl border border-border-light bg-surface-light p-5 dark:border-border-dark dark:bg-surface-dark">
+       <div className="flex items-center justify-between border-b border-border-light pb-3 mb-3 dark:border-border-dark">
+         <h3 className="text-xs font-black uppercase tracking-widest text-text-light/50">{title}</h3>
+         <span className={`text-sm font-bold ${color}`}>{formatCurrency(total)}</span>
+       </div>
+       <div className="space-y-2">
+         {accounts.map((acc: any) => (
+           <div key={acc.id} className="flex items-center justify-between text-xs">
+             <span className="font-medium text-text-light dark:text-text-dark">{acc.code} - {acc.name}</span>
+             <span className="font-mono text-text-light/70 dark:text-text-dark/70">{formatCurrency(acc.balance)}</span>
+           </div>
+         ))}
+         {accounts.length === 0 && <span className="text-[10px] text-text-light/30 italic">No accounts with balance.</span>}
+       </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-1">
+         <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Financial Reports</h2>
+         <p className="text-xs text-text-light/60 dark:text-text-dark/60">Balance Sheet as of {format(new Date(dateRange.endDate), 'MMMM d, yyyy')}</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Balance Sheet Card */}
+        <div className="bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <BookOpen className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <Button 
+               variant="outline" 
+               size="sm"
+               className="h-8 w-8 text-text-light/40 hover:text-primary"
+               disabled={downloadingReport === 'balance-sheet'}
+               onClick={async () => {
+                 try {
+                   setDownloadingReport('balance-sheet');
+                   info('Generating Balance Sheet PDF...', { title: 'Downloading Report' });
+                   
+                   const response = await api.get('/accounting/reports/balance-sheet/pdf', {
+                     params: { salonId, asOfDate: dateRange.endDate },
+                     responseType: 'blob' 
+                   });
+                   const url = window.URL.createObjectURL(new Blob([response.data]));
+                   const link = document.createElement('a');
+                   link.href = url;
+                   link.setAttribute('download', `balance-sheet-${dateRange.endDate}.pdf`);
+                   document.body.appendChild(link);
+                   link.click();
+                   link.remove();
+                   
+                   success('Balance Sheet downloaded successfully.', { title: 'Success' });
+                 } catch (err) {
+                   console.error("Download failed", err);
+                   error('Failed to download report. Please try again.', { title: 'Error' });
+                 } finally {
+                   setDownloadingReport(null);
+                 }
+               }}
+             >
+               {downloadingReport === 'balance-sheet' ? (
+                 <Loader2 className="h-4 w-4 animate-spin" />
+               ) : (
+                 <Download className="h-4 w-4" />
+               )}
+            </Button>
+          </div>
+          <h3 className="font-bold text-sm text-text-light dark:text-text-dark">Balance Sheet</h3>
+          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mt-1 mb-3">
+            Snapshot of financial position as of {new Date(dateRange.endDate).toLocaleDateString()}.
+          </p>
+          <div className="text-xs font-medium text-emerald-600">
+            Assets = Liabilities + Equity
+          </div>
+        </div>
+
+        {/* Profit & Loss Card */}
+        <div className="bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Button 
+               variant="outline" 
+               size="sm"
+               className="h-8 w-8 text-text-light/40 hover:text-primary"
+               disabled={downloadingReport === 'profit-loss'}
+               onClick={async () => {
+                 try {
+                   setDownloadingReport('profit-loss');
+                   info('Generating Profit & Loss PDF...', { title: 'Downloading Report' });
+
+                   const response = await api.get('/accounting/reports/profit-loss/pdf', {
+                     params: { salonId, startDate: dateRange.startDate, endDate: dateRange.endDate },
+                     responseType: 'blob' 
+                   });
+                   const url = window.URL.createObjectURL(new Blob([response.data]));
+                   const link = document.createElement('a');
+                   link.href = url;
+                   link.setAttribute('download', `profit-loss-${dateRange.endDate}.pdf`);
+                   document.body.appendChild(link);
+                   link.click();
+                   link.remove();
+
+                   success('Profit & Loss downloaded successfully.', { title: 'Success' });
+                 } catch (err) {
+                   console.error("Download failed", err);
+                   error('Failed to download report. Please try again.', { title: 'Error' });
+                 } finally {
+                   setDownloadingReport(null);
+                 }
+               }}
+             >
+               {downloadingReport === 'profit-loss' ? (
+                 <Loader2 className="h-4 w-4 animate-spin" />
+               ) : (
+                 <Download className="h-4 w-4" />
+               )}
+            </Button>
+          </div>
+          <h3 className="font-bold text-sm text-text-light dark:text-text-dark">Profit & Loss</h3>
+          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mt-1 mb-3">
+            Income and expenses from {new Date(dateRange.startDate).toLocaleDateString()} to {new Date(dateRange.endDate).toLocaleDateString()}.
+          </p>
+          <div className="text-xs font-medium text-blue-600">
+            Net Income Calculation
+          </div>
+        </div>
+
+        {/* Chart of Accounts Card */}
+         <div className="bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Button 
+               variant="outline" 
+               size="sm"
+               className="h-8 w-8 text-text-light/40 hover:text-primary"
+               disabled={downloadingReport === 'chart-of-accounts'}
+               onClick={async () => {
+                 try {
+                   setDownloadingReport('chart-of-accounts');
+                   info('Generating Chart of Accounts PDF...', { title: 'Downloading Report' });
+
+                   const response = await api.get('/accounting/reports/accounts/pdf', {
+                     params: { salonId },
+                     responseType: 'blob' 
+                   });
+                   const url = window.URL.createObjectURL(new Blob([response.data]));
+                   const link = document.createElement('a');
+                   link.href = url;
+                   link.setAttribute('download', `chart-of-accounts.pdf`);
+                   document.body.appendChild(link);
+                   link.click();
+                   link.remove();
+                   
+                   success('Chart of Accounts downloaded successfully.', { title: 'Success' });
+                 } catch (err) {
+                   console.error("Download failed", err);
+                   error('Failed to download report. Please try again.', { title: 'Error' });
+                 } finally {
+                   setDownloadingReport(null);
+                 }
+               }}
+             >
+               {downloadingReport === 'chart-of-accounts' ? (
+                 <Loader2 className="h-4 w-4 animate-spin" />
+               ) : (
+                 <Download className="h-4 w-4" />
+               )}
+            </Button>
+          </div>
+          <h3 className="font-bold text-sm text-text-light dark:text-text-dark">Chart of Accounts</h3>
+          <p className="text-[10px] text-text-light/60 dark:text-text-dark/60 mt-1 mb-3">
+            Complete list of all asset, liability, equity, revenue, and expense accounts.
+          </p>
+          <div className="text-xs font-medium text-purple-600">
+            Master Record
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <div className="h-64 animate-pulse rounded-xl bg-surface-light dark:bg-surface-dark" />
+           <div className="h-64 animate-pulse rounded-xl bg-surface-light dark:bg-surface-dark" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+           {/* Summary Equation Card */}
+           <div className={`rounded-xl border p-4 flex items-center justify-between ${isBalanced ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-rose-500/30 bg-rose-500/5'}`}>
+              <div className="flex items-center gap-4">
+                 <div className="text-center">
+                    <span className="block text-[10px] font-black uppercase tracking-widest text-text-light/40">Total Assets</span>
+                    <span className="text-lg font-bold text-emerald-600">{formatCurrency(balanceSheet.totalAssets)}</span>
+                 </div>
+                 <span className="text-lg font-bold text-text-light/30">=</span>
+                 <div className="text-center">
+                    <span className="block text-[10px] font-black uppercase tracking-widest text-text-light/40">Liabilities + Equity</span>
+                    <span className="text-lg font-bold text-primary">{formatCurrency(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}</span>
+                 </div>
+              </div>
+              <div className="text-right">
+                 <span className={`text-xs font-bold uppercase tracking-widest px-2 py-1 rounded ${isBalanced ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                    {isBalanced ? 'Balanced' : 'Unbalanced'}
+                 </span>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Assets Column */}
+              <div className="space-y-6">
+                 <AccountSection title="Assets" accounts={balanceSheet.assets} total={balanceSheet.totalAssets} color="text-emerald-600" />
+              </div>
+
+              {/* Liabilities & Equity Column */}
+              <div className="space-y-6">
+                 <AccountSection title="Liabilities" accounts={balanceSheet.liabilities} total={balanceSheet.totalLiabilities} color="text-rose-600" />
+                 <AccountSection title="Equity" accounts={balanceSheet.equity} total={balanceSheet.totalEquity} color="text-primary" />
+              </div>
+           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- TAB 5: JOURNAL ENTRIES (Existing) ---
+
+function JournalEntriesTab({ salonId, dateRange }: { salonId: string; dateRange: { startDate: string; endDate: string } }) {
+  const { success, error } = useToast();
+  const queryClient = useQueryClient();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+
+  const { data: entriesData, isLoading } = useQuery<any>({
+    queryKey: ['journal-entries', salonId, dateRange, page],
+    queryFn: async () => {
+      const res = await api.get('/accounting/journal-entries', { 
+        params: { 
+          salonId, 
+          ...dateRange,
+          page,
+          limit
+        } 
+      });
+      return res.data;
+    },
+    enabled: !!salonId
+  });
+
+  const { entries, total } = useMemo(() => {
+    const raw = entriesData;
+    let list: JournalEntry[] = [];
+    let t = 0;
+
+    if (Array.isArray(raw)) {
+      list = raw;
+      t = raw.length;
+    } else if (raw?.data && Array.isArray(raw.data)) {
+      list = raw.data;
+      t = raw.total || raw.count || list.length;
+    } else if (raw?.data?.data && Array.isArray(raw.data.data)) {
+      list = raw.data.data;
+      t = raw.data.total || raw.data.count || list.length;
+    }
+
+    return { entries: list, total: t };
+  }, [entriesData]);
+
+  const createEntryMutation = useMutation({
+    mutationFn: (data: any) => api.post('/accounting/journal-entries', data),
+    onSuccess: () => {
+      success('Journal entry posted successfully');
+      setShowCreateModal(false);
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.message || 'Failed to post journal entry');
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+         <div className="space-y-1">
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Journal Entries</h2>
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">Record double-entry adjustments and transfers</p>
+         </div>
+         <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)} className="h-9 px-4 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+           <Plus className="mr-2 h-3.5 w-3.5" />
+           New Entry
+         </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="h-16 w-full animate-pulse rounded-xl bg-surface-light dark:bg-surface-dark" />)}
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border-light bg-surface-light/50 p-8 text-center dark:border-border-dark dark:bg-surface-dark/50">
+           <BookOpen className="mx-auto h-12 w-12 text-text-light/20 dark:text-text-dark/20 mb-4" />
+           <h3 className="text-sm font-bold text-text-light dark:text-text-dark">No Entries Found</h3>
+           <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 max-w-xs mx-auto">
+             Create your first journal entry to track adjustments or opening balances.
+           </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-4">
+            {entries.map(entry => (
+              <div key={entry.id} className="rounded-xl border border-border-light bg-surface-light p-4 dark:border-border-dark dark:bg-surface-dark">
+                 <div className="flex items-center justify-between mb-3 border-b border-border-light dark:border-border-dark pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded">{entry.entryNumber}</span>
+                        <span className="text-xs font-medium text-text-light/60 dark:text-text-dark/60">{format(new Date(entry.entryDate), 'MMM dd, yyyy')}</span>
+                      </div>
+                      <h3 className="text-sm font-bold text-text-light dark:text-text-dark mt-1">{entry.description}</h3>
+                    </div>
+                    <div className="text-right">
+                       <span className="block text-[10px] font-black uppercase tracking-widest text-text-light/40">Total</span>
+                       <span className="text-sm font-bold text-text-light dark:text-text-dark">
+                         {formatCurrency(entry.lines.reduce((sum, line) => sum + (Number(line.debitAmount) || 0), 0))}
+                       </span>
+                    </div>
+                 </div>
+                 <div className="bg-background-light/50 dark:bg-background-dark/50 rounded-lg overflow-hidden">
+                   <table className="w-full text-left text-xs">
+                     <thead className="text-[9px] font-black uppercase tracking-widest text-text-light/40 border-b border-border-light/50 dark:border-border-dark/50">
+                       <tr>
+                         <th className="px-3 py-2">Account</th>
+                         <th className="px-3 py-2 text-right">Debit</th>
+                         <th className="px-3 py-2 text-right">Credit</th>
+                       </tr>
+                     </thead>
+                     <tbody className="divide-y divide-border-light/30 dark:divide-border-dark/30">
+                       {entry.lines.map(line => (
+                         <tr key={line.id}>
+                           <td className="px-3 py-1.5 font-medium text-text-light dark:text-text-dark">
+                             {line.accountCode || line.account?.code} - {line.accountName || line.account?.name}
+                             {line.description && <span className="block text-[9px] text-text-light/40 font-normal">{line.description}</span>}
+                           </td>
+                           <td className="px-3 py-1.5 text-right font-mono text-text-light/70 dark:text-text-dark/70">
+                             {Number(line.debitAmount) > 0 ? formatCurrency(Number(line.debitAmount)) : '-'}
+                           </td>
+                           <td className="px-3 py-1.5 text-right font-mono text-text-light/70 dark:text-text-dark/70">
+                             {Number(line.creditAmount) > 0 ? formatCurrency(Number(line.creditAmount)) : '-'}
+                           </td>
+                         </tr>
+                       ))}
+                     </tbody>
+                   </table>
+                 </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination UI */}
+          <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark px-3 py-4">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-text-light/40 dark:text-text-dark/40">
+                 {total} Journals Found
+              </span>
+              <div className="flex items-center gap-2">
+                 <span className="text-[10px] font-black mr-2 opacity-30 uppercase tracking-tighter">Page {page} of {Math.max(1, Math.ceil(total / limit))}</span>
+                 <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => {
+                        setPage(p => Math.max(1, p - 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    disabled={page === 1}
+                    className="h-7 px-3 text-[10px] font-black uppercase tracking-widest"
+                 >Prev</Button>
+                 <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => {
+                        setPage(p => p + 1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    disabled={page * limit >= total}
+                    className="h-7 px-3 text-[10px] font-black uppercase tracking-widest"
+                 >Next</Button>
+              </div>
+          </div>
+        </div>
+      )}
+
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Journal Entry">
+         <JournalEntryForm 
+           salonId={salonId} 
+           onSubmit={(data) => createEntryMutation.mutate(data)} 
+           isSubmitting={createEntryMutation.isPending}
+           onCancel={() => setShowCreateModal(false)}
+         />
+      </Modal>
+    </div>
+  );
+}
+
+function JournalEntryForm({ salonId, onSubmit, isSubmitting, onCancel }: { salonId: string; onSubmit: (data: any) => void; isSubmitting: boolean; onCancel: () => void }) {
+  const { data: accounts = [] } = useQuery<ExpenseCategory[]>({
+    queryKey: ['all-accounts', salonId],
+    queryFn: async () => {
+      const res = await api.get('/accounting/accounts', { params: { salonId } });
+      const data = res.data?.data || res.data || [];
+      return Array.isArray(data) ? data : [];
+    }
+  });
+
+  const [lines, setLines] = useState([
+    { accountId: '', debit: '', credit: '', description: '' },
+    { accountId: '', debit: '', credit: '', description: '' }
+  ]);
+
+  const addLine = () => {
+    setLines([...lines, { accountId: '', debit: '', credit: '', description: '' }]);
+  };
+
+  const removeLine = (index: number) => {
+    if (lines.length > 2) {
+      setLines(lines.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateLine = (index: number, field: string, value: string) => {
+    const newLines = [...lines];
+    newLines[index] = { ...newLines[index], [field]: value };
+    setLines(newLines);
+  };
+
+  const totalDebit = lines.reduce((sum, line) => sum + (parseFloat(line.debit) || 0), 0);
+  const totalCredit = lines.reduce((sum, line) => sum + (parseFloat(line.credit) || 0), 0);
+  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isBalanced) {
+      alert('Debits must equal Credits');
+      return;
+    }
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const entryData = {
+      salonId,
+      entryDate: formData.get('entryDate'),
+      description: formData.get('description'),
+      entryNumber: `JE-${Date.now().toString().slice(-6)}`,
+      status: 'posted',
+      lines: lines
+        .filter(l => (parseFloat(l.debit) || 0) > 0 || (parseFloat(l.credit) || 0) > 0)
+        .map(l => ({
+          accountId: l.accountId,
+          debitAmount: l.debit || '0',
+          creditAmount: l.credit || '0',
+          description: l.description
+        }))
+    };
+    
+    onSubmit(entryData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+         <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Entry Date</label>
+            <input name="entryDate" type="date" required defaultValue={format(new Date(), 'yyyy-MM-dd')}
+              className="w-full rounded-xl border border-border-light bg-surface-light px-3 py-2 text-sm font-bold text-text-light focus:ring-2 focus:ring-primary/20 outline-none dark:bg-surface-dark dark:text-text-dark dark:border-border-dark"
+            />
+         </div>
+         <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-text-light/40 mb-2">Reference / Description</label>
+            <input name="description" type="text" required placeholder="e.g. Opening Balance"
+              className="w-full rounded-xl border border-border-light bg-surface-light px-3 py-2 text-sm font-bold text-text-light focus:ring-2 focus:ring-primary/20 outline-none dark:bg-surface-dark dark:text-text-dark dark:border-border-dark"
+            />
+         </div>
+      </div>
+
+      <div className="border rounded-xl overflow-hidden border-border-light dark:border-border-dark">
+         <table className="w-full text-left">
+           <thead className="bg-background-light dark:bg-background-dark text-[10px] font-black uppercase tracking-widest text-text-light/50">
+             <tr>
+               <th className="px-3 py-2">Account</th>
+               <th className="px-3 py-2 w-24 text-right">Debit</th>
+               <th className="px-3 py-2 w-24 text-right">Credit</th>
+               <th className="px-3 py-2 w-8"></th>
+             </tr>
+           </thead>
+           <tbody className="divide-y divide-border-light dark:divide-border-dark">
+             {lines.map((line, idx) => (
+               <tr key={idx} className="bg-surface-light dark:bg-surface-dark">
+                 <td className="p-2">
+                    <select 
+                      value={line.accountId}
+                      onChange={e => updateLine(idx, 'accountId', e.target.value)}
+                      required
+                      className="w-full bg-transparent text-xs font-bold text-text-light dark:text-text-dark outline-none"
+                    >
+                      <option value="">Select Account...</option>
+                      {accounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.code} - {acc.name} ({acc.accountType || 'EXPENSE'})</option>
+                      ))}
+                    </select>
+                 </td>
+                 <td className="p-2">
+                    <input 
+                      type="number" step="0.01" min="0"
+                      value={line.debit}
+                      onChange={e => updateLine(idx, 'debit', e.target.value)}
+                      onBlur={e => {
+                        if (parseFloat(e.target.value) > 0) updateLine(idx, 'credit', '');
+                      }}
+                      className="w-full bg-transparent text-right text-xs font-mono font-bold text-text-light dark:text-text-dark outline-none placeholder:text-text-light/20"
+                      placeholder="0.00"
+                    />
+                 </td>
+                 <td className="p-2">
+                    <input 
+                      type="number" step="0.01" min="0"
+                      value={line.credit}
+                      onChange={e => updateLine(idx, 'credit', e.target.value)}
+                      onBlur={e => {
+                        if (parseFloat(e.target.value) > 0) updateLine(idx, 'debit', '');
+                      }}
+                      className="w-full bg-transparent text-right text-xs font-mono font-bold text-text-light dark:text-text-dark outline-none placeholder:text-text-light/20"
+                      placeholder="0.00"
+                    />
+                 </td>
+                 <td className="p-2 text-center">
+                   {lines.length > 2 && (
+                     <button type="button" onClick={() => removeLine(idx)} className="text-text-light/30 hover:text-red-500">
+                       <Trash2 className="w-3.5 h-3.5" />
+                     </button>
+                   )}
+                 </td>
+               </tr>
+             ))}
+           </tbody>
+         </table>
+         <div className="p-2 bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark">
+            <button type="button" onClick={addLine} className="flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-wide hover:underline">
+               <Plus className="w-3 h-3" /> Add Line
+            </button>
+         </div>
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark rounded-xl border border-border-light dark:border-border-dark">
+         <div className="text-xs">
+           <div className="flex gap-4">
+              <span className="text-text-light/50">Total Debit: <span className="font-mono font-bold text-text-light dark:text-text-dark">{formatCurrency(totalDebit)}</span></span>
+              <span className="text-text-light/50">Total Credit: <span className="font-mono font-bold text-text-light dark:text-text-dark">{formatCurrency(totalCredit)}</span></span>
+           </div>
+         </div>
+         <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isBalanced ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+            {isBalanced ? 'Balanced' : 'Unbalanced'}
+         </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button type="button" variant="secondary" onClick={onCancel} className="px-6 text-[10px] font-black uppercase tracking-widest">
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" disabled={isSubmitting || !isBalanced} className="px-8 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+          {isSubmitting ? 'Posting...' : 'Post Entry'}
+        </Button>
+      </div>
+    </form>
   );
 }

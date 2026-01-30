@@ -45,7 +45,9 @@ export class SalesService {
     @InjectRepository(SaleItem)
     private saleItemsRepository: Repository<SaleItem>,
     private inventoryService: InventoryService,
+    @Inject(forwardRef(() => AccountingService))
     private accountingService: AccountingService,
+    @Inject(forwardRef(() => CommissionsService))
     private commissionsService: CommissionsService,
     @Inject(forwardRef(() => SalonCustomerService))
     private salonCustomerService: SalonCustomerService,

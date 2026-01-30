@@ -128,6 +128,9 @@ interface SalonOwnerStats {
   monthRevenue: number;
   todaySales: number;
   monthSales: number;
+
+  monthExpenses: number;
+  expenseGrowth: number;
   lowStockItems: number;
   activeLoans: number;
 }
@@ -328,6 +331,59 @@ export default function SalonOwnerDashboard() {
           0
         );
 
+        // Calculate Monthly Expenses
+
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const startDate = format(monthStart, 'yyyy-MM-dd');
+        const endDate = format(monthEnd, 'yyyy-MM-dd');
+
+        // Last Month Dates
+
+        const lastMonthStartDate = format(lastMonthStart, 'yyyy-MM-dd');
+        const lastMonthEndDate = format(lastMonthEnd, 'yyyy-MM-dd');
+        
+        // Fetch Current Month Expenses
+        const expenses = await Promise.all(
+          salons.map((salon) => 
+            api.get('/accounting/financial-summary', { 
+              params: { 
+                salonId: salon.id, 
+                startDate, 
+                endDate 
+              } 
+            })
+            .then(res => {
+               const data = res.data?.data || res.data || {};
+               // console.log(`[Dashboard] Fetched expenses for salon ${salon.id}:`, data.totalExpenses);
+               return Number(data.totalExpenses || 0);
+            })
+            .catch((err) => {
+               console.error(`[Dashboard] Error fetching expenses for salon ${salon.id}:`, err);
+               return 0;
+            })
+          )
+        );
+        const monthExpenses = expenses.reduce((sum, val) => sum + val, 0);
+
+        // Fetch Last Month Expenses
+        const lastMonthExpensesList = await Promise.all(
+          salons.map((salon) => 
+            api.get('/accounting/financial-summary', { 
+              params: { 
+                salonId: salon.id, 
+                startDate: lastMonthStartDate, 
+                endDate: lastMonthEndDate
+              } 
+            })
+            .then(res => {
+               const data = res.data?.data || res.data || {};
+               return Number(data.totalExpenses || 0);
+            })
+            .catch(() => 0)
+          )
+        );
+        const lastMonthExpenses = lastMonthExpensesList.reduce((sum, val) => sum + val, 0);
+
         // Calculate growth percentages
         const revenueGrowth =
           lastMonthRevenue > 0 ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
@@ -335,6 +391,9 @@ export default function SalonOwnerDashboard() {
           lastMonthSales.length > 0
             ? ((monthSales.length - lastMonthSales.length) / lastMonthSales.length) * 100
             : 0;
+            
+        const expenseGrowth = 
+          lastMonthExpenses > 0 ? ((monthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100 : 0;
 
         // Weekly revenue (last 7 days)
         const weekStart = subDays(now, 7);
@@ -407,6 +466,8 @@ export default function SalonOwnerDashboard() {
           topServices,
           revenueGrowth,
           salesGrowth,
+          monthExpenses,
+          expenseGrowth,
         };
       } catch (error) {
         return {
@@ -425,6 +486,8 @@ export default function SalonOwnerDashboard() {
           topServices: [],
           revenueGrowth: 0,
           salesGrowth: 0,
+          monthExpenses: 0,
+          expenseGrowth: 0,
         };
       }
     },
@@ -735,7 +798,7 @@ export default function SalonOwnerDashboard() {
       {/* Key Metrics - Top Row */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {/* Today's Revenue */}
-        <div className="group relative bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-green-500/20 dark:border-green-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1">
           <div className="flex items-start justify-between mb-2">
             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
               <DollarSign className="w-4 h-4 text-white" />
@@ -757,7 +820,7 @@ export default function SalonOwnerDashboard() {
         </div>
 
         {/* Today's Appointments */}
-        <div className="group relative bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-blue-500/20 dark:border-blue-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1">
           <div className="flex items-start justify-between mb-2">
             <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
               <Calendar className="w-4 h-4 text-white" />
@@ -781,30 +844,41 @@ export default function SalonOwnerDashboard() {
           </Link>
         </div>
 
-        {/* Total Salons */}
+        {/* Monthly Expenses */}
         <Link
-          href="/salons"
-          className="group relative bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 dark:border-purple-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1"
+          href="/accounting"
+          className="group relative bg-surface-light dark:bg-surface-dark border border-red-500/20 dark:border-red-500/30 rounded-xl p-4 hover:shadow-lg transition-all flex-1"
         >
           <div className="flex items-start justify-between mb-2">
-            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-              <Building2 className="w-4 h-4 text-white" />
+            <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg">
+              <TrendingDown className="w-4 h-4 text-white" />
             </div>
+            <span className="text-[10px] font-semibold text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded">
+              This Month
+            </span>
           </div>
           <p className="text-xs font-medium text-text-light/60 dark:text-text-dark/60 mb-0.5">
-            Total Salons
+            Monthly Expenses
           </p>
           <p className="text-xl font-bold text-text-light dark:text-text-dark">
-            {stats?.totalSalons || 0}
+             RWF {Number(stats?.monthExpenses || 0).toLocaleString()}
           </p>
-          <div className="flex items-center gap-1 mt-1 text-[10px] text-purple-400">
-            <Users className="w-3 h-3" />
-            <span>{stats?.totalEmployees || 0} employees</span>
+          <div className="flex items-center gap-1 mt-1 text-[10px]">
+             {stats?.expenseGrowth !== undefined && (
+               <span className={stats.expenseGrowth > 0 ? 'text-red-400' : 'text-green-400'}>
+                 {stats.expenseGrowth > 0 ? (
+                   <TrendingUp className="w-3 h-3 inline" />
+                 ) : (
+                   <TrendingDown className="w-3 h-3 inline" />
+                 )}{' '}
+                 {Math.abs(stats.expenseGrowth).toFixed(1)}% vs last month
+               </span>
+             )}
           </div>
         </Link>
 
         {/* Month Revenue */}
-        <div className="group relative bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 dark:border-orange-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
+        <div className="group relative bg-surface-light dark:bg-surface-dark border border-orange-500/20 dark:border-orange-500/30 rounded-xl p-4 hover:shadow-lg transition-all">
           <div className="flex items-start justify-between mb-2">
             <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
               <TrendingUp className="w-4 h-4 text-white" />

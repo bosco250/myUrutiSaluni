@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
@@ -11,6 +13,7 @@ import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 import { Commission } from '../commissions/entities/commission.entity';
 import { CommissionsService } from '../commissions/commissions.service';
 import { WalletsService } from '../wallets/wallets.service';
+import { AccountingService } from '../accounting/accounting.service';
 import { WalletTransactionType } from '../wallets/entities/wallet-transaction.entity';
 
 @Injectable()
@@ -24,8 +27,11 @@ export class PayrollService {
     private salonEmployeesRepository: Repository<SalonEmployee>,
     @InjectRepository(Commission)
     private commissionsRepository: Repository<Commission>,
+    @Inject(forwardRef(() => CommissionsService))
     private commissionsService: CommissionsService,
     private walletsService: WalletsService,
+    @Inject(forwardRef(() => AccountingService))
+    private accountingService: AccountingService,
   ) {}
 
   /**
@@ -259,7 +265,16 @@ export class PayrollService {
 
     payrollRun.status = PayrollStatus.PAID;
     payrollRun.processedAt = new Date();
-    return this.payrollRunsRepository.save(payrollRun);
+    const savedRun = await this.payrollRunsRepository.save(payrollRun);
+
+    // AUTOMATIC ACCOUNTING: Record payroll payment in ledger
+    try {
+      await this.accountingService.createPayrollJournalEntry(savedRun);
+    } catch (error) {
+       console.error('Failed to create automatic journal entry for payroll:', error.message);
+    }
+
+    return savedRun;
   }
 
   /**

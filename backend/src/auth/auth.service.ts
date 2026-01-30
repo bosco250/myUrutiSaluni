@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { UserRole } from '../users/entities/user.entity';
 import { EmailService } from '../notifications/services/email.service';
+import { UserSessionsService } from './user-sessions.service';
 import { EmailTemplateService } from '../notifications/services/email-template.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -18,6 +19,7 @@ export class AuthService {
     private configService: ConfigService,
     private emailService: EmailService,
     private emailTemplateService: EmailTemplateService,
+    private sessionsService: UserSessionsService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -46,15 +48,26 @@ export class AuthService {
     return null;
   }
 
-  async login(user: any) {
+  async login(user: any, deviceInfo?: any) {
     const payload = {
       email: user.email,
       phone: user.phone,
       sub: user.id,
       role: user.role,
     };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    // Create session if device info is provided
+    let sessionId = null;
+    if (deviceInfo) {
+      const session = await this.sessionsService.createSession(user.id, deviceInfo);
+      sessionId = session.id;
+    }
+
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: accessToken,
+      session_id: sessionId,
       user: {
         id: user.id,
         email: user.email,
@@ -317,6 +330,43 @@ export class AuthService {
     return {
       message:
         'Password has been reset successfully. You can now log in with your new password.',
+    };
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: { oldPassword?: string; newPassword: string },
+  ): Promise<{ message: string }> {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Check if user has a password set (social login might not)
+    if (user.passwordHash && changePasswordDto.oldPassword) {
+      const isPasswordValid = await bcrypt.compare(
+        changePasswordDto.oldPassword,
+        user.passwordHash,
+      );
+      if (!isPasswordValid) {
+        throw new BadRequestException('Invalid old password');
+      }
+    } else if (user.passwordHash && !changePasswordDto.oldPassword) {
+      // If user has a password but didn't provide old one
+      throw new BadRequestException('Old password is required');
+    }
+
+    // Hash new password and update user
+    const hashedPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
+
+    await this.usersService.update(userId, {
+      passwordHash: hashedPassword,
+    });
+
+    this.logger.log(`Password successfully updated for user: ${user.email}`);
+
+    return {
+      message: 'Password has been updated successfully.',
     };
   }
 }

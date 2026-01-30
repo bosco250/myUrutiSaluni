@@ -282,365 +282,253 @@ function AppointmentDetailContent() {
     : 'N/A';
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* Header with Navigation */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => router.push('/appointments')}
-            variant="secondary"
-            size="sm"
-            className="flex-shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-              Appointment Details
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.text}`}
-              >
-                <StatusIcon className="w-3.5 h-3.5" />
-                {statusConfig.label}
-              </span>
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <Hash className="w-3.5 h-3.5 text-text-light/40 dark:text-text-dark/40" />
-              <p className="text-xs font-mono text-text-light/60 dark:text-text-dark/60">
-                {appointment.id}
-              </p>
+    <div className="min-h-screen bg-transparent py-4 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto bg-surface-light dark:bg-surface-dark rounded-[2rem] overflow-hidden relative border border-border-light dark:border-border-dark shadow-sm transition-all duration-700">
+        
+        {/* Subtle Background Accent */}
+        <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-gradient-to-br from-primary/5 via-transparent to-transparent -z-10 blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 p-6 md:p-10">
+          
+          {/* TOP BAR - Centralized Actions */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-12">
+            <button
+              onClick={() => router.push('/appointments')}
+              className="flex items-center gap-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-text-light/50 dark:text-text-dark/40 hover:text-primary transition-all group pt-2"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              Appointments
+            </button>
+
+            <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2">
+              {/* Primary Lifecycle Status Actions */}
+              {((canManage && !['completed', 'cancelled'].includes(appointment.status)) || 
+                (canCancel && !isPast && !['completed', 'cancelled'].includes(appointment.status))) && (
+                <div className="flex flex-wrap gap-2 mr-2 pr-2 border-r border-border-light dark:border-border-dark">
+                  {canManage && appointment.status === 'pending' && (
+                    <button
+                      onClick={() =>
+                        handleAction(
+                          () => updateStatusMutation.mutate('booked'),
+                          'Confirm Booking',
+                          'Are you sure you want to confirm this booking?',
+                          'primary',
+                          'Confirm'
+                        )
+                      }
+                      className="h-9 px-4 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all"
+                    >
+                      Authorize
+                    </button>
+                  )}
+                  {canManage && ['booked', 'confirmed'].includes(appointment.status) && (
+                    <button
+                      onClick={() =>
+                        handleAction(
+                          () => updateStatusMutation.mutate('in_progress'),
+                          'Start Service',
+                          'Are you sure you want to start the service?',
+                          'primary',
+                          'Start'
+                        )
+                      }
+                      className="h-9 px-4 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all"
+                    >
+                      Engage
+                    </button>
+                  )}
+                  {canManage && appointment.status === 'in_progress' && (
+                    <button
+                      onClick={() =>
+                        handleAction(
+                          () => updateStatusMutation.mutate('completed'),
+                          'Mark Complete',
+                          'Are you sure you want to mark this appointment as completed?',
+                          'primary',
+                          'Complete'
+                        )
+                      }
+                      className="h-9 px-4 rounded-lg bg-primary text-white text-[9px] font-black uppercase tracking-widest hover:bg-primary-dark transition-all"
+                    >
+                      Finalize
+                    </button>
+                  )}
+                  {canCancel && ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
+                    <button
+                      onClick={() =>
+                        handleAction(
+                          () => updateStatusMutation.mutate('cancelled'),
+                          'Cancel Appointment',
+                          'Are you sure you want to cancel this appointment?',
+                          'danger',
+                          'Cancel'
+                        )
+                      }
+                      className="h-9 px-4 rounded-lg bg-surface-light dark:bg-surface-dark text-error text-[9px] font-black uppercase tracking-widest border border-error/20 hover:bg-error/5 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Utility Actions */}
+              {canManage && appointment.customer && !['cancelled', 'completed'].includes(appointment.status) && (
+                <button
+                  onClick={() =>
+                    handleAction(
+                      () => sendReminderMutation.mutate(),
+                      'Send Reminder',
+                      'Are you sure you want to send a reminder to the customer?',
+                      'primary',
+                      'Send Reminder'
+                    )
+                  }
+                  disabled={sendReminderMutation.isPending}
+                  className="p-2.5 rounded-lg bg-background-light dark:bg-background-dark hover:bg-black/5 dark:hover:bg-white/5 border border-border-light dark:border-border-dark group"
+                  title="Send Reminder"
+                >
+                  <Bell className="w-4 h-4 text-primary" />
+                </button>
+              )}
+
+
             </div>
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {canManage && appointment.customer && !['cancelled', 'completed'].includes(appointment.status) && (
-            <Button
-              onClick={() =>
-                handleAction(
-                  () => sendReminderMutation.mutate(),
-                  'Send Reminder',
-                  'Are you sure you want to send a reminder to the customer?',
-                  'primary',
-                  'Send Reminder'
-                )
-              }
-              variant="outline"
-              size="sm"
-              disabled={sendReminderMutation.isPending}
-              className="flex-1 sm:flex-none justify-center"
-            >
-              {sendReminderMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-              ) : (
-                <Bell className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              Remind
-            </Button>
-          )}
-          {canManage && !['completed'].includes(appointment.status) && (
-            <Button
-              onClick={() => router.push(`/appointments/${appointmentId}/edit`)}
-              variant="outline"
-              size="sm"
-              className="flex-1 sm:flex-none justify-center"
-            >
-              <Edit className="w-3.5 h-3.5 mr-1.5" />
-              Edit
-            </Button>
-          )}
-          {canManage && !['completed'].includes(appointment.status) && (
-            <Button
-              onClick={() =>
-                handleAction(
-                  () => deleteMutation.mutate(),
-                  'Delete Appointment',
-                  'Are you sure you want to delete this appointment? This action cannot be undone.',
-                  'danger',
-                  'Delete'
-                )
-              }
-              variant="outline"
-              size="sm"
-              className="flex-1 sm:flex-none justify-center text-error border-error/20 hover:bg-error/5"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-              ) : (
-                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              Delete
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Main Content - Left Column */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Main Status Actions - Prominent */}
-          {(canManage || canCancel) && !isPast && !['completed', 'cancelled'].includes(appointment.status) && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-border-light dark:border-border-dark shadow-sm">
-              <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">
-                Update Status
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {canManage && appointment.status === 'pending' && (
-                  <Button
-                    onClick={() =>
-                      handleAction(
-                        () => updateStatusMutation.mutate('booked'),
-                        'Confirm Booking',
-                        'Are you sure you want to confirm this booking?',
-                        'primary',
-                        'Confirm'
-                      )
-                    }
-                    variant="primary"
-                    size="sm"
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Confirm Booking
-                  </Button>
-                )}
-                {canManage && ['booked', 'confirmed'].includes(appointment.status) && (
-                  <Button
-                    onClick={() =>
-                      handleAction(
-                        () => updateStatusMutation.mutate('in_progress'),
-                        'Start Service',
-                        'Are you sure you want to start the service?',
-                        'primary',
-                        'Start'
-                      )
-                    }
-                    variant="primary"
-                    size="sm"
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    Start Service
-                  </Button>
-                )}
-                {canManage && appointment.status === 'in_progress' && (
-                  <Button
-                    onClick={() =>
-                      handleAction(
-                        () => updateStatusMutation.mutate('completed'),
-                        'Mark Complete',
-                        'Are you sure you want to mark this appointment as completed?',
-                        'primary',
-                        'Complete'
-                      )
-                    }
-                    variant="primary"
-                    size="sm"
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-1.5" /> Mark Complete
-                  </Button>
-                )}
-                {canCancel && ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
-                  <Button
-                    onClick={() =>
-                      handleAction(
-                        () => updateStatusMutation.mutate('cancelled'),
-                        'Cancel Appointment',
-                        'Are you sure you want to cancel this appointment?',
-                        'danger',
-                        'Cancel Appointment'
-                      )
-                    }
-                    variant="secondary"
-                    size="sm"
-                    className="text-error hover:bg-error/10 border-error/20"
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    Cancel Appointment
-                  </Button>
-                )}
+          {/* HERO - Ultra Compact */}
+          <div className="mb-12">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
+              <h1 className="text-4xl sm:text-5xl font-black text-text-light dark:text-text-dark tracking-tight leading-tight">
+                {appointment.service?.name}
+              </h1>
+              <div className="flex items-center gap-3">
+                <span className={`px-2.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-[0.1em] ${statusConfig.bg} ${statusConfig.text} border border-current/10`}>
+                  {statusConfig.label}
+                </span>
+                <span className="text-[8px] font-mono font-bold text-text-light/30 dark:text-text-dark/30 flex items-center gap-1.5">
+                  <Hash className="w-2.5 h-2.5" /> {appointment.id.split('-')[0].toUpperCase()}
+                </span>
               </div>
             </div>
-          )}
 
-            {/* Service Info Card */}
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
-            <div className="h-2 bg-aprimary" />
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-4">
+            <div className="flex flex-wrap items-center gap-x-12 gap-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <Calendar className="w-5 h-5" />
+                </div>
                 <div>
-                  <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-                    <Scissors className="w-4 h-4 text-primary" />
-                    {appointment.service?.name || 'Service'}
-                  </h2>
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-                    {appointment.service?.description || 'No description provided'}
+                  <p className="text-[8px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Date</p>
+                  <p className="text-base font-bold text-text-light dark:text-text-dark">{format(new Date(appointment.scheduledStart), 'EEEE, MMM do')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black text-text-light/40 dark:text-text-dark/40 uppercase tracking-widest mb-0.5">Time & Duration</p>
+                  <p className="text-base font-bold text-text-light dark:text-text-dark">
+                    {formatTime(appointment.scheduledStart)}
+                    <span className="text-text-light/30 dark:text-text-dark/20 mx-2">•</span>
+                    {duration}
                   </p>
                 </div>
-                {appointment.service?.basePrice && (
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-primary">
-                      RWF {Number(appointment.service.basePrice).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-text-light/40 dark:text-text-dark/40">Base Price</p>
-                  </div>
-                )}
               </div>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4 py-4 border-t border-b border-border-light dark:border-border-dark">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Calendar className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">Date</p>
-                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
-                      {format(new Date(appointment.scheduledStart), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Clock className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                      Time & Duration
-                    </p>
-                    <p className="text-sm font-semibold text-text-light dark:text-text-dark">
-                      {formatTime(appointment.scheduledStart)} • {duration}
-                    </p>
-                  </div>
-                </div>
-              </div>
+          {/* CONTENT - Tight */}
+          <div className="space-y-12">
+            <div>
+              <h3 className="text-[9px] font-black uppercase tracking-[0.3em] text-text-light/40 dark:text-text-dark/40 mb-4">Service Description</h3>
+              <p className="text-base md:text-lg text-text-light/70 dark:text-text-dark/70 font-medium leading-relaxed max-w-2xl">
+                {appointment.service?.description || "High-quality professional service tailored to your personal needs."}
+              </p>
 
               {appointment.notes && (
-                <div className="mt-4 p-3 bg-secondary/5 rounded-lg border border-secondary/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="w-3.5 h-3.5 text-secondary" />
-                    <span className="text-xs font-bold text-secondary">Notes</span>
-                  </div>
-                  <p className="text-sm text-text-light/80 dark:text-text-dark/80 italic">
+                <div className="mt-8 relative p-6 rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/20 border-l-4">
+                  <h4 className="text-[9px] font-black uppercase tracking-widest text-primary mb-2">Special Instructions</h4>
+                  <p className="text-sm font-medium text-text-light/80 dark:text-text-dark/90 italic leading-relaxed">
                     &ldquo;{appointment.notes}&rdquo;
                   </p>
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Sidebar - Right Column */}
-        <div className="space-y-6">
-          {/* Customer Card */}
-          {appointment.customer && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-text-light/40 dark:text-text-dark/40 mb-4 flex items-center gap-2">
-                <User className="w-3.5 h-3.5" /> Customer
-              </h3>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                  {appointment.customer.fullName.charAt(0)}
-                </div>
+          {/* FOOTER - Grid Columns */}
+          <div className="mt-16 pt-10 border-t border-border-light dark:border-border-dark">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
+              {appointment.customer && (
                 <div>
-                  <p className="font-bold text-text-light dark:text-text-dark">
-                    {appointment.customer.fullName}
-                  </p>
-                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                    Registered Customer
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <a
-                  href={`tel:${appointment.customer.phone}`}
-                  className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80 hover:text-primary transition-colors"
-                >
-                  <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                  {appointment.customer.phone}
-                </a>
-                {appointment.customer.email && (
-                  <a
-                    href={`mailto:${appointment.customer.email}`}
-                    className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80 hover:text-primary transition-colors"
-                  >
-                    <Mail className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                    {appointment.customer.email}
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Salon Card */}
-          {appointment.salon && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-text-light/40 dark:text-text-dark/40 mb-4 flex items-center gap-2">
-                <Building2 className="w-3.5 h-3.5" /> Salon
-              </h3>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-text-light dark:text-text-dark">
-                    {appointment.salon.name}
-                  </p>
-                  <button
-                    className="text-xs text-primary hover:underline font-medium hover:text-primary-dark transition-colors text-left"
-                    onClick={() => router.push(`/salons/browse/${appointment.salon!.id}`)}
-                  >
-                    View Salon Profile
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {appointment.salon.phone && (
-                  <div className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80">
-                    <Phone className="w-4 h-4 text-text-light/40 dark:text-text-dark/40" />
-                    {appointment.salon.phone}
+                  <span className="text-[8px] font-black text-text-light/30 dark:text-text-dark/30 uppercase tracking-[0.2em] block mb-4">Customer</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-black text-sm shadow-sm">
+                      {appointment.customer.fullName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-text-light dark:text-text-dark truncate tracking-tight">{appointment.customer.fullName}</h4>
+                      <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/40 truncate">{appointment.customer.phone}</p>
+                    </div>
                   </div>
-                )}
-                {appointment.salon.address && (
-                  <div className="flex items-center gap-3 text-sm text-text-light/80 dark:text-text-dark/80">
-                    <MapPin className="w-4 h-4 text-text-light/40 dark:text-text-dark/40 flex-shrink-0" />
-                    {appointment.salon.address}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Employee Card */}
-          {appointment.salonEmployee && (
-            <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-border-light dark:border-border-dark shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-text-light/40 dark:text-text-dark/40 mb-4 flex items-center gap-2">
-                <User className="w-3.5 h-3.5" /> Professional
-              </h3>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-text-light/60 dark:text-text-dark/60">
-                  <User className="w-4 h-4" />
                 </div>
+              )}
+
+              {appointment.salonEmployee && (
                 <div>
-                  <p className="text-sm font-bold text-text-light dark:text-text-dark">
-                    {appointment.salonEmployee.user?.fullName || 'Unknown'}
-                  </p>
-                  <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                    {appointment.salonEmployee.roleTitle || 'Stylist'}
-                  </p>
+                  <span className="text-[8px] font-black text-text-light/30 dark:text-text-dark/30 uppercase tracking-[0.2em] block mb-4">Stylist</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-secondary/10 dark:bg-secondary/20 flex items-center justify-center text-secondary border border-secondary/20">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-text-light dark:text-text-dark truncate tracking-tight">{appointment.salonEmployee.user?.fullName || 'Assigned'}</h4>
+                      <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/40 truncate">{appointment.salonEmployee.roleTitle || 'Pro Specialist'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {appointment.salon && (
+                <div>
+                  <span className="text-[8px] font-black text-text-light/30 dark:text-text-dark/30 uppercase tracking-[0.2em] block mb-4">Location</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-background-light dark:bg-background-dark flex items-center justify-center text-text-light/40 dark:text-text-dark/40 border border-border-light dark:border-border-dark">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-text-light dark:text-text-dark truncate tracking-tight">{appointment.salon.name}</h4>
+                      <p className="text-[10px] font-bold text-text-light/50 dark:text-text-dark/40 truncate">Active Salon</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-right sm:text-left">
+                <span className="text-[8px] font-black text-text-light/30 dark:text-text-dark/30 uppercase tracking-[0.2em] block mb-4">Price</span>
+                <div className="flex items-baseline gap-1.5 pt-1">
+                  <span className="text-2xl font-black text-text-light dark:text-text-dark tracking-tighter">
+                    {Number(appointment.serviceAmount || appointment.service?.basePrice || 0).toLocaleString()}
+                  </span>
+                  <span className="text-[9px] font-black text-text-light/40 dark:text-text-dark/40 uppercase">RWF</span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Metadata Footer */}
-          <div className="px-2">
-            <p className="text-xs text-text-light/40 dark:text-text-dark/40 text-center">
-              Created on {format(new Date(appointment.createdAt), 'MMM d, yyyy h:mm a')}
-            </p>
+          {/* META - Super compact */}
+          <div className="mt-12 pt-6 border-t border-border-light dark:border-border-dark flex flex-col sm:flex-row items-center justify-between gap-4 text-[8px] font-black uppercase tracking-[0.2em] text-text-light/30 dark:text-text-dark/30">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-success animate-pulse" />
+              Status: System Online
+            </span>
+            <div className="flex gap-6">
+              <span>Last Updated: {format(new Date(appointment.updatedAt), 'MMM dd, HH:mm')}</span>
+              <span>Booking ID: #{appointment.id.split('-')[0].toUpperCase()}</span>
+            </div>
           </div>
         </div>
-
       </div>
 
       <ConfirmationModal

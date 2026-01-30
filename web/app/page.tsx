@@ -184,7 +184,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 onClick={() => document.getElementById('membership-form')?.scrollIntoView({ behavior: 'smooth' })}
-                className="h-12 px-8 rounded-sm text-sm border-[1px] font-bold border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5"
+                className="h-12 px-8 rounded-sm text-sm border-[1px] font-bold  border-primary text-primary hover:bg-primary hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2.5"
               >
                 <UserPlus className="w-5 h-5" />
                 Register Salon
@@ -238,7 +238,7 @@ export default function Home() {
                       <h.icon className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black tracking-tight uppercase tracking-widest">{h.title}</h4>
+                      <h4 className="text-xs font-black tracking-tight uppercase ">{h.title}</h4>
                       <p className="text-[10px] font-medium opacity-50">Enterprise protocols</p>
                     </div>
                   </div>
