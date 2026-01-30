@@ -53,6 +53,7 @@ import { Payment } from '../payments/entities/payment.entity';
 import { CustomerFavorite } from '../customers/entities/customer-favorite.entity';
 import { WaitlistEntry } from '../waitlist/entities/waitlist-entry.entity';
 import { UserSession } from '../auth/entities/user-session.entity';
+import { SystemConfig } from '../system-config/entities/system-config.entity';
 
 @Global()
 @Module({
@@ -117,6 +118,7 @@ import { UserSession } from '../auth/entities/user-session.entity';
           Expense,
           WaitlistEntry,
           UserSession,
+          SystemConfig,
         ];
 
         // Use PostgreSQL by default, SQLite only if explicitly set

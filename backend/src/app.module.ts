@@ -41,6 +41,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 import { UploadsModule } from './uploads/uploads.module';
+import { SystemConfigModule } from './system-config/system-config.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { UploadsModule } from './uploads/uploads.module';
     ReviewsModule,
     PaymentsModule,
     UploadsModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [

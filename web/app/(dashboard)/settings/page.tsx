@@ -950,40 +950,53 @@ function ActiveSessionsList() {
 }
 
 function SystemConfigurations() {
-    const { success } = useToast();
-    const [loading, setLoading] = useState(false);
-    const [config, setConfig] = useState({
-        // General
-        maintenanceMode: false,
-        allowRegistrations: true,
-        // Financial
-        commissionRate: 10,
-        taxRate: 18,
-        currency: 'RWF',
-        // Loans
-        baseInterestRate: 5,
-        penaltyRate: 2,
-        maxLoanAmount: 5000000,
-        // Security
-        sessionTimeout: 30,
-        maxLoginAttempts: 5,
-        passwordExpiry: 90,
-        // Communication
-        supportEmail: 'support@uruti.com',
-        supportPhone: '+250 788 000 000',
-        // Features
-        enableLoans: true,
-        enablePayroll: true,
-        enableInventory: true
+    const { success, error: toastError } = useToast();
+    const { user } = useAuthStore();
+    
+    const { data: config, isLoading, refetch } = useQuery({
+        queryKey: ['system-config'],
+        queryFn: async () => {
+            const response = await api.get('/system-config');
+            return response.data.data !== undefined ? response.data.data : response.data;
+        }
     });
 
-    const handleSave = () => {
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
+    const updateMutation = useMutation({
+        mutationFn: async (updateData: any) => {
+            await api.patch('/system-config', updateData);
+        },
+        onSuccess: () => {
             success('System configurations saved successfully');
-        }, 1200);
+            refetch();
+        },
+        onError: (err: any) => {
+            toastError(err.response?.data?.message || 'Failed to update configuration');
+        }
+    });
+
+    const handleToggle = (key: string) => {
+        if (!config) return;
+        updateMutation.mutate({ [key]: !config[key] });
     };
+
+    const handleInputChange = (key: string, value: any) => {
+        if (!config) return;
+        // Logic for numeric vs string
+        const finalValue = typeof config[key] === 'number' ? Number(value) : value;
+        updateMutation.mutate({ [key]: finalValue });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (!config) return null;
+
+    const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
 
     return (
         <div className="space-y-6">
@@ -992,10 +1005,11 @@ function SystemConfigurations() {
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">System Configurations</h2>
                     <p className="text-xs text-gray-500 max-w-md">Global settings affecting the entire platform. Handle with care.</p>
                 </div>
-                <Button variant="primary" size="sm" onClick={handleSave} disabled={loading} className="shadow-lg shadow-primary/20">
-                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <Check className="w-3.5 h-3.5 mr-2" />}
-                    Save Config
-                </Button>
+                {!isSuperAdmin && (
+                    <div className="px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-bold uppercase border border-amber-500/20">
+                        View Only
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1011,7 +1025,11 @@ function SystemConfigurations() {
                             <p className="text-xs font-bold text-gray-900 dark:text-white">Maintenance Mode</p>
                             <p className="text-[10px] text-gray-500">Disable access for non-admins</p>
                         </div>
-                        <Switch checked={config.maintenanceMode} onChange={() => setConfig(p => ({...p, maintenanceMode: !p.maintenanceMode}))} />
+                        <Switch 
+                            checked={config.maintenanceMode} 
+                            disabled={!isSuperAdmin || updateMutation.isPending}
+                            onChange={() => handleToggle('maintenanceMode')} 
+                        />
                     </div>
 
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
@@ -1019,7 +1037,11 @@ function SystemConfigurations() {
                             <p className="text-xs font-bold text-gray-900 dark:text-white">Allow Registrations</p>
                             <p className="text-[10px] text-gray-500">Enable new user sign-ups</p>
                         </div>
-                        <Switch checked={config.allowRegistrations} onChange={() => setConfig(p => ({...p, allowRegistrations: !p.allowRegistrations}))} />
+                        <Switch 
+                            checked={config.allowRegistrations} 
+                            disabled={!isSuperAdmin || updateMutation.isPending}
+                            onChange={() => handleToggle('allowRegistrations')} 
+                        />
                     </div>
                 </div>
 
@@ -1040,7 +1062,11 @@ function SystemConfigurations() {
                                     <p className="text-xs font-bold text-gray-900 dark:text-white">{item.label}</p>
                                     <p className="text-[10px] text-gray-500">{item.desc}</p>
                                 </div>
-                                <Switch checked={(config as any)[item.key]} onChange={() => setConfig(p => ({...p, [item.key]: !(p as any)[item.key]}))} />
+                                <Switch 
+                                    checked={config[item.key]} 
+                                    disabled={!isSuperAdmin || updateMutation.isPending}
+                                    onChange={() => handleToggle(item.key)} 
+                                />
                             </div>
                          ))}
                     </div>
@@ -1053,8 +1079,20 @@ function SystemConfigurations() {
                         <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase">Financial Constants</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <InputGroup label="Commission Rate (%)" type="number" value={config.commissionRate} onChange={(e: any) => setConfig(p => ({...p, commissionRate: Number(e.target.value)}))} />
-                        <InputGroup label="Default Tax Rate (%)" type="number" value={config.taxRate} onChange={(e: any) => setConfig(p => ({...p, taxRate: Number(e.target.value)}))} />
+                        <InputGroup 
+                            label="Commission Rate (%)" 
+                            type="number" 
+                            value={config.commissionRate} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('commissionRate', e.target.value)} 
+                        />
+                        <InputGroup 
+                            label="Default Tax Rate (%)" 
+                            type="number" 
+                            value={config.taxRate} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('taxRate', e.target.value)} 
+                        />
                     </div>
                 </div>
 
@@ -1065,10 +1103,28 @@ function SystemConfigurations() {
                         <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase">Loan Policy</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <InputGroup label="Base Interest Rate (%)" type="number" value={config.baseInterestRate} onChange={(e: any) => setConfig(p => ({...p, baseInterestRate: Number(e.target.value)}))} />
-                        <InputGroup label="Penalty Rate (%)" type="number" value={config.penaltyRate} onChange={(e: any) => setConfig(p => ({...p, penaltyRate: Number(e.target.value)}))} />
+                        <InputGroup 
+                            label="Interest Rate (%)" 
+                            type="number" 
+                            value={config.baseInterestRate} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('baseInterestRate', e.target.value)} 
+                        />
+                        <InputGroup 
+                            label="Penalty Rate (%)" 
+                            type="number" 
+                            value={config.penaltyRate} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('penaltyRate', e.target.value)} 
+                        />
                         <div className="col-span-2">
-                             <InputGroup label="Max Loan Amount (RWF)" type="number" value={config.maxLoanAmount} onChange={(e: any) => setConfig(p => ({...p, maxLoanAmount: Number(e.target.value)}))} />
+                             <InputGroup 
+                                label="Max Loan Amount (RWF)" 
+                                type="number" 
+                                value={config.maxLoanAmount} 
+                                disabled={!isSuperAdmin}
+                                onBlur={(e: any) => handleInputChange('maxLoanAmount', e.target.value)} 
+                            />
                         </div>
                     </div>
                 </div>
@@ -1080,9 +1136,27 @@ function SystemConfigurations() {
                         <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase">Security Policies</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <InputGroup label="Session Timeout (m)" type="number" value={config.sessionTimeout} onChange={(e: any) => setConfig(p => ({...p, sessionTimeout: Number(e.target.value)}))} />
-                        <InputGroup label="Max Login Attempts" type="number" value={config.maxLoginAttempts} onChange={(e: any) => setConfig(p => ({...p, maxLoginAttempts: Number(e.target.value)}))} />
-                        <InputGroup label="Pass Expiry (Days)" type="number" value={config.passwordExpiry} onChange={(e: any) => setConfig(p => ({...p, passwordExpiry: Number(e.target.value)}))} />
+                        <InputGroup 
+                            label="Session (min)" 
+                            type="number" 
+                            value={config.sessionTimeout} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('sessionTimeout', e.target.value)} 
+                        />
+                        <InputGroup 
+                            label="Login Attempts" 
+                            type="number" 
+                            value={config.maxLoginAttempts} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('maxLoginAttempts', e.target.value)} 
+                        />
+                        <InputGroup 
+                            label="Pass Expiry" 
+                            type="number" 
+                            value={config.passwordExpiry} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('passwordExpiry', e.target.value)} 
+                        />
                     </div>
                 </div>
 
@@ -1093,8 +1167,18 @@ function SystemConfigurations() {
                         <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase">Communication Info</h3>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InputGroup label="Support Email" value={config.supportEmail} onChange={(e: any) => setConfig(p => ({...p, supportEmail: e.target.value}))} />
-                        <InputGroup label="Support Phone" value={config.supportPhone} onChange={(e: any) => setConfig(p => ({...p, supportPhone: e.target.value}))} />
+                        <InputGroup 
+                            label="Support Email" 
+                            value={config.supportEmail} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('supportEmail', e.target.value)} 
+                        />
+                        <InputGroup 
+                            label="Support Phone" 
+                            value={config.supportPhone} 
+                            disabled={!isSuperAdmin}
+                            onBlur={(e: any) => handleInputChange('supportPhone', e.target.value)} 
+                        />
                     </div>
                  </div>
             </div>
