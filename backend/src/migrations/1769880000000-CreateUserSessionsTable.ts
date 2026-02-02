@@ -2,99 +2,104 @@ import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableIndex } f
 
 export class CreateUserSessionsTable1769880000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.createTable(
-            new Table({
-                name: "user_sessions",
-                columns: [
-                    {
-                        name: "id",
-                        type: "uuid",
-                        isPrimary: true,
-                        isGenerated: true,
-                        generationStrategy: "uuid",
-                    },
-                    {
-                        name: "user_id",
-                        type: "uuid",
-                        isNullable: false,
-                    },
-                    {
-                        name: "refresh_token",
-                        type: "varchar",
-                        isNullable: true,
-                    },
-                    {
-                        name: "device_type",
-                        type: "varchar",
-                        isNullable: true,
-                    },
-                    {
-                        name: "browser",
-                        type: "varchar",
-                        isNullable: true,
-                    },
-                    {
-                        name: "os",
-                        type: "varchar",
-                        isNullable: true,
-                    },
-                    {
-                        name: "ip_address",
-                        type: "varchar",
-                        isNullable: true,
-                    },
-                    {
-                        name: "location",
-                        type: "varchar",
-                        isNullable: true,
-                    },
-                    {
-                        name: "last_active",
-                        type: "timestamp",
-                        default: "CURRENT_TIMESTAMP",
-                    },
-                    {
-                        name: "is_revoked",
-                        type: "boolean",
-                        default: false,
-                    },
-                    {
-                        name: "expires_at",
-                        type: "timestamp",
-                        isNullable: false,
-                    },
-                    {
-                        name: "created_at",
-                        type: "timestamp",
-                        default: "CURRENT_TIMESTAMP",
-                    },
-                    {
-                        name: "updated_at",
-                        type: "timestamp",
-                        default: "CURRENT_TIMESTAMP",
-                    },
-                ],
-            }),
-            true
-        );
+        // Check if table already exists
+        const tableExists = await queryRunner.hasTable("user_sessions");
 
-        await queryRunner.createForeignKey(
-            "user_sessions",
-            new TableForeignKey({
-                columnNames: ["user_id"],
-                referencedColumnNames: ["id"],
-                referencedTableName: "users",
-                onDelete: "CASCADE",
-            })
-        );
+        if (!tableExists) {
+            await queryRunner.createTable(
+                new Table({
+                    name: "user_sessions",
+                    columns: [
+                        {
+                            name: "id",
+                            type: "uuid",
+                            isPrimary: true,
+                            isGenerated: true,
+                            generationStrategy: "uuid",
+                        },
+                        {
+                            name: "user_id",
+                            type: "uuid",
+                            isNullable: false,
+                        },
+                        {
+                            name: "refresh_token",
+                            type: "varchar",
+                            isNullable: true,
+                        },
+                        {
+                            name: "device_type",
+                            type: "varchar",
+                            isNullable: true,
+                        },
+                        {
+                            name: "browser",
+                            type: "varchar",
+                            isNullable: true,
+                        },
+                        {
+                            name: "os",
+                            type: "varchar",
+                            isNullable: true,
+                        },
+                        {
+                            name: "ip_address",
+                            type: "varchar",
+                            isNullable: true,
+                        },
+                        {
+                            name: "location",
+                            type: "varchar",
+                            isNullable: true,
+                        },
+                        {
+                            name: "last_active",
+                            type: "timestamp",
+                            default: "CURRENT_TIMESTAMP",
+                        },
+                        {
+                            name: "is_revoked",
+                            type: "boolean",
+                            default: false,
+                        },
+                        {
+                            name: "expires_at",
+                            type: "timestamp",
+                            isNullable: false,
+                        },
+                        {
+                            name: "created_at",
+                            type: "timestamp",
+                            default: "CURRENT_TIMESTAMP",
+                        },
+                        {
+                            name: "updated_at",
+                            type: "timestamp",
+                            default: "CURRENT_TIMESTAMP",
+                        },
+                    ],
+                }),
+                true
+            );
 
-        await queryRunner.createIndex(
-            "user_sessions",
-            new TableIndex({
-                name: "IDX_USER_SESSIONS_USER_ID",
-                columnNames: ["user_id"],
-            })
-        );
+            await queryRunner.createForeignKey(
+                "user_sessions",
+                new TableForeignKey({
+                    columnNames: ["user_id"],
+                    referencedColumnNames: ["id"],
+                    referencedTableName: "users",
+                    onDelete: "CASCADE",
+                })
+            );
+
+            await queryRunner.createIndex(
+                "user_sessions",
+                new TableIndex({
+                    name: "IDX_USER_SESSIONS_USER_ID",
+                    columnNames: ["user_id"],
+                })
+            );
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
