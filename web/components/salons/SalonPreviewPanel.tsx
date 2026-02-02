@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -15,6 +14,7 @@ import {
   Clock,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import api from '@/lib/api';
 
 interface Salon {
   id: string;
@@ -52,6 +52,27 @@ export default function SalonPreviewPanel({
   isFavorited = false,
   userLocation,
 }: SalonPreviewPanelProps) {
+  // Helper to resolve image URLs
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') &&
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   // Calculate distance
   const distance = useMemo(() => {
     if (!userLocation || !salon?.latitude || !salon?.longitude) return null;
@@ -101,11 +122,11 @@ export default function SalonPreviewPanel({
             {/* Header with Image */}
             <div className="relative h-48 flex-shrink-0">
               {imageUrl ? (
-                <Image
-                  src={imageUrl}
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={getImageUrl(imageUrl)}
                   alt={salon.name}
-                  fill
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full bg-background-light dark:bg-background-dark flex items-center justify-center">
@@ -282,11 +303,11 @@ export default function SalonPreviewPanel({
                   {/* Thumbnail */}
                   <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-background-light dark:bg-background-dark">
                     {imageUrl ? (
-                      <Image
-                        src={imageUrl}
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={getImageUrl(imageUrl)}
                         alt={salon.name}
-                        fill
-                        className="object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
