@@ -76,7 +76,9 @@ function MembershipApplyContent() {
     queryKey: ['membership-status', user?.id],
     queryFn: async () => {
       const response = await api.get('/memberships/status');
-      return response.data?.data || response.data;
+      const data = response.data?.data || response.data;
+      // Ensure we have valid membership status data
+      return data && typeof data === 'object' ? data : { isMember: false, application: null };
     },
     enabled: !!user,
     retry: false,
@@ -87,7 +89,9 @@ function MembershipApplyContent() {
     queryKey: ['membership-application', user?.id],
     queryFn: async () => {
       const response = await api.get('/memberships/applications/my');
-      return response.data?.data || response.data;
+      const data = response.data?.data || response.data;
+      // Return null if data is null, undefined, or an object without an id
+      return data && data.id ? data : null;
     },
     enabled: !!user,
     retry: false,
