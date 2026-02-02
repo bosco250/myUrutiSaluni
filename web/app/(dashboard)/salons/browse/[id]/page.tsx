@@ -3,7 +3,6 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import Image from 'next/image';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import {
@@ -178,6 +177,27 @@ function SalonDetailsContent() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const queryClient = useQueryClient();
   const toast = useToast();
+
+  // Helper to resolve image URLs
+  const getImageUrl = useCallback((url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') &&
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  }, []);
 
   // Queries
   const {
@@ -600,13 +620,14 @@ function SalonDetailsContent() {
               ) : categorizedServices.length > 0 ? (
                 <div className="space-y-6">
                   {categorizedServices.map(([category, catServices], index) => (
-                    <ServiceCategoryGroup 
-                      key={category} 
-                      category={category} 
-                      services={catServices} 
+                    <ServiceCategoryGroup
+                      key={category}
+                      category={category}
+                      services={catServices}
                       isInitiallyExpanded={index === 0 || !!searchTerm}
                       forceOpen={!!searchTerm}
                       hideAccordion={categorizedServices.length === 1 && !searchTerm}
+                      getImageUrl={getImageUrl}
                       onBook={(service) => {
                         if (!authUser) {
                           if (typeof window !== 'undefined') {
@@ -768,11 +789,11 @@ function SalonDetailsContent() {
                       tabIndex={0}
                       aria-label={`View ${img.label}`}
                     >
-                      <Image
-                        src={img.src}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getImageUrl(img.src)}
                         alt={img.label}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={() => setFailedImages((prev) => new Set(prev).add(img.src))}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
@@ -807,12 +828,11 @@ function SalonDetailsContent() {
             {/* Salon photo strip */}
             {hasImages && (
               <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">
-                <Image
-                  src={salon.images![currentImageIndex]}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getImageUrl(salon.images![currentImageIndex])}
                   alt={salon.name}
-                  fill
-                  className="object-cover"
-                  priority
+                  className="w-full h-full object-cover"
                 />
                 {salon.images!.length > 1 && (
                   <>
@@ -1039,11 +1059,11 @@ function SalonDetailsContent() {
             {/* Modal Header Image */}
             <div className="relative h-44 md:h-56 w-full flex-shrink-0 group/hero bg-background-light dark:bg-background-dark">
               {selectedService.images?.length || selectedService.imageUrl ? (
-                <Image
-                  src={selectedService.images?.[serviceImageIndex] || selectedService.imageUrl || ''}
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={getImageUrl(selectedService.images?.[serviceImageIndex] || selectedService.imageUrl || '')}
                   alt={selectedService.name}
-                  fill
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
@@ -1174,7 +1194,8 @@ function SalonDetailsContent() {
                         }`}
                         onClick={() => setServiceImageIndex(i)}
                       >
-                        <Image src={img} alt={`${selectedService.name} ${i + 1}`} fill className="object-cover" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={getImageUrl(img)} alt={`${selectedService.name} ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -1318,12 +1339,11 @@ function SalonDetailsContent() {
             onClick={(e) => e.stopPropagation()}
             role="presentation"
           >
-            <Image
-              src={validGalleryImages[lightboxIndex]?.src}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getImageUrl(validGalleryImages[lightboxIndex]?.src)}
               alt={validGalleryImages[lightboxIndex]?.label || 'Gallery image'}
-              fill
-              className="object-contain"
-              priority
+              className="max-w-full max-h-full object-contain"
             />
           </div>
 
@@ -1354,7 +1374,8 @@ function SalonDetailsContent() {
                       : 'opacity-50 hover:opacity-100 hover:scale-105'
                   }`}
                 >
-                  <Image src={img.src} alt={img.label} fill className="object-cover" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={getImageUrl(img.src)} alt={img.label} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
@@ -1367,22 +1388,24 @@ function SalonDetailsContent() {
 
 // --- Helper Components ---
 
-function ServiceCategoryGroup({ 
-  category, 
-  services, 
+function ServiceCategoryGroup({
+  category,
+  services,
   onBook,
   onDetail,
   isInitiallyExpanded = false,
   hideAccordion = false,
-  forceOpen = false
-}: { 
-  category: string; 
-  services: Service[]; 
+  forceOpen = false,
+  getImageUrl,
+}: {
+  category: string;
+  services: Service[];
   onBook: (service: Service) => void;
   onDetail: (service: Service) => void;
   isInitiallyExpanded?: boolean;
   hideAccordion?: boolean;
   forceOpen?: boolean;
+  getImageUrl: (url?: string) => string;
 }) {
   const [isOpen, setIsOpen] = useState(isInitiallyExpanded);
   const [isShowingMore, setIsShowingMore] = useState(false);
@@ -1405,12 +1428,13 @@ function ServiceCategoryGroup({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {services.map((service, idx) => (
-            <ServiceCard 
-              key={service.id} 
-              service={service} 
-              onBook={() => onBook(service)} 
+            <ServiceCard
+              key={service.id}
+              service={service}
+              onBook={() => onBook(service)}
               onDetail={() => onDetail(service)}
               isPopular={idx === 0 && services.length > 5}
+              getImageUrl={getImageUrl}
             />
           ))}
         </div>
@@ -1444,12 +1468,13 @@ function ServiceCategoryGroup({
         <div className="p-2 sm:p-3 border-t border-border-light/40 dark:border-border-dark/40 bg-black/[0.01] dark:bg-white/[0.01]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleServices.map((service, idx) => (
-              <ServiceCard 
-                key={service.id} 
-                service={service} 
-                onBook={() => onBook(service)} 
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onBook={() => onBook(service)}
                 onDetail={() => onDetail(service)}
                 isPopular={idx === 0 && services.length > 3}
+                getImageUrl={getImageUrl}
               />
             ))}
           </div>
@@ -1471,16 +1496,18 @@ function ServiceCategoryGroup({
   );
 }
 
-function ServiceCard({ 
-  service, 
-  onBook, 
+function ServiceCard({
+  service,
+  onBook,
   onDetail,
-  isPopular 
-}: { 
-  service: Service; 
-  onBook: () => void; 
+  isPopular,
+  getImageUrl,
+}: {
+  service: Service;
+  onBook: () => void;
   onDetail: () => void;
   isPopular?: boolean;
+  getImageUrl: (url?: string) => string;
 }) {
   const serviceImage = service.images?.[0] || service.imageUrl;
 
@@ -1500,7 +1527,8 @@ function ServiceCard({
       {/* Visual Indicator/Image */}
       <div className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark group-hover:border-primary/20 transition-all duration-500">
         {serviceImage ? (
-          <Image src={serviceImage} alt={service.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={getImageUrl(serviceImage)} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-black/[0.02] dark:bg-white/[0.02]">
             <Scissors className="w-8 h-8 text-text-light/10 dark:text-text-dark/10 group-hover:text-primary/20 transition-colors" />
