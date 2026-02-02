@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -88,6 +87,27 @@ function BrowseSalonsContent() {
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const itemsPerPage = viewMode === 'list' ? 8 : 12;
+
+  // Helper to resolve image URLs
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') &&
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
 
 
 
@@ -721,6 +741,7 @@ function BrowseSalonsContent() {
                       onViewDetails={() => router.push(`/salons/browse/${salon.id}`)}
                       viewMode={viewMode}
                       userLocation={userLocation}
+                      getImageUrl={getImageUrl}
                     />
                   ))}
                 </div>
@@ -817,6 +838,7 @@ function SalonCard({
   onViewDetails,
   viewMode = 'grid',
   userLocation,
+  getImageUrl,
 }: {
   salon: Salon;
   isFavorited?: boolean;
@@ -824,6 +846,7 @@ function SalonCard({
   onViewDetails: () => void;
   viewMode?: 'grid' | 'list';
   userLocation?: { lat: number; lng: number } | null;
+  getImageUrl: (url?: string) => string;
 }) {
   const hasImage = salon.images && salon.images.length > 0 && salon.images[0];
   const imageUrl = hasImage ? salon.images![0] : null;
@@ -862,11 +885,18 @@ function SalonCard({
         {/* Image */}
         <div className="relative w-32 h-32 flex-shrink-0 overflow-hidden bg-background-light dark:bg-background-dark">
           {imageUrl ? (
-            <Image
-              src={imageUrl}
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={getImageUrl(imageUrl)}
               alt={salon.name}
-              fill
-              className="object-cover group-hover:scale-110 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-primary/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path></svg></div>';
+                }
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -970,11 +1000,18 @@ function SalonCard({
       {/* Image Section */}
       <div className="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-800">
         {imageUrl ? (
-          <Image
-            src={imageUrl}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={getImageUrl(imageUrl)}
             alt={salon.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                parent.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-white/5"><div class="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path></svg><span class="text-xs font-medium uppercase tracking-wider">Image Error</span></div></div>';
+              }
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-white/5">
