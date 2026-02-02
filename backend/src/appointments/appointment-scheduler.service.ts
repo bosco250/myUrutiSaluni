@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In } from 'typeorm';
+import { Repository, Between, In, LessThan } from 'typeorm';
 import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { AppointmentsService } from './appointments.service';
 
@@ -105,6 +105,101 @@ export class AppointmentSchedulerService {
     } catch (error) {
       this.logger.error(
         `❌ Error in scheduled reminders job: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /**
+   * Automatically marks missed appointments as NO_SHOW
+   * Runs every hour
+   * Finds appointments where scheduled time has passed (with 3-hour grace period) but status is still active
+   */
+  @Cron('0 * * * *') // Every hour at minute 0
+  async cancelMissedAppointments() {
+    this.logger.log('🔍 Running missed appointments check...');
+
+    try {
+      const now = new Date();
+
+      // Calculate cutoff time: 3 hours ago from now
+      // Only mark appointments as NO_SHOW if they ended more than 3 hours ago
+      const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+
+      this.logger.log(
+        `Looking for missed appointments with scheduledEnd before ${threeHoursAgo.toISOString()} (3-hour grace period)`,
+      );
+
+      // Find appointments where:
+      // 1. scheduledEnd < (current time - 3 hours) - appointment ended more than 3 hours ago
+      // 2. Status is still PENDING, BOOKED, or CONFIRMED
+      const missedAppointments = await this.appointmentsRepository.find({
+        where: {
+          scheduledEnd: LessThan(threeHoursAgo),
+          status: In([
+            AppointmentStatus.PENDING,
+            AppointmentStatus.BOOKED,
+            AppointmentStatus.CONFIRMED,
+          ]),
+        },
+        relations: [
+          'customer',
+          'customer.user',
+          'service',
+          'salon',
+          'salonEmployee',
+          'salonEmployee.user',
+        ],
+      });
+
+      this.logger.log(
+        `Found ${missedAppointments.length} missed appointment(s) to mark as NO_SHOW`,
+      );
+
+      let successCount = 0;
+      let failureCount = 0;
+
+      // Mark each missed appointment as NO_SHOW
+      for (const appointment of missedAppointments) {
+        try {
+          const oldStatus = appointment.status;
+
+          // Update to NO_SHOW status
+          await this.appointmentsService.update(appointment.id, {
+            status: AppointmentStatus.NO_SHOW,
+            metadata: {
+              ...appointment.metadata,
+              autoMarkedNoShow: true,
+              autoMarkedAt: now.toISOString(),
+              previousStatus: oldStatus,
+            },
+          });
+
+          successCount++;
+
+          // Calculate how long ago the appointment ended
+          const hoursAgo = Math.floor(
+            (now.getTime() - new Date(appointment.scheduledEnd).getTime()) / (60 * 60 * 1000)
+          );
+
+          this.logger.log(
+            `✅ Marked appointment ${appointment.id} as NO_SHOW (was ${oldStatus}) - Ended ${hoursAgo}h ago - Customer: ${appointment.customer?.user?.fullName || 'Unknown'}`,
+          );
+        } catch (error) {
+          failureCount++;
+          this.logger.error(
+            `❌ Failed to mark appointment ${appointment.id} as NO_SHOW: ${error.message}`,
+            error.stack,
+          );
+        }
+      }
+
+      this.logger.log(
+        `✅ Missed appointments job complete - Marked ${successCount} as NO_SHOW, Failed: ${failureCount}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Error in missed appointments job: ${error.message}`,
         error.stack,
       );
     }

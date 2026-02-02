@@ -60,6 +60,11 @@ interface Salon {
   phone: string;
   email: string;
   status: string;
+  ownerId?: string;
+  owner?: {
+    id: string;
+    fullName?: string;
+  };
   settings?: {
     numberOfEmployees?: number;
   };
@@ -142,8 +147,7 @@ export default function SalonOwnerDashboard() {
   // Check membership status
   const { data: membershipStatus } = useMembershipStatus();
 
-  // Fetch salons
-  const { data: salons = [], isLoading: salonsLoading } = useQuery<Salon[]>({
+  const { data: rawSalons = [], isLoading: salonsLoading } = useQuery<Salon[]>({
     queryKey: ['salons', user?.id],
     queryFn: async () => {
       try {
@@ -156,6 +160,28 @@ export default function SalonOwnerDashboard() {
       }
     },
   });
+
+  // Filter salons to ensure we only show what belongs to the user
+  const salons = useMemo(() => {
+    if (!rawSalons.length) return [];
+    if (!user) return [];
+
+    return rawSalons.filter((salon) => {
+      // Check ownership
+      const isOwner =
+        salon.ownerId === user.id ||
+        (salon.owner && salon.owner.id === user.id);
+
+      // If user is strictly an employee, we trust the backend list (as we can't verify ownership)
+      if (user.role === 'SALON_EMPLOYEE' || user.role === 'salon_employee') {
+        return true;
+      }
+
+      // For owners, strict ownership check is safer to avoid showing unrelated salons
+      return isOwner;
+    });
+  }, [rawSalons, user]);
+
 
   // Get employee records for current user (if they are an employee)
   const { data: employeeRecords = [] } = useQuery({

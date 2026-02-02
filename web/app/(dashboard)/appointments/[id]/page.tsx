@@ -302,7 +302,7 @@ function AppointmentDetailContent() {
 
             <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2">
               {/* Primary Lifecycle Status Actions */}
-              {((canManage && !['completed', 'cancelled'].includes(appointment.status)) || 
+              {((canManage && !['completed', 'cancelled'].includes(appointment.status)) ||
                 (canCancel && !isPast && !['completed', 'cancelled'].includes(appointment.status))) && (
                 <div className="flex flex-wrap gap-2 mr-2 pr-2 border-r border-border-light dark:border-border-dark">
                   {canManage && appointment.status === 'pending' && (
@@ -352,6 +352,34 @@ function AppointmentDetailContent() {
                     >
                       Finalize
                     </button>
+                  )}
+                  {canManage && appointment.status === 'no_show' && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        onChange={(e) => {
+                          const newStatus = e.target.value;
+                          if (newStatus) {
+                            handleAction(
+                              () => updateStatusMutation.mutate(newStatus),
+                              'Change Status',
+                              `Are you sure you want to change the status from NO_SHOW to ${newStatus.toUpperCase().replace('_', ' ')}?`,
+                              'primary',
+                              'Change Status'
+                            );
+                            e.target.value = ''; // Reset dropdown
+                          }
+                        }}
+                        className="h-9 px-3 pr-8 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-[9px] font-black uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Change Status</option>
+                        <option value="booked">Booked</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
                   )}
                   {canCancel && ['pending', 'booked', 'confirmed'].includes(appointment.status) && (
                     <button
@@ -452,6 +480,25 @@ function AppointmentDetailContent() {
                   <p className="text-sm font-medium text-text-light/80 dark:text-text-dark/90 italic leading-relaxed">
                     &ldquo;{appointment.notes}&rdquo;
                   </p>
+                </div>
+              )}
+
+              {appointment.status === 'no_show' && (appointment as any).metadata?.autoMarkedNoShow && (
+                <div className="mt-8 relative p-6 rounded-2xl bg-warning/5 dark:bg-warning/10 border border-warning/20 border-l-4">
+                  <h4 className="text-[9px] font-black uppercase tracking-widest text-warning mb-2">Automatic Status Update</h4>
+                  <p className="text-sm font-medium text-text-light/80 dark:text-text-dark/90 leading-relaxed">
+                    This appointment was automatically marked as NO_SHOW because the customer did not attend and the appointment ended more than 3 hours ago.
+                  </p>
+                  {(appointment as any).metadata?.previousStatus && (
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
+                      Previous status: <span className="font-semibold">{(appointment as any).metadata.previousStatus}</span>
+                    </p>
+                  )}
+                  {canManage && (
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-2">
+                      If this was a mistake, you can update the status using the button above.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

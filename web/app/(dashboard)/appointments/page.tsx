@@ -778,6 +778,19 @@ function AppointmentRow({
             </button>
           )}
 
+          {canEdit && (
+            <button
+              onClick={() => {
+                setEditingAppointment(appointment);
+                setShowModal(true);
+              }}
+              className="p-1.5 rounded-md text-text-light/40 dark:text-text-dark/40 hover:text-primary dark:hover:text-primary hover:bg-primary/10 transition-colors"
+              title="Edit Appointment"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           <button
             onClick={() => router.push(`/appointments/${appointment.id}`)}
             className="p-1.5 rounded-md text-text-light/40 dark:text-text-dark/40 hover:text-text-light dark:hover:text-text-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors"
@@ -785,8 +798,6 @@ function AppointmentRow({
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
-
-
         </div>
       </div>
 
