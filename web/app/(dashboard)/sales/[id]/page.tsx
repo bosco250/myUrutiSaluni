@@ -92,7 +92,7 @@ function SaleDetailContent() {
     queryKey: ['sale', saleId],
     queryFn: async () => {
       const response = await api.get(`/sales/${saleId}`);
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!saleId,
   });
@@ -108,6 +108,7 @@ function SaleDetailContent() {
   };
 
   const formatPaymentMethod = (method: string) => {
+    if (!method) return 'Unknown';
     return method
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -197,245 +198,181 @@ function SaleDetailContent() {
   const calculatedTotal = Math.max(0, subtotal - totalDiscount + tax);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => router.push('/sales/history')}
-            variant="secondary"
-            size="sm"
-            className="flex-shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-text-light dark:text-text-dark">
-              {user?.role === UserRole.CUSTOMER ? 'Purchase Details' : 'Sale Details'}
-            </h1>
-            <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
-              {user?.role === UserRole.CUSTOMER ? 'Receipt' : 'Sale'} ID: <span className="font-mono">{sale.id}</span>
-            </p>
-          </div>
-        </div>
+    <div className="flex flex-col items-center py-8 px-4 min-h-[calc(100vh-4rem)]">
+      
+      {/* Actions Toolbar */}
+      <div className="w-full max-w-sm mb-6 flex items-center justify-between print:hidden">
+        <Button
+          onClick={() => router.push('/sales/history')}
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
         <div className="flex gap-2">
-          <Button onClick={handlePrint} variant="secondary">
-            <Printer className="w-4 h-4 mr-2" />
-            Print Receipt
+          <Button onClick={handlePrint} variant="outline" size="sm" className="bg-white dark:bg-black">
+            <Printer className="w-4 h-4" />
           </Button>
-          <Button onClick={handleDownloadPDF} variant="secondary">
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
+          <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="bg-white dark:bg-black">
+            <Download className="w-4 h-4" />
           </Button>
-          {user?.role !== UserRole.CUSTOMER && (
-            <Button onClick={() => router.push('/sales')} variant="primary">
-              <Receipt className="w-4 h-4 mr-2" />
-              New Sale
-            </Button>
-          )}
         </div>
       </div>
 
-      {/* Receipt Card */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-lg overflow-hidden print:shadow-none">
+      {/* THERMAL RECEIPT CONTAINER */}
+      <div className="w-full max-w-[380px] bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark shadow-xl p-6 font-mono text-sm leading-tight relative print:shadow-none print:w-full print:max-w-none print:bg-white print:text-black">
+        
         {/* Receipt Header */}
-        <div className="bg-primary/10 p-6 border-b border-border-light dark:border-border-dark">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-text-light dark:text-text-dark mb-1">
-                {sale.salon?.name || 'Salon Receipt'}
-              </h2>
-              {sale.salon?.address && (
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.salon.address}</p>
-              )}
-              {sale.salon?.phone && (
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.salon.phone}</p>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="inline-flex px-3 py-1 bg-success/20 text-success rounded-full text-sm font-semibold mb-2">
-                <Check className="w-4 h-4 mr-1" />
-                {sale.status.toUpperCase()}
-              </div>
-              <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-                {formatDate(sale.createdAt)}
-              </p>
-            </div>
+        <div className="text-center mb-6">
+          <h1 className="text-xl font-bold uppercase tracking-wider mb-2">
+            {sale.salon?.name || 'SALON RECEIPT'}
+          </h1>
+          {sale.salon?.address && (
+            <p className="mb-1 text-text-light/80 dark:text-text-dark/80">{sale.salon.address}</p>
+          )}
+          {sale.salon?.phone && (
+            <p className="mb-1 text-text-light/80 dark:text-text-dark/80">{sale.salon.phone}</p>
+          )}
+          <div className="mt-4 border-b-2 border-dashed border-border-light dark:border-border-dark pb-4 print:border-black">
+             <div className="flex justify-between">
+                <span>DATE:</span>
+                <span>{new Date(sale.createdAt).toLocaleDateString()}</span>
+             </div>
+             <div className="flex justify-between">
+                <span>TIME:</span>
+                <span>{new Date(sale.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+             </div>
+             <div className="flex justify-between">
+                <span>SALE ID:</span>
+                <span>#{sale.id.slice(0, 8)}</span>
+             </div>
+             <div className="flex justify-between font-bold mt-1">
+                <span>STATUS:</span>
+                <span>{sale.status?.toUpperCase() || 'UNKNOWN'}</span>
+             </div>
           </div>
         </div>
 
-        {/* Sale Information */}
-        <div className="p-6 space-y-6">
-          {/* Customer & Employee Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sale.customer && user?.role !== UserRole.CUSTOMER && (
-              <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <User className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-text-light dark:text-text-dark">Customer</h3>
-                </div>
-                <p className="text-text-light dark:text-text-dark">{sale.customer.fullName}</p>
-                <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.customer.phone}</p>
-                {sale.customer.email && (
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.customer.email}</p>
-                )}
-              </div>
-            )}
-            {sale.createdBy && user?.role !== UserRole.CUSTOMER && (
-              <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-text-light dark:text-text-dark">Processed By</h3>
-                </div>
-                <p className="text-text-light dark:text-text-dark">{sale.createdBy.fullName}</p>
-                {sale.createdBy.email && (
-                  <p className="text-sm text-text-light/60 dark:text-text-dark/60">{sale.createdBy.email}</p>
-                )}
-              </div>
-            )}
+        {/* Items List */}
+        <div className="mb-6">
+          <div className="flex justify-between font-bold border-b border-border-light dark:border-border-dark pb-2 mb-2 print:border-black">
+             <span>ITEM</span>
+             <span>TOTAL</span>
           </div>
-
-          {/* Sale Items */}
-          <div>
-            <h3 className="font-semibold text-text-light dark:text-text-dark mb-4">Items</h3>
-            <div className="space-y-2">
-              {sale.items && sale.items.length > 0 ? (
-                sale.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-background-light dark:bg-background-dark rounded-xl p-4 border border-border-light dark:border-border-dark"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          {item.service ? (
-                            <>
-                              <Scissors className="w-4 h-4 text-primary" />
-                              <span className="font-semibold text-text-light dark:text-text-dark">
-                                {item.service.name}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Package className="w-4 h-4 text-primary" />
-                              <span className="font-semibold text-text-light dark:text-text-dark">
-                                {item.product?.name}
-                              </span>
-                              {item.product?.sku && (
-                                <span className="text-xs text-text-light/40 dark:text-text-dark/40">
-                                  (SKU: {item.product.sku})
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        {item.salonEmployee && user?.role !== UserRole.CUSTOMER && (
-                          <p className="text-xs text-text-light/60 dark:text-text-dark/60">
-                            Assigned to: {item.salonEmployee.user?.fullName || item.salonEmployee.roleTitle || 'Employee'}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-text-light dark:text-text-dark">
-                          {sale.currency || 'RWF'} {item.lineTotal.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-text-light/60 dark:text-text-dark/60">
-                      <span>
-                        {sale.currency || 'RWF'} {item.unitPrice.toLocaleString()} × {item.quantity}
-                      </span>
-                      {item.discountAmount > 0 && (
-                        <span className="text-success">-{sale.currency || 'RWF'} {item.discountAmount.toLocaleString()}</span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-text-light/60 dark:text-text-dark/60 text-center py-4">No items found</p>
-              )}
-            </div>
+          <div className="space-y-3">
+             {sale.items?.map((item) => (
+               <div key={item.id}>
+                 <div className="flex justify-between font-bold">
+                    <span>{item.service?.name || item.product?.name}</span>
+                    <span>{sale.currency || 'RWF'} {item.lineTotal.toLocaleString()}</span>
+                 </div>
+                 <div className="text-xs text-text-light/60 dark:text-text-dark/60 flex justify-between print:text-gray-600">
+                    <span>{item.quantity} x {item.unitPrice.toLocaleString()}</span>
+                    {item.discountAmount > 0 && <span>(Disc: -{item.discountAmount})</span>}
+                 </div>
+               </div>
+             ))}
+             {(!sale.items || sale.items.length === 0) && (
+               <p className="text-center italic mt-2 text-text-light/60 dark:text-text-dark/60">No items</p>
+             )}
           </div>
+        </div>
 
-          {/* Payment Summary */}
-          <div className="border-t border-border-light dark:border-border-dark pt-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-text-light dark:text-text-dark">
-                <span>Subtotal</span>
-                <span>{sale.currency || 'RWF'} {subtotal.toLocaleString()}</span>
-              </div>
-              {totalDiscount > 0 && (
-                <div className="flex justify-between text-text-light dark:text-text-dark">
-                  <span>Discount</span>
-                  <span className="text-success">-{sale.currency || 'RWF'} {totalDiscount.toLocaleString()}</span>
-                </div>
-              )}
-              {tax > 0 && (
-                <div className="flex justify-between text-text-light dark:text-text-dark">
-                  <span>Tax</span>
-                  <span>{sale.currency || 'RWF'} {tax.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark pt-2 border-t border-border-light dark:border-border-dark">
-                <span>Total</span>
-                <span className="text-primary">{sale.currency || 'RWF'} {Number(sale.totalAmount || calculatedTotal).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
+        {/* Totals Section */}
+        <div className="border-t-2 border-dashed border-border-light dark:border-border-dark pt-4 mb-6 space-y-1 print:border-black">
+           <div className="flex justify-between">
+              <span>SUBTOTAL:</span>
+              <span>{sale.currency || 'RWF'} {subtotal.toLocaleString()}</span>
+           </div>
+           {totalDiscount > 0 && (
+             <div className="flex justify-between">
+                <span>DISCOUNT:</span>
+                <span>-{sale.currency || 'RWF'} {totalDiscount.toLocaleString()}</span>
+             </div>
+           )}
+           {tax > 0 && (
+             <div className="flex justify-between">
+                <span>TAX:</span>
+                <span>{sale.currency || 'RWF'} {tax.toFixed(2)}</span>
+             </div>
+           )}
+           <div className="flex justify-between text-xl font-bold border-t-2 border-border-light dark:border-border-dark border-double pt-2 mt-2 print:border-black">
+              <span>TOTAL:</span>
+              <span className="text-primary print:text-black">{sale.currency || 'RWF'} {Number(sale.totalAmount || calculatedTotal).toLocaleString()}</span>
+           </div>
+        </div>
 
-          {/* Payment Information */}
-          <div className="bg-background-light dark:bg-background-dark rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <CreditCard className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold text-text-light dark:text-text-dark">Payment Information</h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-text-light/60 dark:text-text-dark/60">Payment Method</span>
-                <span className="text-text-light dark:text-text-dark font-medium">
-                  {formatPaymentMethod(sale.paymentMethod)}
-                </span>
+        {/* Payment & Customer */}
+        <div className="mb-8 text-xs">
+           <div className="mb-2">
+              <div>
+                <span className="font-bold">PAYMENT: </span>
+                <span>{formatPaymentMethod(sale.paymentMethod).toUpperCase()}</span>
               </div>
               {sale.paymentReference && (
-                <div className="flex justify-between">
-                  <span className="text-text-light/60 dark:text-text-dark/60">Reference</span>
-                  <span className="text-text-light dark:text-text-dark font-mono text-sm">
-                    {sale.paymentReference}
-                  </span>
+                <div className="mt-0.5">
+                  <span className="font-bold">REF/TRANS ID: </span>
+                  <span className="font-mono">{sale.paymentReference}</span>
                 </div>
               )}
-            </div>
-          </div>
+           </div>
+           
+           {(sale.customer || sale.createdBy) && (
+             <div className="border-t border-dashed border-border-light dark:border-border-dark pt-2 mt-2 print:border-black">
+                {sale.customer && (
+                  <div className="mb-2">
+                      <div className="font-bold border-b border-border-light dark:border-border-dark pb-1 mb-1 w-max print:border-black">CUSTOMER</div>
+                      <div>{sale.customer.fullName}</div>
+                      <div className="text-text-light/80 dark:text-text-dark/80">{sale.customer.phone}</div>
+                      {sale.customer.email && <div className="text-text-light/80 dark:text-text-dark/80 italic">{sale.customer.email}</div>}
+                  </div>
+                )}
+                {sale.createdBy && (
+                  <div>
+                      <span className="font-bold">SERVED BY: </span>
+                      <span>{sale.createdBy.fullName}</span>
+                      {sale.createdBy.email && <span className="text-text-light/60 dark:text-text-dark/60 ml-1">({sale.createdBy.email})</span>}
+                  </div>
+                )}
+             </div>
+           )}
         </div>
 
         {/* Footer */}
-        <div className="bg-background-light dark:bg-background-dark p-6 border-t border-border-light dark:border-border-dark text-center">
-          <p className="text-sm text-text-light/60 dark:text-text-dark/60">
-            Thank you for your business!
-          </p>
-          <p className="text-xs text-text-light/40 dark:text-text-dark/40 mt-2">
-            Sale ID: <span className="font-mono">{sale.id}</span>
-          </p>
+        <div className="text-center border-t border-border-light dark:border-border-dark pt-4 print:border-black">
+           <p className="font-bold mb-1">THANK YOU!</p>
+           <p className="text-xs text-text-light/60 dark:text-text-dark/60">Please come again.</p>
+           {/* Barcode Mockup */}
+           <div className="mt-4 h-12 bg-text-light/10 dark:bg-text-dark/10 flex items-center justify-center font-mono text-[10px] tracking-[0.5em] text-text-light/40 dark:text-text-dark/40 print:bg-gray-100 print:text-black">
+              ||| |||| | ||||| ||
+           </div>
+           <p className="text-[10px] mt-1 text-center">{sale.id}</p>
         </div>
       </div>
 
-      {/* Print Styles */}
-      <style jsx global>{`
+       {/* Print Styles */}
+       <style jsx global>{`
         @media print {
           body * {
             visibility: hidden;
           }
-          .max-w-4xl,
-          .max-w-4xl * {
+          .font-mono,
+          .font-mono * {
             visibility: visible;
           }
-          .max-w-4xl {
+          .font-mono {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
+            max-width: 100% !important;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
           }
-          button {
+          .print\\:hidden {
             display: none !important;
           }
         }

@@ -16,6 +16,7 @@ import { User } from '../users/entities/user.entity';
 import { PushNotificationService } from './services/push-notification.service';
 import { InAppNotificationService } from './services/in-app-notification.service';
 import { NotificationOrchestratorService } from './services/notification-orchestrator.service';
+import { DeviceTokenService } from './services/device-token.service';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { format, addHours } from 'date-fns';
 
@@ -35,6 +36,7 @@ export class NotificationsService {
     private emailService: EmailService,
     private smsService: SmsService,
     private pushService: PushNotificationService,
+    private deviceTokenService: DeviceTokenService,
     @Inject(forwardRef(() => InAppNotificationService))
     private inAppService: InAppNotificationService,
     @Inject(forwardRef(() => NotificationOrchestratorService))
@@ -156,11 +158,55 @@ export class NotificationsService {
                 ),
               },
             );
+          } else if (notification.customerId) {
+            // Handle customer push notifications using device tokens
+            const customer = await this.customersRepository.findOne({
+              where: { id: notification.customerId },
+              relations: ['user'],
+            });
+
+            if (customer?.user?.id) {
+              const tokens = await this.deviceTokenService.getUserTokens(
+                customer.user.id,
+              );
+
+              if (tokens.length > 0) {
+                // Send to all registered devices
+                for (const deviceToken of tokens) {
+                  try {
+                    await this.pushService.sendPushNotification(
+                      deviceToken.token,
+                      notification.title,
+                      notification.body,
+                      notification.metadata || {},
+                      {
+                        priority: 'high',
+                        channelId: this.pushService.getChannelIdForType(
+                          notification.type,
+                        ),
+                      },
+                    );
+                  } catch (error) {
+                    this.logger.error(
+                      `Failed to send push to device ${deviceToken.deviceId}: ${error.message}`,
+                    );
+                  }
+                }
+                success = true;
+              } else {
+                this.logger.warn(
+                  `No device tokens found for customer ${notification.customerId}`,
+                );
+                success = false;
+              }
+            } else {
+              this.logger.warn(
+                `Customer ${notification.customerId} has no associated user`,
+              );
+              success = false;
+            }
           } else {
-            // TODO: Handle customer push notifications (requires saving push token for customers/devices)
-            this.logger.warn(
-              `Push notification for customer ${notification.customerId} not yet supported`,
-            );
+            this.logger.warn('Push notification has no userId or customerId');
             success = false;
           }
           break;

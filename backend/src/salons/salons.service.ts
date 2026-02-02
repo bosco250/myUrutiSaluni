@@ -285,4 +285,15 @@ export class SalonsService {
       .orWhere(`salon.city ${operator} :query`, { query: `%${query}%` })
       .getMany();
   }
+
+  /**
+   * Find salons in a specific district (for district leaders)
+   */
+  async findByDistrict(district: string): Promise<Salon[]> {
+    return this.salonsRepository.find({
+      where: { district },
+      relations: ['owner'],
+      order: { createdAt: 'DESC' },
+    });
+  }
 }

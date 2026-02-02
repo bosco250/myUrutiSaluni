@@ -6,6 +6,7 @@ import { PayrollRun } from './entities/payroll-run.entity';
 import { PayrollItem } from './entities/payroll-item.entity';
 import { SalonEmployee } from '../salons/entities/salon-employee.entity';
 import { Commission } from '../commissions/entities/commission.entity';
+import { AttendanceLog } from '../attendance/entities/attendance-log.entity';
 import { CommissionsModule } from '../commissions/commissions.module';
 import { SalonsModule } from '../salons/salons.module';
 import { WalletsModule } from '../wallets/wallets.module';
@@ -18,6 +19,7 @@ import { AccountingModule } from '../accounting/accounting.module';
       PayrollItem,
       SalonEmployee,
       Commission,
+      AttendanceLog,
     ]),
     CommissionsModule,
     SalonsModule,

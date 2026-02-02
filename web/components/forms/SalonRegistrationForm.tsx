@@ -187,6 +187,27 @@ export default function SalonRegistrationForm({
 
   const { user } = useAuthStore();
 
+  // Helper to resolve image URLs
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') &&
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -564,16 +585,25 @@ export default function SalonRegistrationForm({
       formDataUpload.append('file', files[0]);
 
       // Use the correct backend endpoint for file uploads
-      const response = await api.post('/uploads/avatar', formDataUpload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await api.post('/uploads/salon', formDataUpload, {
+        headers: { 'Content-Type': undefined },
       });
 
-      // Backend returns { id, filename, url, contentType, size }
-      const imageUrl = response.data?.url || response.data?.path || response.data;
-      if (imageUrl) {
+      // Parse response similar to services modal
+      const resData = response.data;
+      const fileRef = resData?.url || resData?.id || resData?.data?.url || resData?.data?.id;
+
+      if (fileRef) {
+        // Construct final URL
+        const finalUrl = (typeof fileRef === 'string' && fileRef.startsWith('http'))
+          ? fileRef
+          : (resData?.url || `/uploads/${resData?.id || resData?.data?.id}`);
+
         // Ensure we have an array to spread
         const currentImages = Array.isArray(formData.images) ? formData.images : [];
-        updateField('images', [...currentImages, imageUrl]);
+        updateField('images', [...currentImages, finalUrl]);
+      } else {
+        throw new Error('Invalid server response format');
       }
     } catch (err) {
       console.error('Failed to upload image:', err);
@@ -1137,7 +1167,16 @@ export default function SalonRegistrationForm({
                     <div className="grid grid-cols-4 gap-2">
                       {(Array.isArray(formData.images) ? formData.images : []).map((img, idx) => (
                         <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">
-                          <img src={img} alt={`Salon ${idx + 1}`} className="w-full h-full object-cover" />
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={getImageUrl(img)}
+                            alt={`Salon ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback if image fails to load
+                              e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23f0f0f0" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%23999" font-size="14"%3ENo Image%3C/text%3E%3C/svg%3E';
+                            }}
+                          />
                           <button
                             type="button"
                             onClick={() => removeImage(idx)}

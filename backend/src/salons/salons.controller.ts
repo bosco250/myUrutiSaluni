@@ -141,7 +141,16 @@ export class SalonsController {
       return this.salonsService.findSalonsForUser(user.id);
     }
 
-    // Admins and district leaders can see all salons
+    // District leaders can only see salons in their district
+    if (user.role === UserRole.DISTRICT_LEADER) {
+      if (user.district) {
+        return this.salonsService.findByDistrict(user.district);
+      }
+      // If district leader has no district assigned, return empty array for security
+      return Promise.resolve([]);
+    }
+
+    // Admins can see all salons
     return this.salonsService.findAll();
   }
 

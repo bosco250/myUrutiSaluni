@@ -148,4 +148,15 @@ export class UsersService {
 
     return membershipNumber!;
   }
+
+  /**
+   * Find users in a specific district (for district leaders)
+   */
+  async findByDistrict(district: string, role?: UserRole): Promise<User[]> {
+    const where: any = { district };
+    if (role) {
+      where.role = role;
+    }
+    return this.usersRepository.find({ where });
+  }
 }

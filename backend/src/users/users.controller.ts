@@ -54,10 +54,14 @@ export class UsersController {
     summary: 'Get all users (for searching/selecting employees)',
   })
   findAll(@CurrentUser() user: any, @Query('role') role?: UserRole) {
-    // District leaders can only see users in their district (simplified for now)
+    // District leaders can only see users in their district
     if (user.role === UserRole.DISTRICT_LEADER) {
-      // TODO: Filter by district when district info is available
-      return this.usersService.findAll(role);
+      // Filter by district leader's district
+      if (user.district) {
+        return this.usersService.findByDistrict(user.district, role);
+      }
+      // If district leader has no district assigned, return empty array for security
+      return Promise.resolve([]);
     }
     // Salon owners and employees can see users to add as employees (limited fields)
     if (

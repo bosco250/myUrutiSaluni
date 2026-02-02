@@ -15,6 +15,7 @@ import { CommissionsService } from '../commissions/commissions.service';
 import { WalletsService } from '../wallets/wallets.service';
 import { AccountingService } from '../accounting/accounting.service';
 import { WalletTransactionType } from '../wallets/entities/wallet-transaction.entity';
+import { AttendanceLog, AttendanceType } from '../attendance/entities/attendance-log.entity';
 
 @Injectable()
 export class PayrollService {
@@ -27,6 +28,8 @@ export class PayrollService {
     private salonEmployeesRepository: Repository<SalonEmployee>,
     @InjectRepository(Commission)
     private commissionsRepository: Repository<Commission>,
+    @InjectRepository(AttendanceLog)
+    private attendanceLogsRepository: Repository<AttendanceLog>,
     @Inject(forwardRef(() => CommissionsService))
     private commissionsService: CommissionsService,
     private walletsService: WalletsService,
@@ -109,8 +112,8 @@ export class PayrollService {
   ): Promise<PayrollItem> {
     let baseSalary = 0;
     let commissionAmount = 0;
-    const overtimeAmount = 0;
-    const deductions = 0;
+    let overtimeAmount = 0;
+    let deductions = 0;
 
     // Calculate base salary based on pay frequency
     // baseSalary is stored as the rate for the specified frequency (not annual)
@@ -156,13 +159,15 @@ export class PayrollService {
       }, 0);
     }
 
-    // TODO: Calculate overtime (requires attendance data)
-    // overtimeAmount = await this.calculateOvertime(employee, periodStart, periodEnd);
+    // Calculate overtime from attendance data
+    overtimeAmount = await this.calculateOvertime(employee, periodStart, periodEnd);
 
-    // TODO: Calculate deductions (taxes, loans, etc.)
-    // deductions = await this.calculateDeductions(employee, grossPay);
-
+    // Calculate gross pay before deductions
     const grossPay = baseSalary + commissionAmount + overtimeAmount;
+
+    // Calculate deductions (taxes, loans, etc.)
+    deductions = await this.calculateDeductions(employee, grossPay, periodStart, periodEnd);
+
     const netPay = grossPay - deductions;
 
     const payrollItem = this.payrollItemsRepository.create({
@@ -388,5 +393,147 @@ export class PayrollService {
         ),
       ).size,
     };
+  }
+
+  /**
+   * Calculate overtime pay based on attendance records
+   * Overtime = hours worked beyond standard work hours * hourly rate * overtime multiplier
+   */
+  private async calculateOvertime(
+    employee: SalonEmployee,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<number> {
+    try {
+      // Get all attendance logs for the period
+      const logs = await this.attendanceLogsRepository.find({
+        where: {
+          salonEmployeeId: employee.id,
+          recordedAt: Between(periodStart, periodEnd),
+        },
+        order: { recordedAt: 'ASC' },
+      });
+
+      // Group logs by date to calculate daily hours
+      const dailyHours = new Map<string, number>();
+      const clockInMap = new Map<string, Date>();
+
+      for (const log of logs) {
+        const dateKey = log.recordedAt.toISOString().split('T')[0];
+
+        if (log.type === AttendanceType.CLOCK_IN) {
+          clockInMap.set(dateKey, log.recordedAt);
+        } else if (log.type === AttendanceType.CLOCK_OUT) {
+          const clockIn = clockInMap.get(dateKey);
+          if (clockIn) {
+            const hoursWorked =
+              (log.recordedAt.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+            dailyHours.set(
+              dateKey,
+              (dailyHours.get(dateKey) || 0) + hoursWorked,
+            );
+            clockInMap.delete(dateKey);
+          }
+        }
+      }
+
+      // Calculate overtime (hours beyond 8 per day)
+      const standardHoursPerDay = 8;
+      const overtimeMultiplier = 1.5; // 1.5x pay for overtime
+      let totalOvertimeHours = 0;
+
+      for (const [_, hours] of dailyHours) {
+        if (hours > standardHoursPerDay) {
+          totalOvertimeHours += hours - standardHoursPerDay;
+        }
+      }
+
+      if (totalOvertimeHours === 0) {
+        return 0;
+      }
+
+      // Calculate hourly rate from base salary
+      let hourlyRate = 0;
+      if (employee.baseSalary) {
+        // Assuming 22 working days per month, 8 hours per day
+        hourlyRate = Number(employee.baseSalary) / (22 * 8);
+      }
+
+      const overtimePay = totalOvertimeHours * hourlyRate * overtimeMultiplier;
+      return Math.round(overtimePay * 100) / 100; // Round to 2 decimal places
+    } catch (error) {
+      console.error('Error calculating overtime:', error);
+      return 0; // Return 0 if calculation fails
+    }
+  }
+
+  /**
+   * Calculate deductions (tax, loans, advances, etc.)
+   */
+  private async calculateDeductions(
+    employee: SalonEmployee,
+    grossPay: number,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<number> {
+    let totalDeductions = 0;
+
+    try {
+      // 1. Income Tax (Progressive tax brackets - Rwanda example)
+      const incomeTax = this.calculateIncomeTax(grossPay);
+      totalDeductions += incomeTax;
+
+      // 2. Loan Deductions
+      // TODO: Integrate with loans module to fetch active loan repayment amounts
+      // For now, this can be manually added as needed
+
+      // 3. Advance Salary Deductions
+      // TODO: Implement advance salary tracking system
+
+      // 4. Other Deductions
+      // TODO: Implement custom deductions system
+      // For now, only income tax is automatically calculated
+
+      return Math.round(totalDeductions * 100) / 100; // Round to 2 decimal places
+    } catch (error) {
+      console.error('Error calculating deductions:', error);
+      return 0; // Return 0 if calculation fails
+    }
+  }
+
+  /**
+   * Calculate progressive income tax (Rwanda tax brackets example)
+   * You can adjust these brackets based on your country's tax laws
+   */
+  private calculateIncomeTax(grossPay: number): number {
+    // Rwanda income tax brackets (monthly, in RWF)
+    // Adjust these based on your actual tax requirements
+    const taxBrackets = [
+      { limit: 30000, rate: 0 }, // 0% on first 30,000 RWF
+      { limit: 100000, rate: 0.2 }, // 20% on next 70,000 RWF
+      { limit: Infinity, rate: 0.3 }, // 30% on amount above 100,000 RWF
+    ];
+
+    let tax = 0;
+    let remainingIncome = grossPay;
+    let previousLimit = 0;
+
+    for (const bracket of taxBrackets) {
+      const taxableInThisBracket = Math.min(
+        remainingIncome,
+        bracket.limit - previousLimit,
+      );
+
+      if (taxableInThisBracket > 0) {
+        tax += taxableInThisBracket * bracket.rate;
+        remainingIncome -= taxableInThisBracket;
+      }
+
+      previousLimit = bracket.limit;
+
+      if (remainingIncome <= 0) break;
+    }
+
+    return Math.round(tax * 100) / 100;
   }
 }

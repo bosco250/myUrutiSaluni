@@ -12,6 +12,8 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { PushNotificationService } from './services/push-notification.service';
+import { DeviceTokenService } from './services/device-token.service';
+import { DevicePlatform } from './entities/device-token.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -30,6 +32,7 @@ export class NotificationsController {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly pushNotificationService: PushNotificationService,
+    private readonly deviceTokenService: DeviceTokenService,
   ) {}
 
   @Post('send')
@@ -335,5 +338,39 @@ export class NotificationsController {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  // ==================== Device Token Management ====================
+
+  @Post('devices/register')
+  @ApiOperation({ summary: 'Register device token for push notifications' })
+  async registerDeviceToken(
+    @CurrentUser() user: any,
+    @Body()
+    body: {
+      token: string;
+      platform: DevicePlatform;
+      deviceId?: string;
+      deviceName?: string;
+      appVersion?: string;
+    },
+  ) {
+    return this.deviceTokenService.registerToken({
+      userId: user.id,
+      ...body,
+    });
+  }
+
+  @Get('devices')
+  @ApiOperation({ summary: 'Get all registered devices for current user' })
+  async getUserDevices(@CurrentUser() user: any) {
+    return this.deviceTokenService.getUserTokens(user.id);
+  }
+
+  @Delete('devices/:token')
+  @ApiOperation({ summary: 'Deactivate a device token' })
+  async deactivateDevice(@Param('token') token: string) {
+    await this.deviceTokenService.deactivateToken(token);
+    return { success: true, message: 'Device token deactivated' };
   }
 }
