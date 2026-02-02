@@ -664,7 +664,7 @@ function ApplicationStatusView({ application, onEdit }: { application: Membershi
     },
   };
 
-  const config = statusConfig[application.status];
+  const config = statusConfig[application.status] || statusConfig.pending;
   const Icon = config.icon;
 
   return (
