@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import GlobalSearch from '@/components/navigation/GlobalSearch';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import api from '@/lib/api';
 
 function ModernHeaderComponent() {
   const { user, logout } = useAuthStore();
@@ -16,6 +17,27 @@ function ModernHeaderComponent() {
   const { theme, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+
+  // Helper to resolve image URLs
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') &&
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
 
   // Global keyboard shortcut for search
   useEffect(() => {
@@ -115,11 +137,19 @@ function ModernHeaderComponent() {
                     >
                       <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xs ring-2 ring-primary/20 overflow-hidden relative">
                         {user?.avatarUrl || user?.avatar ? (
-                          <Image 
-                            src={user?.avatarUrl || user?.avatar || ''} 
-                            alt={user?.fullName || 'User'} 
-                            fill
-                            className="object-cover"
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={getImageUrl(user?.avatarUrl || user?.avatar)}
+                            alt={user?.fullName || 'User'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback to initials if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                parent.textContent = user?.fullName?.charAt(0).toUpperCase() || 'U';
+                              }
+                            }}
                           />
                         ) : (
                           user?.fullName?.charAt(0).toUpperCase() || 'U'

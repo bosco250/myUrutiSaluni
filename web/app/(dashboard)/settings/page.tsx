@@ -120,6 +120,27 @@ function ProfileSettings({ user }: { user: any }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [showExtended, setShowExtended] = useState(false);
 
+  // Helper to resolve image URLs
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) {
+      // If the URL contains localhost but we are accessing via IP, translate it
+      if (
+        url.includes('localhost') &&
+        typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost')
+      ) {
+        const port = url.split(':').pop()?.split('/')[0];
+        return `http://${window.location.hostname}:${port || '4000'}${url.split(port || '4000')[1]}`;
+      }
+      return url;
+    }
+
+    // Handle relative paths
+    const apiBase = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://161.97.148.53:4000';
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   // Location State
   const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
@@ -250,12 +271,24 @@ function ProfileSettings({ user }: { user: any }) {
   const handleUploadFile = async (file: File) => {
     if (!file.type.startsWith('image/')) throw new Error('Please select an image file');
     if (file.size > 2 * 1024 * 1024) throw new Error('File size must be less than 2MB');
-    const formData = new FormData(); formData.append('file', file);
-    const uploadResponse = await api.post('/uploads/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-    const responseData = uploadResponse.data;
-    const data = responseData.data || responseData;
-    const avatarUrl = data.url || data.path || data.secure_url || (typeof data === 'string' ? data : null);
-    if (!avatarUrl) throw new Error('No image URL returned');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadResponse = await api.post('/uploads/avatar', formData, {
+      headers: { 'Content-Type': undefined }
+    });
+
+    // Parse response similar to salon images
+    const resData = uploadResponse.data;
+    const fileRef = resData?.url || resData?.id || resData?.data?.url || resData?.data?.id;
+
+    if (!fileRef) throw new Error('No image URL returned');
+
+    // Construct final URL
+    const avatarUrl = (typeof fileRef === 'string' && fileRef.startsWith('http'))
+      ? fileRef
+      : (resData?.url || `/uploads/${resData?.id || resData?.data?.id}`);
+
     await api.put('/users/me', { avatar: avatarUrl });
     await refreshUser();
     success('Avatar updated');
@@ -282,7 +315,19 @@ function ProfileSettings({ user }: { user: any }) {
               <div className="relative group mb-3">
                   <div className="w-20 h-20 rounded-full border-2 border-background-light dark:border-background-dark shadow-md overflow-hidden bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
                       {user?.avatar || user?.avatarUrl ? (
-                         <img src={user.avatar || user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                         <img
+                           src={getImageUrl(user.avatar || user.avatarUrl)}
+                           alt={user.fullName}
+                           className="w-full h-full object-cover"
+                           onError={(e) => {
+                             // Fallback to initials if image fails to load
+                             e.currentTarget.style.display = 'none';
+                             const parent = e.currentTarget.parentElement;
+                             if (parent) {
+                               parent.textContent = user?.fullName?.charAt(0).toUpperCase() || 'U';
+                             }
+                           }}
+                         />
                       ) : ( user?.fullName?.charAt(0) || 'U' )}
                   </div>
                   <button type="button" onClick={() => setIsUploadModalOpen(true)} className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full shadow hover:bg-primary-dark transition-transform hover:scale-105">
