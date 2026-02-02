@@ -57,15 +57,10 @@ export class InventoryController {
       createProductDto.salonId
     ) {
       const salon = await this.salonsService.findOne(createProductDto.salonId);
+      const isOwner = salon.ownerId === user.id;
 
-      if (user.role === UserRole.SALON_OWNER) {
-        if (salon.ownerId !== user.id) {
-          throw new ForbiddenException(
-            'You can only create products for your own salon',
-          );
-        }
-      } else if (user.role === UserRole.SALON_EMPLOYEE) {
-        // Employees need MANAGE_PRODUCTS permission
+      if (!isOwner) {
+        // Not the owner, check if employee with permission
         const employee =
           await this.employeePermissionsService.getEmployeeRecordByUserId(
             user.id,
@@ -133,17 +128,9 @@ export class InventoryController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      let salonIds: string[] = [];
-
-      if (user.role === UserRole.SALON_OWNER) {
-        const salons = await this.salonsService.findByOwnerId(user.id);
-        salonIds = salons.map((s) => s.id);
-      } else {
-        // For employees, find all salons they work at
-        const employeeRecords =
-          await this.salonsService.findAllEmployeesByUserId(user.id);
-        salonIds = employeeRecords.map((e) => e.salonId);
-      }
+      // Find all salons associated with the user (owned or employed)
+      const salons = await this.salonsService.findSalonsForUser(user.id);
+      const salonIds = salons.map((s) => s.id);
 
       if (salonIds.length === 0) {
         return [];
@@ -151,7 +138,7 @@ export class InventoryController {
 
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access products for your own salon',
+          'You can only access products for salons you are associated with',
         );
       }
       // If salonId is provided and valid, use only that salon; otherwise use all user's salons
@@ -298,22 +285,14 @@ export class InventoryController {
     @Query('productId') productId: string | undefined,
     @CurrentUser() user: any,
   ) {
-    // Salon owners and employees can only see movements for their salon(s)
+    // Salon owners and employees (in management mode) can only see movements for their salon(s)
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      let salonIds: string[] = [];
-
-      if (user.role === UserRole.SALON_OWNER) {
-        const salons = await this.salonsService.findByOwnerId(user.id);
-        salonIds = salons.map((s) => s.id);
-      } else {
-        // For employees, find all salons they work at
-        const employeeRecords =
-          await this.salonsService.findAllEmployeesByUserId(user.id);
-        salonIds = employeeRecords.map((e) => e.salonId);
-      }
+      // Find all salons associated with the user (owned or employed)
+      const salons = await this.salonsService.findSalonsForUser(user.id);
+      const salonIds = salons.map((s) => s.id);
 
       if (salonIds.length === 0) {
         return [];
@@ -321,7 +300,7 @@ export class InventoryController {
 
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access movements for your own salon',
+          'You can only access movements for salons you are associated with',
         );
       }
       // If no salonId specified, filter by all user's salons
@@ -353,9 +332,15 @@ export class InventoryController {
     ) {
       const salon = await this.salonsService.findOne(createMovementDto.salonId);
       if (salon.ownerId !== user.id) {
-        throw new ForbiddenException(
-          'You can only create movements for your own salon',
+        const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
+          user.id,
+          createMovementDto.salonId,
         );
+        if (!isEmployee) {
+          throw new ForbiddenException(
+            'You can only create movements for salons you are associated with',
+          );
+        }
       }
     }
 
@@ -378,22 +363,14 @@ export class InventoryController {
     @Query('salonId') salonId: string | undefined,
     @CurrentUser() user: any,
   ) {
-    // Salon owners and employees can only see stock for their salon(s)
+    // Salon owners and employees (in management mode) can only see stock for their salon(s)
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      let salonIds: string[] = [];
-
-      if (user.role === UserRole.SALON_OWNER) {
-        const salons = await this.salonsService.findByOwnerId(user.id);
-        salonIds = salons.map((s) => s.id);
-      } else {
-        // For employees, find all salons they work at
-        const employeeRecords =
-          await this.salonsService.findAllEmployeesByUserId(user.id);
-        salonIds = employeeRecords.map((e) => e.salonId);
-      }
+      // Find all salons associated with the user (owned or employed)
+      const salons = await this.salonsService.findSalonsForUser(user.id);
+      const salonIds = salons.map((s) => s.id);
 
       if (salonIds.length === 0) {
         return [];
@@ -401,7 +378,7 @@ export class InventoryController {
 
       if (salonId && !salonIds.includes(salonId)) {
         throw new ForbiddenException(
-          'You can only access stock for your own salon',
+          'You can only access stock for salons you are associated with',
         );
       }
       // If no salonId specified, get stock for all user's salons
@@ -431,22 +408,16 @@ export class InventoryController {
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       const salon = await this.salonsService.findOne(product.salonId);
+      const isOwner = salon.ownerId === user.id;
 
-      if (user.role === UserRole.SALON_OWNER) {
-        if (salon.ownerId !== user.id) {
-          throw new ForbiddenException(
-            'You can only access stock for your own salon',
-          );
-        }
-      } else {
-        // Employee check
+      if (!isOwner) {
         const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
           user.id,
           product.salonId,
         );
         if (!isEmployee) {
           throw new ForbiddenException(
-            'You can only access stock for salons you work at',
+            'You can only access stock for salons you are associated with',
           );
         }
       }

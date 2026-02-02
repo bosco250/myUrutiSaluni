@@ -355,7 +355,7 @@ export default function AccountingPage() {
   });
 
   // Fetch Financial Summary (Moved up from OverviewTab to be Global)
-  const { data: summary, isLoading: isLoadingSummary } = useQuery<FinancialSummary>({
+  const { data: summary, isLoading: isLoadingSummary, error: summaryError } = useQuery<FinancialSummary>({
     queryKey: ['financial-summary', salonId, dateRange, filterType, filterCategoryId],
     queryFn: async () => {
        try {
@@ -363,20 +363,29 @@ export default function AccountingPage() {
          if (filterType !== 'all') params.type = filterType;
          if (filterCategoryId !== 'all') params.categoryId = filterCategoryId;
 
+         console.log('[Accounting] Fetching financial summary with params:', params);
          const res = await api.get('/accounting/financial-summary', { params });
+         console.log('[Accounting] Financial summary response:', res.data);
+
          // Handle wrapped response { data: { ... } } or direct { ... }
-         return res.data?.data || res.data || { 
-           totalRevenue: 0, 
-           totalExpenses: 0, 
-           netIncome: 0, 
-           salesCount: 0, 
-           expenseCount: 0 
+         const summaryData = res.data?.data || res.data || {
+           totalRevenue: 0,
+           totalExpenses: 0,
+           netIncome: 0,
+           salesCount: 0,
+           expenseCount: 0
          };
-       } catch (error) {
-         return { totalRevenue: 0, totalExpenses: 0, netIncome: 0, salesCount: 0, expenseCount: 0 };
+
+         console.log('[Accounting] Parsed summary data:', summaryData);
+         return summaryData;
+       } catch (error: any) {
+         console.error('[Accounting] Error fetching financial summary:', error);
+         console.error('[Accounting] Error response:', error?.response?.data);
+         throw error; // Re-throw to let React Query handle it
        }
     },
-    enabled: !!salonId
+    enabled: !!salonId,
+    retry: 1
   });
 
   const netIncome = summary?.netIncome || 0;
@@ -660,6 +669,20 @@ export default function AccountingPage() {
       </div>
 
        {/* Global KPI Cards (Placed ABOVE Navigation as requested) */}
+       {summaryError && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-900/20 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-rose-600 dark:text-rose-400 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-rose-900 dark:text-rose-100">Error Loading Financial Data</h3>
+              <p className="text-sm text-rose-700 dark:text-rose-300 mt-1">
+                {(summaryError as any)?.response?.data?.message || 'Failed to load financial summary. Please check the console for details.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
        {isLoadingSummary ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (

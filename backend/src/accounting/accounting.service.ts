@@ -610,8 +610,18 @@ export class AccountingService {
     salesCount: number;
     expenseCount: number;
   }> {
+    console.log('[Accounting Service] getFinancialSummary called with:', {
+      salonId,
+      startDate,
+      endDate,
+      type,
+      categoryId,
+    });
+
     const includeIncome = (!type || type === 'income') && !categoryId;
     const includeExpense = !type || type === 'expense';
+
+    console.log('[Accounting Service] Query flags:', { includeIncome, includeExpense });
 
     // 1. Get Revenue (Source of Truth for Sales)
     let totalSalesRevenue = 0;
@@ -638,9 +648,15 @@ export class AccountingService {
         });
       }
 
+      console.log('[Accounting Service] Sales query SQL:', salesTotalQb.getSql());
+
       const salesResult = await salesTotalQb.getRawOne();
+      console.log('[Accounting Service] Sales query result:', salesResult);
+
       totalSalesRevenue = parseFloat(salesResult?.total || '0');
       salesCount = parseInt(salesResult?.count || '0', 10);
+
+      console.log('[Accounting Service] Parsed sales:', { totalSalesRevenue, salesCount });
 
       // 2. Other Revenue
       const revenueEntriesQb = this.journalEntryLinesRepository
@@ -675,6 +691,8 @@ export class AccountingService {
 
     const totalRevenue = totalSalesRevenue + otherRevenue;
 
+    console.log('[Accounting Service] Total revenue calculated:', totalRevenue);
+
     // 3. Get All Expenses (Manual + Commissions + Journals) via centralized method
     let totalCalculatedExpenses = 0;
     let expenseCount = 0;
@@ -686,19 +704,24 @@ export class AccountingService {
         endDate,
         categoryId,
       );
+      console.log('[Accounting Service] Expense summary:', expenseSummary);
       totalCalculatedExpenses = expenseSummary.totalExpenses;
       expenseCount = expenseSummary.expenseCount;
     }
 
     const netIncome = totalRevenue - totalCalculatedExpenses;
 
-    return {
+    const finalResult = {
       totalRevenue,
       totalExpenses: totalCalculatedExpenses,
       netIncome,
       salesCount,
       expenseCount,
     };
+
+    console.log('[Accounting Service] Final result:', finalResult);
+
+    return finalResult;
   }
 
   // ==================== EXISTING METHODS ====================

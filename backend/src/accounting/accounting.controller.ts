@@ -176,13 +176,31 @@ export class AccountingController {
         ? req.resolvedSalonId
         : salonId;
 
-    return this.accountingService.getFinancialSummary(
+    console.log('[Accounting Controller] getFinancialSummary called with:', {
+      salonId,
+      effectiveSalonId,
+      startDate,
+      endDate,
+      type,
+      categoryId,
+      userRole: req.user?.role,
+    });
+
+    if (!effectiveSalonId) {
+      console.error('[Accounting Controller] ERROR: No salonId provided');
+      throw new Error('Salon ID is required');
+    }
+
+    const result = await this.accountingService.getFinancialSummary(
       effectiveSalonId,
       startDate,
       endDate,
       type,
       categoryId,
     );
+
+    console.log('[Accounting Controller] getFinancialSummary result:', result);
+    return result;
   }
 
   // ==================== EXISTING ENDPOINTS ====================
