@@ -28,8 +28,9 @@ async function createWalletsForAllUsers() {
         const wallet = await walletsService.getOrCreateWallet(user.id);
         
         if (wallet) {
-          // Check if this was a new creation by checking if balance is 0 and createdAt is recent
-          const isNew = wallet.balance === 0 || wallet.balance === '0';
+          // Check if this was a new creation by checking if balance is 0
+          const balance = typeof wallet.balance === 'string' ? parseFloat(wallet.balance) : wallet.balance;
+          const isNew = balance === 0;
           if (isNew) {
             created++;
             console.log(`  ✅ Created wallet: ${wallet.id} (Balance: ${wallet.balance} ${wallet.currency})`);
