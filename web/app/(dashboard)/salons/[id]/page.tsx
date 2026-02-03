@@ -47,6 +47,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import DocumentStatusCard from '@/components/salon/DocumentStatusCard';
 
 interface Salon {
   id: string;
@@ -222,7 +223,7 @@ function SalonDetailContent() {
     queryKey: ['salon-services', salonId],
     queryFn: async () => {
       try {
-        const response = await api.get(`/salons/${salonId}/services`);
+        const response = await api.get(`/services`, { params: { salonId } });
         const servicesData = response.data?.data || response.data;
         return Array.isArray(servicesData) ? servicesData : [];
       } catch {
@@ -231,6 +232,36 @@ function SalonDetailContent() {
     },
     enabled: !!salonId,
   });
+
+  // Fetch documents for status card
+  const { data: documents = [] } = useQuery<any[]>({
+    queryKey: ['salon-documents', salonId],
+    queryFn: async () => {
+      try {
+        const response = await api.get(`/salons/${salonId}/documents`);
+        const docsData = response.data?.data || response.data;
+        return Array.isArray(docsData) ? docsData : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!salonId && !!canEdit,
+  });
+
+  // Calculate document status
+  const totalRequiredDocs = 4; // business_license, owner_id, tax_id, proof_of_address
+  const uploadedDocsCount = documents.length;
+  const documentStatus = (() => {
+    if (uploadedDocsCount === 0) return 'incomplete';
+    if (documents.some((d: any) => d.status === 'expired')) return 'expired';
+    if (documents.every((d: any) => d.status === 'approved') && uploadedDocsCount >= totalRequiredDocs) return 'verified';
+    if (documents.some((d: any) => d.status === 'pending')) return 'pending';
+    if (uploadedDocsCount < totalRequiredDocs) return 'incomplete';
+    return 'pending';
+  })();
+  const lastDocUpdate = documents.length > 0 
+    ? new Date(Math.max(...documents.map((d: any) => new Date(d.updatedAt || d.createdAt).getTime()))).toLocaleDateString()
+    : undefined;
 
   if (isLoading) {
     return (
@@ -529,7 +560,7 @@ function SalonDetailContent() {
                       <p className="text-sm font-bold text-gray-900 dark:text-white">{service.name}</p>
                       <p className="text-[11px] text-gray-400 font-medium">{service.duration} mins • {service.category || 'General'}</p>
                     </div>
-                    <span className="text-sm font-black text-gray-900 dark:text-white">{service.price.toLocaleString()} RWF</span>
+                    <span className="text-sm font-black text-gray-900 dark:text-white">{(service.price || 0).toLocaleString()} RWF</span>
                   </div>
                 ))}
               </div>
@@ -539,6 +570,17 @@ function SalonDetailContent() {
 
         {/* Right Column: Stats & Actions */}
         <div className="space-y-4">
+          {/* Document Status - Only for Salon Owners */}
+          {isSalonOwner() && user?.id === salon?.ownerId && (
+            <DocumentStatusCard 
+              status={documentStatus as 'pending' | 'verified' | 'incomplete' | 'expired'}
+              documentsCount={uploadedDocsCount}
+              totalRequired={totalRequiredDocs}
+              lastUpdated={lastDocUpdate}
+              salonId={salonId}
+            />
+          )}
+
           {/* Stats Grid - Using Shared Pattern */}
           <div className="grid grid-cols-2 gap-2">
             <StatCard label="Staff" value={employees.length} icon={Users} color="text-blue-600" bg="bg-blue-500/10" />

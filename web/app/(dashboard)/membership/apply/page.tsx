@@ -122,7 +122,7 @@ function MembershipApplyContent() {
       const response = await api.post('/memberships/apply', apiData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate and refetch all membership-related queries
       queryClient.invalidateQueries({ queryKey: ['membership-status', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['membership-application', user?.id] });
@@ -134,8 +134,13 @@ function MembershipApplyContent() {
       queryClient.refetchQueries({ queryKey: ['memberships'] }); // Refetch salon memberships
       
       setIsEditing(false);
-      // If we edited a pending application, we stay here. If approved, we redirect.
-      // But typically we want to show the updated status.
+      
+      // Redirect to document upload for new applications
+      if (data && !existingApplication) {
+        setTimeout(() => {
+          router.push('/document-upload?source=membership&applicationId=' + data.id);
+        }, 1000);
+      }
     },
   });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { 
@@ -35,11 +35,13 @@ interface DocumentFile {
 
 export default function DocumentUploadPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { success, error: toastError } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [salonId, setSalonId] = useState<string | null>(null);
+  const [salonError, setSalonError] = useState<string | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   
@@ -86,35 +88,60 @@ export default function DocumentUploadPage() {
     }
   ]);
 
-  // Fetch Salon ID
+  // Fetch Salon ID - First check URL, then get user's own salon
   useEffect(() => {
       const fetchSalon = async () => {
           try {
-              const res = await api.get('/salons');
-              if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-                  setSalonId(res.data[0].id);
+              setSalonError(null);
+              
+              // First, check if salonId is provided in URL
+              const urlSalonId = searchParams.get('salonId');
+              if (urlSalonId) {
+                  console.log('Using salonId from URL:', urlSalonId);
+                  setSalonId(urlSalonId);
+                  return;
               }
+              
+              // Otherwise, fetch user's salons and use the first one
+              const salonsRes = await api.get('/salons');
+              const salons = salonsRes.data?.data || salonsRes.data;
+              
+              if (salons && Array.isArray(salons) && salons.length > 0) {
+                  // Use the first salon (salon owners typically have one salon)
+                  console.log('Using first salon from API:', salons[0].id);
+                  setSalonId(salons[0].id);
+                  return;
+              }
+              
+              setSalonError("No salon found. Please create a salon first or contact support.");
+              console.warn("No salons found for document upload");
           } catch (e) {
               console.error("Failed to fetch salon info", e);
+              setSalonError("Unable to find your salon. Please ensure you have a salon registered or contact support.");
           }
       };
       fetchSalon();
-  }, []);
+  }, [searchParams]);
 
   // Fetch Uploaded Documents
-  const { data: uploadedDocs } = useQuery({
+  const { data: uploadedDocs, isLoading: isLoadingDocs } = useQuery({
     queryKey: ['documents', salonId],
     queryFn: async () => {
         if (!salonId) return [];
         const res = await api.get(`/salons/${salonId}/documents`);
-        return res.data;
+        // Handle nested response structure
+        const docsData = res.data?.data || res.data;
+        console.log('Fetched documents from API:', docsData);
+        return Array.isArray(docsData) ? docsData : [];
     },
-    enabled: !!salonId
+    enabled: !!salonId,
+    staleTime: 0, // Always refetch on mount
   });
 
   // Sync uploaded documents with local state
   useEffect(() => {
-    if (uploadedDocs && Array.isArray(uploadedDocs)) {
+    console.log('Syncing documents, uploadedDocs:', uploadedDocs);
+    if (uploadedDocs && Array.isArray(uploadedDocs) && uploadedDocs.length > 0) {
         const typeMapReverse: Record<string, string> = {
              'business_license': 'Business License',
              'owner_id': 'Owner ID (Front)',
@@ -125,18 +152,18 @@ export default function DocumentUploadPage() {
 
         setDocuments(prevDocs => prevDocs.map(doc => {
             const match = uploadedDocs.find((u: any) => 
-                typeMapReverse[u.type] === doc.type || 
-                (doc.type === 'Business License' && u.type === 'business_license')
+                typeMapReverse[u.type] === doc.type
             );
             
             if (match) {
+                console.log(`Matched document: ${doc.type} -> ${match.type}`);
                 return {
                     ...doc,
-                    status: 'uploaded',
+                    status: 'uploaded' as const,
                     progress: 100,
                     url: match.fileUrl,
                     fileId: match.mongoFileId,
-                    name: match.filename || match.type
+                    name: match.filename || typeMapReverse[match.type] || match.type
                 };
             }
             return doc;
@@ -149,11 +176,25 @@ export default function DocumentUploadPage() {
     mutationFn: async ({ file, docId, docType }: { file: File, docId: string, docType: string }) => {
         if (!salonId) throw new Error("Salon ID not found. Please refresh or create a salon first.");
 
+        // Step 1: Upload the file to GridFS
         const formData = new FormData();
         formData.append('file', file);
+        
+        console.log('Step 1: Uploading file to GridFS...');
         const uploadResponse = await api.post('/uploads/document', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+        
+        console.log('Upload response:', uploadResponse.data);
+        
+        // Handle nested data structure (NestJS interceptor often wraps response in 'data' field)
+        const responseData = uploadResponse.data.data || uploadResponse.data;
+
+        // Validate the upload response
+        if (!responseData || !responseData.url || !responseData.id) {
+            console.error('Invalid upload response structure:', uploadResponse.data);
+            throw new Error('File upload failed: Invalid response from server');
+        }
 
         const typeMap: Record<string, string> = {
              'Business License': 'business_license',
@@ -165,14 +206,19 @@ export default function DocumentUploadPage() {
 
         const docTypeEnum = typeMap[docType] || 'other';
 
-        await api.post(`/salons/${salonId}/documents`, {
+        // Step 2: Create the document record in the database
+        const documentData = {
             type: docTypeEnum,
-            fileUrl: uploadResponse.data.url,
-            mongoFileId: uploadResponse.data.id,
+            fileUrl: responseData.url,
+            mongoFileId: responseData.id,
             filename: file.name
-        });
+        };
+        
+        console.log('Step 2: Creating document record with data:', documentData);
+        
+        await api.post(`/salons/${salonId}/documents`, documentData);
 
-        return { response: uploadResponse.data, docId, fileName: file.name };
+        return { response: responseData, docId, fileName: file.name };
     },
     onMutate: ({ docId, file }) => {
         setDocuments(docs => docs.map(d => 
@@ -282,16 +328,52 @@ export default function DocumentUploadPage() {
     }
   };
 
+  // Check if at least one document is uploaded (allow partial submission)
+  const uploadedDocuments = documents.filter(d => d.status === 'uploaded');
+  const hasAnyUploaded = uploadedDocuments.length > 0;
   const allRequiredUploaded = documents
     .filter(d => d.required)
     .every(d => d.status === 'uploaded');
+  const canSubmit = hasAnyUploaded; // Allow submission with at least 1 document
 
   const selectedDoc = documents.find(d => d.id === selectedDocId);
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Error State - No Salon Found */}
+      {salonError && (
+        <div className="bg-danger/10 border border-danger/20 rounded-xl p-6 text-center">
+          <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-6 h-6 text-danger" />
+          </div>
+          <h2 className="text-lg font-bold text-danger mb-2">Salon Not Found</h2>
+          <p className="text-sm text-text-light/70 dark:text-text-dark/70 mb-4">
+            {salonError}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Button onClick={() => router.push('/salons')} variant="primary" size="sm">
+              Go to Salons
+            </Button>
+            <Button onClick={() => window.location.reload()} variant="secondary" size="sm">
+              Retry
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {!salonId && !salonError && (
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-12 text-center">
+          <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm text-text-light/60 dark:text-text-dark/60">Loading salon information...</p>
+        </div>
+      )}
+
+      {/* Main Content - Only show when salon is found */}
+      {salonId && !salonError && (
+        <>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button onClick={() => router.back()} variant="secondary" size="sm" className="w-8 h-8 p-0 flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
@@ -310,10 +392,10 @@ export default function DocumentUploadPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => verifyMutation.mutate()}
-                disabled={!allRequiredUploaded || isVerifying}
-                className={!allRequiredUploaded || isVerifying ? 'opacity-50 cursor-not-allowed' : ''}
+                disabled={!canSubmit || isVerifying}
+                className={!canSubmit || isVerifying ? 'opacity-50 cursor-not-allowed' : ''}
               >
-                  {isVerifying ? 'Submitting...' : 'Submit Verification'}
+                  {isVerifying ? 'Submitting...' : allRequiredUploaded ? 'Submit Verification' : `Submit (${uploadedDocuments.length} docs)`}
               </Button>
         </div>
       </div>
@@ -527,6 +609,8 @@ export default function DocumentUploadPage() {
           animation: progress 2s infinite ease-in-out;
         }
       `}</style>
+        </>
+      )}
     </div>
   );
 }

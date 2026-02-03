@@ -66,6 +66,12 @@ export class SalonDocument {
   @Column({ type: 'text', nullable: true })
   notes: string; // Rejection reason, etc.
 
+  @Column({ name: 'reviewed_by', type: 'uuid', nullable: true })
+  reviewedBy: string;
+
+  @Column({ name: 'reviewed_at', type: 'timestamp', nullable: true })
+  reviewedAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

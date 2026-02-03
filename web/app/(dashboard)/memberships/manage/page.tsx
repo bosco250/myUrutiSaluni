@@ -537,6 +537,15 @@ function MembershipManagementContent() {
           </div>
           <div className="flex items-center gap-2">
             <Button
+              onClick={() => router.push('/memberships/manage/verifications')}
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Verifications
+            </Button>
+            <Button
               onClick={() => router.push('/memberships/payments')}
               variant="primary"
               size="sm"

@@ -21,6 +21,7 @@ import {
   Search,
   CalendarCheck,
   ClipboardCheck,
+  FileCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useRouter } from 'next/navigation';
@@ -32,6 +33,7 @@ const menuItems = [
   { name: 'Salons', href: '/salons', icon: Scissors },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Memberships', href: '/memberships', icon: Users },
+  { name: 'Document Verification', href: '/document-upload', icon: FileCheck, roles: ['salon_owner'] },
   { name: 'Appointments', href: '/appointments', icon: Calendar },
   { name: 'Services', href: '/services', icon: Sparkles },
   { name: 'Sales & POS', href: '/sales', icon: ShoppingCart },
@@ -69,6 +71,11 @@ export default function Sidebar() {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
           const isHighlighted = item.highlight;
+          
+          // Role-based visibility
+          if (item.roles && (!user?.role || !item.roles.includes(user.role))) {
+            return null;
+          }
 
           return (
             <Link

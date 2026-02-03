@@ -235,6 +235,12 @@ function MembershipStatusContent() {
             </div>
         </div>
         <div className="flex gap-2">
+             {app.status === 'pending' && (
+                  <Button onClick={() => router.push('/document-upload')} variant="outline" size="sm" className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Upload Documents
+                  </Button>
+             )}
              {app.status === 'approved' && !isApprovedButUnpaid && (
                   <Button onClick={() => router.push('/salons')} variant="primary" size="sm">
                     Go to Salons

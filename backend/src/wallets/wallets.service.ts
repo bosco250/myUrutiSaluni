@@ -67,7 +67,7 @@ export class WalletsService {
 
     if (search) {
       qb.where(
-        'user.full_name LIKE :search OR user.email LIKE :search OR CAST(wallet.id AS VARCHAR) LIKE :search',
+        'user.full_name ILIKE :search OR user.email ILIKE :search OR CAST(wallet.id AS VARCHAR) ILIKE :search',
         { search: `%${search}%` },
       );
       this.logger.debug(`Search filter applied: ${search}`);

@@ -14,7 +14,7 @@ export class CreateDocumentDto {
   type: DocumentType;
 
   @IsNotEmpty()
-  @IsUrl()
+  @IsString()
   fileUrl: string;
 
   @IsNotEmpty()

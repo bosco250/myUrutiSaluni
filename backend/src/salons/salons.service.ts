@@ -296,4 +296,161 @@ export class SalonsService {
       order: { createdAt: 'DESC' },
     });
   }
+
+  /**
+   * Get salons for verification (optionally filtered by status), paginated
+   */
+  async getSalonsForVerification(
+    status?: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    data: Salon[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const whereClause = status ? { status } : {};
+    const [data, total] = await this.salonsRepository.findAndCount({
+      where: whereClause,
+      relations: ['owner', 'documents'],
+      order: { updatedAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
+    };
+  }
+
+  /**
+   * Review a document (approve/reject)
+   */
+  async reviewDocument(
+    documentId: string,
+    status: string,
+    notes?: string,
+    reviewedBy?: string,
+  ): Promise<SalonDocument> {
+    const document = await this.salonDocumentsRepository.findOne({
+      where: { id: documentId },
+      relations: ['salon'],
+    });
+
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    document.status = status as any;
+    if (notes) {
+      document.notes = notes;
+    }
+    if (reviewedBy) {
+      document.reviewedBy = reviewedBy;
+      document.reviewedAt = new Date();
+    }
+
+    return this.salonDocumentsRepository.save(document);
+  }
+
+  /**
+   * Verify a salon (change status to active and activate membership)
+   */
+  async verifySalon(
+    salonId: string,
+    approved: boolean,
+    rejectionReason?: string,
+  ): Promise<Salon> {
+    const salon = await this.salonsRepository.findOne({
+      where: { id: salonId },
+      relations: ['documents'],
+    });
+    if (!salon) {
+      throw new NotFoundException('Salon not found');
+    }
+
+    if (approved) {
+      // Guard: all documents must be approved before the salon can be verified
+      const docs = salon.documents || [];
+      if (docs.length === 0) {
+        throw new BadRequestException('Salon has no documents to verify');
+      }
+      const allApproved = docs.every(
+        (d) => d.status === 'approved',
+      );
+      if (!allApproved) {
+        throw new BadRequestException(
+          'All documents must be approved before the salon can be verified',
+        );
+      }
+
+      salon.status = 'active';
+      const savedSalon = await this.salonsRepository.save(salon);
+
+      // Activate the membership — failure here rolls back salon activation
+      const membership =
+        await this.membershipsService.findBySalonId(salonId);
+      if (membership && membership.status !== 'active') {
+        await this.membershipsService.activateMembership(membership.id);
+      }
+
+      // Notification is best-effort; salon is already active
+      try {
+        await this.notificationOrchestrator.notify(
+          NotificationType.SALON_UPDATE,
+          {
+            userId: salon.ownerId,
+            salonId: salon.id,
+            salonName: salon.name,
+            name: 'Salon Verified',
+          },
+        );
+      } catch (error) {
+        console.log('Could not send notification:', error.message);
+      }
+
+      return savedSalon;
+    } else {
+      // Rejected — set to rejected status, store reason in dedicated settings key
+      salon.status = 'rejected';
+      salon.settings = {
+        ...salon.settings,
+        verificationRejectionReason: rejectionReason || null,
+        verificationRejectedAt: new Date().toISOString(),
+      };
+      const savedSalon = await this.salonsRepository.save(salon);
+
+      // Send rejection notification
+      try {
+        await this.notificationOrchestrator.notify(
+          NotificationType.SALON_UPDATE,
+          {
+            userId: salon.ownerId,
+            salonId: salon.id,
+            salonName: salon.name,
+            name: 'Verification Update Required',
+          },
+        );
+      } catch (error) {
+        console.log('Could not send notification:', error.message);
+      }
+
+      return savedSalon;
+    }
+  }
+
+  /**
+   * Get a single document by ID
+   */
+  async getDocumentById(documentId: string): Promise<SalonDocument> {
+    const document = await this.salonDocumentsRepository.findOne({
+      where: { id: documentId },
+      relations: ['salon'],
+    });
+
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    return document;
+  }
 }
