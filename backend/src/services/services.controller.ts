@@ -102,14 +102,31 @@ export class ServicesController {
     @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
+    const isBrowseMode = browse === 'true';
+    const userRole = user?.role?.toLowerCase();
+    const isAdmin =
+      userRole === 'super_admin' || userRole === 'association_admin';
+
+    // For public / browse requests: if a salonId is given, verify the salon is active.
+    // Non-active salons are invisible to the public — return empty rather than leak data.
+    // Owner and employees of the salon can always see their own services regardless of status.
+    if (salonId && !isAdmin) {
+      const salon = await this.salonsService.findOne(salonId);
+      if (salon.status !== 'active') {
+        const isOwner = salon.ownerId === user?.id;
+        const isEmployee = user ? await this.salonsService.isUserEmployeeOfSalon(user.id, salonId) : false;
+        if (!isOwner && !isEmployee) {
+          return [];
+        }
+      }
+    }
+
     if (!user) {
       return this.servicesService.findAll(salonId);
     }
 
-    const isBrowseMode = browse === 'true';
-
-    // Customers can see all services (public browsing)
-    if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
+    // Customers can see services for active salons only (guard above already checked)
+    if (userRole === UserRole.CUSTOMER || userRole === 'customer') {
       return this.servicesService.findAll(salonId);
     }
 

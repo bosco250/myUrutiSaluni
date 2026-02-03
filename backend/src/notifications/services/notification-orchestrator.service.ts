@@ -1147,10 +1147,14 @@ export class NotificationOrchestratorService {
   // System Handlers
   private async handleSalonUpdate(context: NotificationContext) {
     return {
-      title: 'Salon Update',
-      message: context.message || 'Your salon information has been updated.',
+      title: context.name || 'Salon Update',
+      message: context.meaning || context.message || 'Your salon information has been updated.',
       variables: {
         salonName: context.salonName || 'Salon',
+        status: context.status || '',
+        reason: context.message || '',
+        meaning: context.meaning || '',
+        action: context.action || '',
       },
     };
   }

@@ -610,13 +610,13 @@ export class AccountingService {
     salesCount: number;
     expenseCount: number;
   }> {
-    console.log('[Accounting Service] getFinancialSummary called with:', {
-      salonId,
-      startDate,
-      endDate,
-      type,
-      categoryId,
-    });
+    // console.log('[Accounting Service] getFinancialSummary called with:', {
+    //   salonId,
+    //   startDate,
+    //   endDate,
+    //   type,
+    //   categoryId,
+    // });
 
     const includeIncome = (!type || type === 'income') && !categoryId;
     const includeExpense = !type || type === 'expense';
@@ -704,7 +704,7 @@ export class AccountingService {
         endDate,
         categoryId,
       );
-      console.log('[Accounting Service] Expense summary:', expenseSummary);
+      // console.log('[Accounting Service] Expense summary:', expenseSummary);
       totalCalculatedExpenses = expenseSummary.totalExpenses;
       expenseCount = expenseSummary.expenseCount;
     }
@@ -719,7 +719,7 @@ export class AccountingService {
       expenseCount,
     };
 
-    console.log('[Accounting Service] Final result:', finalResult);
+    // console.log('[Accounting Service] Final result:', finalResult);
 
     return finalResult;
   }

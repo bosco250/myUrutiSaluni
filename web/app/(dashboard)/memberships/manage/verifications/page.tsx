@@ -123,6 +123,9 @@ function VerificationsContent() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [reviewingDoc, setReviewingDoc] = useState<{docId: string; salonId: string; action: 'approve' | 'reject'; docType: string} | null>(null);
   const [docRejectionNotes, setDocRejectionNotes] = useState('');
+  const [statusChangeSalon, setStatusChangeSalon] = useState<SalonForVerification | null>(null);
+  const [selectedNewStatus, setSelectedNewStatus] = useState('');
+  const [statusChangeReason, setStatusChangeReason] = useState('');
 
   // Fetch salons (high limit so stats stay accurate; server-paginate when volume grows)
   const { data: salons = [], isLoading, refetch, error: salonsError } = useQuery<SalonForVerification[]>({
@@ -169,6 +172,32 @@ function VerificationsContent() {
     },
     onError: (err: any) => {
       toastError('Failed to verify salon: ' + (err.response?.data?.message || err.message));
+    },
+  });
+
+  // Change salon status mutation
+  const changeStatusMutation = useMutation({
+    mutationFn: async ({ salonId, status, reason }: { salonId: string; salonName: string; status: string; reason?: string }) => {
+      await api.patch(`/salons/${salonId}/status`, { status, reason });
+    },
+    onSuccess: (_, variables) => {
+      const statusLabels: Record<string, string> = {
+        active: 'Active',
+        pending: 'Pending',
+        verification_pending: 'Verification Pending',
+        rejected: 'Rejected',
+        inactive: 'Inactive',
+      };
+      const label = statusLabels[variables.status] || variables.status;
+      success(`${variables.salonName} is now ${label} — owner has been notified`);
+      queryClient.invalidateQueries({ queryKey: ['salons-for-verification'] });
+      queryClient.invalidateQueries({ queryKey: ['salons'] });
+      setStatusChangeSalon(null);
+      setSelectedNewStatus('');
+      setStatusChangeReason('');
+    },
+    onError: (err: any) => {
+      toastError('Failed to update status: ' + (err.response?.data?.message || err.message));
     },
   });
 
@@ -492,9 +521,14 @@ function VerificationsContent() {
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadge.bg} ${statusBadge.color} border-transparent bg-opacity-50`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setStatusChangeSalon(salon); setSelectedNewStatus(salon.status); setStatusChangeReason(''); }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusBadge.bg} ${statusBadge.color} border-transparent bg-opacity-50 hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer`}
+                            title="Click to change status"
+                          >
                             {statusBadge.label}
-                          </span>
+                            <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                          </button>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
@@ -634,28 +668,39 @@ function VerificationsContent() {
                               </div>
 
                               {/* Footer Actions */}
-                              <div className="flex items-center justify-end gap-3 pt-2">
+                              <div className="flex items-center justify-between pt-2">
                                 <Button
-                                  onClick={(e) => { e.stopPropagation(); handleSalonVerify(salon, false); }}
+                                  onClick={(e) => { e.stopPropagation(); setStatusChangeSalon(salon); setSelectedNewStatus(salon.status); setStatusChangeReason(''); }}
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 text-xs px-3 text-error border-error/30 hover:bg-error/5 hover:border-error/50"
-                                  disabled={verifySalonMutation.isPending}
+                                  className="h-8 text-xs px-3 text-primary border-primary/30 hover:bg-primary/5 hover:border-primary/50"
                                 >
-                                  <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                                  Reject Salon
+                                  <ChevronDown className="w-3.5 h-3.5 mr-1.5" />
+                                  Change Status
                                 </Button>
-                                <Button
-                                  onClick={(e) => { e.stopPropagation(); handleSalonVerify(salon, true); }}
-                                  variant="primary"
-                                  size="sm"
-                                  className="h-8 text-xs px-4 shadow-sm"
-                                  disabled={!docStats.allApproved || verifySalonMutation.isPending}
-                                  title={!docStats.allApproved ? 'Approve all documents first' : 'Approve salon'}
-                                >
-                                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                                  Approve Salon Verification
-                                </Button>
+                                <div className="flex items-center gap-3">
+                                  <Button
+                                    onClick={(e) => { e.stopPropagation(); handleSalonVerify(salon, false); }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs px-3 text-error border-error/30 hover:bg-error/5 hover:border-error/50"
+                                    disabled={verifySalonMutation.isPending}
+                                  >
+                                    <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                                    Reject Salon
+                                  </Button>
+                                  <Button
+                                    onClick={(e) => { e.stopPropagation(); handleSalonVerify(salon, true); }}
+                                    variant="primary"
+                                    size="sm"
+                                    className="h-8 text-xs px-4 shadow-sm"
+                                    disabled={!docStats.allApproved || verifySalonMutation.isPending}
+                                    title={!docStats.allApproved ? 'Approve all documents first' : 'Approve salon'}
+                                  >
+                                    <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                                    Approve Salon Verification
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -767,6 +812,112 @@ function VerificationsContent() {
                 disabled={verifySalonMutation.isPending}
               >
                 Reject Verification
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Status Change Modal */}
+      {statusChangeSalon && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setStatusChangeSalon(null);
+            setSelectedNewStatus('');
+            setStatusChangeReason('');
+          }}
+          title={`Change Status — ${statusChangeSalon.name}`}
+          size="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-text-light/60 dark:text-text-dark/60">
+              Current status: <span className={`font-bold ${getSalonStatusBadge(statusChangeSalon.status).color}`}>{getSalonStatusBadge(statusChangeSalon.status).label}</span>
+            </p>
+
+            {/* Status Option Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { value: 'active', label: 'Active', Icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', border: 'border-success', description: 'Open and visible to customers' },
+                { value: 'verification_pending', label: 'Awaiting Verification', Icon: Clock, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning', description: 'Pending document review' },
+                { value: 'pending', label: 'Pending', Icon: AlertTriangle, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary', description: 'Initial registration stage' },
+                { value: 'rejected', label: 'Rejected', Icon: XCircle, color: 'text-error', bg: 'bg-error/10', border: 'border-error', description: 'Verification was rejected' },
+                { value: 'inactive', label: 'Inactive', Icon: Building2, color: 'text-gray-500', bg: 'bg-gray-500/10', border: 'border-gray-500', description: 'Suspended or deactivated' },
+              ].map((opt) => {
+                const isSelected = selectedNewStatus === opt.value;
+                const isCurrent = statusChangeSalon.status === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSelectedNewStatus(opt.value)}
+                    className={`relative p-3 rounded-lg border-2 text-left transition-all ${
+                      isSelected
+                        ? `${opt.border} ${opt.bg} shadow-sm`
+                        : 'border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:border-primary/30'
+                    }`}
+                  >
+                    {isCurrent && (
+                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0 rounded text-[8px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        Current
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2 mb-1">
+                      <opt.Icon className={`w-4 h-4 ${isSelected ? opt.color : 'text-text-light/40 dark:text-text-dark/40'}`} />
+                      <span className={`text-xs font-bold ${isSelected ? opt.color : 'text-text-light dark:text-text-dark'}`}>
+                        {opt.label}
+                      </span>
+                    </div>
+                    <p className={`text-[9px] leading-tight ${isSelected ? 'text-text-light/70 dark:text-text-dark/70' : 'text-text-light/40 dark:text-text-dark/40'}`}>
+                      {opt.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Optional Reason */}
+            <div>
+              <label className="text-[10px] font-semibold text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">
+                Reason (optional)
+              </label>
+              <textarea
+                value={statusChangeReason}
+                onChange={(e) => setStatusChangeReason(e.target.value)}
+                placeholder="e.g. Documents expired, salon requested reactivation..."
+                className="mt-1 w-full h-16 px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-md text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary/20"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                onClick={() => {
+                  setStatusChangeSalon(null);
+                  setSelectedNewStatus('');
+                  setStatusChangeReason('');
+                }}
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (statusChangeSalon && selectedNewStatus && selectedNewStatus !== statusChangeSalon.status) {
+                    changeStatusMutation.mutate({ salonId: statusChangeSalon.id, salonName: statusChangeSalon.name, status: selectedNewStatus, reason: statusChangeReason || undefined });
+                  }
+                }}
+                variant="primary"
+                size="sm"
+                className="h-7 text-xs"
+                disabled={selectedNewStatus === statusChangeSalon.status || changeStatusMutation.isPending}
+              >
+                {changeStatusMutation.isPending ? (
+                  <><Loader2 className="w-3 h-3 animate-spin mr-1.5" />Updating...</>
+                ) : (
+                  'Update Status'
+                )}
               </Button>
             </div>
           </div>

@@ -122,26 +122,24 @@ export class SalonsController {
     @Query('browse') browse: string | undefined,
     @CurrentUser() user: any,
   ) {
-    // If no user is logged in, return all salons (public browsing)
-    if (!user) {
-      return this.salonsService.findAll();
-    }
-
     const isBrowseMode = browse === 'true';
 
-    // Customers can see all active salons (public browsing)
+    // Unauthenticated or browse mode — only active salons
+    if (!user) {
+      return this.salonsService.findAllActive();
+    }
+
+    // Customers always see only active salons
     if (user.role === UserRole.CUSTOMER || user.role === 'customer') {
-      return this.salonsService.findAll(); // Return all salons for customers to browse
+      return this.salonsService.findAllActive();
     }
 
-    // Salon owners can browse all salons when in browse mode (for booking themselves at other salons)
-    if (user.role === UserRole.SALON_OWNER && isBrowseMode) {
-      return this.salonsService.findAll(); // Return all salons for owners to browse
-    }
-
-    // Salon employees can browse all salons when in browse mode
-    if (user.role === UserRole.SALON_EMPLOYEE && isBrowseMode) {
-      return this.salonsService.findAll(); // Return all salons for employees to browse
+    // Salon owners / employees in browse mode — only active salons
+    if (
+      (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) &&
+      isBrowseMode
+    ) {
+      return this.salonsService.findAllActive();
     }
 
     // Salon owners and employees (in management mode) can only see their own salon(s)
@@ -157,11 +155,10 @@ export class SalonsController {
       if (user.district) {
         return this.salonsService.findByDistrict(user.district);
       }
-      // If district leader has no district assigned, return empty array for security
       return Promise.resolve([]);
     }
 
-    // Admins can see all salons
+    // Admins can see all salons (unfiltered)
     return this.salonsService.findAll();
   }
 
@@ -687,6 +684,20 @@ export class SalonsController {
     return this.salonsService.verifySalon(salonId, verifyDto.approved, verifyDto.rejectionReason);
   }
 
+  @Patch(':id/status')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @ApiOperation({ summary: 'Update salon status directly - Admin only' })
+  async updateSalonStatus(
+    @Param('id', ParseUUIDPipe) salonId: string,
+    @Body() body: { status: string; reason?: string },
+  ) {
+    const allowedStatuses = ['active', 'pending', 'verification_pending', 'rejected', 'inactive'];
+    if (!allowedStatuses.includes(body.status)) {
+      throw new BadRequestException(`Invalid status. Allowed: ${allowedStatuses.join(', ')}`);
+    }
+    return this.salonsService.updateSalonStatus(salonId, body.status, body.reason);
+  }
+
   // ==================== Generic Routes (MUST come after specific routes) ====================
 
   @Get(':id')
@@ -698,34 +709,40 @@ export class SalonsController {
     @CurrentUser() user: any,
   ) {
     const salon = await this.salonsService.findOne(id);
-    
-    // Public access if no user
+    const isBrowseMode = browse === 'true';
+    const userRole = user?.role?.toLowerCase();
+    const isAdmin =
+      userRole === UserRole.SUPER_ADMIN ||
+      userRole === UserRole.ASSOCIATION_ADMIN ||
+      userRole === 'super_admin' ||
+      userRole === 'association_admin';
+
+    // Non-active salons are invisible to everyone except admins and the salon's own owner/employees
+    if (salon.status !== 'active' && !isAdmin) {
+      const isOwner = salon.ownerId === user?.id;
+      const isEmployee = user ? await this.salonsService.isUserEmployeeOfSalon(user.id, id) : false;
+      if (!isOwner && !isEmployee) {
+        throw new NotFoundException('Salon not found');
+      }
+    }
+
+    // Unauthenticated — active salon already confirmed above
     if (!user) {
       return salon;
     }
 
-    const isBrowseMode = browse === 'true';
-    const userRole = user.role?.toLowerCase();
-
-    // Customers can view any salon (public browsing)
+    // Customers can view active salons
     if (userRole === UserRole.CUSTOMER || userRole === 'customer') {
-      return salon; // Allow customers to view salon details
+      return salon;
     }
 
-    // Salon owners can view any salon when browsing (for booking themselves at other salons)
+    // Salon owners / employees in browse mode — active salon already confirmed above
     if (
-      (userRole === UserRole.SALON_OWNER || userRole === 'salon_owner') &&
+      (userRole === UserRole.SALON_OWNER || userRole === 'salon_owner' ||
+       userRole === UserRole.SALON_EMPLOYEE || userRole === 'salon_employee') &&
       isBrowseMode
     ) {
-      return salon; // Allow salon owners to browse other salons
-    }
-
-    // Salon employees can view any salon when browsing (similar to customers)
-    if (
-      (userRole === UserRole.SALON_EMPLOYEE || userRole === 'salon_employee') &&
-      isBrowseMode
-    ) {
-      return salon; // Allow employees to browse other salons
+      return salon;
     }
 
     // Salon owners and employees (in management mode) can only access their own salon

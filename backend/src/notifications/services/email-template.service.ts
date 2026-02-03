@@ -229,6 +229,7 @@ export class EmailTemplateService {
       permission_granted: this.getPermissionGrantedTemplate(),
       permission_revoked: this.getPermissionRevokedTemplate(),
       membership_status: this.getMembershipStatusTemplate(),
+      salon_update: this.getSalonUpdateTemplate(),
       email_change_verification: this.getEmailChangeVerificationTemplate(),
     };
 
@@ -901,6 +902,59 @@ export class EmailTemplateService {
         {{#if actionUrl}}
         <div class="button-container">
           <a href="{{actionUrl}}" class="button">Contact Administrator</a>
+        </div>
+        {{/if}}
+      `,
+      );
+  }
+
+  private getSalonUpdateTemplate(): string {
+    return this.baseTemplate
+      .replace('{{headerTitle}}', '{{title}}')
+      .replace(
+        '{{content}}',
+        `
+        <div class="greeting">Hello, {{salonName}} Team,</div>
+        <div class="message">The status of your salon has been updated by an administrator. Please review the details below.</div>
+
+        <div class="info-card">
+          <table class="data-table">
+            <tr>
+              <td class="info-label">Salon</td>
+              <td class="info-value">{{salonName}}</td>
+            </tr>
+            {{#if status}}
+            <tr>
+              <td class="info-label">New Status</td>
+              <td class="info-value" style="font-weight: 600; color: #C89B68;">{{status}}</td>
+            </tr>
+            {{/if}}
+          </table>
+        </div>
+
+        {{#if meaning}}
+        <div class="message" style="font-size: 14px; color: #374151; margin-bottom: 16px;">{{meaning}}</div>
+        {{/if}}
+
+        {{#if reason}}
+        <div class="alert-box alert-box-warning">
+          <div class="alert-title">📋 Admin Note</div>
+          <div class="alert-content">{{reason}}</div>
+        </div>
+        {{/if}}
+
+        {{#if action}}
+        <div class="alert-box alert-box-success">
+          <div class="alert-title">✅ What You Need to Do</div>
+          <div class="alert-content">{{action}}</div>
+        </div>
+        {{/if}}
+
+        <div class="message" style="font-size: 13px; color: #6b7280;">If you have questions about this change, please contact your association administrator.</div>
+
+        {{#if actionUrl}}
+        <div class="button-container">
+          <a href="{{actionUrl}}" class="button" style="color: #ffffff;">{{#if actionLabel}}{{actionLabel}}{{else}}View Salon Details{{/if}}</a>
         </div>
         {{/if}}
       `,

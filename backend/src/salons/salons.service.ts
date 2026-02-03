@@ -14,7 +14,7 @@ import { SalonEmployee } from './entities/salon-employee.entity';
 import { MembershipsService } from '../memberships/memberships.service';
 import { MembershipStatus } from '../memberships/entities/membership.entity';
 import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
-import { NotificationType } from '../notifications/entities/notification.entity';
+import { NotificationType, NotificationChannel } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SalonsService {
@@ -74,6 +74,21 @@ export class SalonsService {
   async findAll(): Promise<Salon[]> {
     const salons = await this.salonsRepository.find({ relations: ['owner'] });
     // Add employee count to each salon
+    for (const salon of salons) {
+      const employeeCount = await this.salonEmployeesRepository.count({
+        where: { salonId: salon.id },
+      });
+      (salon as any).employeeCount = employeeCount;
+    }
+    return salons;
+  }
+
+  /** Public browse — only active salons */
+  async findAllActive(): Promise<Salon[]> {
+    const salons = await this.salonsRepository.find({
+      where: { status: 'active' },
+      relations: ['owner'],
+    });
     for (const salon of salons) {
       const employeeCount = await this.salonEmployeesRepository.count({
         where: { salonId: salon.id },
@@ -436,6 +451,89 @@ export class SalonsService {
 
       return savedSalon;
     }
+  }
+
+  /**
+   * Update salon status directly (admin action)
+   */
+  async updateSalonStatus(
+    salonId: string,
+    status: string,
+    reason?: string,
+  ): Promise<Salon> {
+    const salon = await this.salonsRepository.findOne({
+      where: { id: salonId },
+    });
+    if (!salon) {
+      throw new NotFoundException('Salon not found');
+    }
+
+    salon.status = status;
+    if (reason) {
+      salon.settings = {
+        ...salon.settings,
+        statusChangeReason: reason,
+        statusChangedAt: new Date().toISOString(),
+      };
+    }
+
+    const savedSalon = await this.salonsRepository.save(salon);
+
+    // Notify the salon owner — always IN_APP + EMAIL so the owner knows what changed
+    try {
+      const statusLabels: Record<string, string> = {
+        active: 'Active',
+        pending: 'Pending',
+        verification_pending: 'Verification Pending',
+        rejected: 'Rejected',
+        inactive: 'Inactive',
+      };
+
+      const statusExplanations: Record<string, { meaning: string; action: string }> = {
+        active: {
+          meaning: 'Your salon is now live and visible to customers on the platform. Customers can discover your salon and book appointments.',
+          action: 'No action is needed. Your salon is ready to accept bookings.',
+        },
+        pending: {
+          meaning: 'Your salon is in the initial registration stage and is not yet visible to customers.',
+          action: 'Submit all required documents — business license, owner ID, and proof of address — to begin the verification process.',
+        },
+        verification_pending: {
+          meaning: 'Your documents have been submitted and are currently under review by our team.',
+          action: 'No action is needed at this time. You will be notified once the review is complete.',
+        },
+        rejected: {
+          meaning: 'Your salon verification has been rejected. Your salon is not visible to customers until this is resolved.',
+          action: 'Review the reason provided, correct any issues with your documents, and resubmit them through your salon dashboard.',
+        },
+        inactive: {
+          meaning: 'Your salon has been deactivated and is not visible to customers at this time.',
+          action: 'Contact your association administrator to discuss reactivation and the steps needed to restore your salon.',
+        },
+      };
+
+      await this.notificationOrchestrator.notify(
+        NotificationType.SALON_UPDATE,
+        {
+          userId: salon.ownerId,
+          salonId: salon.id,
+          salonName: salon.name,
+          name: `Salon Status Changed to ${statusLabels[status] || status}`,
+          status: statusLabels[status] || status,
+          message: reason || undefined,
+          meaning: statusExplanations[status]?.meaning || '',
+          action: statusExplanations[status]?.action || '',
+        },
+        {
+          channels: [NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+          priority: 'medium',
+        },
+      );
+    } catch (error) {
+      console.log('Could not send status change notification:', error.message);
+    }
+
+    return savedSalon;
   }
 
   /**
