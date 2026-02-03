@@ -364,6 +364,15 @@ export default function WalletsPage() {
           </div>
           <div className="flex gap-2">
             <Button
+              onClick={() => router.push('/loans')}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 text-xs"
+            >
+              <Banknote className="w-3.5 h-3.5" />
+              Loans
+            </Button>
+            <Button
               onClick={() => router.push('/external-payments')}
               variant="outline"
               size="sm"

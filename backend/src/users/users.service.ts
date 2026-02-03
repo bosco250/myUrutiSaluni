@@ -2,21 +2,32 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
+
+import { WalletsService } from '../wallets/wallets.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @Inject(forwardRef(() => WalletsService))
+    private walletsService: WalletsService,
   ) {}
 
   async create(userData: Partial<User>): Promise<User> {
     const user = this.usersRepository.create(userData);
-    return this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+    
+    // Automatically provision a wallet for the new user
+    await this.walletsService.getOrCreateWallet(savedUser.id);
+    
+    return savedUser;
   }
 
   async findAll(role?: UserRole): Promise<User[]> {
