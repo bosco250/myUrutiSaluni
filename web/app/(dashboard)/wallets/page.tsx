@@ -81,8 +81,10 @@ export default function WalletsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const { isAdmin } = usePermissions();
+  const { isAdmin, user } = usePermissions();
   const isAdminView = isAdmin();
+  
+  console.log('[WalletsPage] User permissions:', { user, isAdminView, userRole: user?.role });
   const [adminSearch, setAdminSearch] = useState('');
   const [adminPage, setAdminPage] = useState(1);
   const adminLimit = 15;
@@ -96,18 +98,25 @@ export default function WalletsPage() {
     enabled: !isAdminView,
   });
 
-  const { data: allWalletsResponse, isLoading: allWalletsLoading } = useQuery<{
+  const { data: allWalletsResponse, isLoading: allWalletsLoading, error: allWalletsError } = useQuery<{
     data: AdminWallet[];
     meta: { total: number; page: number; limit: number; totalPages: number };
   }>({
     queryKey: ['admin-all-wallets', adminPage, adminLimit, adminSearch],
     queryFn: async () => {
+      console.log('[WalletsPage] Fetching admin wallets...', { adminPage, adminLimit, adminSearch, isAdminView });
       const params = new URLSearchParams({ page: String(adminPage), limit: String(adminLimit) });
       if (adminSearch) params.set('search', adminSearch);
+      console.log('[WalletsPage] API call params:', params.toString());
       const response = await api.get(`/wallets?${params}`);
+      console.log('[WalletsPage] API response:', response.data);
       return response.data.data || response.data;
     },
     enabled: isAdminView,
+    retry: (failureCount, error: any) => {
+      console.log('[WalletsPage] Query failed:', error?.response?.status, error?.response?.data);
+      return failureCount < 2;
+    },
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -227,6 +236,18 @@ export default function WalletsPage() {
         </div>
 
         {/* Admin Summary Stats */}
+        {allWalletsError && (
+          <div className="bg-danger/10 border border-danger/20 rounded-xl p-4 mb-4">
+            <h3 className="text-sm font-semibold text-danger mb-2">Error Loading Wallets</h3>
+            <p className="text-xs text-danger/80">
+              {(allWalletsError as any)?.response?.data?.message || allWalletsError?.message || 'Failed to load wallets'}
+            </p>
+            <p className="text-xs text-danger/60 mt-1">
+              Status: {(allWalletsError as any)?.response?.status || 'Unknown'}
+            </p>
+          </div>
+        )}
+        
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-surface-light dark:bg-surface-dark border border-primary-200 dark:border-primary-800/50 rounded-xl p-3">
             <p className="text-[10px] uppercase tracking-wide font-bold text-primary-600 dark:text-primary-400 mb-1">Total Wallets</p>

@@ -33,7 +33,6 @@ export class CommissionsService {
     private salonEmployeesRepository: Repository<SalonEmployee>,
     @Inject(forwardRef(() => NotificationOrchestratorService))
     private notificationOrchestrator: NotificationOrchestratorService,
-    @Inject(forwardRef(() => WalletsService))
     private walletsService: WalletsService,
     @Inject(forwardRef(() => AccountingService))
     private accountingService: AccountingService,

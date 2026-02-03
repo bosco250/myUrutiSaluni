@@ -59,6 +59,8 @@ export class WalletsService {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 
+    this.logger.debug(`getAllWallets called with pagination: ${JSON.stringify(pagination)}, search: ${search}`);
+
     const qb = this.walletsRepository
       .createQueryBuilder('wallet')
       .leftJoinAndSelect('wallet.user', 'user');
@@ -68,6 +70,7 @@ export class WalletsService {
         'user.full_name LIKE :search OR user.email LIKE :search OR CAST(wallet.id AS VARCHAR) LIKE :search',
         { search: `%${search}%` },
       );
+      this.logger.debug(`Search filter applied: ${search}`);
     }
 
     const [data, total] = await qb
@@ -75,6 +78,8 @@ export class WalletsService {
       .skip(skip)
       .take(limit)
       .getManyAndCount();
+
+    this.logger.debug(`Found ${total} wallets, returning ${data.length} for page ${page}`);
 
     return {
       data,

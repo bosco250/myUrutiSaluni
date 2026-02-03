@@ -14,7 +14,7 @@ import { AccountingModule } from '../accounting/accounting.module';
     TypeOrmModule.forFeature([Commission, SalonEmployee]),
     forwardRef(() => SalonsModule),
     forwardRef(() => NotificationsModule),
-    forwardRef(() => WalletsModule),
+    WalletsModule,
     forwardRef(() => AccountingModule),
   ],
   controllers: [CommissionsController],

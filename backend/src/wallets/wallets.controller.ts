@@ -33,11 +33,18 @@ export class WalletsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
+    @CurrentUser() user?: User,
   ) {
-    return this.walletsService.getAllWallets(
+    console.log(`[WalletsController] getAllWallets called by user: ${user?.id} (${user?.role})`);
+    console.log(`[WalletsController] Query params - page: ${page}, limit: ${limit}, search: ${search}`);
+    
+    const result = await this.walletsService.getAllWallets(
       { page: page ? Number(page) : 1, limit: limit ? Number(limit) : 20 },
       search,
     );
+    
+    console.log(`[WalletsController] Returning ${result.data.length} wallets out of ${result.meta.total} total`);
+    return result;
   }
 
   @Get('me')
