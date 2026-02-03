@@ -16,10 +16,6 @@ import {
   Building2,
   Scissors,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
-  MessageSquare,
-  Edit,
   Trash2,
   Loader2,
   X,
@@ -86,22 +82,24 @@ function WaitlistContent() {
   const customers = customersResponse?.data || [];
 
   // Fetch salons
-  const { data: salons = [] } = useQuery({
+  const { data: salonsResponse } = useQuery({
     queryKey: ['salons'],
     queryFn: async () => {
       const response = await api.get('/salons');
-      return response.data || [];
+      return response.data;
     },
   });
+  const salons = salonsResponse?.data || salonsResponse || [];
 
   // Fetch services
-  const { data: services = [] } = useQuery({
+  const { data: servicesResponse } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
       const response = await api.get('/services');
-      return response.data || [];
+      return response.data;
     },
   });
+  const services = servicesResponse?.data || servicesResponse || [];
 
   // Fetch waitlist entries
   const { data: waitlistEntries = [], isLoading } = useQuery<WaitlistEntry[]>({
@@ -404,7 +402,7 @@ function WaitlistModal({
 }) {
   const [formData, setFormData] = useState({
     customerId: entry?.customer.id || '',
-    salonId: entry?.salon.id || salons[0]?.id || '',
+    salonId: entry?.salon.id || (Array.isArray(salons) && salons.length > 0 ? salons[0]?.id : '') || '',
     serviceId: entry?.service?.id || '',
     preferredDate: entry?.preferredDate ? format(new Date(entry.preferredDate), 'yyyy-MM-dd') : '',
     preferredTimeStart: entry?.preferredTimeStart || '',
@@ -527,7 +525,7 @@ function WaitlistModal({
                     className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm focus:outline-none focus:border-primary/50"
                   >
                     <option value="">Select Customer</option>
-                    {customers.map((customer) => (
+                    {Array.isArray(customers) && customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
                         {customer.fullName} {customer.phone ? `(${customer.phone})` : ''}
                       </option>
@@ -546,7 +544,7 @@ function WaitlistModal({
                     className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm focus:outline-none focus:border-primary/50"
                   >
                     <option value="">Select Salon</option>
-                    {salons.map((salon) => (
+                    {Array.isArray(salons) && salons.map((salon) => (
                       <option key={salon.id} value={salon.id}>
                         {salon.name}
                       </option>
@@ -563,7 +561,7 @@ function WaitlistModal({
                     className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-sm focus:outline-none focus:border-primary/50"
                   >
                     <option value="">Any Service</option>
-                    {services.map((service) => (
+                    {Array.isArray(services) && services.map((service) => (
                       <option key={service.id} value={service.id}>
                         {service.name}
                       </option>

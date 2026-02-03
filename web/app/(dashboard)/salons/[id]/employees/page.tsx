@@ -538,19 +538,15 @@ function EmployeeFormModal({
     }
     setIsSearching(true);
     try {
-      const response = await api.get('/users');
-      const allUsers = response.data || [];
-      // Filter users client-side (since backend doesn't have search endpoint)
-      const filtered = allUsers.filter((user: { fullName?: string; email?: string; phone?: string }) => {
-        const searchLower = query.toLowerCase();
-        return (
-          user.fullName?.toLowerCase().includes(searchLower) ||
-          user.email?.toLowerCase().includes(searchLower) ||
-          user.phone?.toLowerCase().includes(searchLower)
-        );
+      // Use backend search instead of fetching all users
+      const response = await api.get('/users', {
+        params: { search: query }
       });
-      setSearchResults(filtered);
+      // Handle different response structures (nest vs flat)
+      const users = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      setSearchResults(users);
     } catch (err) {
+      console.error('Error searching users:', err);
       // Error searching users - show empty results
       setSearchResults([]);
     } finally {
@@ -610,23 +606,23 @@ function EmployeeFormModal({
       />
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div
-          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto slide-in-from-top-4"
+          className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto slide-in-from-top-4"
           onClick={(e) => e.stopPropagation()}
           role="presentation"
         >
-          <div className="p-6">
+          <div className="p-5">
             {/* Header */}
-            <div className="mb-6 pb-6 border-b border-border-light dark:border-border-dark">
+            <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-xl">
-                    <UserPlus className="w-6 h-6 text-primary" />
+                    <UserPlus className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
+                    <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
                       {employee ? 'Edit Employee' : 'Add New Employee'}
                     </h2>
-                    <p className="text-sm text-text-light/60 dark:text-text-dark/60 mt-1">
+                    <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">
                       {employee ? 'Update employee information and details' : 'Add a new employee to your salon team'}
                     </p>
                   </div>
@@ -650,10 +646,10 @@ function EmployeeFormModal({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* User Selection Section */}
               {!employee && (
-                <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-2xl p-6">
+                <div className="bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <Users className="w-5 h-5 text-primary" />
@@ -664,7 +660,7 @@ function EmployeeFormModal({
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="user-search" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
+                    <label htmlFor="user-search" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
                       Search for User <span className="text-danger">*</span>
                     </label>
                     <div className="relative">
@@ -677,7 +673,7 @@ function EmployeeFormModal({
                           searchUsers(e.target.value);
                         }}
                         placeholder="Search by name, email, or phone..."
-                        className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                        className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                       />
                       {isSearching && (
                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -685,7 +681,7 @@ function EmployeeFormModal({
                         </div>
                       )}
                     </div>
-                  {searchResults.length > 0 && (
+                  {searchResults.length > 0 ? (
                     <div className="mt-2 border border-border-light dark:border-border-dark rounded-xl overflow-hidden bg-background-light dark:bg-background-dark max-h-48 overflow-y-auto">
                       {searchResults.map((user) => (
                         <button
@@ -706,6 +702,13 @@ function EmployeeFormModal({
                           </div>
                         </button>
                       ))}
+                    </div>
+                  ) : searchQuery.length >= 2 && !isSearching && (
+                    <div className="mt-2 p-3 bg-warning/10 border border-warning/20 rounded-xl text-center">
+                       <p className="text-sm text-warning font-medium">No registered salon employee found</p>
+                       <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                         The user must be registered with the role "Salon Employee" to appear here.
+                       </p>
                     </div>
                   )}
                   {formData.userId && (
@@ -732,155 +735,155 @@ function EmployeeFormModal({
                   </div>
                 </div>
 
-                {/* Role Title */}
-                <div className="mb-6">
-                  <label htmlFor="role-title-btn" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Professional Title <span className="text-danger">*</span>
-                  </label>
-                  <div className="relative">
-                  <button
-                    id="role-title-btn"
-                    type="button"
-                    onClick={() => {
-                      setShowTitleDropdown(!showTitleDropdown);
-                      setShowSkillsDropdown(false);
-                    }}
-                    className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition flex items-center justify-between"
-                  >
-                    <span className={formData.roleTitle ? 'text-text-light dark:text-text-dark' : 'text-text-light/40 dark:text-text-dark/40'}>
-                      {formData.roleTitle || 'Select a professional title...'}
-                    </span>
-                    <ChevronDown className={`w-5 h-5 text-text-light/40 dark:text-text-dark/40 transition-transform ${showTitleDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showTitleDropdown && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setShowTitleDropdown(false)}
-                        onKeyDown={(e) => { if (e.key === 'Escape') setShowTitleDropdown(false); }}
-                        role="button"
-                        tabIndex={-1}
-                        aria-label="Close dropdown"
+                {/* Role Title & Skills Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Role Title */}
+                  <div>
+                    <label htmlFor="role-title-btn" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                      Professional Title <span className="text-danger">*</span>
+                    </label>
+                    <div className="relative">
+                      <button
+                        id="role-title-btn"
+                        type="button"
+                        onClick={() => {
+                          setShowTitleDropdown(!showTitleDropdown);
+                          setShowSkillsDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition flex items-center justify-between"
+                      >
+                        <span className={formData.roleTitle ? 'text-text-light dark:text-text-dark' : 'text-text-light/40 dark:text-text-dark/40'}>
+                          {formData.roleTitle || 'Select title...'}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-text-light/40 dark:text-text-dark/40 transition-transform ${showTitleDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showTitleDropdown && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setShowTitleDropdown(false)}
+                            onKeyDown={(e) => { if (e.key === 'Escape') setShowTitleDropdown(false); }}
+                            role="button"
+                            tabIndex={-1}
+                            aria-label="Close dropdown"
+                          />
+                          <div className="absolute z-20 w-full mt-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl max-h-60 overflow-y-auto left-0">
+                            {SALON_PROFESSIONAL_TITLES.map((title) => (
+                              <button
+                                key={title}
+                                type="button"
+                                onClick={() => {
+                                  setFormData({ ...formData, roleTitle: title });
+                                  setShowTitleDropdown(false);
+                                }}
+                                className={`w-full px-3 py-2 text-left text-sm hover:bg-background-light dark:hover:bg-background-dark transition ${
+                                  formData.roleTitle === title
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'text-text-light dark:text-text-dark'
+                                }`}
+                              >
+                                {title}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Skills (in grid) */}
+                  <div>
+                    <label htmlFor="skills-search" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                      Skills
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="skills-search"
+                        type="text"
+                        value={skillsSearchQuery}
+                        onChange={(e) => {
+                          setSkillsSearchQuery(e.target.value);
+                          setShowSkillsDropdown(true);
+                        }}
+                        onFocus={() => setShowSkillsDropdown(true)}
+                        placeholder="Add skills..."
+                        className="w-full px-3 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                       />
-                      <div className="absolute z-20 w-full mt-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-                        {SALON_PROFESSIONAL_TITLES.map((title) => (
-                          <button
-                            key={title}
-                            type="button"
+                      {showSkillsDropdown && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
                             onClick={() => {
-                              setFormData({ ...formData, roleTitle: title });
-                              setShowTitleDropdown(false);
+                              setShowSkillsDropdown(false);
+                              setSkillsSearchQuery('');
                             }}
-                            className={`w-full px-4 py-3 text-left hover:bg-background-light dark:hover:bg-background-dark transition ${
-                              formData.roleTitle === title
-                                ? 'bg-primary/10 text-primary font-medium'
-                                : 'text-text-light dark:text-text-dark'
-                            }`}
-                          >
-                            {title}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
+                            onKeyDown={(e) => { if (e.key === 'Escape') setShowSkillsDropdown(false); }}
+                            role="button"
+                            tabIndex={-1}
+                            aria-label="Close dropdown"
+                          />
+                          <div className="absolute z-20 w-full mt-1 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-xl max-h-60 overflow-y-auto left-0">
+                            {filteredSkills.length > 0 ? (
+                              filteredSkills
+                                .filter((skill) => !formData.selectedSkills.includes(skill))
+                                .map((skill) => (
+                                  <button
+                                    key={skill}
+                                    type="button"
+                                    onClick={() => {
+                                      if (!formData.selectedSkills.includes(skill)) {
+                                        setFormData({
+                                          ...formData,
+                                          selectedSkills: [...formData.selectedSkills, skill],
+                                        });
+                                      }
+                                      setSkillsSearchQuery('');
+                                      setShowSkillsDropdown(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-sm hover:bg-background-light dark:hover:bg-background-dark transition text-text-light dark:text-text-dark"
+                                  >
+                                    {skill}
+                                  </button>
+                                ))
+                            ) : (
+                              <div className="px-3 py-2 text-text-light/60 dark:text-text-dark/60 text-xs">
+                                No skills found
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Skills */}
-                <div className="mb-6">
-                  <label htmlFor="skills-search" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Skills & Specializations
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-2 min-h-[3rem] p-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl">
-                    {formData.selectedSkills.length > 0 ? (
-                      formData.selectedSkills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-medium"
-                        >
-                          {skill}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                selectedSkills: formData.selectedSkills.filter((s) => s !== skill),
-                              });
-                            }}
-                            className="hover:bg-primary/20 rounded-full p-0.5 transition"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-text-light/40 dark:text-text-dark/40 text-sm self-center">
-                        No skills selected. Click to add skills...
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="skills-search"
-                      type="text"
-                      value={skillsSearchQuery}
-                      onChange={(e) => {
-                        setSkillsSearchQuery(e.target.value);
-                        setShowSkillsDropdown(true);
-                      }}
-                      onFocus={() => setShowSkillsDropdown(true)}
-                      placeholder="Search and select skills..."
-                      className="w-full px-4 py-3 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark placeholder:text-text-light/40 dark:placeholder:text-text-dark/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                    />
-                    {showSkillsDropdown && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
+                {/* Selected Skills Badges (Full Width) */}
+                {formData.selectedSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {formData.selectedSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium"
+                      >
+                        {skill}
+                        <button
+                          type="button"
                           onClick={() => {
-                            setShowSkillsDropdown(false);
-                            setSkillsSearchQuery('');
+                            setFormData({
+                              ...formData,
+                              selectedSkills: formData.selectedSkills.filter((s) => s !== skill),
+                            });
                           }}
-                          onKeyDown={(e) => { if (e.key === 'Escape') setShowSkillsDropdown(false); }}
-                          role="button"
-                          tabIndex={-1}
-                          aria-label="Close dropdown"
-                        />
-                        <div className="absolute z-20 w-full mt-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-                          {filteredSkills.length > 0 ? (
-                            filteredSkills
-                              .filter((skill) => !formData.selectedSkills.includes(skill))
-                              .map((skill) => (
-                                <button
-                                  key={skill}
-                                  type="button"
-                                  onClick={() => {
-                                    if (!formData.selectedSkills.includes(skill)) {
-                                      setFormData({
-                                        ...formData,
-                                        selectedSkills: [...formData.selectedSkills, skill],
-                                      });
-                                    }
-                                    setSkillsSearchQuery('');
-                                    setShowSkillsDropdown(false);
-                                  }}
-                                  className="w-full px-4 py-3 text-left hover:bg-background-light dark:hover:bg-background-dark transition text-text-light dark:text-text-dark"
-                                >
-                                  {skill}
-                                </button>
-                              ))
-                          ) : (
-                            <div className="px-4 py-3 text-text-light/60 dark:text-text-dark/60 text-sm">
-                              No skills found
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
+                          className="hover:bg-primary/20 rounded-full p-0.5 transition"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
-                  <p className="mt-2 text-xs text-text-light/50 dark:text-text-dark/50">
-                    {formData.selectedSkills.length} skill{formData.selectedSkills.length !== 1 ? 's' : ''} selected
-                  </p>
-                </div>
+                )}
+
+
               </div>
 
               {/* Employment Details Section */}
@@ -895,68 +898,67 @@ function EmployeeFormModal({
                   </div>
                 </div>
 
-                {/* Hire Date */}
-                <div className="mb-6">
-                  <label htmlFor="hire-date" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Hire Date
-                  </label>
-                  <input
-                    id="hire-date"
-                    type="date"
-                    value={formData.hireDate}
-                    onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
-                    className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  />
-                </div>
-
-                {/* Commission Rate - Show if commission is allowed */}
-                {(formData.salaryType === 'COMMISSION_ONLY' || formData.salaryType === 'SALARY_PLUS_COMMISSION') && (
-                  <div className="mb-6">
-                    <label htmlFor="commission-rate" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                      Commission Rate (%) <span className="text-danger">*</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Hire Date */}
+                  <div>
+                    <label htmlFor="hire-date" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                      Hire Date
                     </label>
-                    <div className="relative">
-                      <input
-                        id="commission-rate"
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={formData.commissionRate}
-                        onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                        placeholder="0.00"
-                        required={formData.salaryType === 'COMMISSION_ONLY'}
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
-                        %
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-                      Percentage of service sale amount employee earns as commission (e.g., 15% = RWF 1,500 from RWF 10,000 service)
-                    </p>
+                    <input
+                      id="hire-date"
+                      type="date"
+                      value={formData.hireDate}
+                      onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                      className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    />
                   </div>
-                )}
 
-                {/* Active Status */}
-                <div className="flex items-center gap-3 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/50 cursor-pointer"
-                  />
-                  <label htmlFor="isActive" className="text-sm font-medium text-text-light dark:text-text-dark cursor-pointer flex-1">
-                    Employee is currently active
-                  </label>
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                    formData.isActive
-                      ? 'bg-success/10 text-success border border-success/20'
-                      : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark'
-                  }`}>
-                    {formData.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  {/* Commission Rate - Show if commission is allowed */}
+                  {(formData.salaryType === 'COMMISSION_ONLY' || formData.salaryType === 'SALARY_PLUS_COMMISSION') && (
+                    <div>
+                      <label htmlFor="commission-rate" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                        Commission Rate (%) <span className="text-danger">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="commission-rate"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={formData.commissionRate}
+                          onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                          placeholder="0.00"
+                          required={formData.salaryType === 'COMMISSION_ONLY'}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Active Status */}
+                  <div className="flex items-center gap-2 p-3 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark h-[42px] mt-auto">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary/50 cursor-pointer"
+                    />
+                    <label htmlFor="isActive" className="text-xs font-medium text-text-light dark:text-text-dark cursor-pointer flex-1">
+                      Active
+                    </label>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                      formData.isActive
+                        ? 'bg-success/10 text-success border border-success/20'
+                        : 'bg-text-light/10 dark:bg-text-dark/10 text-text-light/60 dark:text-text-dark/60 border border-border-light dark:border-border-dark'
+                    }`}>
+                      {formData.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -973,15 +975,15 @@ function EmployeeFormModal({
                 </div>
 
                 {/* Salary Type - Enhanced with visual cards */}
-                <div className="mb-6">
-                  <p className="block text-sm font-semibold text-text-light dark:text-text-dark mb-3">
+                <div className="mb-4">
+                  <p className="block text-xs font-semibold text-text-light dark:text-text-dark mb-2">
                     Payment Type <span className="text-danger">*</span>
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, salaryType: 'COMMISSION_ONLY', baseSalary: '' })}
-                      className={`p-4 rounded-xl border-2 transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all ${
                         formData.salaryType === 'COMMISSION_ONLY'
                           ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
                           : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50'
@@ -1006,7 +1008,7 @@ function EmployeeFormModal({
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, salaryType: 'SALARY_ONLY', commissionRate: 0 })}
-                      className={`p-4 rounded-xl border-2 transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all ${
                         formData.salaryType === 'SALARY_ONLY'
                           ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
                           : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50'
@@ -1031,7 +1033,7 @@ function EmployeeFormModal({
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, salaryType: 'SALARY_PLUS_COMMISSION' })}
-                      className={`p-4 rounded-xl border-2 transition-all ${
+                      className={`p-3 rounded-xl border-2 transition-all ${
                         formData.salaryType === 'SALARY_PLUS_COMMISSION'
                           ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
                           : 'border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary/50'
@@ -1060,135 +1062,121 @@ function EmployeeFormModal({
                   </p>
                 </div>
 
-                {/* Base Salary - Show if not commission only */}
-                {formData.salaryType !== 'COMMISSION_ONLY' && (
-                  <>
-                    <div className="mb-6">
-                      <label htmlFor="base-salary" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                        Base Salary {formData.payFrequency === 'DAILY' ? '(Daily Rate)' : '(Annual Amount)'}
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="base-salary"
-                          type="number"
-                          min="0"
-                          step={formData.payFrequency === 'DAILY' ? '100' : '1000'}
-                          value={formData.baseSalary}
-                          onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
-                          className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                          placeholder="0"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
-                          RWF
-                        </span>
+                {/* Salary Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Base Salary - Show if not commission only */}
+                  {formData.salaryType !== 'COMMISSION_ONLY' && (
+                    <>
+                      <div>
+                        <label htmlFor="base-salary" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                          Base Salary
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="base-salary"
+                            type="number"
+                            min="0"
+                            step={formData.payFrequency === 'DAILY' ? '100' : '1000'}
+                            value={formData.baseSalary}
+                            onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                            className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">
+                            RWF
+                          </span>
+                        </div>
                       </div>
-                      <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-                        {formData.payFrequency === 'DAILY' 
-                          ? 'Daily wage amount (paid per day worked)'
-                          : 'Annual base salary amount (will be calculated based on pay frequency)'}
-                      </p>
-                    </div>
 
-                    {/* Pay Frequency */}
-                    <div className="mb-6">
-                      <label htmlFor="pay-frequency" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                        Pay Frequency <span className="text-danger">*</span>
-                      </label>
-                      <select
-                        id="pay-frequency"
-                        value={formData.payFrequency}
-                        onChange={(e) => {
-                          const newFrequency = e.target.value as 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
-                          setFormData({ ...formData, payFrequency: newFrequency });
-                        }}
-                        className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      >
-                        <option value="DAILY">Daily (Daily wage employees)</option>
-                        <option value="WEEKLY">Weekly</option>
-                        <option value="BIWEEKLY">Bi-weekly (Every 2 weeks)</option>
-                        <option value="MONTHLY">Monthly (Fixed monthly salary)</option>
-                      </select>
-                      <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-                        {formData.payFrequency === 'DAILY' && 'For employees paid daily (e.g., daily wage workers)'}
-                        {formData.payFrequency === 'MONTHLY' && 'For employees with fixed monthly salary'}
-                        {formData.payFrequency === 'WEEKLY' && 'For employees paid every week'}
-                        {formData.payFrequency === 'BIWEEKLY' && 'For employees paid every two weeks'}
-                      </p>
-                    </div>
-                  </>
-                )}
+                      {/* Pay Frequency */}
+                      <div>
+                        <label htmlFor="pay-frequency" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                          Pay Frequency <span className="text-danger">*</span>
+                        </label>
+                        <select
+                          id="pay-frequency"
+                          value={formData.payFrequency}
+                          onChange={(e) => {
+                            const newFrequency = e.target.value as 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+                            setFormData({ ...formData, payFrequency: newFrequency });
+                          }}
+                          className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                        >
+                          <option value="DAILY">Daily</option>
+                          <option value="WEEKLY">Weekly</option>
+                          <option value="BIWEEKLY">Bi-weekly</option>
+                          <option value="MONTHLY">Monthly</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
 
-                {/* Employment Type */}
-                <div className="mb-6">
-                  <label htmlFor="employment-type" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Employment Type
-                  </label>
-                  <select
-                    id="employment-type"
-                    value={formData.employmentType}
-                    onChange={(e) => setFormData({ ...formData, employmentType: e.target.value as 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' })}
-                    className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                  >
-                    <option value="FULL_TIME">Full Time</option>
-                    <option value="PART_TIME">Part Time</option>
-                    <option value="CONTRACT">Contract</option>
-                  </select>
-                </div>
-
-                {/* Hourly Rate - Optional */}
-                <div className="mb-6">
-                  <label htmlFor="hourly-rate" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Hourly Rate (Optional)
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="hourly-rate"
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={formData.hourlyRate}
-                      onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                      className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      placeholder="0"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
-                      RWF/hr
-                    </span>
+                  {/* Employment Type */}
+                  <div>
+                    <label htmlFor="employment-type" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                      Employment Type
+                    </label>
+                    <select
+                      id="employment-type"
+                      value={formData.employmentType}
+                      onChange={(e) => setFormData({ ...formData, employmentType: e.target.value as 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' })}
+                      className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                    >
+                      <option value="FULL_TIME">Full Time</option>
+                      <option value="PART_TIME">Part Time</option>
+                      <option value="CONTRACT">Contract</option>
+                    </select>
                   </div>
-                  <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-                    For hourly employees or overtime calculations
-                  </p>
-                </div>
 
-                {/* Overtime Rate */}
-                <div className="mb-6">
-                  <label htmlFor="overtime-rate" className="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
-                    Overtime Rate Multiplier
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="overtime-rate"
-                      type="number"
-                      min="1"
-                      max="3"
-                      step="0.1"
-                      value={formData.overtimeRate}
-                      onChange={(e) => setFormData({ ...formData, overtimeRate: parseFloat(e.target.value) || 1.5 })}
-                      className="w-full px-4 py-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
-                      placeholder="1.5"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-sm">
-                      x
-                    </span>
+                  {/* Hourly Rate - Optional */}
+                  <div>
+                    <label htmlFor="hourly-rate" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                      Hourly Rate (Optional)
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="hourly-rate"
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={formData.hourlyRate}
+                        onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                        className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">
+                        /hr
+                      </span>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-text-light/50 dark:text-text-dark/50">
-                    Multiplier for overtime pay (e.g., 1.5 = time and a half)
-                  </p>
+
+                  {/* Overtime Rate */}
+                  <div>
+                    <label htmlFor="overtime-rate" className="block text-xs font-semibold text-text-light dark:text-text-dark mb-1.5">
+                      Overtime Multiplier
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="overtime-rate"
+                        type="number"
+                        min="1"
+                        max="3"
+                        step="0.1"
+                        value={formData.overtimeRate}
+                        onChange={(e) => setFormData({ ...formData, overtimeRate: parseFloat(e.target.value) || 1.5 })}
+                        className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
+                        placeholder="1.5"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-xs">
+                        x
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Submit Button */}
-              <div className="flex gap-3 pt-4 border-t border-border-light dark:border-border-dark">
+              <div className="flex gap-2 pt-4 border-t border-border-light dark:border-border-dark">
                 <Button
                   type="button"
                   onClick={onClose}

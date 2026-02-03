@@ -26,16 +26,23 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
-  async findAllForEmployeeSelection(): Promise<Partial<User>[]> {
+  async findAllForEmployeeSelection(search?: string): Promise<Partial<User>[]> {
     // Return only necessary fields for employee selection
-    // Exclude admins and other salon owners from selection
-    return this.usersRepository.find({
-      select: ['id', 'fullName', 'email', 'phone', 'role'],
-      where: [
-        { role: UserRole.CUSTOMER },
-        { role: UserRole.SALON_EMPLOYEE }, // Can reassign existing employees
-      ],
-    });
+    // Only return registered salon employees (users who have registered as salon employees)
+    const query = this.usersRepository.createQueryBuilder('user')
+      .select(['user.id', 'user.fullName', 'user.email', 'user.phone', 'user.role'])
+      .where('user.role = :employeeRole', { 
+        employeeRole: UserRole.SALON_EMPLOYEE 
+      });
+
+    if (search) {
+      query.andWhere(
+        '(LOWER(user.fullName) LIKE LOWER(:search) OR LOWER(user.email) LIKE LOWER(:search) OR user.phone LIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
+    return query.getMany();
   }
 
   async findOne(id: string): Promise<User> {

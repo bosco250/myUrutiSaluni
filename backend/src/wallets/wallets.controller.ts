@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -12,8 +13,10 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WalletsService } from './wallets.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { CreateWalletTransactionDto } from './dto/create-wallet-transaction.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @ApiTags('Wallets')
 @ApiBearerAuth()
@@ -21,6 +24,21 @@ import { CreateWalletTransactionDto } from './dto/create-wallet-transaction.dto'
 @Controller('wallets')
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
+
+  @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'List all wallets (admin only)' })
+  async getAllWallets(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+  ) {
+    return this.walletsService.getAllWallets(
+      { page: page ? Number(page) : 1, limit: limit ? Number(limit) : 20 },
+      search,
+    );
+  }
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user wallet' })
@@ -55,10 +73,31 @@ export class WalletsController {
     return this.walletsService.getWalletSummary(walletId);
   }
 
+  @Patch(':walletId/status')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Toggle wallet active status (admin only)' })
+  async toggleWalletStatus(
+    @Param('walletId') walletId: string,
+    @Body() body: { isActive: boolean },
+  ) {
+    return this.walletsService.toggleWalletActive(walletId, body.isActive);
+  }
+
   @Get('transactions/:transactionId')
   @ApiOperation({ summary: 'Get wallet transaction by ID' })
   getTransactionById(@Param('transactionId') transactionId: string) {
     return this.walletsService.getWalletTransactionById(transactionId);
+  }
+
+  @Post('transactions/:transactionId/cancel')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Cancel a pending transaction (admin only)' })
+  async cancelTransaction(
+    @Param('transactionId') transactionId: string,
+  ) {
+    return this.walletsService.cancelTransaction(transactionId);
   }
 
   @Get(':userId')

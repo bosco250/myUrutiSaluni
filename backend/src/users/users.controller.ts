@@ -53,7 +53,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Get all users (for searching/selecting employees)',
   })
-  findAll(@CurrentUser() user: any, @Query('role') role?: UserRole) {
+  findAll(@CurrentUser() user: any, @Query('role') role?: UserRole, @Query('search') search?: string) {
     // District leaders can only see users in their district
     if (user.role === UserRole.DISTRICT_LEADER) {
       // Filter by district leader's district
@@ -68,7 +68,7 @@ export class UsersController {
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
-      return this.usersService.findAllForEmployeeSelection();
+      return this.usersService.findAllForEmployeeSelection(search);
     }
     return this.usersService.findAll(role);
   }

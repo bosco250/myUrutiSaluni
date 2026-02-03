@@ -23,10 +23,12 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  Search,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface WalletData {
   id: string;
@@ -55,6 +57,21 @@ interface WalletTransaction {
   };
 }
 
+interface AdminWallet {
+  id: string;
+  userId: string;
+  balance: number;
+  currency: string;
+  isActive: boolean;
+  createdAt: string;
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: string;
+  };
+}
+
 export default function WalletsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -64,12 +81,33 @@ export default function WalletsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const { isAdmin } = usePermissions();
+  const isAdminView = isAdmin();
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminPage, setAdminPage] = useState(1);
+  const adminLimit = 15;
+
   const { data: wallet, isLoading: walletLoading } = useQuery<WalletData>({
     queryKey: ['wallet'],
     queryFn: async () => {
       const response = await api.get('/wallets/me');
       return response.data.data || response.data;
     },
+    enabled: !isAdminView,
+  });
+
+  const { data: allWalletsResponse, isLoading: allWalletsLoading } = useQuery<{
+    data: AdminWallet[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }>({
+    queryKey: ['admin-all-wallets', adminPage, adminLimit, adminSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(adminPage), limit: String(adminLimit) });
+      if (adminSearch) params.set('search', adminSearch);
+      const response = await api.get(`/wallets?${params}`);
+      return response.data.data || response.data;
+    },
+    enabled: isAdminView,
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -148,6 +186,151 @@ export default function WalletsPage() {
   };
 
   const isCredit = (type: string) => ['deposit', 'commission', 'refund', 'loan_disbursement'].includes(type);
+
+  // ============ ADMIN: ALL WALLETS LIST ============
+  if (isAdminView) {
+    const wallets = allWalletsResponse?.data || [];
+    const adminMeta = allWalletsResponse?.meta || { total: 0, page: 1, limit: adminLimit, totalPages: 1 };
+    const totalBalance = wallets.reduce((sum, w) => sum + toNumber(w.balance), 0);
+    const activeCount = wallets.filter(w => w.isActive).length;
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* Header */}
+        <div className="relative overflow-hidden rounded-2xl border bg-surface-light dark:bg-surface-dark">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary-dark/10" />
+          <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20 flex-shrink-0">
+                <WalletIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
+                  Wallet Management
+                </h1>
+                <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                  Monitor and manage all wallets across the system
+                </p>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-light/40" />
+              <input
+                type="text"
+                value={adminSearch}
+                onChange={(e) => { setAdminSearch(e.target.value); setAdminPage(1); }}
+                placeholder="Search name, email or wallet ID..."
+                className="w-full sm:w-72 pl-9 pr-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Admin Summary Stats */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-surface-light dark:bg-surface-dark border border-primary-200 dark:border-primary-800/50 rounded-xl p-3">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-primary-600 dark:text-primary-400 mb-1">Total Wallets</p>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark">{adminMeta.total}</p>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-emerald-600 dark:text-emerald-400 mb-1">Total Balance</p>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark">
+              RWF {showBalance ? totalBalance.toLocaleString() : '••••••'}
+            </p>
+          </div>
+          <div className="bg-surface-light dark:bg-surface-dark border border-blue-200 dark:border-blue-800/50 rounded-xl p-3">
+            <p className="text-[10px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400 mb-1">Active</p>
+            <p className="text-lg font-bold text-text-light dark:text-text-dark">
+              {activeCount} <span className="text-xs font-normal text-text-light/50">of {wallets.length}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* All Wallets Table */}
+        <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-surface-light dark:bg-surface-dark">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="border-b border-border-light dark:border-border-dark">
+                <tr>
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">User</th>
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Wallet ID</th>
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Balance</th>
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 text-right">Status</th>
+                  <th className="px-3 py-2.5 font-medium text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                {allWalletsLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-8 text-center">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" />
+                    </td>
+                  </tr>
+                ) : wallets.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-12 text-center text-text-light/40 dark:text-text-dark/40">
+                      <WalletIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No wallets found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  wallets.map((w) => (
+                    <tr
+                      key={w.id}
+                      onClick={() => router.push(`/wallets/${w.id}`)}
+                      className="hover:bg-primary/5 cursor-pointer transition-colors"
+                    >
+                      <td className="px-3 py-2.5">
+                        <p className="font-semibold text-text-light dark:text-text-dark">{w.user?.fullName || 'Unknown'}</p>
+                        <p className="text-[10px] text-text-light/50">{w.user?.email || ''}</p>
+                        <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full mt-0.5 ${
+                          w.user?.role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
+                          w.user?.role === 'association_admin' ? 'bg-blue-100 text-blue-700' :
+                          w.user?.role === 'salon_owner' ? 'bg-orange-100 text-orange-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>{w.user?.role?.replace(/_/g, ' ')}</span>
+                      </td>
+                      <td className="px-3 py-2.5 font-mono text-[10px] text-text-light/60 dark:text-text-dark/60">
+                        {w.id.slice(0, 8)}...{w.id.slice(-4)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-bold text-text-light dark:text-text-dark">
+                        {w.currency} {showBalance ? toNumber(w.balance).toLocaleString() : '••••••'}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
+                          w.isActive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                        }`}>
+                          {w.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-text-light/60 dark:text-text-dark/60">
+                        {format(new Date(w.createdAt), 'MMM dd, yyyy')}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {adminMeta.totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50">
+              <div className="text-xs text-text-light/60">
+                Page {adminMeta.page} of {adminMeta.totalPages} • {adminMeta.total} total
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setAdminPage(p => Math.max(1, p - 1))} disabled={adminPage === 1 || allWalletsLoading} className="h-7 px-2 text-xs">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setAdminPage(p => Math.min(adminMeta.totalPages, p + 1))} disabled={adminPage === adminMeta.totalPages || allWalletsLoading} className="h-7 px-2 text-xs">
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (walletLoading) {
     return (

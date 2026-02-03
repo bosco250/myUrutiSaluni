@@ -49,6 +49,44 @@ export class WalletsService {
     return wallet;
   }
 
+  async getAllWallets(
+    pagination: { page: number; limit: number },
+    search?: string,
+  ): Promise<{
+    data: Wallet[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const qb = this.walletsRepository
+      .createQueryBuilder('wallet')
+      .leftJoinAndSelect('wallet.user', 'user');
+
+    if (search) {
+      qb.where(
+        'user.full_name LIKE :search OR user.email LIKE :search OR CAST(wallet.id AS VARCHAR) LIKE :search',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [data, total] = await qb
+      .orderBy('wallet.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async createTransaction(
     walletId: string,
     type: WalletTransactionType,
@@ -186,6 +224,105 @@ export class WalletsService {
     });
     if (!tx) throw new NotFoundException('Wallet transaction not found');
     return tx;
+  }
+
+  async toggleWalletActive(walletId: string, isActive: boolean): Promise<Wallet> {
+    const wallet = await this.walletsRepository.findOne({
+      where: { id: walletId },
+    });
+    if (!wallet) throw new NotFoundException('Wallet not found');
+    wallet.isActive = isActive;
+    return this.walletsRepository.save(wallet);
+  }
+
+  async cancelTransaction(transactionId: string): Promise<{
+    transaction: WalletTransaction;
+    refund?: WalletTransaction;
+  }> {
+    return this.dataSource.transaction(async (manager) => {
+      const transaction = await manager.findOne(WalletTransaction, {
+        where: { id: transactionId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!transaction) throw new NotFoundException('Transaction not found');
+      if (transaction.status !== WalletTransactionStatus.PENDING) {
+        throw new BadRequestException('Only pending transactions can be cancelled');
+      }
+
+      transaction.status = WalletTransactionStatus.CANCELLED;
+      transaction.metadata = {
+        ...(transaction.metadata || {}),
+        cancelledAt: new Date().toISOString(),
+        cancelledBy: 'admin',
+      };
+      await manager.save(transaction);
+
+      // Compensating transaction: reverse the balance change
+      const debitTypes = [
+        WalletTransactionType.WITHDRAWAL,
+        WalletTransactionType.TRANSFER,
+        WalletTransactionType.LOAN_REPAYMENT,
+        WalletTransactionType.FEE,
+      ];
+      const isDebit = debitTypes.includes(transaction.transactionType);
+
+      const wallet = await manager.findOne(Wallet, {
+        where: { id: transaction.walletId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!wallet) throw new NotFoundException('Wallet not found');
+
+      const currentBalance =
+        typeof wallet.balance === 'string'
+          ? parseFloat(wallet.balance) || 0
+          : Number(wallet.balance) || 0;
+
+      const amount = Number(transaction.amount) || 0;
+      const balanceBefore = currentBalance;
+
+      let balanceAfter: number;
+      let compensatingType: WalletTransactionType;
+      let compensatingDescription: string;
+
+      if (isDebit) {
+        balanceAfter = balanceBefore + amount;
+        compensatingType = WalletTransactionType.REFUND;
+        compensatingDescription = `Refund for admin-cancelled ${transaction.transactionType} (${transactionId})`;
+      } else {
+        balanceAfter = balanceBefore - amount;
+        if (balanceAfter < 0) {
+          throw new BadRequestException(
+            'Cannot cancel: wallet balance insufficient to reverse this credit transaction',
+          );
+        }
+        compensatingType = WalletTransactionType.FEE;
+        compensatingDescription = `Reversal for admin-cancelled ${transaction.transactionType} (${transactionId})`;
+      }
+
+      await manager.update(Wallet, { id: transaction.walletId }, { balance: balanceAfter });
+
+      const refund = manager.create(WalletTransaction, {
+        walletId: transaction.walletId,
+        transactionType: compensatingType,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        status: WalletTransactionStatus.COMPLETED,
+        description: compensatingDescription,
+        referenceType: 'wallet_transaction',
+        referenceId: transactionId,
+        transactionReference: `CANCEL_${transactionId}`,
+        metadata: {
+          relatedWalletTransactionId: transactionId,
+          reason: 'Admin cancelled pending transaction',
+        },
+      });
+
+      await manager.save(refund);
+
+      return { transaction, refund };
+    });
   }
 
   /**
