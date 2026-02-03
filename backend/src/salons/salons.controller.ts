@@ -51,6 +51,46 @@ export class SalonsController {
     private readonly rewardsConfigService: RewardsConfigService,
   ) {}
 
+  // ==================== Employee Verification (Public - Must be first!) ====================
+  // This route must come before :id routes to avoid matching 'employees' as a salon ID
+
+  @Get('employees/:employeeId/verify')
+  @Public()
+  @ApiOperation({ summary: 'Verify employee authenticity (public - for QR code scanning)' })
+  async verifyEmployee(
+    @Param('employeeId', ParseUUIDPipe) employeeId: string,
+  ) {
+    const employee = await this.salonsService.findEmployeeById(employeeId);
+    
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const salon = await this.salonsService.findOne(employee.salonId);
+
+    return {
+      isValid: true,
+      employee: {
+        id: employee.id,
+        fullName: employee.user?.fullName || 'Unknown',
+        roleTitle: employee.roleTitle || 'Staff Member',
+        employmentType: employee.employmentType 
+          ? employee.employmentType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+          : 'Employee',
+        hireDate: employee.hireDate,
+        isActive: employee.isActive !== false,
+        phone: employee.user?.phone || null,
+        email: employee.user?.email || null,
+      },
+      salon: {
+        name: salon?.name || 'Unknown Salon',
+        address: salon?.address || null,
+        city: salon?.city || null,
+      },
+      verificationDate: new Date().toISOString(),
+    };
+  }
+
   /**
    * Helper method to check if user has access to a salon
    */

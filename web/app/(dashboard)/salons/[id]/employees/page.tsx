@@ -3,11 +3,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock, Loader2 } from 'lucide-react';
+import { Edit, Trash2, Users, UserPlus, Mail, Phone, Calendar, Briefcase, X, Check, XCircle, AlertCircle, ChevronDown, DollarSign, Calculator, TrendingUp, ArrowRight, Eye, ArrowLeft, Clock, Loader2, Download } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { UserRole } from '@/lib/permissions';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useToast } from '@/components/ui/Toast';
 import { SALON_PROFESSIONAL_TITLES, SALON_SKILLS } from '@/lib/salon-constants';
 
 interface SalonEmployee {
@@ -69,8 +70,36 @@ function SalonEmployeesContent() {
   const router = useRouter();
   const salonId = params.id as string;
   const queryClient = useQueryClient();
+  const { success, error: toastError } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<SalonEmployee | null>(null);
+  const [isDownloadingCards, setIsDownloadingCards] = useState(false);
+
+  // Handle employee cards download
+  const handleDownloadCards = async () => {
+    try {
+      setIsDownloadingCards(true);
+      const response = await api.get(`/reports/employee-cards/${salonId}`, {
+        responseType: 'blob',
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `employee-cards-${salonId.slice(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      success('Employee cards downloaded successfully');
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toastError(error.response?.data?.message || 'Failed to download employee cards');
+    } finally {
+      setIsDownloadingCards(false);
+    }
+  };
   // Fetch salon details
   const { data: salon, isLoading: isLoadingSalon, error: salonError } = useQuery<Salon>({
     queryKey: ['salon', salonId],
@@ -205,6 +234,16 @@ function SalonEmployeesContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={handleDownloadCards}
+              variant="outline"
+              size="sm"
+              className="h-9 flex items-center gap-2 border-gray-200 dark:border-gray-800"
+              disabled={isDownloadingCards}
+            >
+              {isDownloadingCards ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span className="hidden sm:inline">Cards</span>
+            </Button>
             <Button
               onClick={() => router.push(`/payroll?salonId=${salonId}`)}
               variant="outline"

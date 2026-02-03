@@ -30,7 +30,7 @@ api.interceptors.request.use((config) => {
     } else {
       // Only warn if not an auth request
       const url = String(config.url || '');
-      const isPublicEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/signin') || url.includes('/auth/signup');
+      const isPublicEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/signin') || url.includes('/auth/signup') || url.includes('/verify');
       
       if (!isPublicEndpoint) {
         logger.warn('No authentication token found', { url: config.url });

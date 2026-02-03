@@ -190,4 +190,38 @@ export class ReportsController {
       });
     }
   }
+  @Get('employee-cards/:salonId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER)
+  @ApiOperation({ summary: 'Generate employee ID cards PDF for a salon' })
+  async generateEmployeeCards(
+    @Param('salonId') salonId: string,
+    @CurrentUser() user: any,
+    @Res() res: Response,
+  ) {
+    if (user.role === UserRole.SALON_OWNER) {
+      const salon = await this.salonsService.findOne(salonId);
+      if (!salon || salon.ownerId !== user.id) {
+        throw new ForbiddenException(
+          'You do not have permission to access this salon',
+        );
+      }
+    }
+
+    try {
+      const pdf = await this.reportsService.generateEmployeeCards(salonId);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="employee-cards-${salonId.slice(0, 8)}.pdf"`,
+      );
+      res.send(pdf);
+    } catch (error) {
+      console.error('Error generating employee cards:', error);
+      res.status(500).json({
+        message: 'Failed to generate employee cards',
+        error: error.message,
+      });
+    }
+  }
 }

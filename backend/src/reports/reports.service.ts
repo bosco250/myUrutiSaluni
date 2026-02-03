@@ -4,8 +4,11 @@ import {
   OnModuleDestroy,
   Inject,
   forwardRef,
+  BadRequestException,
 } from '@nestjs/common';
 import * as QRCode from 'qrcode';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // Use require for jsreport as it doesn't have proper ES module exports
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -18,6 +21,7 @@ import { SalonsService } from '../salons/salons.service';
 
 @Injectable()
 export class ReportsService implements OnModuleInit, OnModuleDestroy {
+  // ... existing properties code ...
   private jsreportInstance: any;
   private jsreportInitializing: Promise<void> | null = null;
 
@@ -31,6 +35,355 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     @Inject(forwardRef(() => SalonsService))
     private salonsService: SalonsService,
   ) {}
+
+  async generateEmployeeCards(salonId: string): Promise<Buffer> {
+    await this.ensureJsReportReady();
+
+    const salon = await this.salonsService.findOne(salonId);
+    if (!salon) {
+      throw new BadRequestException('Salon not found');
+    }
+
+    const employees = await this.salonsService.getSalonEmployees(salonId);
+    const activeEmployees = employees.filter((e) => e.isActive !== false);
+
+    if (activeEmployees.length === 0) {
+      throw new BadRequestException('No active employees found');
+    }
+
+    // Resolve System Logo
+    let systemLogoDataUrl = '';
+    try {
+      const logoPath = path.resolve(process.cwd(), '../web/public/logo.png');
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        systemLogoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      }
+    } catch (e) {
+      console.warn('Failed to load system logo:', e);
+    }
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+    const resolveUrl = (url?: string) => {
+      if (!url) return null;
+      if (url.startsWith('http')) return url;
+      const cleanBase = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+      const cleanPath = url.startsWith('/') ? url : '/' + url;
+      return `${cleanBase}${cleanPath}`;
+    };
+
+    const salonLogo = resolveUrl(salon.images?.[0]);
+
+    const employeesData = await Promise.all(
+      activeEmployees.map(async (emp) => {
+        let qrCodeDataUrl = '';
+        try {
+          // Generate verification URL for QR code
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+          const cleanFrontendUrl = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : frontendUrl;
+          const verificationUrl = `${cleanFrontendUrl}/verify/employee/${emp.id}`;
+
+          qrCodeDataUrl = await QRCode.toDataURL(
+            verificationUrl,
+            {
+              errorCorrectionLevel: 'M',
+              width: 200,
+              margin: 0,
+              color: {
+                  dark: '#1e293b',
+                  light: '#ffffff'
+              }
+            },
+          );
+        } catch (e) {
+          console.error('Error generating QR', e);
+        }
+
+        const user = emp.user;
+        const names = (user?.fullName || '').split(' ').filter((n: string) => n);
+        const initials =
+          names.length > 0
+            ? (names[0][0] + (names.length > 1 ? names[names.length - 1][0] : '')).toUpperCase()
+            : '??';
+
+        return {
+          fullName: user?.fullName || 'Unknown',
+          roleTitle: emp.roleTitle || 'STAFF MEMBER',
+          skills: emp.skills || [],
+          skillsStr: emp.skills ? emp.skills.join(' • ') : '',
+          employeeId: emp.id.slice(0, 8).toUpperCase(),
+          hireDate: emp.hireDate
+            ? new Date(emp.hireDate).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            : 'N/A',
+          employmentType: emp.employmentType 
+            ? emp.employmentType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+            : '-',
+          phone: user?.phone || '',
+          email: user?.email || '',
+          avatarUrl: resolveUrl(user?.avatarUrl),
+          initials,
+          qrCodeDataUrl,
+        };
+      }),
+    );
+
+    employeesData.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+    const templateData = {
+      salon: {
+        name: salon.name,
+        phone: salon.phone || '',
+        address: salon.address || '',
+        logoUrl: salonLogo,
+        email: salon.email || '',
+      },
+      system: {
+        logoUrl: systemLogoDataUrl,
+        name: 'Uruti Saluni',
+        url: 'www.urutisaluni.com'
+      },
+      employees: employeesData,
+      generatedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    };
+
+    try {
+      const report = await this.jsreportInstance.render({
+        template: {
+          content: this.getEmployeeCardsTemplate(),
+          engine: 'handlebars',
+          recipe: 'chrome-pdf',
+        },
+        data: templateData,
+      });
+
+      return report.content;
+    } catch (e) {
+      console.error('Error rendering PDF', e);
+      throw new Error('Failed to generate employee cards PDF');
+    }
+  }
+
+  private getEmployeeCardsTemplate(): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 0; }
+    body { 
+        font-family: 'Manrope', sans-serif; 
+        margin: 0; 
+        padding: 0; 
+        background: #fff;
+        -webkit-print-color-adjust: exact;
+    }
+    
+    .page-container {
+        width: 210mm;
+        box-sizing: border-box;
+        padding: 10mm 12mm;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        align-content: flex-start;
+        gap: 0;
+    }
+
+    /* Standard CR80 Card: 85.6mm x 54mm */
+    .card-wrapper {
+        width: 86mm; 
+        height: 54mm;
+        margin: 2mm 3mm;
+        box-sizing: border-box;
+        page-break-inside: avoid;
+    }
+
+    .card { 
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 3.5mm;
+        overflow: hidden;
+        position: relative; 
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    /* HEADER: Dark & Gold */
+    .header { 
+        background: #111827; 
+        height: 11mm;
+        display: flex;
+        align-items: center;
+        padding: 0 4mm;
+        justify-content: space-between;
+        border-bottom: 2px solid #C89B68;
+    }
+    .system-brand { display: flex; align-items: center; gap: 2.5mm; }
+    .system-logo-img { height: 7mm; width: auto; filter: brightness(0) invert(1); } /* White Logo */
+    
+    .system-text-col { display: flex; flex-direction: column; justify-content: center; }
+    .system-label { color: #9ca3af; font-size: 3.5pt; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; line-height: 1.2; }
+    .system-name { color: #C89B68; font-size: 7.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
+
+    .card-content {
+        flex: 1;
+        padding: 3.5mm;
+        display: flex;
+        gap: 3.5mm;
+        position: relative;
+    }
+    
+    .card-content::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #fafafa;
+        background-image: radial-gradient(#C89B68 0.5px, transparent 0.5px);
+        background-size: 10px 10px;
+        opacity: 0.15;
+        z-index: 0;
+    }
+
+    .left-col {
+        width: 25mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 1;
+    }
+    .avatar { 
+        width: 25mm; 
+        height: 29mm; 
+        object-fit: cover; 
+        border: 1.5px solid #C89B68;
+        border-radius: 3mm; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .avatar-placeholder {
+        width: 25mm; height: 29mm;
+        background: #f3f4f6;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14pt; color: #9ca3af; font-weight: 700;
+        border: 1.5px solid #C89B68; border-radius: 3mm;
+    }
+    
+    .id-badge {
+        margin-top: 2mm;
+        font-size: 6.5pt;
+        font-weight: 700;
+        color: #111827; 
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        padding: 0.5mm 3mm;
+        border-radius: 10mm;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .right-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        z-index: 1;
+        padding-top: 0.5mm;
+    }
+    
+    .salon-name { font-size: 6.5pt; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5mm; }
+    .employee-name { font-size: 11pt; font-weight: 800; color: #111827; leading-trim: both; line-height: 1.1; margin-bottom: 0.5mm; }
+    .role-title { font-size: 8pt; font-weight: 700; color: #C89B68; text-transform: uppercase; margin-bottom: 2.5mm; }
+    
+    .details { display: flex; flex-direction: column; gap: 0.8mm; margin-top: 0; }
+    .detail-row { display: flex; align-items: baseline; font-size: 6.5pt; color: #374151; }
+    .label { width: 14mm; color: #9ca3af; font-weight: 500; font-size: 6pt; text-transform: uppercase; }
+    .value { font-weight: 600; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 35mm; }
+    
+    .qr-container {
+        position: absolute;
+        bottom: 3.5mm;
+        right: 3.5mm;
+        width: 15mm;
+        height: 15mm;
+        background: white;
+        padding: 1mm;
+        border-radius: 1.5mm;
+        border: 1px solid #f3f4f6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .qr-code { width: 100%; height: 100%; display: block; }
+
+    .footer-strip {
+        height: 3mm;
+        background: #111827;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-top: 1px solid #C89B68;
+    }
+    .footer-text { font-size: 3.5pt; color: #C89B68; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
+
+  </style>
+</head>
+<body>
+  <div class="page-container">
+  {{#each employees}}
+    <div class="card-wrapper">
+        <div class="card">
+            <div class="header">
+                <div class="system-brand">
+                    {{#if ../system.logoUrl}}<img src="{{../system.logoUrl}}" class="system-logo-img" alt="Logo" />{{/if}}
+                    <div class="system-text-col">
+                        <span class="system-label">Association</span>
+                        <span class="system-name">Uruti Saluni</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-content">
+                <div class="left-col">
+                    {{#if avatarUrl}}
+                    <img src="{{avatarUrl}}" class="avatar" />
+                    {{else}}
+                    <div class="avatar-placeholder">{{initials}}</div>
+                    {{/if}}
+                    <div class="id-badge">{{employeeId}}</div>
+                </div>
+                
+                <div class="right-col">
+                    <div class="salon-name">{{../salon.name}}</div>
+                    <div class="employee-name">{{fullName}}</div>
+                    <div class="role-title">{{roleTitle}}</div>
+                    
+                    <div class="details">
+                        <div class="detail-row"><span class="label">Status</span> <span class="value">{{employmentType}}</span></div>
+                        <div class="detail-row"><span class="label">Hired</span> <span class="value">{{hireDate}}</span></div>
+                        <div class="detail-row"><span class="label">Phone</span> <span class="value">{{phone}}</span></div>
+                        {{#if email}}<div class="detail-row"><span class="label">Email</span> <span class="value">{{email}}</span></div>{{/if}}
+                    </div>
+                </div>
+                
+                <div class="qr-container">
+                    <img src="{{qrCodeDataUrl}}" class="qr-code" />
+                </div>
+            </div>
+            
+            <div class="footer-strip">
+                <span class="footer-text">Member of Uruti Saluni Association</span>
+            </div>
+        </div>
+    </div>
+  {{/each}}
+  </div>
+</body>
+</html>
+    `;
+  }
 
   async onModuleInit() {
     // Initialize jsreport in the background without blocking server startup
@@ -529,6 +882,8 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       throw new Error(`Failed to generate PDF: ${renderError.message}`);
     }
   }
+
+
 
   async generateSalesReport(filters: {
     salonId?: string;
