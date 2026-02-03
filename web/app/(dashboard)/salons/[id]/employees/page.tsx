@@ -100,6 +100,34 @@ function SalonEmployeesContent() {
       setIsDownloadingCards(false);
     }
   };
+
+  // Handle single employee card download
+  const [downloadingCardId, setDownloadingCardId] = useState<string | null>(null);
+  
+  const handleDownloadSingleCard = async (employeeId: string, employeeName: string) => {
+    try {
+      setDownloadingCardId(employeeId);
+      const response = await api.get(`/reports/employee-card/${salonId}/${employeeId}`, {
+        responseType: 'blob',
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `id-card-${employeeName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      success(`ID card for ${employeeName} downloaded`);
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toastError(error.response?.data?.message || 'Failed to download ID card');
+    } finally {
+      setDownloadingCardId(null);
+    }
+  };
   // Fetch salon details
   const { data: salon, isLoading: isLoadingSalon, error: salonError } = useQuery<Salon>({
     queryKey: ['salon', salonId],
@@ -456,6 +484,18 @@ function SalonEmployeesContent() {
                           title="View"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadSingleCard(employee.id, employee.user?.fullName || 'employee')}
+                          disabled={downloadingCardId === employee.id}
+                          className="p-1.5 text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-all disabled:opacity-50"
+                          title="Download ID Card"
+                        >
+                          {downloadingCardId === employee.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4" />
+                          )}
                         </button>
                         <button
                           onClick={() => {

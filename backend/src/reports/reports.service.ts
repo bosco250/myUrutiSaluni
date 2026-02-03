@@ -167,6 +167,118 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async generateSingleEmployeeCard(salonId: string, employeeId: string): Promise<Buffer> {
+    await this.ensureJsReportReady();
+
+    const salon = await this.salonsService.findOne(salonId);
+    if (!salon) {
+      throw new BadRequestException('Salon not found');
+    }
+
+    const employee = await this.salonsService.findEmployeeById(employeeId);
+    if (!employee || employee.salonId !== salonId) {
+      throw new BadRequestException('Employee not found in this salon');
+    }
+
+    // Resolve System Logo
+    let systemLogoDataUrl = '';
+    try {
+      const logoPath = path.resolve(process.cwd(), '../web/public/logo.png');
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        systemLogoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      }
+    } catch (e) {
+      console.warn('Failed to load system logo:', e);
+    }
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
+    const resolveUrl = (url?: string) => {
+      if (!url) return null;
+      if (url.startsWith('http')) return url;
+      const cleanBase = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+      const cleanPath = url.startsWith('/') ? url : '/' + url;
+      return `${cleanBase}${cleanPath}`;
+    };
+
+    const salonLogo = resolveUrl(salon.images?.[0]);
+
+    // Generate QR code for this employee
+    let qrCodeDataUrl = '';
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const cleanFrontendUrl = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : frontendUrl;
+      const verificationUrl = `${cleanFrontendUrl}/verify/employee/${employee.id}`;
+
+      qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
+        errorCorrectionLevel: 'M',
+        width: 200,
+        margin: 0,
+        color: { dark: '#1e293b', light: '#ffffff' }
+      });
+    } catch (e) {
+      console.error('Error generating QR', e);
+    }
+
+    const user = employee.user;
+    const names = (user?.fullName || '').split(' ').filter((n: string) => n);
+    const initials = names.length > 0
+      ? (names[0][0] + (names.length > 1 ? names[names.length - 1][0] : '')).toUpperCase()
+      : '??';
+
+    const employeeData = {
+      fullName: user?.fullName || 'Unknown',
+      roleTitle: employee.roleTitle || 'STAFF MEMBER',
+      skills: employee.skills || [],
+      skillsStr: employee.skills ? employee.skills.join(' • ') : '',
+      employeeId: employee.id.slice(0, 8).toUpperCase(),
+      hireDate: employee.hireDate
+        ? new Date(employee.hireDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'N/A',
+      employmentType: employee.employmentType
+        ? employee.employmentType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+        : '-',
+      phone: user?.phone || '',
+      email: user?.email || '',
+      avatarUrl: resolveUrl(user?.avatarUrl),
+      initials,
+      qrCodeDataUrl,
+    };
+
+    const templateData = {
+      salon: {
+        name: salon.name,
+        phone: salon.phone || '',
+        address: salon.address || '',
+        logoUrl: salonLogo,
+        email: salon.email || '',
+      },
+      system: {
+        logoUrl: systemLogoDataUrl,
+        name: 'Uruti Saluni',
+        url: 'www.urutisaluni.com'
+      },
+      employees: [employeeData],
+      generatedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    };
+
+    try {
+      const report = await this.jsreportInstance.render({
+        template: {
+          content: this.getEmployeeCardsTemplate(),
+          engine: 'handlebars',
+          recipe: 'chrome-pdf',
+        },
+        data: templateData,
+      });
+
+      return report.content;
+    } catch (e) {
+      console.error('Error rendering PDF', e);
+      throw new Error('Failed to generate employee card PDF');
+    }
+  }
+
   private getEmployeeCardsTemplate(): string {
     return `
 <!DOCTYPE html>

@@ -34,6 +34,7 @@ import {
   Package,
   Settings,
   Receipt,
+  Download,
 } from 'lucide-react';
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
@@ -217,7 +218,8 @@ function EmployeeDetailContent() {
     queryKey: QUERY_KEYS.SALON_EMPLOYEE(salonId, employeeId),
     queryFn: async () => {
       const response = await api.get(API_ENDPOINTS.EMPLOYEES(salonId));
-      const employees = response.data || [];
+      // Handle nested data structure from API
+      const employees = response.data?.data || response.data || [];
       const found = employees.find((e: SalonEmployee) => e.id === employeeId);
       if (!found) throw new Error(MESSAGES.EMPLOYEE_NOT_FOUND);
       return found;
@@ -230,7 +232,7 @@ function EmployeeDetailContent() {
     queryKey: QUERY_KEYS.EMPLOYEE_COMMISSION_SUMMARY(employeeId),
     queryFn: async () => {
       const response = await api.get(API_ENDPOINTS.COMMISSION_SUMMARY(employeeId));
-      return response.data;
+      return response.data?.data || response.data;
     },
     enabled: !!employeeId,
   });
@@ -240,7 +242,9 @@ function EmployeeDetailContent() {
     queryKey: QUERY_KEYS.EMPLOYEE_COMMISSIONS(employeeId),
     queryFn: async () => {
       const response = await api.get(API_ENDPOINTS.COMMISSIONS(employeeId));
-      return response.data || [];
+      // Handle nested data structure from API
+      const data = response.data?.data || response.data;
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!employeeId,
   });
@@ -529,6 +533,32 @@ function EmployeeDetailContent() {
             >
               <Calculator className="w-4 h-4" />
               Payroll
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await api.get(`/reports/employee-card/${salonId}/${employeeId}`, {
+                    responseType: 'blob',
+                  });
+                  const blob = new Blob([response.data], { type: 'application/pdf' });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `id-card-${(employee.user?.fullName || 'employee').replace(/\s+/g, '-').toLowerCase()}.pdf`);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  window.URL.revokeObjectURL(url);
+                } catch (error) {
+                  console.error('Download error:', error);
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">ID Card</span>
             </Button>
             <Button
               onClick={() => setShowEditModal(true)}
