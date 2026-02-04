@@ -29,11 +29,13 @@ import { format } from 'date-fns';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { usePermissions } from '@/hooks/usePermissions';
+import { Modal } from '@/components/ui/Modal';
 
 interface WalletData {
   id: string;
   balance: number;
   currency: string;
+  isActive: boolean;
   user: {
     fullName: string;
   };
@@ -48,6 +50,9 @@ interface WalletTransaction {
   status: string;
   createdAt: string;
   description: string;
+  referenceType?: string;
+  referenceId?: string;
+  transactionReference?: string;
   metadata?: {
     employeeName?: string;
     salonOwnerName?: string;
@@ -79,6 +84,7 @@ export default function WalletsPage() {
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showBalance, setShowBalance] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedTx, setSelectedTx] = useState<WalletTransaction | null>(null);
   const itemsPerPage = 10;
 
   const { isAdmin, user } = usePermissions();
@@ -375,9 +381,18 @@ export default function WalletsPage() {
               <WalletIcon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
-                Wallet
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black tracking-tight text-text-light dark:text-text-dark">
+                  Wallet
+                </h1>
+                {wallet && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                    wallet.isActive !== false ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                  }`}>
+                    {wallet.isActive !== false ? 'Active' : 'Blocked'}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
                 Manage your digital wallet and view transaction history
               </p>
@@ -406,6 +421,7 @@ export default function WalletsPage() {
               onClick={() => setShowTopUpModal(true)}
               variant="outline"
               size="sm"
+              disabled={wallet?.isActive === false}
               className="flex items-center gap-2 text-xs"
             >
               <ArrowDown className="w-3.5 h-3.5" />
@@ -415,7 +431,7 @@ export default function WalletsPage() {
               onClick={() => setShowWithdrawModal(true)}
               variant="primary"
               size="sm"
-              disabled={balance < 1000}
+              disabled={balance < 1000 || wallet?.isActive === false}
               className="flex items-center gap-2 text-xs"
             >
               <Send className="w-3.5 h-3.5" />
@@ -424,6 +440,19 @@ export default function WalletsPage() {
           </div>
         </div>
       </div>
+
+      {/* Blocked wallet warning */}
+      {wallet && wallet.isActive === false && (
+        <div className="bg-danger/10 border border-danger/20 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-danger">Wallet Blocked</p>
+            <p className="text-xs text-danger/70 mt-0.5">
+              Your wallet has been blocked by an administrator. Withdrawals and top-ups are disabled until it is unblocked. Please contact support for assistance.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards - Compacted & Flat */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -557,7 +586,8 @@ export default function WalletsPage() {
                 transactions.map((tx) => (
                   <tr
                     key={tx.id}
-                    className="hover:bg-background-light dark:hover:bg-background-dark transition-colors"
+                    onClick={() => setSelectedTx(tx)}
+                    className="hover:bg-background-light dark:hover:bg-background-dark transition-colors cursor-pointer"
                   >
                     <td className="px-3 py-2.5 whitespace-nowrap text-text-light dark:text-text-dark">
                       {format(new Date(tx.createdAt), 'MMM dd, yyyy')}
@@ -671,6 +701,122 @@ export default function WalletsPage() {
           }}
         />
       )}
+
+      {/* Transaction Detail Modal */}
+      <Modal isOpen={!!selectedTx} onClose={() => setSelectedTx(null)} title="Transaction Details" size="md">
+        {selectedTx && (
+          <div className="space-y-4">
+            {/* ID + Status */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[11px] text-text-light/60 dark:text-text-dark/60 break-all">
+                {selectedTx.id}
+              </span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide flex-shrink-0 ${
+                selectedTx.status === 'completed'  ? 'bg-success/10 text-success'  :
+                selectedTx.status === 'failed'     ? 'bg-danger/10 text-danger'    :
+                selectedTx.status === 'cancelled'  ? 'bg-danger/10 text-danger'    :
+                                                     'bg-warning/10 text-warning'
+              }`}>
+                {selectedTx.status}
+              </span>
+            </div>
+
+            {/* Type + Date */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3">
+                <p className="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 mb-1">Type</p>
+                <div className="flex items-center gap-1.5">
+                  <span className={`flex items-center justify-center w-5 h-5 rounded-md ${
+                    getTransactionColor(selectedTx.transactionType, selectedTx.status).split(' ')[1]
+                  } ${getTransactionColor(selectedTx.transactionType, selectedTx.status).split(' ')[0]}`}>
+                    {getTransactionIcon(selectedTx.transactionType)}
+                  </span>
+                  <p className="text-sm font-medium text-text-light dark:text-text-dark capitalize">
+                    {selectedTx.transactionType.replace(/_/g, ' ')}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-background-light dark:bg-background-dark rounded-lg p-3">
+                <p className="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 mb-1">Date</p>
+                <p className="text-sm text-text-light dark:text-text-dark">
+                  {format(new Date(selectedTx.createdAt), 'MMM dd, yyyy')}
+                </p>
+                <p className="text-[10px] text-text-light/50 dark:text-text-dark/50">
+                  {format(new Date(selectedTx.createdAt), 'HH:mm:ss')}
+                </p>
+              </div>
+            </div>
+
+            {/* Amount + Balance flow */}
+            <div className="bg-background-light dark:bg-background-dark rounded-lg p-4">
+              <div className="text-center mb-3">
+                <p className={`text-2xl font-bold ${isCredit(selectedTx.transactionType) ? 'text-success' : 'text-danger'}`}>
+                  {isCredit(selectedTx.transactionType) ? '+' : '-'}{toNumber(selectedTx.amount).toLocaleString()} RWF
+                </p>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <div className="text-center">
+                  <p className="text-text-light/50 dark:text-text-dark/50">Before</p>
+                  <p className="font-medium text-text-light dark:text-text-dark">{toNumber(selectedTx.balanceBefore).toLocaleString()} RWF</p>
+                </div>
+                <span className="text-text-light/30 dark:text-text-dark/30 text-lg">→</span>
+                <div className="text-center">
+                  <p className="text-text-light/50 dark:text-text-dark/50">After</p>
+                  <p className="font-bold text-text-light dark:text-text-dark">{toNumber(selectedTx.balanceAfter).toLocaleString()} RWF</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            {selectedTx.description && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50 mb-1">Description</p>
+                <p className="text-sm text-text-light dark:text-text-dark">{selectedTx.description}</p>
+              </div>
+            )}
+
+            {/* References */}
+            {(selectedTx.referenceType || selectedTx.referenceId || selectedTx.transactionReference) && (
+              <div className="border-t border-border-light dark:border-border-dark pt-3 space-y-2">
+                <p className="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">References</p>
+                {selectedTx.referenceType && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-text-light/60 dark:text-text-dark/60">Reference Type</span>
+                    <span className="text-xs font-mono text-text-light dark:text-text-dark">{selectedTx.referenceType}</span>
+                  </div>
+                )}
+                {selectedTx.referenceId && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-text-light/60 dark:text-text-dark/60">Reference ID</span>
+                    <span className="text-xs font-mono text-text-light dark:text-text-dark">{selectedTx.referenceId.slice(0, 8)}…{selectedTx.referenceId.slice(-4)}</span>
+                  </div>
+                )}
+                {selectedTx.transactionReference && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-text-light/60 dark:text-text-dark/60">Tx Reference</span>
+                    <span className="text-xs font-mono text-text-light dark:text-text-dark">{selectedTx.transactionReference}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Metadata */}
+            {selectedTx.metadata && Object.keys(selectedTx.metadata).length > 0 && (
+              <div className="border-t border-border-light dark:border-border-dark pt-3 space-y-2">
+                <p className="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Details</p>
+                {Object.entries(selectedTx.metadata).map(([key, value]) => (
+                  <div key={key} className="flex justify-between items-center">
+                    <span className="text-xs text-text-light/60 dark:text-text-dark/60 capitalize">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                    <span className="text-xs font-mono text-text-light dark:text-text-dark truncate ml-2 max-w-[55%]">{String(value)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

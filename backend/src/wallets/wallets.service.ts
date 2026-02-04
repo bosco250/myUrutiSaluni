@@ -116,6 +116,17 @@ export class WalletsService {
         throw new NotFoundException('Wallet not found');
       }
 
+      // Block outgoing transactions on inactive wallets; incoming (deposits, commissions, refunds) are still allowed
+      const outgoingTypes = [
+        WalletTransactionType.WITHDRAWAL,
+        WalletTransactionType.TRANSFER,
+        WalletTransactionType.FEE,
+        WalletTransactionType.LOAN_REPAYMENT,
+      ];
+      if (!wallet.isActive && outgoingTypes.includes(type)) {
+        throw new BadRequestException('Wallet is blocked. Outgoing transactions are not allowed.');
+      }
+
       // Ensure proper number conversion (decimal from DB comes as string)
       const currentBalance =
         typeof wallet.balance === 'string'
@@ -351,6 +362,10 @@ export class WalletsService {
     }
 
     const wallet = await this.getOrCreateWallet(params.userId);
+
+    if (!wallet.isActive) {
+      throw new BadRequestException('Your wallet is blocked. Please contact support to unblock it.');
+    }
 
     const formattedPhone = this.mockPayout.formatPhoneNumber(
       params.phoneNumber,
