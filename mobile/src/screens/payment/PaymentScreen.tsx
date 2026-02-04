@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
 import {
@@ -22,6 +24,8 @@ import {
   PaymentType,
   Payment,
 } from "../../services/payments";
+
+const { width } = Dimensions.get('window');
 
 interface PaymentScreenProps {
   navigation: {
@@ -47,21 +51,21 @@ const PAYMENT_METHODS: {
   color: string;
   description: string;
   badge?: string;
-}[] = [
+} [] = [
   {
     method: "airtel_money",
     label: "Airtel Money",
-    icon: "phone-android",
-    color: "#FFCC00",
-    description: "Fast & secure mobile money",
-    badge: "Recommended",
+    icon: "mobile-alt",
+    color: "#E11900", // Airtel Red
+    description: "Instant mobile payment",
+    badge: "Fastest",
   },
   {
     method: "wallet",
     label: "URUTI Wallet",
-    icon: "account-balance-wallet",
+    icon: "wallet",
     color: theme.colors.primary,
-    description: "Use existing wallet balance",
+    description: "Use your balance",
   },
 ];
 
@@ -79,7 +83,7 @@ export default function PaymentScreen({
   } = route?.params || {};
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
-    null
+    type === "wallet_topup" ? "airtel_money" : null
   );
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
@@ -87,6 +91,25 @@ export default function PaymentScreen({
   const [status, setStatus] = useState<
     "input" | "processing" | "success" | "failed"
   >("input");
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [status]);
 
   // For wallet top-up: allow user to enter amount
   const isTopUp = type === "wallet_topup";
@@ -96,67 +119,53 @@ export default function PaymentScreen({
   const amount = isTopUp ? Number(topUpAmount) || 0 : initialAmount;
 
   // Preset amounts for quick top-up
-  const PRESET_AMOUNTS = [5000, 10000, 20000, 50000, 100000];
+  const PRESET_AMOUNTS = [2000, 5000, 10000, 25000, 50000];
 
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? "#1C1C1E" : theme.colors.background,
+      backgroundColor: isDark ? "#0F172A" : "#F8FAFC",
     },
     text: {
-      color: isDark ? "#FFFFFF" : theme.colors.text,
+      color: isDark ? "#F8FAFC" : "#1E293B",
     },
     textSecondary: {
-      color: isDark ? "#8E8E93" : theme.colors.textSecondary,
+      color: isDark ? "#94A3B8" : "#64748B",
     },
     card: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
-      borderColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+      backgroundColor: isDark ? "#1E293B" : "#FFFFFF",
+      borderColor: isDark ? "#334155" : "#E2E8F0",
     },
     input: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.backgroundSecondary,
-      borderColor: isDark ? "#3A3A3C" : theme.colors.border,
-      color: isDark ? "#FFFFFF" : theme.colors.text,
+      backgroundColor: isDark ? "#0F172A" : "#F1F5F9",
+      borderColor: isDark ? "#334155" : "#E2E8F0",
+      color: isDark ? "#F8FAFC" : "#1E293B",
     },
   };
 
   const validatePhoneNumber = (phone: string): boolean => {
-    if (!phone || phone.trim().length === 0) return false;
+    if (!phone) return false;
     const clean = phone.replace(/\D/g, "");
-    // Rwanda Airtel Money: 072, 073
-    // User can enter 9 digits: 72XXXXXXX or 73XXXXXXX (without leading 0)
-    // Or 10 digits: 072XXXXXXX or 073XXXXXXX (with leading 0)
-    if (clean.length === 9) {
-      // Format: 72XXXXXXX or 73XXXXXXX (9 digits, starts with 72 or 73)
-      return /^(72|73)\d{7}$/.test(clean);
-    }
-    if (clean.length === 10) {
-      // Format: 072XXXXXXX or 073XXXXXXX (10 digits with leading 0)
-      return /^0(72|73)\d{7}$/.test(clean);
-    }
+    if (clean.length === 9) return /^(72|73)\d{7}$/.test(clean);
+    if (clean.length === 10) return /^0(72|73)\d{7}$/.test(clean);
     return false;
   };
 
   const handlePayment = async () => {
     if (!selectedMethod) {
-      Alert.alert("Select Method", "Please select a payment method");
+      Alert.alert("Selection Required", "Please choose how you'd like to pay.");
       return;
     }
 
     if (selectedMethod === "airtel_money") {
-      if (!phoneNumber || phoneNumber.trim().length === 0) {
-        Alert.alert(
-          "Phone Number Required",
-          "Please enter your Airtel Money phone number"
-        );
-        return;
-      }
       if (!validatePhoneNumber(phoneNumber)) {
-        Alert.alert(
-          "Invalid Number",
-          "Please enter a valid Airtel Money number (072X or 073X)"
-        );
+        Alert.alert("Invalid Number", "Please enter a valid Airtel Money number (072X or 073X).");
         return;
       }
+    }
+
+    if (isTopUp && amount < 1000) {
+      Alert.alert("Minimum Amount", "The minimum top-up amount is 1,000 RWF.");
+      return;
     }
 
     setLoading(true);
@@ -167,8 +176,7 @@ export default function PaymentScreen({
         amount,
         method: selectedMethod,
         type,
-        phoneNumber:
-          selectedMethod === "airtel_money" ? phoneNumber : undefined,
+        phoneNumber: selectedMethod === "airtel_money" ? phoneNumber : undefined,
         appointmentId,
         salonId,
         description,
@@ -176,7 +184,6 @@ export default function PaymentScreen({
 
       setPayment(paymentResponse);
 
-      // If Airtel Money, poll for status
       if (selectedMethod === "airtel_money") {
         try {
           const finalPayment = await paymentsService.pollStatus(
@@ -198,10 +205,7 @@ export default function PaymentScreen({
         setStatus("success");
       }
     } catch (error: any) {
-      Alert.alert(
-        "Payment Failed",
-        error.message || "Unable to process payment"
-      );
+      Alert.alert("Payment Error", error.message || "Something went wrong while processing your payment.");
       setStatus("failed");
     } finally {
       setLoading(false);
@@ -215,87 +219,96 @@ export default function PaymentScreen({
     navigation.goBack();
   };
 
-  // Processing/Result Screen
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={[styles.headerCircleButton, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}
+      >
+        <Ionicons name="chevron-back" size={24} color={dynamicStyles.text.color} />
+      </TouchableOpacity>
+      <Text style={[styles.headerTitle, dynamicStyles.text]}>
+        {isTopUp ? "Fund Wallet" : "Complete Payment"}
+      </Text>
+      <View style={{ width: 40 }} />
+    </View>
+  );
+
   if (status !== "input") {
     return (
       <SafeAreaView style={[styles.container, dynamicStyles.container]}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-
-        <View style={styles.resultContainer}>
+        <Animated.View style={[styles.resultContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          
           {status === "processing" && (
-            <>
-              <View style={styles.processingIcon}>
+            <View style={styles.stateContent}>
+              <View style={styles.loaderWrapper}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
+                <View style={styles.pulseContainer}>
+                   <View style={[styles.pulseCircle, { borderColor: theme.colors.primary }]} />
+                </View>
               </View>
-              <Text style={[styles.resultTitle, dynamicStyles.text]}>
-                Processing Payment
-              </Text>
+              <Text style={[styles.resultTitle, dynamicStyles.text]}>Awaiting Approval</Text>
               <Text style={[styles.resultMessage, dynamicStyles.textSecondary]}>
-                Please approve the payment on your phone...
+                We've sent a prompt to <Text style={{fontWeight: '700', color: theme.colors.primary}}>+250 {phoneNumber}</Text>. Please enter your PIN to authorize.
               </Text>
-              <Text style={[styles.phonePrompt, dynamicStyles.textSecondary]}>
-                Check your phone for Airtel Money prompt
-              </Text>
-            </>
+              <View style={styles.instructionCard}>
+                 <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
+                 <Text style={styles.instructionText}>Do not close this screen until the payment is confirmed.</Text>
+              </View>
+            </View>
           )}
 
           {status === "success" && (
-            <>
-              <View
-                style={[styles.successIcon, { backgroundColor: "#E6F7EA" }]}
-              >
-                <MaterialIcons
-                  name="check"
-                  size={48}
-                  color={theme.colors.success}
-                />
+            <View style={styles.stateContent}>
+              <View style={[styles.iconCircle, { backgroundColor: '#10B98120' }]}>
+                <Ionicons name="checkmark-circle" size={80} color="#10B981" />
               </View>
-              <Text style={[styles.resultTitle, dynamicStyles.text]}>
-                Payment Successful!
-              </Text>
+              <Text style={[styles.resultTitle, dynamicStyles.text]}>Payment Confirmed!</Text>
               <Text style={[styles.resultMessage, dynamicStyles.textSecondary]}>
-                Your payment of {paymentsService.formatAmount(amount)} has been
-                processed.
+                Successfully added <Text style={{fontWeight: '700', color: '#10B981'}}>{paymentsService.formatAmount(amount)}</Text> to your balance.
               </Text>
-              <TouchableOpacity
-                style={styles.doneButton}
-                onPress={handleDone}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.doneButtonText}>Done</Text>
+              
+              <View style={[styles.detailCard, dynamicStyles.card]}>
+                 <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, dynamicStyles.textSecondary]}>Transaction ID</Text>
+                    <Text style={[styles.detailValue, dynamicStyles.text]}>{payment?.id?.substring(0, 12).toUpperCase()}</Text>
+                 </View>
+                 <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, dynamicStyles.textSecondary]}>Status</Text>
+                    <Text style={[styles.detailValue, { color: '#10B981' }]}>Success</Text>
+                 </View>
+              </View>
+
+              <TouchableOpacity style={styles.primaryButton} onPress={handleDone}>
+                <Text style={styles.primaryButtonText}>Continue</Text>
               </TouchableOpacity>
-            </>
+            </View>
           )}
 
           {status === "failed" && (
-            <>
-              <View style={[styles.failedIcon, { backgroundColor: "#FFE5E5" }]}>
-                <MaterialIcons
-                  name="close"
-                  size={48}
-                  color={theme.colors.error}
-                />
+            <View style={styles.stateContent}>
+              <View style={[styles.iconCircle, { backgroundColor: '#EF444420' }]}>
+                <Ionicons name="close-circle" size={80} color="#EF4444" />
               </View>
-              <Text style={[styles.resultTitle, dynamicStyles.text]}>
-                Payment Failed
-              </Text>
+              <Text style={[styles.resultTitle, dynamicStyles.text]}>Payment Failed</Text>
               <Text style={[styles.resultMessage, dynamicStyles.textSecondary]}>
-                {payment?.failureReason ||
-                  "Unable to complete payment. Please try again."}
+                {payment?.failureReason || "The transaction was declined or timed out. Please check your balance and try again."}
               </Text>
-              <TouchableOpacity
-                style={[
-                  styles.doneButton,
-                  { backgroundColor: theme.colors.error },
-                ]}
+              
+              <TouchableOpacity 
+                style={[styles.primaryButton, { backgroundColor: '#EF4444' }]} 
                 onPress={() => setStatus("input")}
-                activeOpacity={0.7}
               >
-                <Text style={styles.doneButtonText}>Try Again</Text>
+                <Text style={styles.primaryButtonText}>Try Again</Text>
               </TouchableOpacity>
-            </>
+              
+              <TouchableOpacity style={styles.textButton} onPress={handleDone}>
+                <Text style={[styles.textButtonText, dynamicStyles.textSecondary]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           )}
-        </View>
+        </Animated.View>
       </SafeAreaView>
     );
   }
@@ -304,319 +317,166 @@ export default function PaymentScreen({
     <KeyboardAvoidingView
       style={[styles.container, dynamicStyles.container]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
     >
-      <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+      <SafeAreaView style={{ flex: 1 }}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={dynamicStyles.text.color}
-            />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, dynamicStyles.text]}>Payment</Text>
-          <View style={styles.headerRight} />
-        </View>
+        {renderHeader()}
 
         <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Top-Up Header with Icon */}
-          {isTopUp && (
-            <View style={styles.topUpHeader}>
-              <View
-                style={[
-                  styles.topUpIconContainer,
-                  { backgroundColor: theme.colors.primary + "20" },
-                ]}
-              >
-                <MaterialIcons
-                  name="account-balance-wallet"
-                  size={24}
-                  color={theme.colors.primary}
-                />
-              </View>
-              <Text style={[styles.topUpTitle, dynamicStyles.text]}>
-                Top Up Wallet
-              </Text>
-            </View>
-          )}
-
-          {/* Amount Display / Input */}
-          {isTopUp ? (
-            <View style={styles.amountSection}>
-              <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
-                Amount
-              </Text>
-              <View
-                style={[
-                  styles.amountInputContainer,
-                  dynamicStyles.input,
-                  amount >= 1000 && styles.amountInputContainerValid,
-                ]}
-              >
-                <Text style={[styles.currencyPrefix, dynamicStyles.text]}>
-                  RWF
-                </Text>
-                <TextInput
-                  style={[
-                    styles.amountInput,
-                    { color: dynamicStyles.text.color },
-                  ]}
-                  placeholder="0"
-                  placeholderTextColor={theme.colors.textTertiary}
-                  value={topUpAmount}
-                  onChangeText={(text) =>
-                    setTopUpAmount(text.replace(/[^0-9]/g, ""))
-                  }
-                  keyboardType="number-pad"
-                  maxLength={9}
-                />
-                {amount >= 1000 && (
-                  <MaterialIcons
-                    name="check-circle"
-                    size={18}
-                    color={theme.colors.success}
-                    style={styles.validIcon}
+          {/* Main Amount Card */}
+          <View style={[styles.mainAmountCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+             <Text style={[styles.cardLabel, dynamicStyles.textSecondary]}>
+                {isTopUp ? "Enter Top-up Amount" : "Payable Amount"}
+             </Text>
+             
+             {isTopUp ? (
+               <View style={styles.amountInputWrapper}>
+                  <Text style={[styles.currencySymbol, dynamicStyles.text]}>RWF</Text>
+                  <TextInput
+                    style={[styles.hugeInput, dynamicStyles.text]}
+                    value={topUpAmount}
+                    onChangeText={(text) => setTopUpAmount(text.replace(/[^0-9]/g, ""))}
+                    placeholder="0"
+                    placeholderTextColor={isDark ? "#334155" : "#CBD5E1"}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    autoFocus={type === 'wallet_topup'}
                   />
-                )}
-              </View>
+               </View>
+             ) : (
+               <Text style={[styles.hugeAmount, dynamicStyles.text]}>
+                  {paymentsService.formatAmount(amount)}
+               </Text>
+             )}
 
-              {/* Preset Amount Buttons */}
-              <View style={styles.presetAmountsContainer}>
-                {PRESET_AMOUNTS.map((preset) => (
-                  <TouchableOpacity
-                    key={preset}
-                    style={[
-                      styles.presetButton,
-                      dynamicStyles.card,
-                      Number(topUpAmount) === preset &&
-                        styles.presetButtonActive,
-                    ]}
-                    onPress={() => setTopUpAmount(String(preset))}
-                    activeOpacity={0.7}
-                  >
-                    <Text
+             {isTopUp && (
+               <View style={styles.chipsContainer}>
+                  {PRESET_AMOUNTS.map((val) => (
+                    <TouchableOpacity
+                      key={val}
                       style={[
-                        styles.presetButtonText,
-                        Number(topUpAmount) === preset
-                          ? styles.presetButtonTextActive
-                          : dynamicStyles.textSecondary,
+                        styles.chip,
+                        { backgroundColor: isDark ? '#0F172A' : '#F1F5F9' },
+                        Number(topUpAmount) === val && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
                       ]}
+                      onPress={() => setTopUpAmount(String(val))}
                     >
-                      {preset.toLocaleString()}
-                    </Text>
+                      <Text style={[
+                        styles.chipText, 
+                        dynamicStyles.textSecondary,
+                        Number(topUpAmount) === val && { color: '#FFF', fontWeight: '700' }
+                      ]}>
+                        +{val.toLocaleString()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+               </View>
+             )}
+          </View>
+
+          {/* Payment Method Selector */}
+          <View style={styles.section}>
+             <Text style={[styles.sectionHeading, dynamicStyles.text]}>Select Payment Method</Text>
+             {PAYMENT_METHODS.filter(pm => {
+                if (type === 'wallet_topup' && pm.method === 'wallet') return false;
+                return true;
+             }).map((pm) => {
+                const isSelected = selectedMethod === pm.method;
+                return (
+                  <TouchableOpacity
+                    key={pm.method}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedMethod(pm.method)}
+                    style={[
+                      styles.methodCard,
+                      dynamicStyles.card,
+                      isSelected && { borderColor: pm.color, borderWidth: 2, backgroundColor: pm.color + '08' }
+                    ]}
+                  >
+                    <View style={[styles.methodIconBox, { backgroundColor: pm.color + '15' }]}>
+                       <FontAwesome5 name={pm.icon} size={20} color={pm.color} />
+                    </View>
+                    <View style={styles.methodTextContent}>
+                       <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                          <Text style={[styles.methodLabel, dynamicStyles.text]}>{pm.label}</Text>
+                          {pm.badge && (
+                            <View style={[styles.miniBadge, { backgroundColor: pm.color }]}>
+                               <Text style={styles.miniBadgeText}>{pm.badge}</Text>
+                            </View>
+                          )}
+                       </View>
+                       <Text style={[styles.methodDesc, dynamicStyles.textSecondary]}>{pm.description}</Text>
+                    </View>
+                    <View style={[styles.selectorCircle, isSelected && { borderColor: pm.color }]}>
+                       {isSelected && <View style={[styles.selectorInner, { backgroundColor: pm.color }]} />}
+                    </View>
                   </TouchableOpacity>
-                ))}
-              </View>
+                );
+             })}
+          </View>
 
-              <Text style={[styles.minAmountHint, dynamicStyles.textSecondary]}>
-                Min: 1,000 RWF
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.amountSection}>
-              <Text style={[styles.amountLabel, dynamicStyles.textSecondary]}>
-                Amount to Pay
-              </Text>
-              <Text style={[styles.amountValue, dynamicStyles.text]}>
-                {paymentsService.formatAmount(amount)}
-              </Text>
-              {description && (
-                <Text
-                  style={[
-                    styles.amountDescription,
-                    dynamicStyles.textSecondary,
-                  ]}
-                >
-                  {description}
-                </Text>
-              )}
-            </View>
-          )}
-
-          {/* Payment Methods */}
-          <View style={styles.methodsSection}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-              Payment Method
-            </Text>
-
-            {PAYMENT_METHODS.map((pm) => (
-              <TouchableOpacity
-                key={pm.method}
-                style={[
-                  styles.methodCard,
-                  dynamicStyles.card,
-                  selectedMethod === pm.method && styles.methodCardSelected,
-                  pm.method === "airtel_money" && styles.airtelCard,
-                ]}
-                onPress={() => setSelectedMethod(pm.method)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.methodIcon,
-                    { backgroundColor: pm.color + "20" },
-                  ]}
-                >
-                  <MaterialIcons
-                    name={pm.icon as any}
-                    size={24}
-                    color={pm.color}
-                  />
-                </View>
-                <View style={styles.methodInfo}>
-                  <View style={styles.methodHeader}>
-                    <Text style={[styles.methodLabel, dynamicStyles.text]}>
-                      {pm.label}
-                    </Text>
-                    {pm.badge && (
-                      <View
-                        style={[styles.badge, { backgroundColor: pm.color }]}
-                      >
-                        <Text style={styles.badgeText}>{pm.badge}</Text>
-                      </View>
-                    )}
+          {/* Additional Details (Phone Number) */}
+          {selectedMethod === 'airtel_money' && (
+            <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+               <Text style={[styles.sectionHeading, dynamicStyles.text]}>Mobile Money Number</Text>
+               <View style={[styles.phoneInputBox, dynamicStyles.card, validatePhoneNumber(phoneNumber) && { borderColor: '#10B981' }]}>
+                  <View style={styles.countryCode}>
+                     <Text style={[styles.countryCodeText, dynamicStyles.text]}>+250</Text>
                   </View>
-                </View>
-                <View
-                  style={[
-                    styles.radioOuter,
-                    selectedMethod === pm.method && { borderColor: pm.color },
-                  ]}
-                >
-                  {selectedMethod === pm.method && (
-                    <View
-                      style={[styles.radioInner, { backgroundColor: pm.color }]}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Phone Number Input (Airtel Money) */}
-          {selectedMethod === "airtel_money" && (
-            <View style={styles.phoneSection}>
-              <View style={styles.phoneHeader}>
-                <MaterialIcons name="phone-android" size={20} color="#FFCC00" />
-                <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-                  Airtel Money Number
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.phoneInputContainer,
-                  dynamicStyles.input,
-                  validatePhoneNumber(phoneNumber) &&
-                    styles.phoneInputContainerValid,
-                ]}
-              >
-                <View style={styles.phonePrefixContainer}>
-                  <Text style={[styles.phonePrefix, dynamicStyles.text]}>
-                    +250
-                  </Text>
-                  <View style={styles.phoneDivider} />
-                </View>
-                <TextInput
-                  style={[
-                    styles.phoneInput,
-                    {
-                      color: isDark ? "#FFFFFF" : "#000000",
-                    },
-                  ]}
-                  placeholder="72X XXX XXX"
-                  placeholderTextColor={theme.colors.textTertiary}
-                  value={phoneNumber}
-                  onChangeText={(text) => {
-                    // Remove all non-digits
-                    const cleaned = text.replace(/\D/g, "");
-                    // Limit to 9 digits (Rwanda phone number without country code)
-                    const limited = cleaned.slice(0, 9);
-                    setPhoneNumber(limited);
-                  }}
-                  keyboardType="phone-pad"
-                  maxLength={9}
-                  autoFocus={false}
-                  selectionColor={theme.colors.primary}
-                />
-                {validatePhoneNumber(phoneNumber) && (
-                  <MaterialIcons
-                    name="check-circle"
-                    size={20}
-                    color={theme.colors.success}
-                    style={styles.validIcon}
+                  <TextInput
+                    style={[styles.phoneInput, dynamicStyles.text]}
+                    placeholder="7XXXXXXXX"
+                    placeholderTextColor={isDark ? "#475569" : "#94A3B8"}
+                    value={phoneNumber}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/\D/g, "");
+                      setPhoneNumber(cleaned.slice(0, 9));
+                    }}
+                    keyboardType="phone-pad"
+                    maxLength={9}
                   />
-                )}
-              </View>
-              <View style={styles.phoneHintContainer}>
-                <MaterialIcons
-                  name="info-outline"
-                  size={14}
-                  color={dynamicStyles.textSecondary.color}
-                />
-                <Text style={[styles.phoneHint, dynamicStyles.textSecondary]}>
-                  Enter your registered Airtel Money number (072X or 073X)
-                </Text>
-              </View>
-            </View>
+                  {validatePhoneNumber(phoneNumber) && (
+                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                  )}
+               </View>
+               <Text style={[styles.hintText, dynamicStyles.textSecondary]}>
+                  Enter the Airtel Money number that will receive the payment prompt.
+               </Text>
+            </Animated.View>
           )}
 
-          {/* Pay Button */}
-          <TouchableOpacity
-            style={[
-              styles.payButton,
-              (!selectedMethod ||
-                (selectedMethod === "airtel_money" && !phoneNumber) ||
-                (isTopUp && amount < 1000)) &&
-                styles.payButtonDisabled,
-            ]}
-            onPress={handlePayment}
-            activeOpacity={0.7}
-            disabled={
-              !selectedMethod ||
-              loading ||
-              (selectedMethod === "airtel_money" && !phoneNumber) ||
-              (isTopUp && amount < 1000)
-            }
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <MaterialIcons name="lock" size={20} color="#FFFFFF" />
-                <Text style={styles.payButtonText}>
-                  {isTopUp
-                    ? `Top Up ${paymentsService.formatAmount(amount)}`
-                    : `Pay ${paymentsService.formatAmount(amount)}`}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Security Note */}
-          <View style={styles.securityNote}>
-            <MaterialIcons
-              name="verified-user"
-              size={14}
-              color={theme.colors.success}
-            />
-            <Text style={[styles.securityText, dynamicStyles.textSecondary]}>
-              Secured with encryption
-            </Text>
-          </View>
         </ScrollView>
+
+        <View style={styles.footer}>
+           <View style={styles.secureBadge}>
+              <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+              <Text style={styles.secureText}>End-to-end encrypted payment</Text>
+           </View>
+           
+           <TouchableOpacity
+             style={[
+               styles.payButtonBig,
+               (!selectedMethod || (selectedMethod === 'airtel_money' && !validatePhoneNumber(phoneNumber)) || (isTopUp && amount < 1000)) && styles.disabledButton
+             ]}
+             disabled={loading}
+             onPress={handlePayment}
+           >
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.payButtonTextBig}>
+                     {isTopUp ? "Fund Wallet" : "Confirm Payment"}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                </>
+              )}
+           </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -627,349 +487,335 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  backButton: {
-    padding: theme.spacing.xs,
+  headerCircleButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  headerRight: {
-    width: 32,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  amountSection: {
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  amountLabel: {
-    fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginBottom: theme.spacing.xs,
-  },
-  amountValue: {
-    fontSize: 36,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
-  },
-  amountDescription: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.xs,
-  },
-  amountInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: theme.spacing.md,
-    height: 56,
-    marginBottom: theme.spacing.sm,
-  },
-  currencyPrefix: {
     fontSize: 16,
-    fontFamily: theme.fonts.medium,
-    fontWeight: "600",
-    marginRight: theme.spacing.sm,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 28,
     fontFamily: theme.fonts.bold,
-    fontWeight: "700",
+    fontWeight: '700',
   },
-  presetAmountsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 24,
   },
-  presetButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: 16,
+  mainAmountCard: {
+    padding: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  cardLabel: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  currencySymbol: {
+    fontSize: 20,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
+    opacity: 0.8,
+  },
+  hugeInput: {
+    fontSize: 36,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '800',
+    minWidth: 80,
+  },
+  hugeAmount: {
+    fontSize: 32,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '800',
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
+    borderColor: 'transparent',
   },
-  presetButtonActive: {
-    borderColor: theme.colors.primary,
-    borderWidth: 2,
-    backgroundColor: `${theme.colors.primary}10`,
-  },
-  presetButtonText: {
+  chipText: {
     fontSize: 12,
     fontFamily: theme.fonts.medium,
   },
-  presetButtonTextActive: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+  section: {
+    marginBottom: 20,
   },
-  minAmountHint: {
-    fontSize: 11,
-    fontFamily: theme.fonts.regular,
-    textAlign: "center",
-  },
-  amountInputContainerValid: {
-    borderColor: theme.colors.success,
-    borderWidth: 2,
-  },
-  validIcon: {
-    marginLeft: theme.spacing.sm,
-  },
-  topUpHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  topUpIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  topUpTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  methodsSection: {
-    marginBottom: theme.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.sm,
+  sectionHeading: {
+    fontSize: 14,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
+    marginBottom: 12,
+    marginLeft: 2,
   },
   methodCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.sm,
-    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: theme.spacing.xs,
-    gap: theme.spacing.sm,
+    marginBottom: 10,
   },
-  methodCardSelected: {
-    borderColor: theme.colors.primary,
-    borderWidth: 2,
-    backgroundColor: `${theme.colors.primary}05`,
+  methodIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  airtelCard: {
-    borderColor: "#FFCC00",
-  },
-  methodIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  methodInfo: {
+  methodTextContent: {
     flex: 1,
-  },
-  methodHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
   },
   methodLabel: {
     fontSize: 15,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  badge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "700",
     fontFamily: theme.fonts.bold,
+    fontWeight: '700',
   },
-  radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+  methodDesc: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+    marginTop: 1,
   },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.primary,
+  miniBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
-  phoneSection: {
-    marginBottom: theme.spacing.md,
+  miniBadgeText: {
+    color: '#FFF',
+    fontSize: 8,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
-  phoneHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-  },
-  phoneInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    minHeight: 50,
-  },
-  phoneInputContainerValid: {
-    borderColor: theme.colors.success,
-    borderWidth: 2,
-  },
-  phonePrefixContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: theme.spacing.sm,
-  },
-  phonePrefix: {
-    fontSize: 16,
-    fontFamily: theme.fonts.medium,
-  },
-  phoneDivider: {
-    width: 1,
+  selectorCircle: {
+    width: 20,
     height: 20,
-    backgroundColor: theme.colors.border,
-    marginLeft: theme.spacing.sm,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectorInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  phoneInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  countryCode: {
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
+    paddingRight: 10,
+    marginRight: 10,
+  },
+  countryCodeText: {
+    fontSize: 15,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
   },
   phoneInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: theme.fonts.regular,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xs,
-    minHeight: 40,
-    textAlign: "left",
-  },
-  phoneHintContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.xs,
-  },
-  phoneHint: {
-    fontSize: 12,
-    fontFamily: theme.fonts.regular,
-    flex: 1,
-  },
-  payButton: {
-    flexDirection: "row",
-    backgroundColor: theme.colors.buttonPrimary,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-  },
-  payButtonDisabled: {
-    opacity: 0.5,
-  },
-  payButtonText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "600",
     fontFamily: theme.fonts.medium,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  securityNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: theme.spacing.xs,
-    paddingVertical: theme.spacing.xs,
-  },
-  securityText: {
+  hintText: {
     fontSize: 11,
     fontFamily: theme.fonts.regular,
+    marginTop: 8,
+    marginLeft: 2,
+    lineHeight: 16,
+  },
+  footer: {
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 8 : 16,
+  },
+  secureBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginBottom: 12,
+  },
+  secureText: {
+    fontSize: 10,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  payButtonBig: {
+    backgroundColor: theme.colors.primary,
+    height: 54,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  disabledButton: {
+    opacity: 0.6,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  payButtonTextBig: {
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
   },
   resultContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: theme.spacing.xl,
+    justifyContent: 'center',
+    padding: 24,
   },
-  processingIcon: {
-    marginBottom: theme.spacing.lg,
+  stateContent: {
+    alignItems: 'center',
   },
-  successIcon: {
+  loaderWrapper: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  pulseContainer: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulseCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.lg,
+    borderWidth: 2,
+    opacity: 0.2,
   },
-  failedIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.lg,
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   resultTitle: {
     fontSize: 24,
-    fontWeight: "700",
     fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.md,
-    textAlign: "center",
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   resultMessage: {
-    fontSize: 16,
-    fontFamily: theme.fonts.regular,
-    textAlign: "center",
-    marginBottom: theme.spacing.xl,
-    lineHeight: 24,
+    fontSize: 15,
+    fontFamily: theme.fonts.medium,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
   },
-  phonePrompt: {
+  instructionCard: {
+    flexDirection: 'row',
+    backgroundColor: '#EBF5FF',
+    padding: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    gap: 10,
+  },
+  instructionText: {
+    color: '#1D4ED8',
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+    flex: 1,
+  },
+  detailCard: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 32,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  detailLabel: {
+    fontSize: 13,
+    fontFamily: theme.fonts.medium,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    width: '100%',
+    height: 54,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
+  },
+  textButton: {
+    marginTop: 16,
+    padding: 8,
+  },
+  textButtonText: {
     fontSize: 14,
-    fontFamily: theme.fonts.medium,
-    textAlign: "center",
-    marginTop: theme.spacing.lg,
-  },
-  doneButton: {
-    backgroundColor: theme.colors.buttonPrimary,
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.xl,
-    borderRadius: 8,
-    minWidth: 200,
-    alignItems: "center",
-  },
-  doneButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.bold,
   },
 });

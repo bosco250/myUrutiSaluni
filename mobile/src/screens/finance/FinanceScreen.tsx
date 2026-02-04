@@ -30,6 +30,7 @@ interface WalletData {
   balance: number;
   currency: string;
   pendingBalance?: number;
+  status?: string;
 }
 
 interface LoanData {
@@ -202,6 +203,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         balance,
         currency: response?.currency || "RWF",
         pendingBalance,
+        status: response?.status || 'active',
       });
     } catch (error) {
       console.error("Error fetching wallet:", error);
@@ -477,7 +479,12 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         </View>
         <View style={styles.walletActionButtons}>
           <TouchableOpacity
-            style={[styles.walletActionButton, styles.withdrawButton]}
+            style={[
+              styles.walletActionButton, 
+              styles.withdrawButton,
+              wallet?.status === 'blocked' && { opacity: 0.5 }
+            ]}
+            disabled={wallet?.status === 'blocked'}
             onPress={() =>
               navigation.navigate("Withdraw", {
                 onSuccess: () => {
@@ -495,7 +502,12 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
             <Text style={styles.withdrawButtonText}>Withdraw</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.walletActionButton, styles.topUpButton]}
+            style={[
+              styles.walletActionButton, 
+              styles.topUpButton,
+              wallet?.status === 'blocked' && { opacity: 0.5 }
+            ]}
+            disabled={wallet?.status === 'blocked'}
             onPress={() =>
               navigation.navigate("Payment", {
                 type: "wallet_topup",
@@ -516,10 +528,39 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         </View>
       </View>
 
-      <Text style={styles.walletLabel}>Wallet Balance</Text>
-      <Text style={styles.walletBalance}>
-        {formatCurrency(wallet?.balance || 0, wallet?.currency)}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+        <View>
+          <Text style={styles.walletLabel}>Wallet Balance</Text>
+          <Text style={styles.walletBalance}>
+            {formatCurrency(wallet?.balance || 0, wallet?.currency)}
+          </Text>
+        </View>
+        
+        {wallet?.status && wallet.status !== 'active' && (
+          <View style={[
+            styles.statusBadge, 
+            { backgroundColor: wallet.status === 'blocked' ? theme.colors.error : theme.colors.warning }
+          ]}>
+            <MaterialIcons 
+              name={wallet.status === 'blocked' ? "block" : "info-outline"} 
+              size={12} 
+              color="#FFF" 
+            />
+            <Text style={styles.statusBadgeText}>
+              {wallet.status.toUpperCase()}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {wallet?.status === 'blocked' && (
+        <View style={styles.blockedNotice}>
+          <MaterialIcons name="warning" size={14} color={theme.colors.error} />
+          <Text style={styles.blockedNoticeText}>
+            Your wallet is restricted. Please contact support.
+          </Text>
+        </View>
+      )}
 
       <TouchableOpacity
         style={styles.viewTransactionsButton}
@@ -1067,6 +1108,38 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 4,
+  },
+  statusBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: theme.fonts.bold,
+  },
+  blockedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  blockedNoticeText: {
+    color: theme.colors.error,
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+    flex: 1,
   },
 
   // Loan Card Styles
