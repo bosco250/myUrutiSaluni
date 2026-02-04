@@ -35,15 +35,21 @@ export class WalletsController {
     @Query('search') search?: string,
     @CurrentUser() user?: User,
   ) {
-    console.log(`[WalletsController] getAllWallets called by user: ${user?.id} (${user?.role})`);
-    console.log(`[WalletsController] Query params - page: ${page}, limit: ${limit}, search: ${search}`);
-    
+    console.log(
+      `[WalletsController] getAllWallets called by user: ${user?.id} (${user?.role})`,
+    );
+    console.log(
+      `[WalletsController] Query params - page: ${page}, limit: ${limit}, search: ${search}`,
+    );
+
     const result = await this.walletsService.getAllWallets(
       { page: page ? Number(page) : 1, limit: limit ? Number(limit) : 20 },
       search,
     );
-    
-    console.log(`[WalletsController] Returning ${result.data.length} wallets out of ${result.meta.total} total`);
+
+    console.log(
+      `[WalletsController] Returning ${result.data.length} wallets out of ${result.meta.total} total`,
+    );
     return result;
   }
 
@@ -101,9 +107,7 @@ export class WalletsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Cancel a pending transaction (admin only)' })
-  async cancelTransaction(
-    @Param('transactionId') transactionId: string,
-  ) {
+  async cancelTransaction(@Param('transactionId') transactionId: string) {
     return this.walletsService.cancelTransaction(transactionId);
   }
 

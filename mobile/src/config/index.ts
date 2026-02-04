@@ -6,8 +6,8 @@ const CONFIG = {
   // API URL - change this to your backend URL
   // For development on physical device, use your computer's IP address
   // For emulator, use 10.0.2.2 (Android) or localhost (iOS)
-  API_URL: 'http://192.168.1.76:4000/api',
-  // API_URL: 'http://161.97.148.53:4000/api',
+  API_URL: 'http://192.168.1.79:4000/api',
+  // API_URL: 'http://38.242.224.199:5000/api',
   
   // App info
   APP_NAME: 'URUTI Saluni',

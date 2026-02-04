@@ -44,7 +44,8 @@ export class UploadsController {
     if (!file) {
       throw new NotFoundException('No file uploaded');
     }
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const baseUrl =
+      process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     return this.uploadsService.uploadFile(file, baseUrl, 'avatars');
   }
 
@@ -70,7 +71,8 @@ export class UploadsController {
     if (!file) {
       throw new NotFoundException('No file uploaded');
     }
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const baseUrl =
+      process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     return this.uploadsService.uploadFile(file, baseUrl, 'services');
   }
 
@@ -96,7 +98,8 @@ export class UploadsController {
     if (!file) {
       throw new NotFoundException('No file uploaded');
     }
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const baseUrl =
+      process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     return this.uploadsService.uploadFile(file, baseUrl, 'documents');
   }
 
@@ -122,7 +125,8 @@ export class UploadsController {
     if (!file) {
       throw new NotFoundException('No file uploaded');
     }
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const baseUrl =
+      process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     return this.uploadsService.uploadFile(file, baseUrl, 'salons');
   }
 

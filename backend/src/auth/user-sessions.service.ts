@@ -10,13 +10,16 @@ export class UserSessionsService {
     private sessionsRepository: Repository<UserSession>,
   ) {}
 
-  async createSession(userId: string, deviceInfo: {
-    deviceType?: string;
-    browser?: string;
-    os?: string;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<UserSession> {
+  async createSession(
+    userId: string,
+    deviceInfo: {
+      deviceType?: string;
+      browser?: string;
+      os?: string;
+      ipAddress?: string;
+      userAgent?: string;
+    },
+  ): Promise<UserSession> {
     // Set expiry to 7 days from now (matching JWT default)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);

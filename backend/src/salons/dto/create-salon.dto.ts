@@ -102,7 +102,10 @@ export class CreateSalonDto {
   @IsString({ each: true })
   images?: string[];
 
-  @ApiProperty({ required: false, description: 'Salon status (e.g., active, pending, verification_pending)' })
+  @ApiProperty({
+    required: false,
+    description: 'Salon status (e.g., active, pending, verification_pending)',
+  })
   @IsOptional()
   @IsString()
   status?: string;

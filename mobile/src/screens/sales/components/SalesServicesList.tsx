@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../../theme';
+import { getImageUrl } from '../../../utils/imageUrl';
 
 interface ServiceItem {
   id: string;
@@ -40,69 +41,73 @@ export const SalesServicesList: React.FC<SalesServicesListProps> = React.memo(({
     );
   }, [services, searchQuery]);
 
-  const renderServiceCard = React.useCallback(({ item: service }: { item: ServiceItem }) => (
-    <TouchableOpacity
-      style={[styles.itemCard, dynamicStyles.card]}
-      onPress={() => onAddToCart(service)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.imageContainer}>
-        {service.imageUrl ? (
-          <Image
-            source={{ uri: service.imageUrl }}
-            style={styles.serviceImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={[
-              styles.placeholderIcon,
-              { backgroundColor: theme.colors.secondary + "15" },
-            ]}
-          >
-            <MaterialIcons
-              name="content-cut"
-              size={24}
-              color={theme.colors.secondary}
+  const renderServiceCard = React.useCallback(({ item: service }: { item: ServiceItem }) => {
+    const imageUrl = getImageUrl(service.imageUrl);
+    
+    return (
+      <TouchableOpacity
+        style={[styles.itemCard, dynamicStyles.card]}
+        onPress={() => onAddToCart(service)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.imageContainer}>
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.serviceImage}
+              resizeMode="cover"
             />
-          </View>
-        )}
-      </View>
-
-      <View style={styles.contentContainer}>
-        <View style={styles.itemInfo}>
-          <Text
-            style={[styles.itemName, dynamicStyles.text]}
-            numberOfLines={2}
-          >
-            {service.name}
-          </Text>
-          {service.duration && (
-            <Text
-              style={[styles.itemMeta, dynamicStyles.textSecondary]}
+          ) : (
+            <View
+              style={[
+                styles.placeholderIcon,
+                { backgroundColor: theme.colors.secondary + "15" },
+              ]}
             >
-              {service.duration} min
-            </Text>
+              <MaterialIcons
+                name="content-cut"
+                size={24}
+                color={theme.colors.secondary}
+              />
+            </View>
           )}
         </View>
 
-        <View style={styles.footer}>
-          <Text
-            style={[styles.itemPrice, { color: theme.colors.primary }]}
-          >
-            RWF {service.price.toLocaleString()}
-          </Text>
-          <View style={styles.addButton}>
-            <MaterialIcons
-              name="add"
-              size={18}
-              color={theme.colors.white}
-            />
+        <View style={styles.contentContainer}>
+          <View style={styles.itemInfo}>
+            <Text
+              style={[styles.itemName, dynamicStyles.text]}
+              numberOfLines={2}
+            >
+              {service.name}
+            </Text>
+            {service.duration && (
+              <Text
+                style={[styles.itemMeta, dynamicStyles.textSecondary]}
+              >
+                {service.duration} min
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.footer}>
+            <Text
+              style={[styles.itemPrice, { color: theme.colors.primary }]}
+            >
+              RWF {service.price.toLocaleString()}
+            </Text>
+            <View style={styles.addButton}>
+              <MaterialIcons
+                name="add"
+                size={18}
+                color={theme.colors.white}
+              />
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  ), [onAddToCart, dynamicStyles]);
+      </TouchableOpacity>
+    );
+  }, [onAddToCart, dynamicStyles]);
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>

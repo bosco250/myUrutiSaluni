@@ -84,7 +84,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
             textStyle={styles.primaryButtonText}
           />
           <TouchableOpacity
-            onPress={handleGetStarted}
+            onPress={() => navigation?.navigate("guest")}
             style={styles.skipButton}
           >
             <Text style={styles.skipText}>Skip for now</Text>

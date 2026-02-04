@@ -100,9 +100,10 @@ export class NotificationsService {
         });
       }
 
-      const preference = prefWhere.length > 0 
-        ? await this.preferencesRepository.findOne({ where: prefWhere }) 
-        : null;
+      const preference =
+        prefWhere.length > 0
+          ? await this.preferencesRepository.findOne({ where: prefWhere })
+          : null;
 
       if (preference && !preference.enabled) {
         this.logger.log(
@@ -470,11 +471,15 @@ export class NotificationsService {
       this.logger.log(`🧪 Sending test notification to user ${userId}`);
 
       // Fetch user email
-      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      const user = await this.usersRepository.findOne({
+        where: { id: userId },
+      });
       const recipientEmail = user?.email;
 
       if (!recipientEmail) {
-        this.logger.warn(`Could not find email for user ${userId}, skipping email test`);
+        this.logger.warn(
+          `Could not find email for user ${userId}, skipping email test`,
+        );
       }
 
       // Send via orchestrator to test all channels

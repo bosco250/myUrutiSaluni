@@ -1,4 +1,10 @@
-import { MigrationInterface, QueryRunner, Table, TableIndex, TableForeignKey } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  Table,
+  TableIndex,
+  TableForeignKey,
+} from 'typeorm';
 
 export class AddDeviceTokens1770043312000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -122,7 +128,10 @@ export class AddDeviceTokens1770043312000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop indexes
     await queryRunner.dropIndex('device_tokens', 'IDX_DEVICE_TOKENS_STATUS');
-    await queryRunner.dropIndex('device_tokens', 'IDX_DEVICE_TOKENS_USER_PLATFORM');
+    await queryRunner.dropIndex(
+      'device_tokens',
+      'IDX_DEVICE_TOKENS_USER_PLATFORM',
+    );
     await queryRunner.dropIndex('device_tokens', 'IDX_DEVICE_TOKENS_USER_ID');
 
     // Drop foreign key

@@ -56,12 +56,12 @@ export class SalonsController {
 
   @Get('employees/:employeeId/verify')
   @Public()
-  @ApiOperation({ summary: 'Verify employee authenticity (public - for QR code scanning)' })
-  async verifyEmployee(
-    @Param('employeeId', ParseUUIDPipe) employeeId: string,
-  ) {
+  @ApiOperation({
+    summary: 'Verify employee authenticity (public - for QR code scanning)',
+  })
+  async verifyEmployee(@Param('employeeId', ParseUUIDPipe) employeeId: string) {
     const employee = await this.salonsService.findEmployeeById(employeeId);
-    
+
     if (!employee) {
       throw new NotFoundException('Employee not found');
     }
@@ -74,8 +74,11 @@ export class SalonsController {
         id: employee.id,
         fullName: employee.user?.fullName || 'Unknown',
         roleTitle: employee.roleTitle || 'Staff Member',
-        employmentType: employee.employmentType 
-          ? employee.employmentType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+        employmentType: employee.employmentType
+          ? employee.employmentType
+              .replace('_', ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, (l) => l.toUpperCase())
           : 'Employee',
         hireDate: employee.hireDate,
         isActive: employee.isActive !== false,
@@ -98,23 +101,33 @@ export class SalonsController {
     const salon = await this.salonsService.findOne(salonId);
 
     // Debug logging to troubleshoot access issues
-    this.logger.debug(`checkSalonAccess - User ID: ${user.id}, User Role: ${user.role}`);
-    this.logger.debug(`checkSalonAccess - Salon ID: ${salonId}, Salon Owner ID: ${salon.ownerId}`);
-    this.logger.debug(`checkSalonAccess - Owner match: ${salon.ownerId === user.id}`);
+    this.logger.debug(
+      `checkSalonAccess - User ID: ${user.id}, User Role: ${user.role}`,
+    );
+    this.logger.debug(
+      `checkSalonAccess - Salon ID: ${salonId}, Salon Owner ID: ${salon.ownerId}`,
+    );
+    this.logger.debug(
+      `checkSalonAccess - Owner match: ${salon.ownerId === user.id}`,
+    );
 
     if (
       user.role === UserRole.SALON_OWNER ||
       user.role === UserRole.SALON_EMPLOYEE
     ) {
       if (salon.ownerId !== user.id) {
-        this.logger.debug(`checkSalonAccess - User is not owner, checking if employee...`);
+        this.logger.debug(
+          `checkSalonAccess - User is not owner, checking if employee...`,
+        );
         const isEmployee = await this.salonsService.isUserEmployeeOfSalon(
           user.id,
           salonId,
         );
         this.logger.debug(`checkSalonAccess - Is employee: ${isEmployee}`);
         if (!isEmployee) {
-          this.logger.warn(`checkSalonAccess - Access denied for user ${user.id} to salon ${salonId}`);
+          this.logger.warn(
+            `checkSalonAccess - Access denied for user ${user.id} to salon ${salonId}`,
+          );
           /* 
           // TEMPORARY BYPASS: allow access even if ownership check fails
           throw new ForbiddenException(
@@ -176,7 +189,8 @@ export class SalonsController {
 
     // Salon owners / employees in browse mode — only active salons
     if (
-      (user.role === UserRole.SALON_OWNER || user.role === UserRole.SALON_EMPLOYEE) &&
+      (user.role === UserRole.SALON_OWNER ||
+        user.role === UserRole.SALON_EMPLOYEE) &&
       isBrowseMode
     ) {
       return this.salonsService.findAllActive();
@@ -279,7 +293,11 @@ export class SalonsController {
       const isBrowseMode = browse === 'true';
 
       // Public users (unauthenticated) and Customers can view employees for booking purposes
-      if (!user || user.role === UserRole.CUSTOMER || user.role === 'customer') {
+      if (
+        !user ||
+        user.role === UserRole.CUSTOMER ||
+        user.role === 'customer'
+      ) {
         // Return only active employees for customers/public
         const allEmployees = await this.salonsService.getSalonEmployees(id);
         return allEmployees.filter((emp: any) => emp.isActive !== false);
@@ -683,7 +701,10 @@ export class SalonsController {
 
   @Get('pending-verification')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
-  @ApiOperation({ summary: 'Get salons for verification (Admin only). Supports ?status, ?page, ?limit.' })
+  @ApiOperation({
+    summary:
+      'Get salons for verification (Admin only). Supports ?status, ?page, ?limit.',
+  })
   async getSalonsForVerification(
     @Query('status') status?: string,
     @Query('page') page?: string,
@@ -711,7 +732,12 @@ export class SalonsController {
       throw new ForbiddenException('Document does not belong to this salon');
     }
 
-    return this.salonsService.reviewDocument(documentId, reviewDto.status, reviewDto.notes, user?.id);
+    return this.salonsService.reviewDocument(
+      documentId,
+      reviewDto.status,
+      reviewDto.notes,
+      user?.id,
+    );
   }
 
   @Patch(':id/verify')
@@ -721,7 +747,11 @@ export class SalonsController {
     @Param('id', ParseUUIDPipe) salonId: string,
     @Body() verifyDto: { approved: boolean; rejectionReason?: string },
   ) {
-    return this.salonsService.verifySalon(salonId, verifyDto.approved, verifyDto.rejectionReason);
+    return this.salonsService.verifySalon(
+      salonId,
+      verifyDto.approved,
+      verifyDto.rejectionReason,
+    );
   }
 
   @Patch(':id/status')
@@ -731,11 +761,23 @@ export class SalonsController {
     @Param('id', ParseUUIDPipe) salonId: string,
     @Body() body: { status: string; reason?: string },
   ) {
-    const allowedStatuses = ['active', 'pending', 'verification_pending', 'rejected', 'inactive'];
+    const allowedStatuses = [
+      'active',
+      'pending',
+      'verification_pending',
+      'rejected',
+      'inactive',
+    ];
     if (!allowedStatuses.includes(body.status)) {
-      throw new BadRequestException(`Invalid status. Allowed: ${allowedStatuses.join(', ')}`);
+      throw new BadRequestException(
+        `Invalid status. Allowed: ${allowedStatuses.join(', ')}`,
+      );
     }
-    return this.salonsService.updateSalonStatus(salonId, body.status, body.reason);
+    return this.salonsService.updateSalonStatus(
+      salonId,
+      body.status,
+      body.reason,
+    );
   }
 
   // ==================== Generic Routes (MUST come after specific routes) ====================
@@ -760,7 +802,9 @@ export class SalonsController {
     // Non-active salons are invisible to everyone except admins and the salon's own owner/employees
     if (salon.status !== 'active' && !isAdmin) {
       const isOwner = salon.ownerId === user?.id;
-      const isEmployee = user ? await this.salonsService.isUserEmployeeOfSalon(user.id, id) : false;
+      const isEmployee = user
+        ? await this.salonsService.isUserEmployeeOfSalon(user.id, id)
+        : false;
       if (!isOwner && !isEmployee) {
         throw new NotFoundException('Salon not found');
       }
@@ -778,8 +822,10 @@ export class SalonsController {
 
     // Salon owners / employees in browse mode — active salon already confirmed above
     if (
-      (userRole === UserRole.SALON_OWNER || userRole === 'salon_owner' ||
-       userRole === UserRole.SALON_EMPLOYEE || userRole === 'salon_employee') &&
+      (userRole === UserRole.SALON_OWNER ||
+        userRole === 'salon_owner' ||
+        userRole === UserRole.SALON_EMPLOYEE ||
+        userRole === 'salon_employee') &&
       isBrowseMode
     ) {
       return salon;
@@ -845,22 +891,37 @@ export class SalonsController {
   }
 
   @Post(':id/documents')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Add a document to a salon' })
   async createDocument(
     @Param('id', ParseUUIDPipe) salonId: string,
     @Body() createDocumentDto: CreateDocumentDto,
     @CurrentUser() user: any,
   ) {
-    this.logger.log(`Creating document for salon ${salonId}: ${JSON.stringify(createDocumentDto)}`);
+    this.logger.log(
+      `Creating document for salon ${salonId}: ${JSON.stringify(createDocumentDto)}`,
+    );
     await this.checkSalonAccess(salonId, user);
-    const doc = await this.salonsService.createDocument(salonId, createDocumentDto);
+    const doc = await this.salonsService.createDocument(
+      salonId,
+      createDocumentDto,
+    );
     this.logger.log(`Document created successfully: ${doc.id}`);
     return doc;
   }
 
   @Get(':id/documents')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get all documents for a salon' })
   async getDocuments(
     @Param('id', ParseUUIDPipe) salonId: string,
@@ -964,6 +1025,4 @@ export class SalonsController {
 
     return this.salonsService.removeEmployee(employeeId);
   }
-
-
 }

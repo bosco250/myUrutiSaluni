@@ -7,6 +7,10 @@ import {
   Alert,
   Text,
   TouchableOpacity,
+  Animated,
+  Dimensions,
+  Easing,
+  Platform,
 } from "react-native";
 import AuthNavigator from "./AuthNavigator";
 import WelcomeScreen from "../screens/WelcomeScreen";
@@ -28,7 +32,9 @@ import {
   mapScreenToTab,
   ROLE_NAVIGATION_TABS,
   NavigationTab,
+  GUEST_NAVIGATION_TABS,
 } from "./navigationConfig";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import BottomNavigation from "../components/common/BottomNavigation";
 import SwipeableTabNavigator from "../components/common/SwipeableTabNavigator";
 import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
@@ -143,12 +149,48 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
   const unreadNotificationCount = useUnreadNotifications();
   const [showWelcome, setShowWelcome] = useState(true);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<MainScreen>("Home");
   const [screenParams, setScreenParams] = useState<any>({});
   const [screenHistory, setScreenHistory] = useState<HistoryItem[]>([
     { name: "Home", params: {} },
   ]);
   const [activeTab, setActiveTab] = useState<string>("home");
+  
+  // Menu Animation State
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuAnim = React.useRef(new Animated.Value(0)).current;
+
+  const toggleMenu = useCallback((show: boolean) => {
+    if (show) setIsMenuOpen(true);
+    Animated.timing(menuAnim, {
+      toValue: show ? Dimensions.get('window').width * 0.75 : 0,
+      duration: 400,
+      useNativeDriver: false, // Width animation requires JS driver
+      easing: Easing.inOut(Easing.ease),
+    }).start(() => {
+      if (!show) setIsMenuOpen(false);
+    });
+  }, [menuAnim]);
+
+  // Track whether the user has ever been authenticated in this session.
+  // When they log out (token disappears), reset back to the Welcome entry point
+  // so the app doesn't stay stuck on the Login screen forever.
+  const wasAuthenticatedRef = React.useRef(false);
+  useEffect(() => {
+    if (isAuthenticated) {
+      wasAuthenticatedRef.current = true;
+    } else if (wasAuthenticatedRef.current && !isLoading) {
+      // Transition: was authenticated → now logged out → back to Welcome
+      wasAuthenticatedRef.current = false;
+      setIsGuest(false);
+      setShowWelcome(true);
+      setHasShownWelcome(false);
+      setCurrentScreen("Home");
+      setScreenHistory([{ name: "Home", params: {} }]);
+      setActiveTab("home");
+    }
+  }, [isAuthenticated, isLoading]);
 
   // Initialize permission check hook - it will automatically load salonId and employeeId
   // No need to load salonId separately as the hook handles it internally
@@ -216,6 +258,31 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       setActiveTab(initialTab);
     }
   }, [isLoading, isAuthenticated, hasShownWelcome, user]);
+
+  // Resume a pending booking intent after the user logs in from guest mode
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      AsyncStorage.getItem("@booking_intent").then((raw) => {
+        if (!raw) return;
+        AsyncStorage.removeItem("@booking_intent");
+        try {
+          const intent = JSON.parse(raw);
+          // Defer to let the role-home effect finish first
+          setTimeout(() => {
+            setCurrentScreen("BookingFlow" as MainScreen);
+            setScreenParams(intent);
+            setScreenHistory((prev) => [
+              ...prev,
+              { name: "BookingFlow" as MainScreen, params: intent },
+            ]);
+          }, 200);
+        } catch {
+          // malformed intent — ignore
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user]);
 
   // Sync activeTab with current screen based on role
   // This ensures the correct tab is highlighted when navigating
@@ -368,9 +435,15 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     return () => backHandler.remove();
   }, [handleBackPress]);
 
-  const handleWelcomeComplete = () => {
+  const handleWelcomeComplete = (screen?: string) => {
     setShowWelcome(false);
     setHasShownWelcome(true);
+    if (screen === "guest") {
+      setIsGuest(true);
+      setCurrentScreen("Explore");
+      setScreenHistory([{ name: "Explore", params: {} }]);
+      setActiveTab("explore");
+    }
   };
 
   const handleNavigate = useCallback(
@@ -380,6 +453,23 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       // Ensure we have a valid screen
       if (!targetScreen) {
         console.warn("handleNavigate called with invalid screen:", screen);
+        return;
+      }
+
+      // Handle Menu Navigation Slide-In
+      if (screen === 'MoreMenu') {
+        toggleMenu(true);
+        return;
+      }
+      
+      // Close menu if navigating elsewhere
+      if (isMenuOpen) {
+        toggleMenu(false);
+      }
+
+      // Guest mode: Login / SignUp switches to auth flow
+      if (isGuest && (screen === "Login" || screen === "SignUp")) {
+        setIsGuest(false);
         return;
       }
 
@@ -448,7 +538,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       setCurrentScreen(targetScreen);
       setScreenParams(params || {});
     },
-    [user?.role, safeCheckPermission, isOwner, isAdmin, permissionsLoading]
+    [user?.role, safeCheckPermission, isOwner, isAdmin, permissionsLoading, isGuest, isMenuOpen, toggleMenu]
   );
 
   // Expose navigate function to parent via callback
@@ -459,6 +549,11 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
   }, [onNavigationReady, handleNavigate]);
 
   const handleGoBack = useCallback(() => {
+    if (isMenuOpen) {
+      toggleMenu(false);
+      return;
+    }
+
     if (screenHistory.length > 1) {
       const newHistory = [...screenHistory];
       newHistory.pop(); // Remove current screen
@@ -486,11 +581,17 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       setCurrentScreen(homeScreen);
       setScreenHistory([{ name: homeScreen, params: {} }]);
     }
-  }, [screenHistory, user?.role]);
+  }, [screenHistory, user?.role, isMenuOpen, toggleMenu]);
 
   // Handle tab press - role aware - memoized to prevent re-renders
   const handleTabPress = React.useCallback(
     (tabId: string) => {
+      // Guest mode: Sign In tab switches to auth flow
+      if (isGuest && tabId === "signin") {
+        setIsGuest(false);
+        return;
+      }
+
       // First, determine what screen this tab should navigate to
       // We need to check both owner and employee tabs to find the right screen
       let targetScreen: MainScreen = "Home"; // Default fallback
@@ -513,6 +614,8 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
             targetScreen = "Finance";
           } else if (tab.screen === Screen.MORE_MENU) {
             targetScreen = "MoreMenu";
+          } else if (tab.screen === Screen.PROFILE) {
+            targetScreen = "Profile";
           }
         }
       }
@@ -615,6 +718,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       isAdmin,
       hasOwnerLevelPermissions, // Include in dependencies
       currentScreen, // Include currentScreen to detect salon mode correctly
+      isGuest,
     ]
   );
 
@@ -622,8 +726,9 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
   // SWIPE NAVIGATION HOOKS - Must be before any conditional returns
   // ========================================================================
   
-  // Get current navigation tabs for the user's role
+  // Get current navigation tabs for the user's role (guest mode returns guest tabs)
   const currentTabs = useMemo(() => {
+    if (isGuest) return GUEST_NAVIGATION_TABS;
     return getNavigationTabsForRole(
       user?.role,
       safeCheckPermission,
@@ -632,7 +737,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
       hasOwnerLevelPermissions || false,
       currentScreen
     );
-  }, [user?.role, safeCheckPermission, isOwner, isAdmin, hasOwnerLevelPermissions, currentScreen]);
+  }, [isGuest, user?.role, safeCheckPermission, isOwner, isAdmin, hasOwnerLevelPermissions, currentScreen]);
 
   // Map tab IDs to screen names for rendering
   const getScreenNameForTab = useCallback((tabId: string): string => {
@@ -734,14 +839,14 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
     return <WelcomeScreen navigation={{ navigate: handleWelcomeComplete }} />;
   }
 
-  // After authentication, show main app screens using screen router
-  if (isAuthenticated) {
+  // After authentication (or in guest mode), show main app screens
+  if (isAuthenticated || isGuest) {
     try {
       return (
         <View style={{ flex: 1 }}>
           {/* Main Content Area */}
-          {isMainTabScreen ? (
-            // Swipeable tabs for main navigation screens
+          {isMainTabScreen && !isGuest ? (
+            // Swipeable tabs for main navigation screens (disabled in guest mode)
             <SwipeableTabNavigator
               tabs={currentTabs}
               activeTabId={activeTab}
@@ -750,7 +855,7 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
               enabled={currentTabs.length > 1}
             />
           ) : (
-            // Detail screens render directly without swipe
+            // Detail screens (and guest explore) render directly without swipe
             renderScreen(
               screenToShow,
               handleNavigate,
@@ -759,13 +864,69 @@ function NavigationContent({ onNavigationReady }: NavigationContentProps) {
             )
           )}
 
-          {/* Bottom Navigation */}
-          <BottomNavigation
-            activeTab={activeTab}
-            onTabPress={handleTabPress}
-            unreadNotificationCount={unreadNotificationCount}
-            currentScreen={currentScreen}
-          />
+
+
+          {/* Sliding Menu Overlay */}
+          {isMenuOpen && (
+            <>
+              {/* Backdrop */}
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  top: 0, 
+                  bottom: 0, 
+                  left: 0, 
+                  right: 0,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  zIndex: 9998,
+                }}
+                activeOpacity={1}
+                onPress={() => toggleMenu(false)}
+              />
+              
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  bottom: Platform.OS === 'ios' ? 100 : 88, // Clear bottom nav fully
+                  left: 0,
+                  zIndex: 9999,
+                  backgroundColor: theme.colors.background,
+                  borderTopRightRadius: 24,
+                  borderBottomRightRadius: 24,
+                  width: menuAnim,
+                  overflow: 'hidden', // Clip content as width grows
+                  elevation: 10,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 4, height: 0 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                }}
+              >
+                <View style={{ width: Dimensions.get('window').width * 0.75, height: '100%' }}>
+                {renderScreen(
+                  "MoreMenu", 
+                  handleNavigate, 
+                  () => toggleMenu(false), // Custom back for menu
+                  {}
+                )}
+                </View>
+              </Animated.View>
+            </>
+          )}
+
+          {/* Bottom Navigation: Only shown on top-level tab screens */}
+          {isMainTabScreen && (
+            <View style={{ zIndex: 10001, elevation: 20, backgroundColor: theme.colors.background }}>
+              <BottomNavigation
+                activeTab={activeTab}
+                onTabPress={handleTabPress}
+                unreadNotificationCount={unreadNotificationCount}
+                currentScreen={currentScreen}
+                tabsOverride={isGuest ? GUEST_NAVIGATION_TABS : undefined}
+              />
+            </View>
+          )}
         </View>
       );
     } catch (error) {

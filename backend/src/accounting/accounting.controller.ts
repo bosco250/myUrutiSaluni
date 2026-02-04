@@ -245,7 +245,9 @@ export class AccountingController {
 
   @Get('accounts')
   @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
-  @ApiOperation({ summary: 'Get all chart of accounts (Assets, Liabilities, etc.)' })
+  @ApiOperation({
+    summary: 'Get all chart of accounts (Assets, Liabilities, etc.)',
+  })
   @ApiQuery({ name: 'salonId', required: true })
   @ApiQuery({ name: 'type', required: false })
   async getAccounts(
@@ -254,24 +256,33 @@ export class AccountingController {
   ) {
     return this.accountingService.getAccounts(salonId, type);
   }
-  
+
   @Get('reports/accounts')
   @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
   @ApiOperation({ summary: 'Get all chart of accounts report' })
   @ApiQuery({ name: 'salonId', required: true })
   async getAccountsReport(@Query('salonId') salonId: string) {
     const assets = await this.accountingService.getAccounts(salonId, 'asset');
-    const liabilities = await this.accountingService.getAccounts(salonId, 'liability');
+    const liabilities = await this.accountingService.getAccounts(
+      salonId,
+      'liability',
+    );
     const equity = await this.accountingService.getAccounts(salonId, 'equity');
-    const revenue = await this.accountingService.getAccounts(salonId, 'revenue');
-    const expenses = await this.accountingService.getAccounts(salonId, 'expense');
+    const revenue = await this.accountingService.getAccounts(
+      salonId,
+      'revenue',
+    );
+    const expenses = await this.accountingService.getAccounts(
+      salonId,
+      'expense',
+    );
 
     return {
       assets,
       liabilities,
       equity,
       revenue,
-      expenses
+      expenses,
     };
   }
 
@@ -285,8 +296,11 @@ export class AccountingController {
     @Query('asOfDate') asOfDate: string,
     @Res() res: Response,
   ) {
-    const buffer = await this.accountingService.exportBalanceSheetToPdf(salonId, asOfDate);
-    
+    const buffer = await this.accountingService.exportBalanceSheetToPdf(
+      salonId,
+      asOfDate,
+    );
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=balance-sheet-${asOfDate}.pdf`,
@@ -308,8 +322,12 @@ export class AccountingController {
     @Query('endDate') endDate: string,
     @Res() res: Response,
   ) {
-    const buffer = await this.accountingService.exportProfitAndLossToPdf(salonId, startDate, endDate);
-    
+    const buffer = await this.accountingService.exportProfitAndLossToPdf(
+      salonId,
+      startDate,
+      endDate,
+    );
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=profit-loss-${endDate}.pdf`,
@@ -327,8 +345,9 @@ export class AccountingController {
     @Query('salonId') salonId: string,
     @Res() res: Response,
   ) {
-    const buffer = await this.accountingService.exportChartOfAccountsToPdf(salonId);
-    
+    const buffer =
+      await this.accountingService.exportChartOfAccountsToPdf(salonId);
+
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=chart-of-accounts.pdf`,
@@ -341,7 +360,10 @@ export class AccountingController {
   @Patch('accounts/:id')
   @RequirePermission(EmployeePermission.MANAGE_EXPENSES)
   @ApiOperation({ summary: 'Update an account' })
-  async updateAccount(@Param('id') id: string, @Body() updates: Partial<CreateAccountDto>) {
+  async updateAccount(
+    @Param('id') id: string,
+    @Body() updates: Partial<CreateAccountDto>,
+  ) {
     return this.accountingService.updateAccount(id, updates);
   }
 

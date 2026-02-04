@@ -414,6 +414,13 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       color: "#00BFA5",
     },
     {
+      id: "inventory",
+      label: "Inventory",
+      icon: "inventory-2",
+      screen: "StockManagement",
+      color: "#FF9800",
+    },
+    {
       id: "payments",
       label: "Payments",
       icon: "history",

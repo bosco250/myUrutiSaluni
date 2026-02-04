@@ -67,7 +67,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     const resolveUrl = (url?: string) => {
       if (!url) return null;
       if (url.startsWith('http')) return url;
-      const cleanBase = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+      const cleanBase = backendUrl.endsWith('/')
+        ? backendUrl.slice(0, -1)
+        : backendUrl;
       const cleanPath = url.startsWith('/') ? url : '/' + url;
       return `${cleanBase}${cleanPath}`;
     };
@@ -79,31 +81,36 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
         let qrCodeDataUrl = '';
         try {
           // Generate verification URL for QR code
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-          const cleanFrontendUrl = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : frontendUrl;
+          const frontendUrl =
+            process.env.FRONTEND_URL || 'http://localhost:3000';
+          const cleanFrontendUrl = frontendUrl.endsWith('/')
+            ? frontendUrl.slice(0, -1)
+            : frontendUrl;
           const verificationUrl = `${cleanFrontendUrl}/verify/employee/${emp.id}`;
 
-          qrCodeDataUrl = await QRCode.toDataURL(
-            verificationUrl,
-            {
-              errorCorrectionLevel: 'M',
-              width: 200,
-              margin: 0,
-              color: {
-                  dark: '#1e293b',
-                  light: '#ffffff'
-              }
+          qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
+            errorCorrectionLevel: 'M',
+            width: 200,
+            margin: 0,
+            color: {
+              dark: '#1e293b',
+              light: '#ffffff',
             },
-          );
+          });
         } catch (e) {
           console.error('Error generating QR', e);
         }
 
         const user = emp.user;
-        const names = (user?.fullName || '').split(' ').filter((n: string) => n);
+        const names = (user?.fullName || '')
+          .split(' ')
+          .filter((n: string) => n);
         const initials =
           names.length > 0
-            ? (names[0][0] + (names.length > 1 ? names[names.length - 1][0] : '')).toUpperCase()
+            ? (
+                names[0][0] +
+                (names.length > 1 ? names[names.length - 1][0] : '')
+              ).toUpperCase()
             : '??';
 
         return {
@@ -119,8 +126,11 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
                 year: 'numeric',
               })
             : 'N/A',
-          employmentType: emp.employmentType 
-            ? emp.employmentType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+          employmentType: emp.employmentType
+            ? emp.employmentType
+                .replace('_', ' ')
+                .toLowerCase()
+                .replace(/\b\w/g, (l) => l.toUpperCase())
             : '-',
           phone: user?.phone || '',
           email: user?.email || '',
@@ -144,10 +154,14 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       system: {
         logoUrl: systemLogoDataUrl,
         name: 'Uruti Saluni',
-        url: 'www.urutisaluni.com'
+        url: 'www.urutisaluni.com',
       },
       employees: employeesData,
-      generatedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      generatedAt: new Date().toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
     };
 
     try {
@@ -167,7 +181,10 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async generateSingleEmployeeCard(salonId: string, employeeId: string): Promise<Buffer> {
+  async generateSingleEmployeeCard(
+    salonId: string,
+    employeeId: string,
+  ): Promise<Buffer> {
     await this.ensureJsReportReady();
 
     const salon = await this.salonsService.findOne(salonId);
@@ -196,7 +213,9 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     const resolveUrl = (url?: string) => {
       if (!url) return null;
       if (url.startsWith('http')) return url;
-      const cleanBase = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+      const cleanBase = backendUrl.endsWith('/')
+        ? backendUrl.slice(0, -1)
+        : backendUrl;
       const cleanPath = url.startsWith('/') ? url : '/' + url;
       return `${cleanBase}${cleanPath}`;
     };
@@ -207,14 +226,16 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     let qrCodeDataUrl = '';
     try {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const cleanFrontendUrl = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : frontendUrl;
+      const cleanFrontendUrl = frontendUrl.endsWith('/')
+        ? frontendUrl.slice(0, -1)
+        : frontendUrl;
       const verificationUrl = `${cleanFrontendUrl}/verify/employee/${employee.id}`;
 
       qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
         errorCorrectionLevel: 'M',
         width: 200,
         margin: 0,
-        color: { dark: '#1e293b', light: '#ffffff' }
+        color: { dark: '#1e293b', light: '#ffffff' },
       });
     } catch (e) {
       console.error('Error generating QR', e);
@@ -222,9 +243,12 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
 
     const user = employee.user;
     const names = (user?.fullName || '').split(' ').filter((n: string) => n);
-    const initials = names.length > 0
-      ? (names[0][0] + (names.length > 1 ? names[names.length - 1][0] : '')).toUpperCase()
-      : '??';
+    const initials =
+      names.length > 0
+        ? (
+            names[0][0] + (names.length > 1 ? names[names.length - 1][0] : '')
+          ).toUpperCase()
+        : '??';
 
     const employeeData = {
       fullName: user?.fullName || 'Unknown',
@@ -233,10 +257,17 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       skillsStr: employee.skills ? employee.skills.join(' • ') : '',
       employeeId: employee.id.slice(0, 8).toUpperCase(),
       hireDate: employee.hireDate
-        ? new Date(employee.hireDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        ? new Date(employee.hireDate).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
         : 'N/A',
       employmentType: employee.employmentType
-        ? employee.employmentType.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+        ? employee.employmentType
+            .replace('_', ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, (l) => l.toUpperCase())
         : '-',
       phone: user?.phone || '',
       email: user?.email || '',
@@ -256,10 +287,14 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       system: {
         logoUrl: systemLogoDataUrl,
         name: 'Uruti Saluni',
-        url: 'www.urutisaluni.com'
+        url: 'www.urutisaluni.com',
       },
       employees: [employeeData],
-      generatedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      generatedAt: new Date().toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
     };
 
     try {
@@ -995,8 +1030,6 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-
-
   async generateSalesReport(filters: {
     salonId?: string;
     startDate?: Date;
@@ -1638,12 +1671,20 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     <tr>
       <td colspan="2" class="section-header">Assets</td>
     </tr>
-    ${data.assets.length > 0 ? data.assets.map((a: any) => `
+    ${
+      data.assets.length > 0
+        ? data.assets
+            .map(
+              (a: any) => `
     <tr class="item-row">
       <td>${a.name}</td>
       <td class="amount">${a.formattedBalance}</td>
     </tr>
-    `).join('') : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No assets recorded</td></tr>'}
+    `,
+            )
+            .join('')
+        : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No assets recorded</td></tr>'
+    }
     <tr class="total-row">
       <td style="padding-left: 10px;">Total Assets</td>
       <td class="amount">${data.formattedTotalAssets}</td>
@@ -1654,12 +1695,20 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     <tr>
       <td colspan="2" class="section-header">Liabilities</td>
     </tr>
-    ${data.liabilities.length > 0 ? data.liabilities.map((l: any) => `
+    ${
+      data.liabilities.length > 0
+        ? data.liabilities
+            .map(
+              (l: any) => `
     <tr class="item-row">
       <td>${l.name}</td>
       <td class="amount">${l.formattedBalance}</td>
     </tr>
-    `).join('') : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No liabilities recorded</td></tr>'}
+    `,
+            )
+            .join('')
+        : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No liabilities recorded</td></tr>'
+    }
     <tr class="total-row">
       <td style="padding-left: 10px;">Total Liabilities</td>
       <td class="amount">${data.formattedTotalLiabilities}</td>
@@ -1670,12 +1719,20 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     <tr>
       <td colspan="2" class="section-header">Equity</td>
     </tr>
-    ${data.equity.length > 0 ? data.equity.map((e: any) => `
+    ${
+      data.equity.length > 0
+        ? data.equity
+            .map(
+              (e: any) => `
     <tr class="item-row">
       <td>${e.name}</td>
       <td class="amount">${e.formattedBalance}</td>
     </tr>
-    `).join('') : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No equity recorded</td></tr>'}
+    `,
+            )
+            .join('')
+        : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No equity recorded</td></tr>'
+    }
     <tr class="total-row">
       <td style="padding-left: 10px;">Total Equity</td>
       <td class="amount">${data.formattedTotalEquity}</td>
@@ -1742,12 +1799,20 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     <tr>
       <td colspan="2" class="section-header">Income</td>
     </tr>
-    ${data.revenue.length > 0 ? data.revenue.map((r: any) => `
+    ${
+      data.revenue.length > 0
+        ? data.revenue
+            .map(
+              (r: any) => `
     <tr class="item-row">
       <td>${r.name}</td>
       <td class="amount">${r.formattedAmount}</td>
     </tr>
-    `).join('') : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No income recorded</td></tr>'}
+    `,
+            )
+            .join('')
+        : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No income recorded</td></tr>'
+    }
     <tr class="total-row">
       <td style="padding-left: 10px;">Total Income</td>
       <td class="amount">${data.formattedTotalRevenue}</td>
@@ -1758,12 +1823,20 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     <tr>
       <td colspan="2" class="section-header">Expenses</td>
     </tr>
-    ${data.expenses.length > 0 ? data.expenses.map((e: any) => `
+    ${
+      data.expenses.length > 0
+        ? data.expenses
+            .map(
+              (e: any) => `
     <tr class="item-row">
       <td>${e.name}</td>
       <td class="amount">${e.formattedAmount}</td>
     </tr>
-    `).join('') : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No expenses recorded</td></tr>'}
+    `,
+            )
+            .join('')
+        : '<tr class="item-row"><td colspan="2" style="font-style:italic; color:#999;">No expenses recorded</td></tr>'
+    }
     <tr class="total-row">
       <td style="padding-left: 10px;">Total Expenses</td>
       <td class="amount">${data.formattedTotalExpenses}</td>
@@ -1841,14 +1914,18 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
       </tr>
     </thead>
     <tbody>
-      ${data.accounts.map((acc: any) => `
+      ${data.accounts
+        .map(
+          (acc: any) => `
         <tr>
           <td style="font-family: monospace; font-weight: bold;">${acc.code}</td>
           <td>${acc.name}</td>
           <td><span class="type-badge">${acc.accountType}</span></td>
           <td>${acc.category || '-'}</td>
         </tr>
-      `).join('')}
+      `,
+        )
+        .join('')}
     </tbody>
   </table>
   

@@ -41,7 +41,11 @@ export class UserSession {
   @Column({ name: 'location', nullable: true })
   location: string; // e.g., 'Kigali, RW'
 
-  @Column({ name: 'last_active', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'last_active',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   lastActive: Date;
 
   @Column({ name: 'is_revoked', default: false })

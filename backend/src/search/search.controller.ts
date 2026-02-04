@@ -53,7 +53,9 @@ export class SearchController {
           const employees = await this.salonsService.findAllEmployeesByUserId(
             user.id,
           );
-          salonIds = employees.map((e) => e.salonId).filter(Boolean) as string[];
+          salonIds = employees
+            .map((e) => e.salonId)
+            .filter(Boolean) as string[];
         }
       } catch (error) {
         // If salon lookup fails, continue without salon filtering

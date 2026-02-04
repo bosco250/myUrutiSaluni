@@ -97,7 +97,6 @@ export const ROLE_NAVIGATION_TABS = {
     },
     { id: "chat", label: "Chat", icon: "chat", screen: Screen.CHAT }, // Chat is always visible for employees
     { id: "profile", label: "Profile", icon: "person", screen: Screen.PROFILE },
-    { id: "more", label: "More", icon: "more-horiz", screen: Screen.MORE_MENU }, // More menu for employees with permissions
   ] as NavigationTab[],
 
   salon_owner: [
@@ -154,19 +153,10 @@ export const ROLE_NAVIGATION_TABS = {
       ],
     },
     {
-      id: "more",
-      label: "More",
-      icon: "more-horiz",
-      screen: Screen.MORE_MENU,
-      // More menu accessible with any permission
-      requiredPermissions: [
-        EmployeePermission.MANAGE_SALON_PROFILE,
-        EmployeePermission.MANAGE_APPOINTMENTS,
-        EmployeePermission.MANAGE_SERVICES,
-        EmployeePermission.MANAGE_PRODUCTS,
-        EmployeePermission.VIEW_SALON_SETTINGS,
-        EmployeePermission.VIEW_ALL_APPOINTMENTS,
-      ],
+      id: "profile",
+      label: "Profile",
+      icon: "person",
+      screen: Screen.PROFILE,
     },
   ] as NavigationTab[],
 
@@ -198,6 +188,14 @@ export const ROLE_NAVIGATION_TABS = {
     { id: "profile", label: "Profile", icon: "person", screen: Screen.PROFILE },
   ] as NavigationTab[],
 };
+
+/**
+ * Guest navigation tabs — shown before login (Explore + Sign In)
+ */
+export const GUEST_NAVIGATION_TABS: NavigationTab[] = [
+  { id: "explore", label: "Explore", icon: "explore", screen: Screen.EXPLORE },
+  { id: "signin", label: "Sign In", icon: "login", screen: Screen.HOME },
+];
 
 /**
  * Helper function to check if a tab should be shown based on permissions
@@ -310,40 +308,14 @@ export const getNavigationTabsForRole = (
       const profileTab = tabs.find((t) => t.id === "profile");
       const moreTab = tabs.find((t) => t.id === "more");
 
-      // Decide whether to show Profile or More in bottom nav
-      // If employee has ANY permissions, show More (which will contain all permitted features + profile)
-      // If employee has NO permissions, show Profile directly
-      const hasAnyPermissions = permissionBasedTabs.length > 0;
-
-      // Build final tabs: Home, My Work, Explore, Chat, More/Profile
-      // This gives employees a clean 5-tab navigation (max 5 tabs)
-      let finalTabs: NavigationTab[];
-      if (hasAnyPermissions && moreTab) {
-        // Employee has permissions and more tab exists -> show More
-        // Include: Home, My Work, Explore, Chat, More
-        finalTabs = [
-          ...essentialTabs,
-          ...exploreTabs,
-          ...(chatTab ? [chatTab] : []),
-          moreTab,
-        ];
-      } else if (profileTab) {
-        // Employee has no permissions or more tab doesn't exist -> show Profile
-        // Include: Home, My Work, Explore, Chat, Profile
-        finalTabs = [
-          ...essentialTabs,
-          ...exploreTabs,
-          ...(chatTab ? [chatTab] : []),
-          profileTab,
-        ];
-      } else {
-        // Fallback: just essential + explore + chat
-        finalTabs = [
-          ...essentialTabs,
-          ...exploreTabs,
-          ...(chatTab ? [chatTab] : []),
-        ];
-      }
+      // Build final tabs: Home, My Work, Explore, Chat, Profile
+      // This gives employees a cleaner navigation
+      const finalTabs = [
+        ...essentialTabs,
+        ...exploreTabs,
+        ...(chatTab ? [chatTab] : []),
+        ...(profileTab ? [profileTab] : []),
+      ];
 
       // Limit to 5 tabs maximum
       return finalTabs.slice(0, 5);

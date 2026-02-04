@@ -20,6 +20,7 @@ import { Loader } from "../../components/common";
 import { api } from "../../services/api";
 import { uploadService } from "../../services/upload";
 import { useRefreshControl } from "../../hooks/useRefreshControl";
+import { config } from "../../config";
 import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
@@ -27,6 +28,29 @@ import EmployeeContractScreen from "./EmployeeContractScreen";
 
 // Placeholder profile image - in production, use actual user image
 const profileImage = require("../../../assets/Logo.png");
+
+// Helper to format image URL (handles relative URLs and localhost from backend)
+const getImageUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  
+  // Get the server base URL (without /api)
+  const baseUrl = config.apiUrl.replace(/\/api\/?$/, '');
+  
+  // If URL starts with http/https, check if it uses localhost and fix it
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Replace localhost or 127.0.0.1 with actual server IP
+    const fixedUrl = url
+      .replace(/^https?:\/\/localhost(:\d+)?/, baseUrl)
+      .replace(/^https?:\/\/127\.0\.0\.1(:\d+)?/, baseUrl);
+    return fixedUrl;
+  }
+  
+  // Handle file:// URLs as-is
+  if (url.startsWith('file:')) return url;
+  
+  // Prepend server base URL for relative paths
+  return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
+};
 
 interface ProfileScreenProps {
   navigation?: {
@@ -243,7 +267,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               <View style={styles.profileImageGlow} />
               <TouchableOpacity onPress={handlePickImage} disabled={uploading}>
                   <Image 
-                    source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                    source={user?.avatarUrl ? { uri: getImageUrl(user.avatarUrl) || '' } : profileImage} 
                     style={[styles.profileImage, uploading && { opacity: 0.7 }]}
                     onError={(e) => console.log('Profile avatar load error:', e.nativeEvent.error)}
                   />
@@ -588,19 +612,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 80,
     paddingTop: theme.spacing.xs,
   },
   profileHeader: {
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: 0,
   },
   profileHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   profileImageContainer: {
     position: "relative",
@@ -609,18 +633,18 @@ const styles = StyleSheet.create({
   },
   profileImageGlow: {
     position: "absolute",
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: theme.colors.primary,
     opacity: 0.1,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: theme.colors.backgroundSecondary,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: theme.colors.white,
   },
   editBadge: {
@@ -662,16 +686,13 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   sectionCard: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    borderRadius: 20,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: 12,
     padding: theme.spacing.md,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    // Removed shadows for flat design
+    elevation: 0,
   },
   sectionHeader: {
     marginBottom: theme.spacing.xs,
@@ -697,11 +718,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: theme.spacing.xs + 2,
-    minHeight: 40,
+    paddingVertical: theme.spacing.xs,
+    minHeight: 36,
   },
   settingLabel: {
-    fontSize: 15,
+    fontSize: 14,
     color: theme.colors.text,
     fontFamily: theme.fonts.regular,
     flex: 1,
@@ -711,7 +732,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   settingValue: {
-    fontSize: 15,
+    fontSize: 14,
     color: theme.colors.textSecondary,
     marginRight: theme.spacing.xs / 2,
     fontFamily: theme.fonts.regular,
@@ -719,15 +740,15 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: theme.colors.borderLight,
-    marginVertical: theme.spacing.xs / 2,
+    marginVertical: 4,
   },
   logoutButton: {
-    marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.xs,
     marginBottom: theme.spacing.lg,
-    borderRadius: 20,
+    borderRadius: 12,
     overflow: "hidden",
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: theme.colors.error + "20",
     backgroundColor: theme.colors.error + "05",
   },
@@ -781,14 +802,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     gap: 8,
-    elevation: 4,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    elevation: 0,
   },
   ownerApplyButtonText: {
     color: '#FFF',
@@ -806,15 +823,13 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    maxWidth: 320,
-    borderRadius: 16,
-    padding: theme.spacing.lg,
+    maxWidth: 300,
+    borderRadius: 12,
+    padding: theme.spacing.md,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   modalIconContainer: {
     width: 64,

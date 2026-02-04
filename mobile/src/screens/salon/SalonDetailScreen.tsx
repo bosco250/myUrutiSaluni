@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
   Image,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -24,6 +25,7 @@ import {
 import { appointmentsService } from "../../services/appointments";
 import { reviewsService, Review } from "../../services/reviews";
 import { Loader } from "../../components/common";
+import { getImageUrl } from "../../utils";
 
 
 
@@ -246,108 +248,239 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
 
   // Render Functions
   const renderHeader = () => (
-      <View style={[styles.header, dynamicStyles.headerBorder]}>
+      <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton} 
             onPress={() => navigation.goBack()}
           >
-              <MaterialIcons name="chevron-left" size={28} color={dynamicStyles.text.color} />
+              <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
           </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-              <Text style={[styles.headerTitle, dynamicStyles.text]} numberOfLines={1}>{salon.name}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(salon.status) + '15' }]}>
-                  <Text style={[styles.statusText, { color: getStatusColor(salon.status) }]}>{salon.status}</Text>
+          <View style={styles.headerContent}>
+              <View style={styles.titleRow}>
+                  <Text style={[styles.headerTitle, dynamicStyles.text]} numberOfLines={1}>{salon.name}</Text>
+                  <View style={[styles.statusBadgeCompact, { backgroundColor: getStatusColor(salon.status) + '15' }]}>
+                      <View style={[styles.statusDotCompact, { backgroundColor: getStatusColor(salon.status) }]} />
+                      <Text style={[styles.statusTextCompact, { color: getStatusColor(salon.status) }]}>
+                        {salon.status === 'pending_approval' ? 'Pending' : salon.status}
+                      </Text>
+                  </View>
               </View>
           </View>
           <TouchableOpacity 
-            style={styles.editButton}
+            style={styles.editLink}
             onPress={() => navigation.navigate("CreateSalon", { mode: "edit", salon })}
           >
-              <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Edit</Text>
+              <MaterialIcons name="edit" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
       </View>
   );
 
   const renderTabs = () => (
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        contentContainerStyle={styles.tabsContainer}
-        style={[styles.tabsScrollView, dynamicStyles.headerBorder]}
-      >
-          {[
-              { id: "overview", label: "Overview" },
-              { id: "employees", label: "Team" },
-              { id: "services", label: "Services" },
-              { id: "products", label: "Inventory" },
-              { id: "bookings", label: "Bookings" },
-              { id: "reviews", label: "Reviews" },
-          ].map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                  <TouchableOpacity
-                    key={tab.id}
-                    style={[
-                        styles.tabItem, 
-                        isActive ? dynamicStyles.tabActive : dynamicStyles.tabInactive
-                    ]}
-                    onPress={() => setActiveTab(tab.id as TabType)}
-                  >
-                      <Text style={[
-                          styles.tabText, 
-                          isActive ? { color: '#FFF' } : dynamicStyles.textSecondary
-                      ]}>
-                          {tab.label}
-                      </Text>
-                  </TouchableOpacity>
-              );
-          })}
-      </ScrollView>
+      <View style={[styles.tabsWrapper, dynamicStyles.headerBorder]}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.tabsContainer}
+          >
+              {[
+                  { id: "overview", label: "Overview" },
+                  { id: "employees", label: "Team" },
+                  { id: "services", label: "Services" },
+                  { id: "products", label: "Inventory" },
+                  { id: "bookings", label: "Bookings" },
+                  { id: "reviews", label: "Reviews" },
+              ].map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                      <TouchableOpacity
+                        key={tab.id}
+                        style={[
+                            styles.tabItemCompact, 
+                            isActive && styles.tabItemActiveCompact
+                        ]}
+                        onPress={() => setActiveTab(tab.id as TabType)}
+                      >
+                          <Text style={[
+                              styles.tabTextCompact, 
+                              isActive ? { color: theme.colors.primary, fontWeight: '700' } : dynamicStyles.textSecondary
+                          ]}>
+                              {tab.label}
+                          </Text>
+                          {isActive && <View style={styles.activeTabIndicator} />}
+                      </TouchableOpacity>
+                  );
+              })}
+          </ScrollView>
+      </View>
   );
 
   const renderOverview = () => {
-      // Helper for Operating Hours
-      const renderOperatingHours = () => {
-          const hours = salon.businessHours || salon.settings?.workingHours;
-          if (!hours) return null;
-
-          const days = [
-              "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
-          ];
+      // Robust helper to get business hours from various possible locations
+      const getOperatingHoursData = () => {
+          if (!salon) return null;
           
+          // 1. Direct property
+          if (salon.businessHours) return salon.businessHours;
+
+          // 2. Settings locations
+          const settings = salon.settings || {};
+          const settingsHours = settings.workingHours || settings.operatingHours || settings.businessHours;
+          
+          if (settingsHours) {
+              if (typeof settingsHours === 'string') {
+                  try { return JSON.parse(settingsHours); } catch (e) { /* ignore */ }
+              } else {
+                  return settingsHours;
+              }
+          }
+
+          // 3. Metadata locations (common in some API responses)
+          const metadata = (salon as any).metadata || {};
+          const metaHours = metadata.workingHours || metadata.operatingHours || metadata.businessHours;
+          
+          if (metaHours) {
+              if (typeof metaHours === 'string') {
+                  try { return JSON.parse(metaHours); } catch (e) { /* ignore */ }
+              } else {
+                  return metaHours;
+              }
+          }
+
+          return null;
+      };
+
+      // Helper for Operating Hours UI
+      const renderOperatingHours = () => {
+          const hours = getOperatingHoursData();
+          
+          const daysOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
           const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
           return (
-              <View style={[styles.sectionContainer, dynamicStyles.card]}>
-                  <Text style={[styles.sectionTitle, dynamicStyles.text]}>Operating Hours</Text>
-                  {days.map((day) => {
-                      const data = (hours as any)[day];
-                      if (!data) return null;
-                      
-                      const isOpen = data.isOpen !== false && (data.openTime || data.open);
-                      const open = data.openTime || data.open;
-                      const close = data.closeTime || data.close;
-                      const isToday = day === today;
+              <View style={[styles.sectionContainer, dynamicStyles.card, { paddingBottom: 8 }]}>
+                  <View style={styles.sectionHeaderRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <MaterialIcons name="access-time" size={20} color={theme.colors.primary} />
+                          <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 0 }]}>Operating Hours</Text>
+                      </View>
+                  </View>
 
-                      return (
-                          <View key={day} style={[styles.hourRow, isToday && styles.hourRowToday]}>
-                              <Text style={[
-                                  styles.dayText, 
-                                  dynamicStyles.text, 
-                                  isToday && { color: theme.colors.primary, fontWeight: '700' }
-                              ]}>
-                                  {day.charAt(0).toUpperCase() + day.slice(1)}
-                              </Text>
-                              <Text style={[
-                                  styles.timeText, 
-                                  isOpen ? dynamicStyles.text : { color: theme.colors.textSecondary, fontStyle: 'italic' },
-                                  isToday && isOpen && { color: theme.colors.primary, fontWeight: '700' }
-                              ]}>
-                                  {isOpen ? `${open} - ${close}` : "Closed"}
-                              </Text>
+                  {!hours ? (
+                      <TouchableOpacity 
+                        style={styles.emptyHoursContainer}
+                        onPress={() => navigation.navigate("CreateSalon", { mode: "edit", salon })}
+                      >
+                          <Text style={[styles.emptyHoursText, dynamicStyles.textSecondary]}>
+                              Business hours not set yet.
+                          </Text>
+                          <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: '600' }}>
+                              Set Hours
+                          </Text>
+                      </TouchableOpacity>
+                  ) : (
+                      <View style={styles.hoursGrid}>
+                          {daysOrder.map((day) => {
+                              // Support both lowercase and Capitalized keys
+                              const dayData = hours[day] || hours[day.charAt(0).toUpperCase() + day.slice(1)];
+                              
+                              const isOpen = dayData && dayData.isOpen !== false && (dayData.openTime || dayData.open || dayData.startTime);
+                              const open = dayData?.openTime || dayData?.open || dayData?.startTime;
+                              const close = dayData?.closeTime || dayData?.close || dayData?.endTime;
+                              const isToday = day === today;
+
+                              return (
+                                  <View key={day} style={[styles.hourRowCompact, isToday && styles.hourRowTodayCompact]}>
+                                      <Text style={[
+                                          styles.dayTextCompact, 
+                                          dynamicStyles.text, 
+                                          isToday && { color: theme.colors.primary, fontWeight: '700' }
+                                      ]}>
+                                          {day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                                      </Text>
+                                      <View style={styles.timeContainerCompact}>
+                                          {isOpen ? (
+                                              <Text style={[
+                                                  styles.timeTextCompact, 
+                                                  dynamicStyles.text,
+                                                  isToday && { color: theme.colors.primary, fontWeight: '700' }
+                                              ]}>
+                                                  {open} - {close}
+                                              </Text>
+                                          ) : (
+                                              <Text style={[styles.timeTextCompact, { color: theme.colors.error, opacity: 0.6, fontStyle: 'italic' }]}>
+                                                  Closed
+                                              </Text>
+                                          )}
+                                      </View>
+                                  </View>
+                              );
+                          })}
+                      </View>
+                  )}
+              </View>
+          );
+      };
+
+      const renderGallery = () => {
+          const images = salon.images || [];
+          if (images.length === 0) return null;
+
+          const galleryHeight = 220;
+          const spacing = 6;
+
+          return (
+              <View style={[styles.gallerySection, dynamicStyles.card]}>
+                  <View style={styles.galleryHeader}>
+                      <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 0 }]}>Gallery</Text>
+                      {images.length > 3 && (
+                          <TouchableOpacity>
+                              <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>View All</Text>
+                          </TouchableOpacity>
+                      )}
+                  </View>
+
+                  <View style={[styles.mosaicContainer, { height: galleryHeight }]}>
+                      {images.length === 1 ? (
+                          <TouchableOpacity activeOpacity={0.9} style={styles.fullImageContainer}>
+                              <Image source={{ uri: getImageUrl(images[0]) || '' }} style={styles.mosaicImage} />
+                          </TouchableOpacity>
+                      ) : images.length === 2 ? (
+                          <View style={styles.mosaicRow}>
+                              <TouchableOpacity activeOpacity={0.9} style={styles.halfImageContainer}>
+                                  <Image source={{ uri: getImageUrl(images[0]) || '' }} style={styles.mosaicImage} />
+                              </TouchableOpacity>
+                              <View style={{ width: spacing }} />
+                              <TouchableOpacity activeOpacity={0.9} style={styles.halfImageContainer}>
+                                  <Image source={{ uri: getImageUrl(images[1]) || '' }} style={styles.mosaicImage} />
+                              </TouchableOpacity>
                           </View>
-                      );
-                  })}
+                      ) : (
+                          <View style={styles.mosaicRow}>
+                              {/* Large Featured Image */}
+                              <TouchableOpacity activeOpacity={0.9} style={styles.featuredImageContainer}>
+                                  <Image source={{ uri: getImageUrl(images[0]) || '' }} style={styles.mosaicImage} />
+                              </TouchableOpacity>
+                              
+                              <View style={{ width: spacing }} />
+                              
+                              {/* Side Column (2 smaller images) */}
+                              <View style={styles.sideMosaicColumn}>
+                                  <TouchableOpacity activeOpacity={0.9} style={styles.sideImageContainer}>
+                                      <Image source={{ uri: getImageUrl(images[1]) || '' }} style={styles.mosaicImage} />
+                                  </TouchableOpacity>
+                                  <View style={{ height: spacing }} />
+                                  <TouchableOpacity activeOpacity={0.9} style={styles.sideImageContainer}>
+                                      <Image source={{ uri: getImageUrl(images[2]) || '' }} style={styles.mosaicImage} />
+                                      {images.length > 3 && (
+                                          <View style={styles.moreOverlay}>
+                                              <Text style={styles.moreText}>+{images.length - 3}</Text>
+                                          </View>
+                                      )}
+                                  </TouchableOpacity>
+                              </View>
+                          </View>
+                      )}
+                  </View>
               </View>
           );
       };
@@ -355,27 +488,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
       return (
           <View style={styles.contentContainer}>
               {/* Image Gallery */}
-              {salon.images && salon.images.length > 0 && (
-                <View style={[styles.sectionContainer, dynamicStyles.card]}>
-                  <Text style={[styles.sectionTitle, dynamicStyles.text]}>Gallery</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
-                    {salon.images.map((img, index) => (
-                      <TouchableOpacity key={index} onPress={() => {/* Maybe open full screen viewer later */}}>
-                        <Image 
-                          source={{ uri: img }} 
-                          style={{ 
-                            width: 280, 
-                            height: 180, 
-                            borderRadius: 12, 
-                            marginRight: 12,
-                            backgroundColor: theme.colors.gray200
-                          }} 
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+              {renderGallery()}
 
               {/* Quick Stats Grid */}
               <View style={styles.statsGrid}>
@@ -475,23 +588,31 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
               {/* Quick Actions */}
               <View style={[styles.sectionContainer, { borderWidth: 0, padding: 0 }]}>
                    <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 12 }]}>Quick Actions</Text>
-                   <View style={styles.actionButtonsRow}>
+                    <View style={styles.actionButtonsRow}>
                         <TouchableOpacity 
-                            style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                            style={[styles.actionButton, { backgroundColor: theme.colors.primary, flex: 1 }]}
                             onPress={() => navigation.navigate("AddEmployee", { salonId })}
                         >
-                            <MaterialIcons name="person-add" size={20} color="#FFF" />
-                            <Text style={styles.actionButtonText}>Add Staff</Text>
+                            <MaterialIcons name="person-add" size={18} color="#FFF" />
+                            <Text style={[styles.actionButtonText, { fontSize: 13 }]}>Staff</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity 
-                             style={[styles.actionButton, { backgroundColor: theme.colors.secondary }]}
+                             style={[styles.actionButton, { backgroundColor: theme.colors.secondary, flex: 1 }]}
                              onPress={() => navigation.navigate("AddService", { salonId })}
                         >
-                            <MaterialIcons name="add" size={20} color="#FFF" />
-                            <Text style={styles.actionButtonText}>Add Service</Text>
+                            <MaterialIcons name="add" size={18} color="#FFF" />
+                            <Text style={[styles.actionButtonText, { fontSize: 13 }]}>Service</Text>
                         </TouchableOpacity>
-                   </View>
+
+                        <TouchableOpacity 
+                             style={[styles.actionButton, { backgroundColor: '#FF9500', flex: 1 }]}
+                             onPress={() => navigation.navigate("AddProduct", { salonId })}
+                        >
+                            <MaterialIcons name="inventory-2" size={18} color="#FFF" />
+                            <Text style={[styles.actionButtonText, { fontSize: 13 }]}>Product</Text>
+                        </TouchableOpacity>
+                    </View>
               </View>
           </View>
       );
@@ -561,7 +682,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                   >
                       {srv.imageUrl ? (
                           <Image 
-                              source={{ uri: srv.imageUrl }} 
+                              source={{ uri: getImageUrl(srv.imageUrl) || '' }} 
                               style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12, backgroundColor: theme.colors.gray200 }} 
                           />
                       ) : (
@@ -586,13 +707,20 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
     <View style={styles.contentContainer}>
         <View style={styles.sectionHeaderRow}>
              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory ({products.length})</Text>
-             <TouchableOpacity 
-               onPress={() => navigation.navigate("StockManagement", { salonId })}
-               style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-             >
-                 <MaterialIcons name="inventory" size={16} color={theme.colors.primary} />
-                 <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>Manage Stock</Text>
-             </TouchableOpacity>
+             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate("StockManagement", { salonId })}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                >
+                    <MaterialIcons name="inventory" size={16} color={theme.colors.primary} />
+                    <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>Manage</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                   onPress={() => navigation.navigate("AddProduct", { salonId })}
+                >
+                    <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>+ Add</Text>
+                </TouchableOpacity>
+             </View>
         </View>
 
         {products.length === 0 ? (
@@ -602,10 +730,10 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                 </View>
                 <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>No products in inventory</Text>
                 <TouchableOpacity 
-                  onPress={() => navigation.navigate("StockManagement", { salonId })}
+                  onPress={() => navigation.navigate("AddProduct", { salonId })}
                   style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: theme.colors.primary, borderRadius: 10 }}
                 >
-                    <Text style={{ color: '#FFF', fontWeight: '600' }}>Add Products</Text>
+                    <Text style={{ color: '#FFF', fontWeight: '600' }}>Add Product</Text>
                 </TouchableOpacity>
             </View>
         ) : (
@@ -731,58 +859,94 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 0,
-    paddingBottom: 10,
+    paddingTop: 8,
+    paddingBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   backButton: {
-    padding: 4,
+    marginRight: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  editButton: {
-      padding: 8,
+  headerContent: {
+    flex: 1,
   },
-  headerTitleContainer: {
-      alignItems: 'center',
-      flex: 1,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
+    letterSpacing: -0.5,
+    maxWidth: '70%',
+  },
+  statusBadgeCompact: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+  },
+  statusDotCompact: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginRight: 4,
+  },
+  statusTextCompact: {
+      fontSize: 9,
+      fontWeight: '700',
+      textTransform: 'uppercase',
   },
   statusBadge: {
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 12,
-      marginTop: 2,
   },
   statusText: {
       fontSize: 10,
       fontWeight: '700',
       textTransform: 'uppercase',
   },
-  tabsScrollView: {
-      flexGrow: 0,
+  editLink: {
+      padding: 8,
+  },
+  tabsWrapper: {
       borderBottomWidth: 1,
   },
   tabsContainer: {
       paddingHorizontal: 16,
-      paddingTop: 0,
-      paddingBottom: 10,
+      paddingVertical: 0,
   },
-  tabItem: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginRight: 8,
-      borderWidth: 1,
-      minHeight: 36,
+  tabItemCompact: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginRight: 4,
+      alignItems: 'center',
       justifyContent: 'center',
   },
-  tabText: {
+  tabItemActiveCompact: {
+      // styles for active tab
+  },
+  tabTextCompact: {
       fontSize: 14,
       fontWeight: '600',
+  },
+  activeTabIndicator: {
+      position: 'absolute',
+      bottom: 0,
+      left: 16,
+      right: 16,
+      height: 3,
+      backgroundColor: theme.colors.primary,
+      borderTopLeftRadius: 3,
+      borderTopRightRadius: 3,
   },
   scrollContent: {
       padding: 14, // Reduced from 16
@@ -814,6 +978,58 @@ const styles = StyleSheet.create({
       borderRadius: 14,
       borderWidth: 1,
   },
+  gallerySection: {
+      padding: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+  },
+  galleryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mosaicContainer: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mosaicRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  mosaicImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.gray200,
+  },
+  fullImageContainer: {
+    flex: 1,
+  },
+  halfImageContainer: {
+    flex: 1,
+  },
+  featuredImageContainer: {
+    flex: 2, // Takes 2/3 of space
+  },
+  sideMosaicColumn: {
+    flex: 1, // Takes 1/3 of space
+  },
+  sideImageContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  moreOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
   sectionTitle: {
       fontSize: 16, // Reduced from 18
       fontWeight: '700',
@@ -839,25 +1055,46 @@ const styles = StyleSheet.create({
   detailText: {
       fontSize: 13, // Reduced from 15
   },
-  // Hours
-  hourRow: {
+  // Hours refined
+  hoursGrid: {
+      marginTop: 4,
+  },
+  hourRowCompact: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: 'rgba(150,150,150,0.1)',
+  },
+  hourRowTodayCompact: {
+      backgroundColor: theme.colors.primary + '08',
+      marginHorizontal: -12,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      borderBottomWidth: 0,
+  },
+  dayTextCompact: {
+      fontSize: 13,
+      fontWeight: '600',
+      width: 45,
+  },
+  timeContainerCompact: {
+      flex: 1,
+      alignItems: 'flex-end',
+  },
+  timeTextCompact: {
+      fontSize: 13,
+  },
+  emptyHoursContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingVertical: 6, // Reduced from 8
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: 'rgba(150,150,150,0.2)',
+      alignItems: 'center',
+      paddingVertical: 12,
+      marginTop: 4,
   },
-  hourRowToday: {
-      backgroundColor: 'rgba(150,150,150,0.05)',
-      marginHorizontal: -12, // Matches new padding
-      paddingHorizontal: 12,
-  },
-  dayText: {
-      fontSize: 13, // Reduced from 14
-      fontWeight: '500',
-  },
-  timeText: {
-      fontSize: 13, // Reduced from 14
+  emptyHoursText: {
+      fontSize: 13,
+      fontStyle: 'italic',
   },
   actionButtonsRow: {
       flexDirection: 'row',

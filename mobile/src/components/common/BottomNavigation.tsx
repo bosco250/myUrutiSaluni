@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../theme';
 import { useTheme, useAuth } from '../../context';
-import { getNavigationTabsForRole } from '../../navigation/navigationConfig';
+import { getNavigationTabsForRole, NavigationTab } from '../../navigation/navigationConfig';
 import { useEmployeePermissionCheck } from '../../hooks/useEmployeePermissionCheck';
 // Removed unused imports - useEmployeePermissionCheck handles salon loading
 
@@ -12,6 +12,7 @@ interface BottomNavigationProps {
   onTabPress: (tabId: string) => void;
   unreadNotificationCount?: number;
   currentScreen?: string; // Current screen name to detect salon view mode
+  tabsOverride?: NavigationTab[]; // Caller-supplied tabs (used in guest mode)
 }
 
 /**
@@ -19,29 +20,30 @@ interface BottomNavigationProps {
  * Displays different tabs based on the user's role
  * Memoized to prevent unnecessary re-renders
  */
-const BottomNavigation = React.memo(function BottomNavigation({ 
-  activeTab, 
-  onTabPress, 
+const BottomNavigation = React.memo(function BottomNavigation({
+  activeTab,
+  onTabPress,
   unreadNotificationCount = 0,
-  currentScreen 
+  currentScreen,
+  tabsOverride,
 }: BottomNavigationProps) {
   const { isDark } = useTheme();
   const { user } = useAuth();
 
   // Use permission check hook - it will automatically load salonId and employeeId
-  const { 
-    checkPermission, 
-    isOwner, 
+  const {
+    checkPermission,
+    isOwner,
     isAdmin,
     hasOwnerLevelPermissions, // Check if employee has owner-level permissions
   } = useEmployeePermissionCheck({
     autoFetch: true,
   });
 
-  // Get tabs based on user's role, filtered by permissions
-  // Tabs will automatically update when permissions change because activePermissions changes
-  // When viewing salon screens, employees with permissions see owner navigation
+  // Get tabs based on user's role, filtered by permissions.
+  // When tabsOverride is supplied (e.g. guest mode) use it directly.
   const tabs = React.useMemo(() => {
+    if (tabsOverride) return tabsOverride;
     const calculatedTabs = getNavigationTabsForRole(
       user?.role,
       checkPermission,
@@ -50,24 +52,13 @@ const BottomNavigation = React.memo(function BottomNavigation({
       hasOwnerLevelPermissions || false,
       currentScreen // Pass current screen to detect salon mode
     );
-    
+
     return calculatedTabs;
-  }, [user?.role, checkPermission, isOwner, isAdmin, hasOwnerLevelPermissions, currentScreen]); // Include currentScreen in dependencies
+  }, [tabsOverride, user?.role, checkPermission, isOwner, isAdmin, hasOwnerLevelPermissions, currentScreen]);
 
   const dynamicStyles = {
     container: {
       backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-      borderTopColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-    },
-    tabLabel: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
-    },
-    tabLabelActive: {
-      color: theme.colors.primary,
-    },
-    iconColor: (isActive: boolean) => {
-      if (isActive) return theme.colors.primary;
-      return isDark ? theme.colors.gray400 : theme.colors.textSecondary;
     },
   };
 
@@ -76,24 +67,29 @@ const BottomNavigation = React.memo(function BottomNavigation({
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         const showBadge = tab.id === 'notifications' && unreadNotificationCount > 0;
+        
+        // Active color configuration
+        const activeColor = theme.colors.primary;
+        const inactiveColor = isDark ? theme.colors.gray400 : theme.colors.textSecondary;
+        const pillColor = isDark ? theme.colors.primary + '30' : theme.colors.primary + '15';
+
         return (
           <TouchableOpacity
             key={tab.id}
-            style={[
-              styles.tab,
-              isActive && styles.tabActive,
-              isActive && {
-                backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
-              }
-            ]}
+            style={styles.tab}
             onPress={() => onTabPress(tab.id)}
             activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
           >
-            <View style={styles.iconContainer}>
+            <View style={[
+              styles.iconContainer,
+              isActive && { backgroundColor: pillColor }
+            ]}>
               <MaterialIcons
                 name={tab.icon as any}
-                size={isActive ? 26 : 24}
-                color={dynamicStyles.iconColor(isActive)}
+                size={24}
+                color={isActive ? activeColor : inactiveColor}
               />
               {showBadge && (
                 <View style={[styles.badge, { borderColor: isDark ? theme.colors.gray900 : theme.colors.background }]}>
@@ -106,9 +102,9 @@ const BottomNavigation = React.memo(function BottomNavigation({
             <Text
               style={[
                 styles.tabLabel,
-                isActive ? [styles.tabLabelActive, dynamicStyles.tabLabelActive] : dynamicStyles.tabLabel,
-                { fontSize: isActive ? 12 : 11, fontWeight: isActive ? '700' : '600' }
+                { color: isActive ? activeColor : inactiveColor, fontWeight: isActive ? '700' : '500' }
               ]}
+              numberOfLines={1}
             >
               {tab.label}
             </Text>
@@ -124,81 +120,55 @@ export default BottomNavigation;
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.md + 4, // Extra padding for safe area
-    paddingHorizontal: theme.spacing.xs,
-    justifyContent: 'space-around',
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    
+    // Premium Shadow / Soft Lift
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 20, // ensure it sits above content
   },
   tab: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-    borderRadius: 12,
-    minHeight: 64, // Ensure proper touch target
-    marginHorizontal: 2,
-  },
-  tabActive: {
-    borderRadius: 12,
-  },
-  tabLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
-    fontFamily: theme.fontFamilies.medium,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  tabLabelActive: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontFamily: theme.fontFamilies.bold,
-    fontWeight: '700',
-    fontSize: 12,
+    height: 56,
   },
   iconContainer: {
-    position: 'relative',
+    width: 60, // Wide Pill shape
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 28,
-    height: 28,
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  tabLabel: {
+    fontSize: 10,
+    letterSpacing: 0.2,
+    fontFamily: theme.fontFamilies.medium,
   },
   badge: {
     position: 'absolute',
-    top: -8,
-    right: -12,
+    top: -4,
+    right: 12,
     backgroundColor: theme.colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 5,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: theme.colors.background,
     zIndex: 10,
-    shadowColor: theme.colors.error,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
   badgeText: {
     color: theme.colors.white,
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: theme.fontFamilies.bold,
-    lineHeight: 12,
+    fontSize: 9,
+    fontWeight: 'bold',
   },
 });

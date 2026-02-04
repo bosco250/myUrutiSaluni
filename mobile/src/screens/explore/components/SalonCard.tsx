@@ -7,16 +7,19 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../../theme";
 import { useTheme } from "../../../context";
 import { Salon } from "../../../services/explore";
 import { BUSINESS_TYPES } from "../../../constants/business";
+import { getImageUrl } from "../../../utils";
 
 interface SalonCardProps {
   salon: Salon;
   onPress?: () => void;
   width?: number;
+  userLocation?: { latitude: number; longitude: number };
 }
 
 // Business type lookup with memoization
@@ -27,13 +30,13 @@ const BUSINESS_TYPE_MAP = new Map(
 const getBusinessTypeLabel = (type?: string): string =>
   BUSINESS_TYPE_MAP.get(type || "") || "Salon";
 
-const getClienteleIcon = (clientele?: string): keyof typeof Ionicons.glyphMap => {
-  const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-    men: "male",
-    women: "female",
-    both: "people",
+const getClienteleLabel = (clientele?: string): string => {
+  const labels: Record<string, string> = {
+    men: "Men",
+    women: "Women",
+    both: "Unisex",
   };
-  return icons[clientele || ""] || "people";
+  return labels[clientele || ""] || "All";
 };
 
 const getInitials = (name: string): string =>
@@ -43,7 +46,41 @@ const getInitials = (name: string): string =>
     .map((word) => word[0]?.toUpperCase() || "")
     .join("");
 
-export default function SalonCard({ salon, onPress, width }: SalonCardProps) {
+// Premium gradient backgrounds when no image
+const GRADIENT_PALETTES = [
+  ["#1A1A2E", "#16213E"],
+  ["#2D3436", "#000000"],
+  ["#1E3A5F", "#0F2027"],
+  ["#2C3E50", "#1A1A2E"],
+  ["#434343", "#000000"],
+];
+
+// Helper to calculate distance
+const calculateDistance = (
+  lat1?: number, 
+  lon1?: number, 
+  lat2?: number, 
+  lon2?: number
+): string | null => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  
+  if (d < 1) return "<1 km";
+  return `${d.toFixed(1)} km`;
+};
+
+export default function SalonCard({ salon, onPress, width, userLocation }: SalonCardProps) {
   const { isDark } = useTheme();
 
   const cardWidth = useMemo(() => {
@@ -55,11 +92,10 @@ export default function SalonCard({ salon, onPress, width }: SalonCardProps) {
   const colors = useMemo(
     () => ({
       cardBg: isDark ? theme.colors.gray800 : "#FFFFFF",
-      border: isDark ? theme.colors.gray700 : "#E5E7EB",
-      title: isDark ? theme.colors.white : "#111827",
-      subtitle: isDark ? theme.colors.gray400 : "#6B7280",
-      badgeBg: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)",
-      badgeText: isDark ? "#E5E7EB" : "#374151",
+      border: isDark ? theme.colors.gray700 : "rgba(0,0,0,0.08)",
+      title: "#FFFFFF", // On image overlay
+      text: isDark ? theme.colors.gray300 : theme.colors.textSecondary,
+      primary: theme.colors.primary,
     }),
     [isDark]
   );
@@ -70,6 +106,24 @@ export default function SalonCard({ salon, onPress, width }: SalonCardProps) {
     [salon.businessType]
   );
   const location = salon.district || salon.city || salon.address;
+  
+  const gradientIndex = useMemo(() => {
+    const charCode = salon.id?.charCodeAt(0) || 0;
+    return charCode % GRADIENT_PALETTES.length;
+  }, [salon.id]);
+  
+  const distance = useMemo(() => {
+    if (!userLocation) return null;
+    return calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      salon.latitude,
+      salon.longitude
+    );
+  }, [userLocation, salon.latitude, salon.longitude]);
+
+  const hasImage = salon.images && salon.images.length > 0;
+  const isOpen = salon.status === 'active';
 
   return (
     <TouchableOpacity
@@ -82,77 +136,125 @@ export default function SalonCard({ salon, onPress, width }: SalonCardProps) {
         },
       ]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.9}
     >
-      {/* Image / Avatar Section */}
-      <View style={styles.imageSection}>
-        {salon.images && salon.images.length > 0 ? (
-           <Image source={{ uri: salon.images[0] }} style={styles.salonImage} resizeMode="cover" />
+      {/* ─── Image Section ─── */}
+      <View style={styles.imageContainer}>
+        {hasImage ? (
+          <Image 
+            source={{ uri: getImageUrl(salon.images![0]) || '' }} 
+            style={styles.image} 
+            resizeMode="cover" 
+          />
         ) : (
-           <View style={styles.avatarContainer}>
-             <Text style={styles.avatarText}>{initials}</Text>
-           </View>
+          <LinearGradient
+            colors={GRADIENT_PALETTES[gradientIndex] as [string, string]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.placeholderGradient}
+          >
+            <View style={styles.initialsCircle}>
+              <Text style={styles.initialsText}>{initials}</Text>
+            </View>
+          </LinearGradient>
         )}
 
-        {/* Category Tag */}
-        <View style={[styles.categoryTag, { backgroundColor: colors.badgeBg }]}>
-          <Text style={[styles.categoryText, { color: colors.badgeText }]}>
-            {businessType}
-          </Text>
+        {/* Gradient Overlay */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']}
+          locations={[0, 0.6, 1]}
+          style={styles.gradientOverlay}
+        />
+
+        {/* Top Badges */}
+        <View style={styles.topBadges}>
+          {isOpen && (
+            <View style={[styles.badge, styles.badgeSuccess]}>
+              <Text style={styles.badgeText}>OPEN</Text>
+            </View>
+          )}
         </View>
 
-        {/* Clientele Indicator */}
-        {salon.targetClientele && (
-          <View style={styles.clienteleTag}>
-            <Ionicons
-              name={getClienteleIcon(salon.targetClientele)}
-              size={12}
-              color="#FFFFFF"
-            />
+        {/* Favorite Icon */}
+        <View style={styles.favoriteButton}>
+          <Ionicons name="heart-outline" size={16} color="#FFF" />
+        </View>
+
+        {/* Bottom Content on Image */}
+        <View style={styles.imageContent}>
+          <Text style={styles.salonName} numberOfLines={1}>
+            {salon.name}
+          </Text>
+          
+          <View style={styles.locationRow}>
+            <MaterialIcons name="location-on" size={12} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {location || "Location unavailable"}
+            </Text>
+            
+            {/* Distance Indicator */}
+            {distance && (
+              <>
+                <View style={styles.dotSeparator} />
+                <MaterialCommunityIcons name="map-marker-distance" size={12} color="#FFF" />
+                <Text style={[styles.locationText, { fontFamily: theme.fonts.bold, marginLeft: 2 }]}>
+                  {distance}
+                </Text>
+              </>
+            )}
           </View>
-        )}
+        </View>
       </View>
 
-      {/* Content Section */}
-      <View style={styles.content}>
-        <Text
-          style={[styles.name, { color: colors.title }]}
-          numberOfLines={1}
-        >
-          {salon.name}
-        </Text>
-
-        {salon.description && (
-          <Text
-            style={[styles.description, { color: colors.subtitle }]}
-            numberOfLines={2}
+      {/* ─── Body Section ─── */}
+      <View style={styles.body}>
+        {/* Description (max 1 line) */}
+        {salon.description ? (
+          <Text 
+            style={[styles.description, { color: colors.text }]} 
+            numberOfLines={1}
           >
             {salon.description}
           </Text>
-        )}
+        ) : null}
 
-        {/* Meta Info */}
-        <View style={styles.metaRow}>
-          {salon.employeeCount !== undefined && salon.employeeCount > 0 && (
-            <View style={styles.metaItem}>
-              <MaterialIcons name="people" size={12} color={theme.colors.primary} />
-              <Text style={[styles.metaText, { color: colors.subtitle }]}>
-                {salon.employeeCount}
+        {/* Tags / Pills */}
+        <View style={styles.pillsContainer}>
+          <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}>
+            <Text style={[styles.pillText, { color: colors.text }]}>
+              {businessType}
+            </Text>
+          </View>
+          {salon.targetClientele && (
+            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}>
+              <Text style={[styles.pillText, { color: colors.text }]}>
+                {getClienteleLabel(salon.targetClientele)}
               </Text>
             </View>
           )}
-
-          {location && (
-            <View style={[styles.metaItem, styles.locationItem]}>
-              <MaterialIcons name="place" size={12} color={theme.colors.primary} />
-              <Text
-                style={[styles.metaText, { color: colors.subtitle }]}
-                numberOfLines={1}
-              >
-                {location}
+           <View style={[styles.pill, { backgroundColor: theme.colors.primary + '15' }]}>
+              <Text style={[styles.pillText, { color: theme.colors.primary }]}>
+                {salon.employeeCount || 0} Staff
               </Text>
             </View>
-          )}
+        </View>
+
+        {/* Divider */}
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          {salon.phone ? (
+             <View style={styles.phoneContainer}>
+               <MaterialIcons name="phone" size={12} color={colors.text} />
+               <Text style={[styles.phoneText, { color: colors.text }]}>{salon.phone}</Text>
+             </View>
+          ) : <View />}
+
+          <View style={styles.exploreButton}>
+            <Text style={styles.exploreText}>Explore</Text>
+            <MaterialIcons name="arrow-forward" size={12} color={theme.colors.primary} />
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -163,87 +265,177 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     borderWidth: 1,
-    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 4,
+    overflow: 'hidden',
   },
-  imageSection: {
-    height: 120,
-    backgroundColor: theme.colors.primaryLight,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
+  imageContainer: {
+    height: 120, // Reduced height for compactness
+    width: '100%',
+    position: 'relative',
+    backgroundColor: theme.colors.gray200,
   },
-  salonImage: {
+  image: {
     width: '100%',
     height: '100%',
   },
-  avatarContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
+  placeholderGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  avatarText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "700",
+  initialsCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  initialsText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
     fontFamily: theme.fonts.bold,
   },
-  categoryTag: {
-    position: "absolute",
+  gradientOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '100%',
+  },
+  topBadges: {
+    position: 'absolute',
     top: 8,
     left: 8,
-    paddingHorizontal: 8,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  badge: {
+    paddingHorizontal: 6,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  categoryText: {
-    fontSize: 10,
-    fontWeight: "600",
-    fontFamily: theme.fonts.semibold,
+  badgeSuccess: {
+    backgroundColor: '#10B981',
   },
-  clienteleTag: {
-    position: "absolute",
+  badgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  favoriteButton: {
+    position: 'absolute',
     top: 8,
     right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  content: {
+  imageContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 10,
   },
-  name: {
+  salonName: {
+    color: '#FFF',
     fontSize: 14,
-    fontWeight: "600",
-    fontFamily: theme.fonts.semibold,
+    fontWeight: '700',
+    fontFamily: theme.fonts.bold,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
     marginBottom: 2,
   },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  locationText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 10,
+    fontFamily: theme.fonts.medium,
+    flex: 0,
+    maxWidth: '65%', // Prevent overlap with distance
+  },
+  dotSeparator: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    marginHorizontal: 2,
+  },
+  body: {
+    padding: 10,
+    paddingTop: 8,
+  },
   description: {
-    fontSize: 11,
+    fontSize: 10,
     lineHeight: 14,
     fontFamily: theme.fonts.regular,
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: 8,
+    height: 20, // Constrain height to 1 row
+    overflow: 'hidden',
   },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
+  pill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  locationItem: {
-    flex: 1,
+  pillText: {
+    fontSize: 9,
+    fontFamily: theme.fonts.medium,
   },
-  metaText: {
+  divider: {
+    height: 1,
+    width: '100%',
+    marginBottom: 8,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  phoneContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  phoneText: {
+    fontSize: 9,
+    fontFamily: theme.fonts.medium,
+  },
+  exploreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  exploreText: {
     fontSize: 10,
-    fontFamily: theme.fonts.regular,
+    fontWeight: '700',
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.bold,
   },
 });

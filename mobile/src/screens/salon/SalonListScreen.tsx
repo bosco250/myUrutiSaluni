@@ -17,6 +17,7 @@ import { useTheme, useAuth } from "../../context";
 import { salonService, SalonDetails } from "../../services/salon";
 import { api } from "../../services/api";
 import { Loader } from "../../components/common";
+import { getImageUrl } from "../../utils";
 
 interface SalonListScreenProps {
   navigation: {
@@ -193,7 +194,7 @@ const SalonListScreen = React.memo(function SalonListScreen({
       <View style={[styles.iconContainer, dynamicStyles.iconBg]}>
         {(salon.images && salon.images.length > 0) || (salon.photos && salon.photos.length > 0) ? (
            <Image 
-             source={{ uri: (salon.images && salon.images[0]) || (salon.photos && salon.photos[0]) }} 
+             source={{ uri: getImageUrl((salon.images && salon.images[0]) || (salon.photos && salon.photos[0])) || '' }} 
              style={styles.salonImage} 
            />
         ) : (

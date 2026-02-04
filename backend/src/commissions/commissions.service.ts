@@ -426,7 +426,7 @@ export class CommissionsService {
       // Get or create wallets WITHIN transaction (ensures consistency)
       let ownerWallet = await manager.findOne(Wallet, {
         where: { userId: salonOwnerId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!ownerWallet) {
@@ -437,10 +437,10 @@ export class CommissionsService {
         });
         ownerWallet = await manager.save(ownerWallet);
         // Refetch with lock if just created
-        ownerWallet = await manager.findOne(Wallet, { 
+        ownerWallet = (await manager.findOne(Wallet, {
           where: { id: ownerWallet.id },
-          lock: { mode: 'pessimistic_write' } 
-        }) as Wallet;
+          lock: { mode: 'pessimistic_write' },
+        })) as Wallet;
       }
 
       // Check balance WITHIN transaction using pessimistic lock to prevent race conditions
@@ -460,7 +460,7 @@ export class CommissionsService {
       // Get or create employee wallet (needed for both payment methods)
       let employeeWallet = await manager.findOne(Wallet, {
         where: { userId: employeeUserId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!employeeWallet) {
@@ -471,10 +471,10 @@ export class CommissionsService {
         });
         employeeWallet = await manager.save(employeeWallet);
         // Refetch with lock if just created
-        employeeWallet = await manager.findOne(Wallet, { 
+        employeeWallet = (await manager.findOne(Wallet, {
           where: { id: employeeWallet.id },
-          lock: { mode: 'pessimistic_write' } 
-        }) as Wallet;
+          lock: { mode: 'pessimistic_write' },
+        })) as Wallet;
       }
 
       // Ensure proper number conversion (decimal from DB comes as string)
@@ -599,9 +599,13 @@ export class CommissionsService {
 
       // AUTOMATIC ACCOUNTING: Record commission payment in ledger
       try {
-        await this.accountingService.createCommissionJournalEntry(savedCommission);
+        await this.accountingService.createCommissionJournalEntry(
+          savedCommission,
+        );
       } catch (error) {
-        this.logger.error(`Failed to create journal entry for commission payment: ${error.message}`);
+        this.logger.error(
+          `Failed to create journal entry for commission payment: ${error.message}`,
+        );
       }
 
       // Send notification for commission paid (outside transaction for performance)
@@ -879,7 +883,9 @@ export class CommissionsService {
         try {
           await this.accountingService.createCommissionJournalEntry(commission);
         } catch (error) {
-          this.logger.error(`Failed to create batch journal entry for commission: ${error.message}`);
+          this.logger.error(
+            `Failed to create batch journal entry for commission: ${error.message}`,
+          );
         }
 
         if (commission.salonEmployee?.user?.id) {

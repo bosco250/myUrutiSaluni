@@ -4,11 +4,24 @@
  * Uses native system fonts (Roboto on Android, SF Pro on iOS)
  */
 
+// Font family definitions (using Manrope to match web)
+export const fontFamilies = {
+  // Regular weight
+  regular: 'Manrope_400Regular',
+  // Medium weight
+  medium: 'Manrope_500Medium',
+  // Semibold weight
+  semibold: 'Manrope_600SemiBold',
+  // Bold weight
+  bold: 'Manrope_700Bold',
+};
+
 export const typography = {
   // Screen Title / Large Heading
   h1: {
     fontSize: 28,
-    lineHeight: 36, // 1.29 ratio
+    lineHeight: 36,
+    fontFamily: fontFamilies.bold,
     fontWeight: '700' as const,
     letterSpacing: -0.5,
   },
@@ -16,7 +29,8 @@ export const typography = {
   // Section Heading
   h2: {
     fontSize: 22,
-    lineHeight: 30, // 1.36 ratio
+    lineHeight: 30,
+    fontFamily: fontFamilies.semibold,
     fontWeight: '600' as const,
     letterSpacing: -0.3,
   },
@@ -24,7 +38,8 @@ export const typography = {
   // Subsection Heading
   h3: {
     fontSize: 18,
-    lineHeight: 26, // 1.44 ratio
+    lineHeight: 26,
+    fontFamily: fontFamilies.semibold,
     fontWeight: '600' as const,
     letterSpacing: 0,
   },
@@ -32,7 +47,8 @@ export const typography = {
   // Card Title / List Item Title
   h4: {
     fontSize: 16,
-    lineHeight: 24, // 1.5 ratio
+    lineHeight: 24,
+    fontFamily: fontFamilies.semibold,
     fontWeight: '600' as const,
     letterSpacing: 0,
   },
@@ -40,7 +56,8 @@ export const typography = {
   // Body Text (Primary)
   body: {
     fontSize: 16,
-    lineHeight: 24, // 1.5 ratio
+    lineHeight: 24,
+    fontFamily: fontFamilies.regular,
     fontWeight: '400' as const,
     letterSpacing: 0,
   },
@@ -48,7 +65,8 @@ export const typography = {
   // Body Text (Secondary / Medium)
   bodyMedium: {
     fontSize: 16,
-    lineHeight: 24, // 1.5 ratio
+    lineHeight: 24,
+    fontFamily: fontFamilies.medium,
     fontWeight: '500' as const,
     letterSpacing: 0,
   },
@@ -56,7 +74,8 @@ export const typography = {
   // Small Body Text
   bodySmall: {
     fontSize: 14,
-    lineHeight: 20, // 1.43 ratio
+    lineHeight: 20,
+    fontFamily: fontFamilies.regular,
     fontWeight: '400' as const,
     letterSpacing: 0,
   },
@@ -64,7 +83,8 @@ export const typography = {
   // Caption / Helper Text
   caption: {
     fontSize: 12,
-    lineHeight: 16, // 1.33 ratio
+    lineHeight: 16,
+    fontFamily: fontFamilies.regular,
     fontWeight: '400' as const,
     letterSpacing: 0.2,
   },
@@ -72,7 +92,8 @@ export const typography = {
   // Button Text
   button: {
     fontSize: 16,
-    lineHeight: 20, // 1.25 ratio (tighter for buttons)
+    lineHeight: 20,
+    fontFamily: fontFamilies.semibold,
     fontWeight: '600' as const,
     letterSpacing: 0.1,
   },
@@ -80,7 +101,8 @@ export const typography = {
   // Label Text
   label: {
     fontSize: 14,
-    lineHeight: 20, // 1.43 ratio
+    lineHeight: 20,
+    fontFamily: fontFamilies.medium,
     fontWeight: '500' as const,
     letterSpacing: 0.1,
   },
@@ -93,18 +115,6 @@ export const typography = {
     letterSpacing: 0.5,
     textTransform: 'uppercase' as const,
   },
-};
-
-// Font family definitions (uses native system fonts)
-export const fontFamilies = {
-  // Regular weight
-  regular: 'System',
-  // Medium weight
-  medium: 'System',
-  // Semibold weight
-  semibold: 'System',
-  // Bold weight
-  bold: 'System',
 };
 
 // Typography scale type

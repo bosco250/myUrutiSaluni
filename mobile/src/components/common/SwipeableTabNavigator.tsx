@@ -24,6 +24,7 @@ const SwipeableTabNavigator: React.FC<SwipeableTabNavigatorProps> = ({
   enabled = true,
 }) => {
   const pagerRef = useRef<PagerView>(null);
+  const internalIndex = useRef(0);
   
   // Find current tab index
   const activeIndex = useMemo(() => {
@@ -32,9 +33,12 @@ const SwipeableTabNavigator: React.FC<SwipeableTabNavigatorProps> = ({
   }, [tabs, activeTabId]);
 
   // Sync pager with activeTabId when it changes externally (tab press)
+  // We only update if the new index is different from our internal tracker
+  // This prevents loop/jumping when swipe triggers the update
   useEffect(() => {
-    if (pagerRef.current && tabs.length > 0) {
-      pagerRef.current.setPageWithoutAnimation(activeIndex);
+    if (pagerRef.current && tabs.length > 0 && internalIndex.current !== activeIndex) {
+      pagerRef.current.setPage(activeIndex); // Use animation for tab presses
+      internalIndex.current = activeIndex;
     }
   }, [activeIndex, tabs.length]);
 
@@ -42,6 +46,8 @@ const SwipeableTabNavigator: React.FC<SwipeableTabNavigatorProps> = ({
   const handlePageSelected = useCallback(
     (event: PagerViewOnPageSelectedEvent) => {
       const newIndex = event.nativeEvent.position;
+      internalIndex.current = newIndex; // Sync internal state
+      
       if (newIndex >= 0 && newIndex < tabs.length) {
         const newTabId = tabs[newIndex].id;
         if (newTabId !== activeTabId) {

@@ -61,7 +61,10 @@ export class AuthService {
     // Create session if device info is provided
     let sessionId = null;
     if (deviceInfo) {
-      const session = await this.sessionsService.createSession(user.id, deviceInfo);
+      const session = await this.sessionsService.createSession(
+        user.id,
+        deviceInfo,
+      );
       sessionId = session.id;
     }
 

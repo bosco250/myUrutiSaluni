@@ -909,11 +909,9 @@ export class EmailTemplateService {
   }
 
   private getSalonUpdateTemplate(): string {
-    return this.baseTemplate
-      .replace('{{headerTitle}}', '{{title}}')
-      .replace(
-        '{{content}}',
-        `
+    return this.baseTemplate.replace('{{headerTitle}}', '{{title}}').replace(
+      '{{content}}',
+      `
         <div class="greeting">Hello, {{salonName}} Team,</div>
         <div class="message">The status of your salon has been updated by an administrator. Please review the details below.</div>
 
@@ -958,7 +956,7 @@ export class EmailTemplateService {
         </div>
         {{/if}}
       `,
-      );
+    );
   }
 
   private getMembershipStatusTemplate(): string {

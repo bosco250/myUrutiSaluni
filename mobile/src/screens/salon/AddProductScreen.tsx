@@ -160,7 +160,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
   );
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary 
   },
   
-  bottomBar: { padding: 14, paddingBottom: Platform.OS === 'ios' ? 10 : 14, borderTopWidth: 1 },
+  bottomBar: { padding: 14, borderTopWidth: 1 },
   submitBtn: { 
     borderRadius: 12, 
     paddingVertical: 14, 

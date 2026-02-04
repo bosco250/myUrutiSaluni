@@ -506,13 +506,11 @@ export default function BookingFlowScreen({
     } else if (
       isAnyEmployee &&
       service &&
-      currentStep === "datetime" &&
-      operatingHours
+      currentStep === "datetime"
     ) {
-      // Generate availability from operating hours when "Any Available" is selected
       fetchAvailability();
     }
-  }, [selectedEmployeeId, isAnyEmployee, service, currentStep, operatingHours, fetchAvailability]);
+  }, [selectedEmployeeId, isAnyEmployee, service, currentStep, fetchAvailability]);
 
   useEffect(() => {
     if (selectedDate && service) {

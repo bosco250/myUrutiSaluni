@@ -1,4 +1,9 @@
-import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('system_config')
 export class SystemConfig {
@@ -13,20 +18,44 @@ export class SystemConfig {
   allowRegistrations: boolean;
 
   // Financial
-  @Column({ name: 'commission_rate', type: 'decimal', precision: 5, scale: 2, default: 10.0 })
+  @Column({
+    name: 'commission_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 10.0,
+  })
   commissionRate: number;
 
-  @Column({ name: 'tax_rate', type: 'decimal', precision: 5, scale: 2, default: 18.0 })
+  @Column({
+    name: 'tax_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 18.0,
+  })
   taxRate: number;
 
   @Column({ default: 'RWF' })
   currency: string;
 
   // Loans
-  @Column({ name: 'base_interest_rate', type: 'decimal', precision: 5, scale: 2, default: 5.0 })
+  @Column({
+    name: 'base_interest_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 5.0,
+  })
   baseInterestRate: number;
 
-  @Column({ name: 'penalty_rate', type: 'decimal', precision: 5, scale: 2, default: 2.0 })
+  @Column({
+    name: 'penalty_rate',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 2.0,
+  })
   penaltyRate: number;
 
   @Column({ name: 'max_loan_amount', type: 'bigint', default: 5000000 })

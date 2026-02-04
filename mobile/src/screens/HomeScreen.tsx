@@ -24,12 +24,36 @@ import AutoSlider from "./explore/components/AutoSlider";
 import { appointmentsService, Appointment } from "../services/appointments";
 import { customersService } from "../services/customers";
 import { exploreService, Salon } from "../services/explore";
+import { config } from "../config";
 
 // Import logo
 const logo = require("../../assets/Logo.png");
 
 // Placeholder profile image - in production, use actual user image
 const profileImage = require("../../assets/Logo.png");
+
+// Helper to format image URL (handles relative URLs and localhost from backend)
+const getImageUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  
+  // Get the server base URL (without /api)
+  const baseUrl = config.apiUrl.replace(/\/api\/?$/, '');
+  
+  // If URL starts with http/https, check if it uses localhost and fix it
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Replace localhost or 127.0.0.1 with actual server IP
+    const fixedUrl = url
+      .replace(/^https?:\/\/localhost(:\d+)?/, baseUrl)
+      .replace(/^https?:\/\/127\.0\.0\.1(:\d+)?/, baseUrl);
+    return fixedUrl;
+  }
+  
+  // Handle file:// URLs as-is
+  if (url.startsWith('file:')) return url;
+  
+  // Prepend server base URL for relative paths
+  return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
+};
 
 interface HomeScreenProps {
   navigation?: {
@@ -428,7 +452,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               activeOpacity={0.7}
             >
               <Image 
-                source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                source={user?.avatarUrl ? { uri: getImageUrl(user.avatarUrl) || '' } : profileImage} 
                 style={styles.profileImage}
                 onError={(e) => console.log('Home avatar load error:', e.nativeEvent.error)}
               />

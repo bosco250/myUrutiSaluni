@@ -154,7 +154,9 @@ export class DeviceTokenService {
       .createQueryBuilder()
       .delete()
       .where('lastUsedAt < :cutoffDate', { cutoffDate })
-      .orWhere('status = :expiredStatus', { expiredStatus: TokenStatus.EXPIRED })
+      .orWhere('status = :expiredStatus', {
+        expiredStatus: TokenStatus.EXPIRED,
+      })
       .execute();
 
     this.logger.log(`Cleaned up ${result.affected || 0} old device tokens`);

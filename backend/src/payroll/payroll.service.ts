@@ -15,7 +15,10 @@ import { CommissionsService } from '../commissions/commissions.service';
 import { WalletsService } from '../wallets/wallets.service';
 import { AccountingService } from '../accounting/accounting.service';
 import { WalletTransactionType } from '../wallets/entities/wallet-transaction.entity';
-import { AttendanceLog, AttendanceType } from '../attendance/entities/attendance-log.entity';
+import {
+  AttendanceLog,
+  AttendanceType,
+} from '../attendance/entities/attendance-log.entity';
 
 @Injectable()
 export class PayrollService {
@@ -160,13 +163,22 @@ export class PayrollService {
     }
 
     // Calculate overtime from attendance data
-    overtimeAmount = await this.calculateOvertime(employee, periodStart, periodEnd);
+    overtimeAmount = await this.calculateOvertime(
+      employee,
+      periodStart,
+      periodEnd,
+    );
 
     // Calculate gross pay before deductions
     const grossPay = baseSalary + commissionAmount + overtimeAmount;
 
     // Calculate deductions (taxes, loans, etc.)
-    deductions = await this.calculateDeductions(employee, grossPay, periodStart, periodEnd);
+    deductions = await this.calculateDeductions(
+      employee,
+      grossPay,
+      periodStart,
+      periodEnd,
+    );
 
     const netPay = grossPay - deductions;
 
@@ -276,7 +288,10 @@ export class PayrollService {
     try {
       await this.accountingService.createPayrollJournalEntry(savedRun);
     } catch (error) {
-       console.error('Failed to create automatic journal entry for payroll:', error.message);
+      console.error(
+        'Failed to create automatic journal entry for payroll:',
+        error.message,
+      );
     }
 
     return savedRun;

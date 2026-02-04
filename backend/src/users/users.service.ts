@@ -29,16 +29,23 @@ export class UsersService {
   async findAllForEmployeeSelection(search?: string): Promise<Partial<User>[]> {
     // Return only necessary fields for employee selection
     // Only return registered salon employees (users who have registered as salon employees)
-    const query = this.usersRepository.createQueryBuilder('user')
-      .select(['user.id', 'user.fullName', 'user.email', 'user.phone', 'user.role'])
-      .where('user.role = :employeeRole', { 
-        employeeRole: UserRole.SALON_EMPLOYEE 
+    const query = this.usersRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.fullName',
+        'user.email',
+        'user.phone',
+        'user.role',
+      ])
+      .where('user.role = :employeeRole', {
+        employeeRole: UserRole.SALON_EMPLOYEE,
       });
 
     if (search) {
       query.andWhere(
         '(LOWER(user.fullName) LIKE LOWER(:search) OR LOWER(user.email) LIKE LOWER(:search) OR user.phone LIKE :search)',
-        { search: `%${search}%` }
+        { search: `%${search}%` },
       );
     }
 

@@ -59,7 +59,9 @@ export class WalletsService {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 
-    this.logger.debug(`getAllWallets called with pagination: ${JSON.stringify(pagination)}, search: ${search}`);
+    this.logger.debug(
+      `getAllWallets called with pagination: ${JSON.stringify(pagination)}, search: ${search}`,
+    );
 
     const qb = this.walletsRepository
       .createQueryBuilder('wallet')
@@ -79,7 +81,9 @@ export class WalletsService {
       .take(limit)
       .getManyAndCount();
 
-    this.logger.debug(`Found ${total} wallets, returning ${data.length} for page ${page}`);
+    this.logger.debug(
+      `Found ${total} wallets, returning ${data.length} for page ${page}`,
+    );
 
     return {
       data,
@@ -107,9 +111,9 @@ export class WalletsService {
   ): Promise<WalletTransaction> {
     return this.dataSource.transaction(async (manager) => {
       // Use pessimistic lock to prevent balance race conditions
-      const wallet = await manager.findOne(Wallet, { 
+      const wallet = await manager.findOne(Wallet, {
         where: { id: walletId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!wallet) {
@@ -124,7 +128,9 @@ export class WalletsService {
         WalletTransactionType.LOAN_REPAYMENT,
       ];
       if (!wallet.isActive && outgoingTypes.includes(type)) {
-        throw new BadRequestException('Wallet is blocked. Outgoing transactions are not allowed.');
+        throw new BadRequestException(
+          'Wallet is blocked. Outgoing transactions are not allowed.',
+        );
       }
 
       // Ensure proper number conversion (decimal from DB comes as string)
@@ -176,9 +182,18 @@ export class WalletsService {
   }> {
     const result = await this.transactionsRepository
       .createQueryBuilder('tx')
-      .select('SUM(CASE WHEN tx.transaction_type IN (\'deposit\', \'commission\', \'refund\', \'loan_disbursement\') AND tx.status = \'completed\' THEN CAST(tx.amount AS NUMERIC) ELSE 0 END)', 'totalReceived')
-      .addSelect('SUM(CASE WHEN tx.transaction_type IN (\'withdrawal\', \'transfer\', \'loan_repayment\', \'fee\') AND tx.status = \'completed\' THEN CAST(tx.amount AS NUMERIC) ELSE 0 END)', 'totalSent')
-      .addSelect('COUNT(CASE WHEN tx.status = \'pending\' THEN 1 END)', 'pendingCount')
+      .select(
+        "SUM(CASE WHEN tx.transaction_type IN ('deposit', 'commission', 'refund', 'loan_disbursement') AND tx.status = 'completed' THEN CAST(tx.amount AS NUMERIC) ELSE 0 END)",
+        'totalReceived',
+      )
+      .addSelect(
+        "SUM(CASE WHEN tx.transaction_type IN ('withdrawal', 'transfer', 'loan_repayment', 'fee') AND tx.status = 'completed' THEN CAST(tx.amount AS NUMERIC) ELSE 0 END)",
+        'totalSent',
+      )
+      .addSelect(
+        "COUNT(CASE WHEN tx.status = 'pending' THEN 1 END)",
+        'pendingCount',
+      )
       .where('tx.wallet_id = :walletId', { walletId })
       .getRawOne();
 
@@ -242,7 +257,10 @@ export class WalletsService {
     return tx;
   }
 
-  async toggleWalletActive(walletId: string, isActive: boolean): Promise<Wallet> {
+  async toggleWalletActive(
+    walletId: string,
+    isActive: boolean,
+  ): Promise<Wallet> {
     const wallet = await this.walletsRepository.findOne({
       where: { id: walletId },
     });
@@ -263,7 +281,9 @@ export class WalletsService {
 
       if (!transaction) throw new NotFoundException('Transaction not found');
       if (transaction.status !== WalletTransactionStatus.PENDING) {
-        throw new BadRequestException('Only pending transactions can be cancelled');
+        throw new BadRequestException(
+          'Only pending transactions can be cancelled',
+        );
       }
 
       transaction.status = WalletTransactionStatus.CANCELLED;
@@ -316,7 +336,11 @@ export class WalletsService {
         compensatingDescription = `Reversal for admin-cancelled ${transaction.transactionType} (${transactionId})`;
       }
 
-      await manager.update(Wallet, { id: transaction.walletId }, { balance: balanceAfter });
+      await manager.update(
+        Wallet,
+        { id: transaction.walletId },
+        { balance: balanceAfter },
+      );
 
       const refund = manager.create(WalletTransaction, {
         walletId: transaction.walletId,
@@ -364,7 +388,9 @@ export class WalletsService {
     const wallet = await this.getOrCreateWallet(params.userId);
 
     if (!wallet.isActive) {
-      throw new BadRequestException('Your wallet is blocked. Please contact support to unblock it.');
+      throw new BadRequestException(
+        'Your wallet is blocked. Please contact support to unblock it.',
+      );
     }
 
     const formattedPhone = this.mockPayout.formatPhoneNumber(

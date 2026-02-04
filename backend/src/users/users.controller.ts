@@ -53,7 +53,11 @@ export class UsersController {
   @ApiOperation({
     summary: 'Get all users (for searching/selecting employees)',
   })
-  findAll(@CurrentUser() user: any, @Query('role') role?: UserRole, @Query('search') search?: string) {
+  findAll(
+    @CurrentUser() user: any,
+    @Query('role') role?: UserRole,
+    @Query('search') search?: string,
+  ) {
     // District leaders can only see users in their district
     if (user.role === UserRole.DISTRICT_LEADER) {
       // Filter by district leader's district

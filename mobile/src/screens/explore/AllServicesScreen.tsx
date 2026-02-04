@@ -19,6 +19,13 @@ import * as Location from "expo-location";
 import { SERVICE_CATEGORIES, TARGET_CLIENTELE } from "../../constants/business";
 import { exploreService, Service } from "../../services/explore";
 import ServiceCard from "./components/ServiceCard";
+import { Platform, UIManager, LayoutAnimation } from "react-native";
+
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 // Helper function to safely get screen width
 const getScreenWidth = () => {
@@ -71,6 +78,7 @@ export default function AllServicesScreen({
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortOption, setSortOption] = useState<SortOption>("name");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchServices();
@@ -270,12 +278,26 @@ export default function AllServicesScreen({
               color={dynamicStyles.text.color}
             />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.viewModeButton}
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setShowFilters(!showFilters);
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons
+              name={showFilters ? "filter-list-off" : "filter-list"}
+              size={24}
+              color={showFilters ? theme.colors.primary : dynamicStyles.text.color}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Search and Filters Section */}
       <View style={[styles.filtersSection, dynamicStyles.container]}>
-        {/* Search Bar */}
+        {/* Search Bar - Always Visible */}
         <View style={[styles.searchContainer, dynamicStyles.searchContainer]}>
           <MaterialIcons
             name="search"
@@ -303,6 +325,10 @@ export default function AllServicesScreen({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Collapsible Filters */}
+        {showFilters && (
+        <>
 
         {/* Filters Bar */}
         <ScrollView
@@ -379,6 +405,8 @@ export default function AllServicesScreen({
             ))}
           </ScrollView>
         </View>
+        )}
+        </>
         )}
       </View>
 
@@ -490,8 +518,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.bold,
   },
   headerRight: {
-    width: 40,
-    alignItems: "flex-end",
+    flexDirection: 'row',
+    alignItems: "center",
+    gap: 8,
   },
   viewModeButton: {
     padding: theme.spacing.xs,

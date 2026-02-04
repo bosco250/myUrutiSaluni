@@ -60,6 +60,13 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   // Animation for search expansion (0 = collapsed/title visible, 1 = expanded/search visible)
   const searchAnim = React.useRef(new Animated.Value(0)).current;
 
+  // Location Filter State
+  const [selectedLocation, setSelectedLocation] = useState<string>('All');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  // User Location State
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | undefined>(undefined);
+
   useEffect(() => {
      Animated.timing(searchAnim, {
        toValue: isSearching ? 1 : 0,
@@ -87,6 +94,16 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
     "Other"
   ], []);
 
+  // Extract unique locations (cities)
+  const locations = useMemo(() => {
+    const cities = new Set(
+      salons
+        .map((salon) => salon.city?.trim())
+        .filter((city): city is string => !!city)
+    );
+    return ["All", ...Array.from(cities).sort()];
+  }, [salons]);
+
   useEffect(() => {
     fetchData();
     requestLocationPermission();
@@ -100,6 +117,10 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
       }
 
       const location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
       setMapRegion({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -193,7 +214,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         
         // Filter salons that offer services in this category
         // Note: This is a loose approximation based on salon type or name
-        return result.filter(s => {
+        result = result.filter(s => {
              const type = s.businessType?.toLowerCase() || "";
              const name = s.name.toLowerCase();
              
@@ -207,8 +228,12 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
         });
     }
 
+    if (selectedLocation !== "All") {
+       result = result.filter(s => s.city?.trim() === selectedLocation);
+    }
+
     return result;
-  }, [salons, searchQuery, selectedFilter]);
+  }, [salons, searchQuery, selectedFilter, selectedLocation]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -252,39 +277,42 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header Area */}
-      <View style={[styles.header, { backgroundColor: dynamicStyles.container.backgroundColor }]}>
-         <View style={[styles.headerTop, { position: 'relative', height: 50 }]}>
-          {/* Title Area - Fades Out */}
+      <View style={[styles.header, { backgroundColor: dynamicStyles.container.backgroundColor, paddingBottom: 8 }]}>
+         <View style={[styles.headerTop, { position: 'relative', height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: theme.spacing.md }]}>
+          
+          {/* Title Area */}
           <Animated.View style={{ 
             opacity: searchAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0] }),
-            position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1
+            flex: 1, 
+            justifyContent: 'center',
+            zIndex: isSearching ? 0 : 2
           }}>
-             <Text style={[styles.discoverTitle, dynamicStyles.text]}>Discover</Text>
+             <Text style={[styles.discoverTitle, dynamicStyles.text, { fontSize: 24 }]}>Discover</Text>
           </Animated.View>
 
-          {/* Search Button (Target for opening) - Fades Out */}
+          {/* Right: Actions */}
           <Animated.View style={{ 
             opacity: searchAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0] }),
-            position: 'absolute', right: 0, top: 0, bottom: 0, justifyContent: 'center', zIndex: isSearching ? 0 : 1,
-            flexDirection: 'row', gap: 8
+            flexDirection: 'row', alignItems: 'center', gap: 10, zIndex: isSearching ? 0 : 1
           }}>
              {/* Map Toggle Button */}
              <TouchableOpacity 
-                style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}
+                style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100, width: 36, height: 36 }]}
                 onPress={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
              >
-                <MaterialIcons name={viewMode === 'list' ? "map" : "list"} size={24} color={theme.colors.primary} />
+                <MaterialIcons name={viewMode === 'list' ? "map" : "list"} size={20} color={theme.colors.primary} />
              </TouchableOpacity>
 
+             {/* Search Button */}
              <TouchableOpacity 
-                style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}
+                style={[styles.searchIconBtn, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100, width: 36, height: 36 }]}
                 onPress={() => setIsSearching(true)}
              >
-                <MaterialIcons name="search" size={24} color={theme.colors.primary} />
+                <MaterialIcons name="search" size={20} color={theme.colors.primary} />
              </TouchableOpacity>
           </Animated.View>
 
-          {/* Expandable Search Bar */}
+          {/* Expandable Search Bar Overlay */}
           <Animated.View style={[
              styles.searchBarContainer, 
              { 
@@ -294,7 +322,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                position: 'absolute', right: 0, top: 0, bottom: 0,
                marginTop: 0, marginBottom: 0, 
                overflow: 'hidden',
-               zIndex: isSearching ? 2 : 0
+               zIndex: isSearching ? 10 : 0
              }
           ]}>
              <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} />
@@ -316,6 +344,33 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
              </TouchableOpacity>
           </Animated.View>
         </View>
+        
+        {/* Location Picker Dropdown */}
+        {showLocationPicker && (
+          <View style={[styles.locationModalOverlay, { backgroundColor: isDark ? theme.colors.gray800 : '#FFF', borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200 }]}>
+             <ScrollView nestedScrollEnabled style={{ maxHeight: 250 }}>
+                {locations.map((loc) => (
+                   <TouchableOpacity
+                     key={loc}
+                     style={[styles.locationItem, { borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.gray100 }]}
+                     onPress={() => {
+                        setSelectedLocation(loc);
+                        setShowLocationPicker(false);
+                     }}
+                   >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={[styles.locationItemText, { color: selectedLocation === loc ? theme.colors.primary : (isDark ? '#FFF' : theme.colors.text) }]}>
+                           {loc === 'All' ? 'All Locations' : loc}
+                        </Text>
+                        {selectedLocation === loc && (
+                           <MaterialIcons name="check" size={16} color={theme.colors.primary} />
+                        )}
+                      </View>
+                   </TouchableOpacity>
+                ))}
+             </ScrollView>
+          </View>
+        )}
 
         {/* Categories / Filters */}
         <View style={styles.filtersWrapper}>
@@ -324,6 +379,28 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filtersContainer}
           >
+             {/* Location Filter Chip */}
+             <TouchableOpacity
+                onPress={() => setShowLocationPicker(!showLocationPicker)}
+                style={[
+                   styles.filterChip,
+                   selectedLocation !== 'All' ? styles.filterChipSelected : styles.filterChipUnselected,
+                   selectedLocation === 'All' && { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary, borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight },
+                   { flexDirection: 'row', alignItems: 'center', gap: 4 }
+                ]}
+             >
+                <MaterialIcons 
+                  name="location-on" 
+                  size={14} 
+                  color={selectedLocation !== 'All' ? theme.colors.white : theme.colors.primary} 
+                />
+                <Text style={[
+                   styles.filterChipText, 
+                   selectedLocation !== 'All' ? styles.filterChipTextSelected : { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary }
+                ]}>
+                   {selectedLocation === 'All' ? 'Location' : selectedLocation}
+                </Text>
+             </TouchableOpacity>
             {filters.map((filter) => {
               const isSelected = selectedFilter === filter;
               return (
@@ -496,28 +573,43 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
 
           {/* Salons Section */}
           <View style={[styles.section, styles.salonsSection]}>
-            <View style={[styles.sectionHeader, styles.salonsSectionHeader]}>
-               <View style={styles.sectionTitleContainer}>
-                <MaterialIcons
-                  name="store"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>
-                  All Salons
-                </Text>
+            {/* Section Header */}
+            <View style={styles.salonsSectionHeader}>
+              <View style={styles.sectionTitleContainer}>
+                <View style={styles.salonIconWrapper}>
+                  <MaterialIcons
+                    name="store"
+                    size={18}
+                    color={theme.colors.white}
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>
+                    Popular Salons
+                  </Text>
+                  <Text style={[styles.sectionSubtitle, dynamicStyles.textSecondary]}>
+                    {filteredSalons.length} {filteredSalons.length === 1 ? 'salon' : 'salons'} near you
+                  </Text>
+                </View>
               </View>
             </View>
 
             {filteredSalons.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <MaterialIcons
-                  name="store"
-                  size={48}
-                  color={dynamicStyles.textSecondary.color}
-                />
+                <View style={styles.emptyIconWrapper}>
+                  <MaterialIcons
+                    name="store"
+                    size={32}
+                    color={dynamicStyles.textSecondary.color}
+                  />
+                </View>
+                <Text style={[styles.emptyTitle, dynamicStyles.text]}>
+                  No Salons Found
+                </Text>
                 <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-                  {searchQuery.trim() || selectedFilter !== 'All' ? 'No salons match your criteria' : 'No salons available'}
+                  {searchQuery.trim() || selectedFilter !== 'All' 
+                    ? 'Try adjusting your search or filters' 
+                    : 'Check back later for new salons'}
                 </Text>
               </View>
             ) : (
@@ -529,29 +621,47 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                         key={salon.id}
                         salon={salon}
                         onPress={() => handleSalonPress(salon)}
+                        userLocation={userLocation}
                       />
                     )
                   )}
                 </View>
+                
+                {/* Premium View All Button */}
                 {filteredSalons.length > 10 && (
                   <TouchableOpacity
-                    style={styles.viewAllButtonBottom}
-                    onPress={() => {
-                      setShowAllSalons(!showAllSalons);
-                    }}
-                    activeOpacity={0.7}
+                    style={[
+                      styles.viewAllButtonPremium,
+                      { backgroundColor: isDark ? theme.colors.gray800 : '#F5F5F7' }
+                    ]}
+                    onPress={() => setShowAllSalons(!showAllSalons)}
+                    activeOpacity={0.8}
                   >
-                    <Text
-                      style={[
-                        styles.viewAllText,
-                        { color: theme.colors.primary },
-                      ]}
-                    >
-                      {showAllSalons ? "Show Less" : "View All"}
-                    </Text>
+                    <View style={styles.viewAllContent}>
+                      <View style={[
+                        styles.viewAllIconCircle,
+                        { backgroundColor: theme.colors.primary }
+                      ]}>
+                        <MaterialIcons
+                          name={showAllSalons ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+                          size={20}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                      <View>
+                        <Text style={[styles.viewAllTextPrimary, dynamicStyles.text]}>
+                          {showAllSalons ? "Show Less" : `View All ${filteredSalons.length} Salons`}
+                        </Text>
+                        <Text style={[styles.viewAllTextSecondary, dynamicStyles.textSecondary]}>
+                          {showAllSalons 
+                            ? "Collapse to show top 10" 
+                            : `${filteredSalons.length - 10} more salons available`}
+                        </Text>
+                      </View>
+                    </View>
                     <MaterialIcons
-                      name={showAllSalons ? "arrow-upward" : "arrow-forward"}
-                      size={16}
+                      name="arrow-forward-ios"
+                      size={14}
                       color={theme.colors.primary}
                     />
                   </TouchableOpacity>
@@ -764,5 +874,93 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+  // Salon section styles
+  salonIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
+  emptyIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 4,
+  },
+  // Premium View All button styles
+  viewAllButtonPremium: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
+  viewAllContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  viewAllIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewAllTextPrimary: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
+  },
+  viewAllTextSecondary: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
+  },
+  // Location Picker Styles
+  locationModalOverlay: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    maxHeight: 300,
+    borderRadius: 16,
+    zIndex: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+  },
+  locationItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  locationItemText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
   },
 });

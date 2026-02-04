@@ -317,12 +317,21 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                 <MaterialIcons name="inventory-2" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
                 <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('StockManagement', { salonId })}
-                activeOpacity={0.7}
-              >
-                  <Text style={styles.viewAllText}>Manage</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('StockManagement', { salonId })}
+                  activeOpacity={0.7}
+                >
+                    <Text style={styles.viewAllText}>Manage</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => navigation.navigate('AddProduct', { salonId })}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.addButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {products.length === 0 ? (

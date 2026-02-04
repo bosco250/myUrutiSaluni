@@ -25,6 +25,7 @@ const profileImage = require('../../../assets/Logo.png');
 interface MoreMenuScreenProps {
   navigation: {
     navigate: (screen: string, params?: any) => void;
+    goBack?: () => void;
   };
 }
 
@@ -33,32 +34,25 @@ interface MenuItem {
   icon: string;
   label: string;
   description?: string;
-  screen: string;
+  screen?: string;
   badge?: number | string;
   iconColor: string;
   requiredPermissions?: EmployeePermission[];
   ownerOnly?: boolean; // If true, only owners/admins can see this item
+  subItems?: MenuItem[];
 }
 
 // Menu sections with items
 // Using theme colors for consistency
 const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
   {
-    title: 'My Account',
+    title: 'Account',
     items: [
-      {
-        id: 'profile',
-        icon: 'person',
-        label: 'My Profile',
-        description: 'Manage personal details',
-        screen: 'Profile',
-        iconColor: theme.colors.secondary,
-      },
       {
         id: 'notifications',
         icon: 'notifications',
         label: 'Alerts',
-        description: ' Updates & reminders',
+        description: 'Updates & reminders',
         screen: 'Notifications',
         badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
         iconColor: theme.colors.warning,
@@ -69,127 +63,157 @@ const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
     title: 'Workspace',
     items: [
       {
-        id: 'sales',
+        id: 'sales-group',
         icon: 'point-of-sale',
-        label: 'Checkout',
-        description: 'Process a new payment',
-        screen: 'Sales',
+        label: 'POS & Sales',
+        description: 'Manage sales & history',
         iconColor: theme.colors.success,
-        requiredPermissions: [EmployeePermission.PROCESS_PAYMENTS],
+        requiredPermissions: [EmployeePermission.PROCESS_PAYMENTS, EmployeePermission.VIEW_SALES_REPORTS],
+        subItems: [
+          {
+             id: 'sales',
+             icon: 'bolt', 
+             label: 'Quick Sales',
+             screen: 'Sales',
+             iconColor: theme.colors.success,
+             requiredPermissions: [EmployeePermission.PROCESS_PAYMENTS],
+          },
+          {
+             id: 'sales-history',
+             icon: 'receipt-long',
+             label: 'Sales History',
+             screen: 'SalesHistory',
+             iconColor: theme.colors.secondary,
+             requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+          }
+        ]
       },
       {
-        id: 'sales-history',
-        icon: 'receipt-long',
-        label: 'Transactions',
-        description: 'View sales history',
-        screen: 'SalesHistory',
-        iconColor: theme.colors.secondary,
-        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
-      },
-      {
-        id: 'commissions',
-        icon: 'payments',
-        label: 'My Earnings',
-        description: 'Track commissions',
-        screen: 'Commissions',
-        iconColor: theme.colors.primary,
-        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS, EmployeePermission.VIEW_EMPLOYEE_COMMISSIONS],
-      },
-      {
-        id: 'analytics',
-        icon: 'analytics',
-        label: 'Business Reports',
-        description: 'Performance insights',
-        screen: 'BusinessAnalytics',
-        iconColor: theme.colors.warning,
-        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
-      },
-      {
-        id: 'expenses',
-        icon: 'receipt-long',
-        label: 'Expenses',
-        description: 'Track expenses',
-        screen: 'Expenses',
-        iconColor: theme.colors.error,
-        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
-      },
-      {
-        id: 'accounting',
+        id: 'finance-group',
         icon: 'account-balance',
         label: 'Accounting',
-        description: 'Financial overview',
-        screen: 'Accounting',
-        iconColor: theme.colors.info || theme.colors.primary,
-        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+        description: 'Finance & Reports',
+        iconColor: theme.colors.primary,
+        requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS, EmployeePermission.VIEW_EMPLOYEE_COMMISSIONS],
+        subItems: [
+          {
+            id: 'accounting',
+            icon: 'dashboard',
+            label: 'Overview',
+            screen: 'Accounting',
+            iconColor: theme.colors.primary,
+            requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+          },
+          {
+            id: 'expenses',
+            icon: 'receipt',
+            label: 'Expenses',
+            screen: 'Expenses',
+            iconColor: theme.colors.error,
+            requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+          },
+          {
+            id: 'analytics',
+            icon: 'analytics',
+            label: 'Reports',
+            screen: 'BusinessAnalytics',
+            iconColor: theme.colors.warning,
+            requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS],
+          },
+          {
+            id: 'commissions',
+            icon: 'payments',
+            label: 'Commissions',
+            screen: 'Commissions',
+            iconColor: theme.colors.success,
+            requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS, EmployeePermission.VIEW_EMPLOYEE_COMMISSIONS],
+          },
+        ],
       },
       {
-        id: 'employee-schedules',
-        icon: 'calendar-today',
-        label: 'Team Schedule',
-        description: 'Manage shifts',
-        screen: 'MySchedule',
-        iconColor: theme.colors.secondary,
-        requiredPermissions: [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES],
-      },
-      {
-        id: 'performance',
-        icon: 'trending-up',
-        label: 'Team Performance',
-        description: 'Staff metrics',
-        screen: 'BusinessAnalytics',
-        iconColor: theme.colors.warning,
-        requiredPermissions: [EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE],
-      },
-      {
-        id: 'staff',
+        id: 'team-group',
         icon: 'people',
-        label: 'Team List',
-        description: 'View & manage staff',
-        screen: 'StaffManagement',
-        iconColor: theme.colors.secondary,
-        requiredPermissions: [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES, EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE],
+        label: 'Team',
+        description: 'Manage staff & schedules',
+        iconColor: theme.colors.info,
+        subItems: [
+          {
+            id: 'staff',
+            icon: 'people',
+            label: 'Team List',
+            screen: 'StaffManagement',
+            iconColor: theme.colors.secondary,
+            requiredPermissions: [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES, EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE],
+          },
+          {
+            id: 'employee-schedules',
+            icon: 'calendar-today',
+            label: 'Schedule',
+            screen: 'MySchedule',
+            iconColor: theme.colors.secondary,
+            requiredPermissions: [EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES],
+          },
+          {
+            id: 'performance',
+            icon: 'trending-up',
+            label: 'Performance',
+            screen: 'BusinessAnalytics',
+            iconColor: theme.colors.warning,
+            requiredPermissions: [EmployeePermission.VIEW_EMPLOYEE_PERFORMANCE],
+          },
+          {
+            id: 'employee-permissions',
+            icon: 'admin-panel-settings',
+            label: 'Access Controls',
+            screen: 'EmployeePermissions',
+            iconColor: theme.colors.secondary,
+            ownerOnly: true,
+          },
+        ],
       },
       {
-        id: 'employee-permissions',
-        icon: 'admin-panel-settings',
-        label: 'Access Controls',
-        description: 'Manage staff permissions',
-        screen: 'EmployeePermissions',
-        iconColor: theme.colors.secondary,
-        ownerOnly: true, // Only owners can manage permissions
-      },
-      {
-        id: 'customers',
-        icon: 'people-outline',
-        label: 'Client List',
-        description: 'View customer directory',
-        screen: 'CustomerManagement',
-        iconColor: theme.colors.secondaryLight,
-        requiredPermissions: [EmployeePermission.MANAGE_CUSTOMERS, EmployeePermission.VIEW_CUSTOMER_HISTORY],
-      },
-      {
-        id: 'schedule',
-        icon: 'schedule',
-        label: 'My Calendar',
-        description: 'View my appointments',
-        screen: 'SalonAppointments',
-        iconColor: theme.colors.error,
-        requiredPermissions: [EmployeePermission.VIEW_ALL_APPOINTMENTS, EmployeePermission.MANAGE_APPOINTMENTS],
+        id: 'salon-group',
+        icon: 'store',
+        label: 'Salon',
+        description: 'Operations & Settings',
+        iconColor: theme.colors.primary,
+        subItems: [
+          {
+            id: 'schedule',
+            icon: 'schedule',
+            label: 'Appointments',
+            screen: 'SalonAppointments',
+            iconColor: theme.colors.error,
+            requiredPermissions: [EmployeePermission.VIEW_ALL_APPOINTMENTS, EmployeePermission.MANAGE_APPOINTMENTS],
+          },
+          {
+            id: 'customers',
+            icon: 'people-outline',
+            label: 'Customers',
+            screen: 'CustomerManagement',
+            iconColor: theme.colors.secondaryLight,
+            requiredPermissions: [EmployeePermission.MANAGE_CUSTOMERS, EmployeePermission.VIEW_CUSTOMER_HISTORY],
+          },
+          {
+            id: 'salon-settings',
+            icon: 'settings',
+            label: 'Details & Settings',
+            screen: 'SalonSettings',
+            iconColor: theme.colors.primary,
+            requiredPermissions: [
+              EmployeePermission.MANAGE_SALON_PROFILE, 
+              EmployeePermission.VIEW_SALON_SETTINGS, 
+              EmployeePermission.UPDATE_SALON_SETTINGS, 
+              EmployeePermission.MANAGE_BUSINESS_HOURS
+            ],
+          },
+        ],
       },
     ] as MenuItem[],
   },
   {
-    title: 'App Settings',
+    title: 'General',
     items: [
-      {
-        id: 'salon-settings',
-        icon: 'store',
-        label: 'Salon Details',
-        description: 'Hours & info',
-        screen: 'SalonSettings',
-        iconColor: theme.colors.primary,
-        requiredPermissions: [EmployeePermission.MANAGE_SALON_PROFILE, EmployeePermission.VIEW_SALON_SETTINGS, EmployeePermission.UPDATE_SALON_SETTINGS, EmployeePermission.MANAGE_BUSINESS_HOURS],
-      },
 
       {
         id: 'explore',
@@ -230,22 +254,21 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   const { user, logout } = useAuth();
   const unreadNotificationCount = useUnreadNotifications();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (id: string) => {
+    setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
+  };
   
-  // Get cached permission data - this is instant, no API calls needed!
   const { activeSalon, isOwner, isAdmin } = usePermissions();
-  
-  // Also get checkPermission from hook for backward compatibility
   const { checkPermission } = useEmployeePermissionCheck();
   
-  // Get salon info from cached activeSalon - instant access!
   const employeeSalonId = activeSalon?.salonId;
   const salonName = activeSalon?.salonName;
 
-
-  // Dynamic styles for dark/light mode
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? theme.colors.gray900 : "#F8F9FA",
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
       color: isDark ? theme.colors.white : theme.colors.text,
@@ -253,37 +276,17 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     textSecondary: {
       color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
     },
-    card: {
+    border: {
+      borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    modalBg: {
       backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-      borderWidth: 1,
-    },
-    header: {
-      backgroundColor: isDark ? theme.colors.gray900 : "#F8F9FA",
-    },
-    divider: {
-      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-    },
-    primaryButton: {
-      backgroundColor: theme.colors.primary,
-    },
-    outlineButtonBorder: {
-      borderColor: isDark ? theme.colors.gray600 : theme.colors.border,
-    },
-    outlineButtonText: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    iconBg: {
-      backgroundColor: isDark ? theme.colors.gray900 + "80" : theme.colors.backgroundSecondary,
     }
   };
 
-  // Helper to generate light background from color
-  const getLightBg = (color: string) => `${color}15`; // 15% opacity
-
   const menuSections = useMemo(() => getMenuSections(unreadNotificationCount, isDark), [unreadNotificationCount, isDark]);
 
-  // Dashboard section for employees
   const employeeSalonSection = useMemo(() => {
     return (employeeSalonId && user?.role === UserRole.SALON_EMPLOYEE) ? {
       title: 'Dashboard',
@@ -292,7 +295,6 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
           id: 'my-salon',
           icon: 'dashboard',
           label: salonName || 'My Workspace',
-          description: 'Manage your tasks & schedule',
           screen: 'EmployeeSalonDashboard',
           iconColor: theme.colors.primary,
           requiredPermissions: [
@@ -315,7 +317,22 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
   const filteredMenuSections = useMemo(() => {
     return allMenuSections.map(section => ({
       ...section,
-      items: section.items.filter(item => {
+      items: section.items.map(item => {
+        // Handle sub-items recursively
+        let filteredSubItems = item.subItems;
+        if (item.subItems) {
+           filteredSubItems = item.subItems.filter(sub => {
+              if (sub.ownerOnly && !(isOwner || isAdmin)) return false;
+              if (isOwner || isAdmin) return true;
+              if (!sub.requiredPermissions || sub.requiredPermissions.length === 0) return true;
+              return sub.requiredPermissions.some(perm => checkPermission(perm));
+           });
+        }
+        return { ...item, subItems: filteredSubItems };
+      }).filter(item => {
+        // If it has subItems, only show if there are visible children
+        if (item.subItems) return item.subItems.length > 0;
+
         if (item.ownerOnly) return isOwner || isAdmin;
         if (isOwner || isAdmin) return true;
         if (!item.requiredPermissions || item.requiredPermissions.length === 0) return true;
@@ -324,7 +341,8 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     })).filter(section => section.items.length > 0);
   }, [allMenuSections, isOwner, isAdmin, checkPermission]);
 
-  const handleMenuPress = (screen: string) => {
+  const handleMenuPress = (screen?: string) => {
+    if (!screen) return;
     const screensNeedingSalonId = [
       'AddProduct', 'AddService', 'StockManagement', 'SalonSettings',
       'SalonAppointments', 'CustomerManagement', 'Sales', 'StaffManagement',
@@ -352,42 +370,50 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
 
   const cancelLogout = () => setShowLogoutModal(false);
 
-  const renderMenuItem = (item: MenuItem) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.menuItem}
-      onPress={() => handleMenuPress(item.screen)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.menuIconContainer, { backgroundColor: getLightBg(item.iconColor) }]}>
-        <MaterialIcons name={item.icon as any} size={20} color={item.iconColor} />
-      </View>
-      <View style={styles.menuItemContent}>
-        <Text style={[styles.menuItemLabel, dynamicStyles.text]}>{item.label}</Text>
-        {item.description && (
-          <Text style={[styles.menuItemDescription, dynamicStyles.textSecondary]}>
-            {item.description}
-          </Text>
-        )}
-      </View>
-      <View style={styles.menuItemRight}>
-        {item.badge && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
-            </Text>
-          </View>
-        )}
-        <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
-      </View>
-    </TouchableOpacity>
-  );
+  const renderMenuItem = (item: MenuItem, depth: number = 0) => {
+    const hasSubItems = item.subItems && item.subItems.length > 0;
+    const isExpanded = expandedItems[item.id];
+    
+    const itemStyle = depth > 0 ? { 
+        paddingLeft: 40, 
+        backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' 
+    } : {};
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
+    const mainRow = (
+      <TouchableOpacity
+        key={item.id}
+        style={[styles.menuItem, dynamicStyles.border, itemStyle]}
+        onPress={() => hasSubItems ? toggleExpand(item.id) : handleMenuPress(item.screen)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.menuItemLabel, dynamicStyles.text, depth > 0 && { fontSize: 13, opacity: 0.9 }]}>{item.label}</Text>
+        <View style={styles.menuItemRight}>
+          {item.badge && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {typeof item.badge === 'number' && item.badge > 99 ? '99+' : item.badge}
+              </Text>
+            </View>
+          )}
+          <MaterialIcons 
+            name={hasSubItems ? (isExpanded ? "expand-less" : "expand-more") : "chevron-right"} 
+            size={18} 
+            color={isDark ? theme.colors.gray600 : theme.colors.border} 
+          />
+        </View>
+      </TouchableOpacity>
+    );
+
+    if (hasSubItems) {
+       return (
+          <View key={item.id}>
+             {mainRow}
+             {isExpanded && item.subItems!.map(sub => renderMenuItem(sub, depth + 1))}
+          </View>
+       );
+    }
+    
+    return mainRow;
   };
 
   return (
@@ -397,107 +423,99 @@ export default function MoreMenuScreen({ navigation }: MoreMenuScreenProps) {
     >
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
+      {/* Premium Header */}
+      <View style={[styles.header, dynamicStyles.border]}>
+         <Text style={[styles.headerTitle, dynamicStyles.text]}>Menu</Text>
+         <TouchableOpacity 
+           onPress={() => navigation.goBack ? navigation.goBack() : navigation.navigate('Home')} 
+           style={styles.closeButton}
+           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+         >
+            <MaterialIcons name="close" size={22} color={dynamicStyles.textSecondary.color} />
+         </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Personalized Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.greetingText, dynamicStyles.textSecondary]}>{getGreeting()},</Text>
-            <Text style={[styles.userNameText, dynamicStyles.text]}>
-              {user?.fullName?.split(' ')[0] || getRoleName(user?.role)}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={[styles.notificationIcon, dynamicStyles.iconBg]}
-            onPress={() => navigation.navigate('Notifications')}
-          >
-            <MaterialIcons name="notifications-none" size={24} color={dynamicStyles.text.color} />
-            {unreadNotificationCount > 0 && <View style={styles.dot} />}
-          </TouchableOpacity>
-        </View>
-
-        {/* Profile Card */}
-        <TouchableOpacity
-          style={[styles.profileCard, dynamicStyles.card]}
-          onPress={() => navigation.navigate('Profile')}
-          activeOpacity={0.7}
-        >
-          <Image 
-            source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
-            style={styles.profileImage} 
-            onError={(e) => console.log('More menu avatar load error:', e.nativeEvent.error)}
-          />
-          <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, dynamicStyles.text]}>
-              {user?.fullName || getRoleName(user?.role)}
-            </Text>
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleBadgeText}>{getRoleName(user?.role)}</Text>
-            </View>
-          </View>
-          <MaterialIcons name="keyboard-arrow-right" size={24} color={dynamicStyles.textSecondary.color} />
-        </TouchableOpacity>
-
-        {/* Menu Sections */}
         {filteredMenuSections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={[styles.sectionTitle, dynamicStyles.textSecondary]}>
               {section.title}
             </Text>
-            <View style={[styles.sectionCard, dynamicStyles.card]}>
-              {section.items.map((item, index) => (
-                <View key={item.id}>
-                  {renderMenuItem(item)}
-                  {index < section.items.length - 1 && (
-                    <View style={[styles.itemDivider, dynamicStyles.divider]} />
-                  )}
-                </View>
-              ))}
+            <View>
+              {section.items.map(item => renderMenuItem(item, 0))}
             </View>
           </View>
         ))}
+        {/* Profile & Logout Section at bottom */}
+        <View style={[styles.bottomSection, dynamicStyles.border]}>
+          <TouchableOpacity 
+            style={[styles.profileOuterContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }]}
+            onPress={() => handleMenuPress('Profile')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.avatarContainer}>
+              <Image 
+                source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
+                style={styles.avatar}
+                defaultSource={profileImage}
+              />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={[styles.userName, dynamicStyles.text]} numberOfLines={1}>
+                {user?.fullName || 'User Profile'}
+              </Text>
+              <Text style={[styles.userRole, dynamicStyles.textSecondary]}>
+                {getRoleName(user?.role)}
+              </Text>
+            </View>
+            <MaterialIcons 
+              name="chevron-right" 
+              size={18} 
+              color={dynamicStyles.textSecondary.color} 
+              style={{ opacity: 0.3 }}
+            />
+          </TouchableOpacity>
 
-        {/* Logout */}
-        <TouchableOpacity
-          style={[styles.logoutButton, dynamicStyles.card]}
-          onPress={handleLogout}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.menuIconContainer, { backgroundColor: getLightBg(theme.colors.error) }]}>
-            <MaterialIcons name="logout" size={20} color={theme.colors.error} />
-          </View>
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <View style={styles.logoutContent}>
+              <MaterialIcons name="logout" size={20} color={theme.colors.error} />
+              <Text style={styles.logoutText}>Sign out of Uruti</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         <Text style={[styles.versionText, dynamicStyles.textSecondary]}>
           Version 1.2.0 • Uruti
         </Text>
-
-        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Logout Modal */}
+      {/* Clean Logout Modal */}
       <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={cancelLogout}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, dynamicStyles.card, { borderWidth: 0 }]}>
-            <View style={styles.modalIconContainer}>
-              <MaterialIcons name="logout" size={32} color={theme.colors.error} />
-            </View>
-            <Text style={[styles.modalTitle, dynamicStyles.text]}>Confirm Logout</Text>
+          <View style={[styles.modalContent, dynamicStyles.modalBg]}>
+            <Text style={[styles.modalTitle, dynamicStyles.text]}>Log Out</Text>
             <Text style={[styles.modalMessage, dynamicStyles.textSecondary]}>
-              Are you sure you want to exit your account?
+              Are you sure you want to sign out?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton, { backgroundColor: isDark ? theme.colors.gray700 : "#F1F3F5" }]}
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={cancelLogout}
               >
                 <Text style={[styles.cancelButtonText, dynamicStyles.text]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={confirmLogout}>
-                <Text style={styles.confirmButtonText}>Logout</Text>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmButton]} 
+                onPress={confirmLogout}
+              >
+                <Text style={styles.confirmButtonText}>Log Out</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -511,218 +529,203 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-  },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xs,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
-  greetingText: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-    marginBottom: 2,
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  userNameText: {
-    fontSize: 24,
-    fontFamily: theme.fonts.bold,
-    fontWeight: 'bold',
-  },
-  notificationIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.04)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dot: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.error,
-    borderWidth: 2,
-    borderColor: '#F8F9FA',
+  headerTitle: {
+    fontSize: 24,
+    fontFamily: theme.fonts.bold,
+    fontWeight: '700',
+    letterSpacing: -0.8,
   },
-  profileCard: {
+  bottomSection: {
+    marginTop: 56,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  profileOuterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    borderRadius: 24,
-    marginBottom: theme.spacing.xl,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
-  profileImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    marginRight: theme.spacing.md,
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
   },
   profileInfo: {
+    marginLeft: 14,
     flex: 1,
   },
-  profileName: {
-    fontSize: 18,
+  userName: {
+    fontSize: 16,
     fontFamily: theme.fonts.bold,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 1,
+    letterSpacing: -0.4,
   },
   roleBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.primary + '15',
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  roleBadgeText: {
+  userRole: {
     fontSize: 12,
-    color: theme.colors.primary,
     fontFamily: theme.fonts.medium,
+    opacity: 0.5,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   section: {
-    marginBottom: theme.spacing.xl,
+    marginTop: 32,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: theme.fonts.bold,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: theme.spacing.md,
-    marginLeft: theme.spacing.xs,
-  },
-  sectionCard: {
-    borderRadius: 24,
-    overflow: 'hidden',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    marginLeft: 20,
+    opacity: 0.4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-  },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.md,
-  },
-  menuItemContent: {
-    flex: 1,
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
   menuItemLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: theme.fonts.medium,
-    fontWeight: '500',
-  },
-  menuItemDescription: {
-    fontSize: 12,
-    marginTop: 1,
+    fontWeight: '400',
+    letterSpacing: -0.2,
   },
   menuItemRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  itemDivider: {
-    height: 1,
-    marginHorizontal: theme.spacing.md,
-    opacity: 0.5,
-  },
   badge: {
     backgroundColor: theme.colors.error,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    marginRight: theme.spacing.xs,
+    marginRight: 8,
   },
   badgeText: {
     color: '#FFF',
     fontSize: 10,
-    fontFamily: theme.fonts.bold,
+    fontWeight: 'bold',
   },
   logoutButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  logoutContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    borderRadius: 24,
-    marginTop: theme.spacing.sm,
   },
   logoutText: {
     fontSize: 15,
-    fontFamily: theme.fonts.bold,
-    fontWeight: 'bold',
+    fontFamily: theme.fonts.medium,
+    fontWeight: '600',
     color: theme.colors.error,
+    marginLeft: 12,
+    letterSpacing: -0.2,
   },
   versionText: {
     textAlign: 'center',
-    fontSize: 12,
-    marginTop: theme.spacing.xl,
-    opacity: 0.6,
+    fontSize: 11,
+    marginTop: 24,
+    opacity: 0.4,
   },
+  // Minimial Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: 24,
   },
   modalContent: {
     width: '100%',
-    borderRadius: 24,
-    padding: theme.spacing.xl,
+    maxWidth: 320,
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
-  },
-  modalIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.error + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   modalTitle: {
     fontSize: 18,
     fontFamily: theme.fonts.bold,
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.xs,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   modalMessage: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: 24,
     lineHeight: 20,
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: 12,
+    width: '100%',
   },
   modalButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButton: {
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   confirmButton: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.error, // Keep red for dangerous action
   },
   confirmButtonText: {
     color: '#FFF',
     fontSize: 14,
-    fontFamily: theme.fonts.bold,
+    fontWeight: '600',
   },
   cancelButtonText: {
     fontSize: 14,
-    fontFamily: theme.fonts.medium,
+    fontWeight: '500',
   },
 });

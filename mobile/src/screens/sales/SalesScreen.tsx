@@ -27,6 +27,7 @@ import { api } from "../../services/api";
 import { EmployeePermissionGate } from "../../components/permissions/EmployeePermissionGate";
 import { EmployeePermission } from "../../constants/employeePermissions";
 import { useEmployeePermissionCheck } from "../../hooks/useEmployeePermissionCheck";
+import { showToast } from "../../utils/toast";
 
 // Senior Dev: Extracted components for better performance
 import { SalesHeader } from "./components/SalesHeader";
@@ -309,6 +310,7 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
         },
       ]);
     }
+    showToast(`You added ${item.name} to cart`, 'success');
   };
 
   const updateQuantity = (id: string, type: string, change: number) => {
@@ -324,6 +326,10 @@ export default function SalesScreen({ navigation }: SalesScreenProps) {
   };
 
   const removeFromCart = (id: string, type: string) => {
+    const itemToRemove = cart.find((item) => item.id === id && item.type === type);
+    if (itemToRemove) {
+      showToast(`You removed ${itemToRemove.name} from cart`, 'info');
+    }
     setCart(cart.filter((item) => !(item.id === id && item.type === type)));
   };
 

@@ -16,15 +16,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../theme";
-import { useTheme } from "../../context";
-import { 
-  exploreService, 
-  Salon, 
-  Service, 
-  Product, 
-  Employee 
+import { useTheme, useAuth } from "../../context";
+import {
+  exploreService,
+  Salon,
+  Service,
+  Product,
+  Employee
 } from "../../services/explore";
 import ImageViewing from "react-native-image-viewing";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getImageUrl, getImageUrls } from "../../utils";
 
 // Custom navigation props since we don't use React Navigation methods directly
 type Props = {
@@ -41,11 +43,44 @@ const HERO_HEIGHT = 280;
 
 
 // Middleware to normalize working hours location from backend
+// Matches web version's getWorkingHours logic
 const getSalonHours = (salon: Salon) => {
-  return salon.operatingHours || 
-         salon.businessHours || 
-         salon.settings?.workingHours || 
-         null;
+  // 1. Check direct operatingHours / businessHours first
+  if (salon.operatingHours) return salon.operatingHours;
+  if (salon.businessHours) return salon.businessHours;
+
+  // 2. Check settings.workingHours (may be a JSON string)
+  if (salon.settings?.workingHours) {
+    const hours = salon.settings.workingHours;
+    if (typeof hours === 'string') {
+      try {
+        return JSON.parse(hours);
+      } catch {
+        return null;
+      }
+    }
+    return hours;
+  }
+
+  // 3. Check settings.operatingHours (may be a JSON string)
+  if (salon.settings?.operatingHours) {
+    const hours = salon.settings.operatingHours;
+    if (typeof hours === 'string') {
+      try {
+        return JSON.parse(hours);
+      } catch {
+        return null;
+      }
+    }
+    return hours;
+  }
+
+  // 4. Check metadata locations
+  if (salon.metadata?.workingHours) return salon.metadata.workingHours;
+  if (salon.metadata?.operatingHours) return salon.metadata.operatingHours;
+  if (salon.metadata?.businessHours) return salon.metadata.businessHours;
+
+  return null;
 };
 
 // Helper to check if salon is currently open based on structure hours
@@ -64,24 +99,19 @@ const checkSalonOpenStatus = (salon: Salon) => {
       return { isOpen: false, label: 'Closed' };
     }
 
+    // Flexible time field access (matches web version)
+    const openTime = todayHours.open || todayHours.openTime || todayHours.startTime || '09:00';
+    const closeTime = todayHours.close || todayHours.closeTime || todayHours.endTime || '18:00';
+
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    
-    // Parse "HH:mm" to minutes
-    const [openH, openM] = todayHours.openTime 
-      ? todayHours.openTime.split(':').map(Number) // Support openTime (CreateSalon)
-      : todayHours.open.split(':').map(Number);    // Support open (Standard)
-      
-    const [closeH, closeM] = todayHours.closeTime
-      ? todayHours.closeTime.split(':').map(Number)
-      : todayHours.close.split(':').map(Number);
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
     
     const openMinutes = openH * 60 + openM;
     const closeMinutes = closeH * 60 + closeM;
 
     if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
-       // normalize close time string
-       const closeStr = todayHours.closeTime || todayHours.close;
-      return { isOpen: true, label: `Open until ${closeStr}` };
+      return { isOpen: true, label: `Open until ${closeTime}` };
     }
     return { isOpen: false, label: 'Closed' };
   }
@@ -191,12 +221,9 @@ const SectionHeader = ({ title, action }: { title: string; action?: string }) =>
   </View>
 );
 
-const ServiceItem = ({ service, onPress }: { service: Service; onPress: () => void }) => {
-  const imageSource = service.images && service.images.length > 0 
-      ? { uri: service.images[0] }
-      : service.imageUrl 
-          ? { uri: service.imageUrl }
-          : null;
+const ServiceItem = ({ service, onPress, onBook }: { service: Service; onPress: () => void; onBook: () => void }) => {
+  const rawImageUrl = (service.images && service.images.length > 0 ? service.images[0] : null) || service.imageUrl;
+  const imageSource = rawImageUrl ? { uri: getImageUrl(rawImageUrl) || '' } : null;
 
   return (
     <TouchableOpacity style={styles.serviceItem} onPress={onPress}>
@@ -209,7 +236,7 @@ const ServiceItem = ({ service, onPress }: { service: Service; onPress: () => vo
       </View>
       <View style={styles.servicePriceContainer}>
         <Text style={styles.servicePrice}>{formatCurrency(service.basePrice)}</Text>
-        <TouchableOpacity style={styles.bookButtonSmall} onPress={onPress}>
+        <TouchableOpacity style={styles.bookButtonSmall} onPress={onBook}>
           <Text style={styles.bookButtonTextSmall}>Book</Text>
         </TouchableOpacity>
       </View>
@@ -266,6 +293,7 @@ const DescriptionText = ({ text }: { text: string }) => {
 
 export default function SalonDetailScreen({ route, navigation }: Props) {
   const { isDark } = useTheme();
+  const { user } = useAuth();
   // Use generic access to params since types might optionally include salon object
   const params = route.params as any;
   const salonId = params.salonId;
@@ -291,6 +319,22 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
+
+  // Combine salon and service images for gallery viewer
+  const allGalleryImages = useMemo(() => {
+    const salonImages = salon?.images || [];
+    const serviceImagesUrls: string[] = [];
+    
+    services.forEach(service => {
+      if (service.images && service.images.length > 0) {
+        serviceImagesUrls.push(...service.images);
+      } else if (service.imageUrl) {
+        serviceImagesUrls.push(service.imageUrl);
+      }
+    });
+
+    return [...salonImages, ...serviceImagesUrls];
+  }, [salon?.images, services]);
 
   const fetchData = async () => {
     try {
@@ -353,7 +397,23 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
     if (salon?.phone) Linking.openURL(`sms:${salon.phone}`);
   };
 
+  const handleViewService = (service: Service) => {
+    // Navigate to service detail screen
+    navigation.navigate("ServiceDetail", {
+      serviceId: service.id,
+      service: service,
+    });
+  };
+
   const handleBookService = (service: Service) => {
+    if (!user) {
+      AsyncStorage.setItem(
+        "@booking_intent",
+        JSON.stringify({ salonId: salon?.id, serviceId: service.id, service })
+      );
+      navigation.navigate("Login");
+      return;
+    }
     // @ts-ignore
     navigation.navigate("BookingFlow", {
       salonId: salon?.id,
@@ -363,13 +423,20 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
   };
 
   const handleBook = () => {
-    if (salon) {
-      // @ts-ignore - BookingFlow params mismatch possible, ignoring for clean build if verified elsewhere
-      navigation.navigate("BookingFlow", {
-        salonId: salon.id,
-        salonName: salon.name,
-      });
+    if (!salon) return;
+    if (!user) {
+      AsyncStorage.setItem(
+        "@booking_intent",
+        JSON.stringify({ salonId: salon.id, salonName: salon.name })
+      );
+      navigation.navigate("Login");
+      return;
     }
+    // @ts-ignore - BookingFlow params mismatch possible, ignoring for clean build if verified elsewhere
+    navigation.navigate("BookingFlow", {
+      salonId: salon.id,
+      salonName: salon.name,
+    });
   };
 
   if (loading) {
@@ -439,7 +506,7 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
         <View style={styles.heroSection}>
           {salon.images && salon.images.length > 0 ? (
             <Image 
-              source={{ uri: salon.images[0] }} 
+              source={{ uri: getImageUrl(salon.images[0]) || '' }} 
               style={StyleSheet.absoluteFillObject} 
               resizeMode="cover" 
             />
@@ -547,9 +614,9 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
                      
                      const isToday = new Date().getDay() === DAYS_ORDER.indexOf(day) + 1 || (day === 'sunday' && new Date().getDay() === 0);
                      
-                     // Normalize field names (open vs openTime)
-                     const openStr = hours.open || hours.openTime;
-                     const closeStr = hours.close || hours.closeTime;
+                     // Normalize field names (open vs openTime vs startTime) - matches web
+                     const openStr = hours.open || hours.openTime || hours.startTime || '09:00';
+                     const closeStr = hours.close || hours.closeTime || hours.endTime || '18:00';
 
                      return (
                        <View key={day} style={[styles.hourRow, isToday && styles.todayRow]}>
@@ -608,7 +675,8 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
                   <ServiceItem 
                     key={service.id} 
                     service={service} 
-                    onPress={() => handleBookService(service)}
+                    onPress={() => handleViewService(service)}
+                    onBook={() => handleBookService(service)}
                   />
                 ))
               )}
@@ -630,35 +698,92 @@ export default function SalonDetailScreen({ route, navigation }: Props) {
             </View>
           )}
 
-          {activeTab === "gallery" && (
-            <View style={styles.galleryContainer}>
-               {!salon.images || salon.images.length === 0 ? (
-                 <Text style={styles.emptyText}>No photos available.</Text>
-               ) : (
-                 <View style={styles.galleryGrid}>
-                   {salon.images.map((img, index) => (
-                     <TouchableOpacity 
-                       key={index} 
-                       style={styles.galleryImageContainer}
-                       onPress={() => {
-                         setSelectedImageIndex(index);
-                         setViewerVisible(true);
-                       }}
-                     >
-                       <Image source={{ uri: img }} style={styles.galleryImage} resizeMode="cover" />
-                     </TouchableOpacity>
-                   ))}
-                 </View>
-               )}
-            </View>
-          )}
+          {activeTab === "gallery" && (() => {
+            // Collect all images: salon images + service images
+            const salonImages = salon.images || [];
+            const serviceImages: { url: string; serviceName: string }[] = [];
+            
+            services.forEach(service => {
+              if (service.images && service.images.length > 0) {
+                service.images.forEach(img => {
+                  serviceImages.push({ url: img, serviceName: service.name });
+                });
+              } else if (service.imageUrl) {
+                serviceImages.push({ url: service.imageUrl, serviceName: service.name });
+              }
+            });
+
+            // Combined all images for the image viewer
+            // const allImages = [
+            //   ...salonImages,
+            //   ...serviceImages.map(s => s.url)
+            // ];
+
+            const hasNoImages = salonImages.length === 0 && serviceImages.length === 0;
+
+            return (
+              <View style={styles.galleryContainer}>
+                {hasNoImages ? (
+                  <Text style={styles.emptyText}>No photos available.</Text>
+                ) : (
+                  <View>
+                    {/* Salon Profile Images */}
+                    {salonImages.length > 0 && (
+                      <View style={{ marginBottom: 24 }}>
+                        <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Salon Photos</Text>
+                        <View style={styles.galleryGrid}>
+                          {salonImages.map((img, index) => (
+                            <TouchableOpacity 
+                              key={`salon-${index}`} 
+                              style={styles.galleryImageContainer}
+                              onPress={() => {
+                                setSelectedImageIndex(index);
+                                setViewerVisible(true);
+                              }}
+                            >
+                              <Image source={{ uri: getImageUrl(img) || '' }} style={styles.galleryImage} resizeMode="cover" />
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Service Images */}
+                    {serviceImages.length > 0 && (
+                      <View>
+                        <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Service Photos</Text>
+                        <View style={styles.galleryGrid}>
+                          {serviceImages.map((item, index) => (
+                            <TouchableOpacity 
+                              key={`service-${index}`} 
+                              style={styles.galleryImageContainer}
+                              onPress={() => {
+                                setSelectedImageIndex(salonImages.length + index);
+                                setViewerVisible(true);
+                              }}
+                            >
+                              <Image source={{ uri: getImageUrl(item.url) || '' }} style={styles.galleryImage} resizeMode="cover" />
+                              {/* Optional: Show service name overlay */}
+                              <View style={styles.galleryImageOverlay}>
+                                <Text style={styles.galleryImageLabel} numberOfLines={1}>{item.serviceName}</Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })()}
         </View>
 
       </Animated.ScrollView>
 
       {/* Full Screen Image Viewer */}
       <ImageViewing
-        images={(salon.images || []).map(img => ({ uri: img }))}
+        images={getImageUrls(allGalleryImages).map(img => ({ uri: img }))}
         imageIndex={selectedImageIndex}
         visible={viewerVisible}
         onRequestClose={() => setViewerVisible(false)}
@@ -1138,5 +1263,20 @@ const styles = StyleSheet.create({
   galleryImage: {
     width: "100%",
     height: "100%",
+  },
+  galleryImageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  galleryImageLabel: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
   },
 });

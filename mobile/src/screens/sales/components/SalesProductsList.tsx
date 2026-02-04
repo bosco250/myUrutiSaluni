@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StyleSheet, Image } from 'react
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '../../../theme';
 import { SalonProduct } from '../../../services/salon';
+import { getImageUrl } from '../../../utils/imageUrl';
 
 interface SalesProductsListProps {
   products: SalonProduct[];
@@ -36,6 +37,7 @@ export const SalesProductsList: React.FC<SalesProductsListProps> = React.memo(({
   const renderProductCard = React.useCallback(({ item: product }: { item: SalonProduct }) => {
     // Cast to any to access imageUrl if it exists but isn't in interface
     const productWithImage = product as any;
+    const imageUrl = getImageUrl(productWithImage.imageUrl);
     
     return (
       <TouchableOpacity
@@ -44,9 +46,9 @@ export const SalesProductsList: React.FC<SalesProductsListProps> = React.memo(({
         activeOpacity={0.7}
       >
         <View style={styles.imageContainer}>
-          {productWithImage.imageUrl ? (
+          {imageUrl ? (
             <Image
-              source={{ uri: productWithImage.imageUrl }}
+              source={{ uri: imageUrl }}
               style={styles.serviceImage}
               resizeMode="cover"
             />

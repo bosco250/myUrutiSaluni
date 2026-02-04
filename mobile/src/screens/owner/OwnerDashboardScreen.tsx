@@ -545,7 +545,14 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <View style={[styles.headerLeft, { flexDirection: 'row', alignItems: 'center' }]}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate("MoreMenu")} 
+              style={{ marginRight: 4 }}
+              activeOpacity={0.7}
+            >
+               <MaterialIcons name="menu" size={26} color={dynamicStyles.text.color} />
+            </TouchableOpacity>
             <Image source={logo} style={styles.logo} resizeMode="contain" />
           </View>
           <View style={styles.headerRight}>

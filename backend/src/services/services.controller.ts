@@ -114,7 +114,9 @@ export class ServicesController {
       const salon = await this.salonsService.findOne(salonId);
       if (salon.status !== 'active') {
         const isOwner = salon.ownerId === user?.id;
-        const isEmployee = user ? await this.salonsService.isUserEmployeeOfSalon(user.id, salonId) : false;
+        const isEmployee = user
+          ? await this.salonsService.isUserEmployeeOfSalon(user.id, salonId)
+          : false;
         if (!isOwner && !isEmployee) {
           return [];
         }

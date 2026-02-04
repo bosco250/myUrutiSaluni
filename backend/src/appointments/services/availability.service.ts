@@ -81,8 +81,6 @@ export class AvailabilityService {
   ): Promise<DayAvailability[]> {
     const { employeeId, startDate, endDate, serviceId, duration } = query;
 
-
-
     // Get service details for duration
     let serviceDuration = duration || 30; // Default 30 minutes
     if (serviceId) {
@@ -558,9 +556,7 @@ export class AvailabilityService {
         typeof workingHours === 'string'
           ? JSON.parse(workingHours)
           : workingHours;
-      this.logger.debug(
-        `Found workingHours in settings for salon ${salon.id}`,
-      );
+      this.logger.debug(`Found workingHours in settings for salon ${salon.id}`);
     }
 
     if (!operatingHours) {
@@ -688,7 +684,6 @@ export class AvailabilityService {
 
     // Check blackout dates
     if (rules?.blackoutDates?.includes(dateStr)) {
-
       return {
         date: dateStr,
         status: 'unavailable',
@@ -715,8 +710,6 @@ export class AvailabilityService {
     } else {
       status = 'available';
     }
-
-
 
     return {
       date: dateStr,

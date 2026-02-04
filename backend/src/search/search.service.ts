@@ -62,7 +62,10 @@ export class SearchService {
   ) {}
 
   private get isPostgres(): boolean {
-    return this.appointmentsRepository.manager.connection.driver.options.type === 'postgres';
+    return (
+      this.appointmentsRepository.manager.connection.driver.options.type ===
+      'postgres'
+    );
   }
 
   private get likeOperator(): string {
@@ -91,13 +94,13 @@ export class SearchService {
       return { query, totalCount: 0, categories: [] };
     }
 
-    const searchTerm = `%${query.toLowerCase()}%`;
+    // const searchTerm = `%${query.toLowerCase()}%`;
     const categories: GlobalSearchResult['categories'] = [];
     let totalCount = 0;
 
     try {
       // Determine what the user can search based on their role
-      const { userRole, salonIds } = context;
+      const { userRole } = context;
 
       // 1. Search Salons (role-filtered)
       if (this.canSearchSalons(userRole)) {
@@ -271,7 +274,8 @@ export class SearchService {
         }
       }
 
-      const isPublicView = context.userRole === 'GUEST' || context.userRole === UserRole.CUSTOMER;
+      const isPublicView =
+        context.userRole === 'GUEST' || context.userRole === UserRole.CUSTOMER;
 
       return filteredSalons.slice(0, 5).map((salon: any) => ({
         id: salon.id,
@@ -279,7 +283,9 @@ export class SearchService {
         title: salon.name,
         subtitle: salon.address || salon.district || 'Salon',
         description: salon.phone,
-        href: isPublicView ? `/salons/browse/${salon.id}` : `/salons/${salon.id}`,
+        href: isPublicView
+          ? `/salons/browse/${salon.id}`
+          : `/salons/${salon.id}`,
         metadata: { status: salon.status },
       }));
     } catch (error) {
@@ -295,7 +301,8 @@ export class SearchService {
     try {
       const services = await this.servicesService.search(query);
 
-      const isPublicView = context.userRole === 'GUEST' || context.userRole === UserRole.CUSTOMER;
+      const isPublicView =
+        context.userRole === 'GUEST' || context.userRole === UserRole.CUSTOMER;
 
       return services.slice(0, 5).map((service: any) => ({
         id: service.id,
@@ -303,7 +310,7 @@ export class SearchService {
         title: service.name,
         subtitle: `RWF ${Number(service.price || 0).toLocaleString()}`,
         description: service.description?.substring(0, 60),
-        href: isPublicView 
+        href: isPublicView
           ? `/salons/browse/${service.salonId || (service.salon && service.salon.id)}?bookService=${service.id}`
           : `/services?salonId=${service.salonId || (service.salon && service.salon.id)}&highlight=${service.id}`,
         metadata: { duration: service.duration, category: service.category },
@@ -439,8 +446,12 @@ export class SearchService {
         .leftJoinAndSelect('appointment.customer', 'customer')
         .leftJoinAndSelect('appointment.service', 'service')
         .leftJoinAndSelect('appointment.salon', 'salon')
-        .where(`customer.fullName ${this.likeOperator} :query`, { query: `%${query}%` })
-        .orWhere(`service.name ${this.likeOperator} :query`, { query: `%${query}%` })
+        .where(`customer.fullName ${this.likeOperator} :query`, {
+          query: `%${query}%`,
+        })
+        .orWhere(`service.name ${this.likeOperator} :query`, {
+          query: `%${query}%`,
+        })
         .orderBy('appointment.scheduledStart', 'DESC')
         .take(5);
 
@@ -484,8 +495,15 @@ export class SearchService {
         .createQueryBuilder('sale')
         .leftJoinAndSelect('sale.customer', 'customer')
         .leftJoinAndSelect('sale.salon', 'salon')
-        .where(`customer.fullName ${this.likeOperator} :query`, { query: `%${query}%` })
-        .orWhere(this.isPostgres ? 'sale.id::text ILIKE :query' : 'sale.id LIKE :query', { query: `%${query}%` })
+        .where(`customer.fullName ${this.likeOperator} :query`, {
+          query: `%${query}%`,
+        })
+        .orWhere(
+          this.isPostgres
+            ? 'sale.id::text ILIKE :query'
+            : 'sale.id LIKE :query',
+          { query: `%${query}%` },
+        )
         .orderBy('sale.createdAt', 'DESC')
         .take(5);
 
@@ -518,7 +536,10 @@ export class SearchService {
     }
   }
 
-  private searchPages(query: string, userRole: UserRole | 'GUEST'): SearchResultItem[] {
+  private searchPages(
+    query: string,
+    userRole: UserRole | 'GUEST',
+  ): SearchResultItem[] {
     const pages: Array<{
       id: string;
       name: string;
@@ -562,7 +583,14 @@ export class SearchService {
         id: 'membership-apply',
         name: 'Apply for Membership',
         href: '/#membership-form',
-        keywords: ['membership', 'apply', 'application', 'join', 'partner', 'register'],
+        keywords: [
+          'membership',
+          'apply',
+          'application',
+          'join',
+          'partner',
+          'register',
+        ],
       },
       {
         id: 'users',

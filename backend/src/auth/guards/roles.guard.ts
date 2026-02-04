@@ -42,11 +42,15 @@ export class RolesGuard implements CanActivate {
       return userRole === role || userRole === String(role);
     });
 
-    console.log(`[RolesGuard] User role: ${userRole}, Has required role: ${hasRole}`);
+    console.log(
+      `[RolesGuard] User role: ${userRole}, Has required role: ${hasRole}`,
+    );
 
     if (!hasRole) {
       const roleNames = requiredRoles.map((r) => String(r)).join(', ');
-      console.log(`[RolesGuard] Access denied. Required: ${roleNames}, User has: ${userRole}`);
+      console.log(
+        `[RolesGuard] Access denied. Required: ${roleNames}, User has: ${userRole}`,
+      );
       throw new ForbiddenException(
         `Access denied. Required roles: ${roleNames}. Your role: ${userRole}`,
       );

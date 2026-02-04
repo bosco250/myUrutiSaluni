@@ -38,7 +38,10 @@ export class AuthController {
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
-  @SwaggerApiResponse({ status: 201, description: 'User successfully registered' })
+  @SwaggerApiResponse({
+    status: 201,
+    description: 'User successfully registered',
+  })
   @SwaggerApiResponse({ status: 400, description: 'Invalid input data' })
   @SwaggerApiResponse({ status: 409, description: 'User already exists' })
   async register(@Body() registerDto: RegisterDto) {
@@ -100,7 +103,10 @@ export class AuthController {
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password using token from email' })
   @ApiBody({ type: ResetPasswordDto })
-  @SwaggerApiResponse({ status: 200, description: 'Password successfully reset' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Password successfully reset',
+  })
   @SwaggerApiResponse({ status: 400, description: 'Invalid or expired token' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(
@@ -120,8 +126,14 @@ export class AuthController {
   @Post('change-email')
   @Public() // Can be public since token verifies identity
   @ApiOperation({ summary: 'Change email using verification token' })
-  @SwaggerApiResponse({ status: 200, description: 'Email updated successfully' })
-  @SwaggerApiResponse({ status: 400, description: 'Invalid token or email in use' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Email updated successfully',
+  })
+  @SwaggerApiResponse({
+    status: 400,
+    description: 'Invalid token or email in use',
+  })
   async changeEmail(@Body() body: { token: string; newEmail: string }) {
     return this.authService.changeEmail(body.token, body.newEmail);
   }
@@ -129,7 +141,10 @@ export class AuthController {
   @Get('profile')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user profile' })
-  @SwaggerApiResponse({ status: 200, description: 'Profile retrieved successfully' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Profile retrieved successfully',
+  })
   @SwaggerApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@CurrentUser() user: any) {
     return user;
@@ -138,7 +153,10 @@ export class AuthController {
   @Post('change-password')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Change current user password' })
-  @SwaggerApiResponse({ status: 200, description: 'Password successfully updated' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: 'Password successfully updated',
+  })
   @SwaggerApiResponse({ status: 400, description: 'Invalid old password' })
   async changePassword(
     @CurrentUser() user: any,
@@ -157,14 +175,18 @@ export class AuthController {
   @Delete('sessions/:id')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Revoke a specific session' })
-  async revokeSession(@Param('id') sessionId: string, @CurrentUser() user: any) {
+  async revokeSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: any,
+  ) {
     await this.sessionsService.revokeSession(sessionId, user.id);
     return { success: true };
   }
 
   private extractDeviceInfo(req: any) {
     const ua = req.headers['user-agent'] || '';
-    const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ip =
+      req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     let deviceType = 'Desktop';
     if (/mobile/i.test(ua)) deviceType = 'Mobile';

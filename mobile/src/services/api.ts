@@ -155,9 +155,14 @@ class ApiService {
     // Handle empty responses
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      return response.json();
+      const json = await response.json();
+      // Unwrap NestJS TransformInterceptor envelope: { data, statusCode, timestamp }
+      if (json && typeof json === 'object' && 'statusCode' in json && 'data' in json) {
+        return json.data as T;
+      }
+      return json;
     }
-    
+
     return {} as T;
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import * as React from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { View, ActivityIndicator, Text, StyleSheet, Platform } from "react-native";
@@ -6,21 +6,50 @@ import { AppProvider } from "./src/context";
 import Navigation from "./src/navigation";
 import { theme } from "./src/theme";
 
+import { 
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold 
+} from "@expo-google-fonts/manrope";
+
+import * as Font from 'expo-font';
+
 export default function App() {
-  const [isReady, setIsReady] = useState(false);
+  const [fontsLoaded, setFontsLoaded] = React.useState(false);
+  const [isReady, setIsReady] = React.useState(false);
 
-  useEffect(() => {
-    // Simulate initial bundle loading
-    // This gives React Native time to load all screens
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 100); // Minimal delay, just to ensure smooth transition
-
-    return () => clearTimeout(timer);
+  React.useEffect(() => {
+    async function loadFonts() {
+      try {
+        await Font.loadAsync({
+          'Manrope_400Regular': Manrope_400Regular,
+          'Manrope_500Medium': Manrope_500Medium,
+          'Manrope_600SemiBold': Manrope_600SemiBold,
+          'Manrope_700Bold': Manrope_700Bold,
+        });
+        setFontsLoaded(true);
+      } catch (e) {
+        console.warn('Error loading fonts:', e);
+        // Fallback to system fonts if needed, but continue
+        setFontsLoaded(true);
+      }
+    }
+    loadFonts();
   }, []);
 
-  // Show splash screen while app is initializing
-  if (!isReady) {
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      // Simulate minimal delay for smooth transition
+      const timer = setTimeout(() => {
+        setIsReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [fontsLoaded]);
+
+  // Show splash screen while app is initializing or fonts are loading
+  if (!isReady || !fontsLoaded) {
     return (
       <View style={styles.splashContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />

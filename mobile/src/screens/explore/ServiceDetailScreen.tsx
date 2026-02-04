@@ -20,6 +20,8 @@ import { exploreService, Service } from "../../services/explore";
 import { reviewsService, Review } from "../../services/reviews";
 import { Loader } from "../../components/common";
 import { SERVICE_CATEGORIES, TARGET_CLIENTELE } from "../../constants/business";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getImageUrl } from "../../utils";
 
 interface ServiceDetailScreenProps {
   navigation?: {
@@ -139,6 +141,14 @@ export default function ServiceDetailScreen({
 
   const handleBookNow = () => {
     if (!service) return;
+    if (!user) {
+      AsyncStorage.setItem(
+        "@booking_intent",
+        JSON.stringify({ serviceId: service.id, service, salonId: service.salonId })
+      );
+      navigation?.navigate("Login");
+      return;
+    }
     navigation?.navigate("BookingFlow", {
       serviceId: service.id,
       service: service,
@@ -235,13 +245,13 @@ export default function ServiceDetailScreen({
             <TouchableOpacity activeOpacity={0.9} style={{ width: '100%', height: '100%' }}>
                   {service.images && service.images.length > 0 ? (
                       <Animated.Image 
-                          source={{ uri: service.images[activeImageIndex] }} 
+                          source={{ uri: getImageUrl(service.images[activeImageIndex]) || '' }} 
                           style={{ width: '100%', height: '100%', resizeMode: 'cover', opacity: fadeAnim }} 
                       />
                   ) : (
                       service.imageUrl ? (
                           <Image 
-                              source={{ uri: service.imageUrl }} 
+                              source={{ uri: getImageUrl(service.imageUrl) || '' }} 
                               style={{ width: '100%', height: '100%', resizeMode: 'cover' }} 
                           />
                       ) : (
@@ -276,7 +286,7 @@ export default function ServiceDetailScreen({
                                     activeImageIndex === index && styles.thumbnailActive
                                 ]}
                             >
-                                <Image source={{ uri: img }} style={styles.thumbnailImage} resizeMode="cover" />
+                                <Image source={{ uri: getImageUrl(img) || '' }} style={styles.thumbnailImage} resizeMode="cover" />
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -382,7 +392,7 @@ export default function ServiceDetailScreen({
                                  <View style={styles.reviewerAvatar}>
                                      {review.customer?.user?.profileImage ? (
                                          <Image 
-                                             source={{ uri: review.customer.user.profileImage }} 
+                                             source={{ uri: getImageUrl(review.customer.user.profileImage) || '' }} 
                                              style={{ width: '100%', height: '100%' }}
                                          />
                                      ) : (

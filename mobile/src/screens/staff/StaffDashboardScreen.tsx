@@ -475,7 +475,15 @@ export default function StaffDashboardScreen({
         >
           {/* Top Bar */}
           <View style={styles.topBar}>
-            <Image source={logo} style={styles.logo} resizeMode="contain" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("MoreMenu")}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="menu" size={26} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Image source={logo} style={styles.logo} resizeMode="contain" />
+            </View>
             <Pressable
               style={({ pressed }) => [
                 styles.notificationButton,

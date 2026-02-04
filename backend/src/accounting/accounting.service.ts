@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { ChartOfAccount, AccountType } from './entities/chart-of-account.entity';
+import {
+  ChartOfAccount,
+  AccountType,
+} from './entities/chart-of-account.entity';
 import { JournalEntry } from './entities/journal-entry.entity';
 import { JournalEntryLine } from './entities/journal-entry-line.entity';
 import { Invoice } from './entities/invoice.entity';
@@ -61,8 +64,11 @@ export class AccountingService {
     try {
       await this.createExpenseJournalEntry(finalExpense);
     } catch (error) {
-      console.error('Failed to create automatic journal entry for expense:', error.message);
-      // We don't fail the expense creation if journal entry fails, 
+      console.error(
+        'Failed to create automatic journal entry for expense:',
+        error.message,
+      );
+      // We don't fail the expense creation if journal entry fails,
       // but in a production system we might want atomic transactions.
     }
 
@@ -77,7 +83,7 @@ export class AccountingService {
     // DETERMINING ACCOUNT BASED ON PAYMENT METHOD
     let accountCode = '1010';
     let accountName = 'Cash';
-    
+
     // Check first item for payment method
     if (payrollRun.items?.[0]?.paymentMethod === 'bank_transfer') {
       accountCode = '1030';
@@ -144,7 +150,7 @@ export class AccountingService {
     // DETERMINING ACCOUNT BASED ON PAYMENT METHOD
     let accountCode = '1010';
     let accountName = 'Cash';
-    
+
     if (commission.paymentMethod === 'bank_transfer') {
       accountCode = '1030';
       accountName = 'Bank';
@@ -208,7 +214,7 @@ export class AccountingService {
     // 1. Get the credit account (where money is coming from)
     let accountCode = '1010';
     let accountName = 'Cash';
-    
+
     if (expense.paymentMethod === 'bank_transfer') {
       accountCode = '1030';
       accountName = 'Bank';
@@ -228,7 +234,9 @@ export class AccountingService {
     // If categoryId is missing (unlikely per UI), we use a fallback 'Miscellaneous Expense'
     let expenseAccount: ChartOfAccount | null = null;
     if (expense.categoryId) {
-      expenseAccount = await this.chartOfAccountsRepository.findOne({ where: { id: expense.categoryId } });
+      expenseAccount = await this.chartOfAccountsRepository.findOne({
+        where: { id: expense.categoryId },
+      });
     }
 
     if (!expenseAccount) {
@@ -417,7 +425,7 @@ export class AccountingService {
     let commissionsTotal = 0;
     let commissionsCount = 0;
     let journalTotal = 0;
-    let journalCount = 0;
+    const journalCount = 0;
     let payrollTotal = 0;
     let payrollCount = 0;
     let feeTotal = 0;
@@ -621,7 +629,10 @@ export class AccountingService {
     const includeIncome = (!type || type === 'income') && !categoryId;
     const includeExpense = !type || type === 'expense';
 
-    console.log('[Accounting Service] Query flags:', { includeIncome, includeExpense });
+    console.log('[Accounting Service] Query flags:', {
+      includeIncome,
+      includeExpense,
+    });
 
     // 1. Get Revenue (Source of Truth for Sales)
     let totalSalesRevenue = 0;
@@ -648,7 +659,10 @@ export class AccountingService {
         });
       }
 
-      console.log('[Accounting Service] Sales query SQL:', salesTotalQb.getSql());
+      console.log(
+        '[Accounting Service] Sales query SQL:',
+        salesTotalQb.getSql(),
+      );
 
       const salesResult = await salesTotalQb.getRawOne();
       console.log('[Accounting Service] Sales query result:', salesResult);
@@ -656,7 +670,10 @@ export class AccountingService {
       totalSalesRevenue = parseFloat(salesResult?.total || '0');
       salesCount = parseInt(salesResult?.count || '0', 10);
 
-      console.log('[Accounting Service] Parsed sales:', { totalSalesRevenue, salesCount });
+      console.log('[Accounting Service] Parsed sales:', {
+        totalSalesRevenue,
+        salesCount,
+      });
 
       // 2. Other Revenue
       const revenueEntriesQb = this.journalEntryLinesRepository
@@ -748,7 +765,12 @@ export class AccountingService {
     endDate?: string,
     page: number = 1,
     limit: number = 20,
-  ): Promise<{ data: JournalEntry[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    data: JournalEntry[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const qb = this.journalEntriesRepository
       .createQueryBuilder('entry')
       .leftJoinAndSelect('entry.lines', 'line')
@@ -756,10 +778,14 @@ export class AccountingService {
       .where('entry.salonId = :salonId', { salonId });
 
     if (startDate) {
-      qb.andWhere('entry.entryDate >= :startDate', { startDate: new Date(startDate) });
+      qb.andWhere('entry.entryDate >= :startDate', {
+        startDate: new Date(startDate),
+      });
     }
     if (endDate) {
-      qb.andWhere('entry.entryDate <= :endDate', { endDate: new Date(endDate) });
+      qb.andWhere('entry.entryDate <= :endDate', {
+        endDate: new Date(endDate),
+      });
     }
 
     qb.orderBy('entry.entryDate', 'DESC');
@@ -855,8 +881,13 @@ export class AccountingService {
     });
   }
 
-  async updateAccount(id: string, updates: Partial<ChartOfAccount>): Promise<ChartOfAccount> {
-    const account = await this.chartOfAccountsRepository.findOne({ where: { id } });
+  async updateAccount(
+    id: string,
+    updates: Partial<ChartOfAccount>,
+  ): Promise<ChartOfAccount> {
+    const account = await this.chartOfAccountsRepository.findOne({
+      where: { id },
+    });
     if (!account) throw new NotFoundException('Account not found');
     Object.assign(account, updates);
     return this.chartOfAccountsRepository.save(account);
@@ -1333,7 +1364,7 @@ export class AccountingService {
       where: [
         { salonId, accountType: 'ASSET' as any },
         { salonId, accountType: 'LIABILITY' as any },
-        { salonId, accountType: 'EQUITY' as any }
+        { salonId, accountType: 'EQUITY' as any },
       ],
     });
 
@@ -1397,15 +1428,21 @@ export class AccountingService {
     const pnl = await this.getFinancialSummary(salonId, undefined, asOfDate);
 
     const netIncome = pnl.netIncome;
-    report.equity.push({ id: 'retained-earnings', name: 'Net Income (Retained Earnings)', code: 'EQUITY-RET', balance: netIncome });
+    report.equity.push({
+      id: 'retained-earnings',
+      name: 'Net Income (Retained Earnings)',
+      code: 'EQUITY-RET',
+      balance: netIncome,
+    });
     report.totalEquity += netIncome;
 
     // --- AUTO-BALANCE LOGIC ---
     // Since we don't force double-entry for every POS sale (we just record Revenue),
     // we must assume the difference sits in "Cash/Bank".
     // Formula: Implied Cash = (Total Liabilities + Total Equity) - (Total Assets excluding manual cash)
-    
-    const discrepancy = (report.totalLiabilities + report.totalEquity) - report.totalAssets;
+
+    const discrepancy =
+      report.totalLiabilities + report.totalEquity - report.totalAssets;
 
     if (discrepancy > 0) {
       report.assets.push({
@@ -1413,7 +1450,7 @@ export class AccountingService {
         name: 'Cash on Hand (Calculated)',
         code: 'ASSET-CASH-AUTO',
         balance: discrepancy,
-        isSystem: true
+        isSystem: true,
       });
       report.totalAssets += discrepancy;
     }
@@ -1421,8 +1458,10 @@ export class AccountingService {
     return report;
   }
 
-
-  async exportBalanceSheetToPdf(salonId: string, asOfDate: string): Promise<any> {
+  async exportBalanceSheetToPdf(
+    salonId: string,
+    asOfDate: string,
+  ): Promise<any> {
     const report = await this.getBalanceSheetReport(salonId, asOfDate);
     const salon = await this.salonsService.findOne(salonId);
 
@@ -1435,7 +1474,7 @@ export class AccountingService {
 
     const formatItem = (item: any) => ({
       ...item,
-      formattedBalance: formatMoney(item.balance)
+      formattedBalance: formatMoney(item.balance),
     });
 
     const reportData = {
@@ -1447,13 +1486,19 @@ export class AccountingService {
       formattedTotalAssets: formatMoney(report.totalAssets),
       formattedTotalLiabilities: formatMoney(report.totalLiabilities),
       formattedTotalEquity: formatMoney(report.totalEquity),
-      formattedTotalLiabEquity: formatMoney(report.totalLiabilities + report.totalEquity)
+      formattedTotalLiabEquity: formatMoney(
+        report.totalLiabilities + report.totalEquity,
+      ),
     };
 
     return this.reportsService.generateBalanceSheetReport(reportData);
   }
 
-  async exportProfitAndLossToPdf(salonId: string, startDate: string, endDate: string): Promise<any> {
+  async exportProfitAndLossToPdf(
+    salonId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<any> {
     const summary = await this.getFinancialSummary(salonId, startDate, endDate);
     const salon = await this.salonsService.findOne(salonId);
 
@@ -1464,25 +1509,33 @@ export class AccountingService {
       }).format(amount);
     };
 
-    // We need breakdown of revenue/expenses. 
+    // We need breakdown of revenue/expenses.
     // getFinancialSummary currently returns totals.
     // For a detailed P&L, we would ideally want account-level details.
     // For now, we will use the totals but structure it as a simple P&L.
     // In a real P&L, we would iterate through Income and Expense accounts.
-    
+
     // FETCH DETAILED ACCOUNTS FOR P&L (Improvement over just summary)
-    const revenueAccounts = await this.chartOfAccountsRepository.find({ where: { salonId, accountType: 'REVENUE' as any } });
-    
+    const revenueAccounts = await this.chartOfAccountsRepository.find({
+      where: { salonId, accountType: 'REVENUE' as any },
+    });
+
     // Get decentralized expense breakdown
-    const expenseSummary = await this.getExpenseSummary(salonId, startDate, endDate);
+    const expenseSummary = await this.getExpenseSummary(
+      salonId,
+      startDate,
+      endDate,
+    );
 
     // Calculate GL balances for revenue accounts
     const getAccountBalance = async (accountId: string) => {
-       const qb = this.journalEntryLinesRepository
+      const qb = this.journalEntryLinesRepository
         .createQueryBuilder('line')
         .innerJoin('line.journalEntry', 'entry')
         .where('line.accountId = :accountId', { accountId })
-        .andWhere('entry.entryDate >= :startDate', { startDate: new Date(startDate) })
+        .andWhere('entry.entryDate >= :startDate', {
+          startDate: new Date(startDate),
+        })
         .andWhere('entry.entryDate <= :endDate', { endDate: new Date(endDate) })
         .andWhere("entry.status = 'posted'");
 
@@ -1490,41 +1543,52 @@ export class AccountingService {
         .select('SUM(CAST(line.creditAmount AS NUMERIC))', 'credit')
         .addSelect('SUM(CAST(line.debitAmount AS NUMERIC))', 'debit')
         .getRawOne();
-      
+
       const credit = parseFloat(result?.credit || '0');
       const debit = parseFloat(result?.debit || '0');
       return { credit, debit };
     };
 
-    const revenueWithBalances = await Promise.all(revenueAccounts.map(async (acc) => {
-      const { credit, debit } = await getAccountBalance(acc.id);
-      const balance = credit - debit;
-      return { name: acc.name, balance, formattedAmount: formatMoney(balance) };
-    }));
+    const revenueWithBalances = await Promise.all(
+      revenueAccounts.map(async (acc) => {
+        const { credit, debit } = await getAccountBalance(acc.id);
+        const balance = credit - debit;
+        return {
+          name: acc.name,
+          balance,
+          formattedAmount: formatMoney(balance),
+        };
+      }),
+    );
 
     // For expenses, we use the detailed breakdown from getExpenseSummary
-    const activeExpenses = expenseSummary.byCategory.map(cat => ({
+    const activeExpenses = expenseSummary.byCategory.map((cat) => ({
       name: cat.categoryName,
       balance: cat.total,
-      formattedAmount: formatMoney(cat.total)
+      formattedAmount: formatMoney(cat.total),
     }));
 
     // Filter out zero balance accounts for revenue
-    const activeRevenue = revenueWithBalances.filter(r => Math.abs(r.balance) > 0);
-    
+    const activeRevenue = revenueWithBalances.filter(
+      (r) => Math.abs(r.balance) > 0,
+    );
+
     let totalRev = activeRevenue.reduce((sum, r) => sum + r.balance, 0);
     // If POS sales are not in GL, add them as a fallback (using the summary data)
     if (totalRev < summary.totalRevenue) {
       const diff = summary.totalRevenue - totalRev;
       if (diff > 0) {
-        activeRevenue.push({ name: 'Sales Revenue (POS)', balance: diff, formattedAmount: formatMoney(diff) });
+        activeRevenue.push({
+          name: 'Sales Revenue (POS)',
+          balance: diff,
+          formattedAmount: formatMoney(diff),
+        });
         totalRev = summary.totalRevenue;
       }
     }
-    
+
     const totalExp = expenseSummary.totalExpenses;
     const netIncome = totalRev - totalExp;
-
 
     const reportData = {
       salonName: salon?.name || 'Salon',
@@ -1534,7 +1598,7 @@ export class AccountingService {
       formattedTotalRevenue: formatMoney(totalRev),
       formattedTotalExpenses: formatMoney(totalExp),
       formattedNetIncome: formatMoney(netIncome),
-      netIncome // for styling logic
+      netIncome, // for styling logic
     };
 
     return this.reportsService.generateProfitAndLossReport(reportData);
@@ -1543,19 +1607,24 @@ export class AccountingService {
     const accounts = await this.chartOfAccountsRepository.find({
       where: { salonId },
       order: { code: 'ASC' },
-      relations: ['parent']
+      relations: ['parent'],
     });
     const salon = await this.salonsService.findOne(salonId);
 
     const reportData = {
       salonName: salon?.name || 'Salon',
       date: new Date().toLocaleDateString(),
-      accounts: accounts.map(acc => ({
+      accounts: accounts.map((acc) => ({
         code: acc.code,
         name: acc.name,
         accountType: acc.accountType.toUpperCase(),
-        category: (acc.metadata as any)?.category || (acc.parent ? acc.parent.name : acc.accountType.charAt(0).toUpperCase() + acc.accountType.slice(1))
-      }))
+        category:
+          (acc.metadata as any)?.category ||
+          (acc.parent
+            ? acc.parent.name
+            : acc.accountType.charAt(0).toUpperCase() +
+              acc.accountType.slice(1)),
+      })),
     };
 
     return this.reportsService.generateChartOfAccountsReport(reportData);

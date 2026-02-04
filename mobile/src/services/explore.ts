@@ -57,6 +57,12 @@ export interface Salon {
   settings?: Record<string, any>;
   operatingHours?: Record<string, { open: string; close: string; isOpen: boolean }>; // Key: 'monday', 'tuesday', etc.
   businessHours?: Record<string, { open: string; close: string; isOpen: boolean }>; // Legacy / Alternative location
+  metadata?: {
+    workingHours?: Record<string, { open?: string; close?: string; openTime?: string; closeTime?: string; isOpen: boolean }>;
+    operatingHours?: Record<string, { open?: string; close?: string; openTime?: string; closeTime?: string; isOpen: boolean }>;
+    businessHours?: Record<string, { open?: string; close?: string; openTime?: string; closeTime?: string; isOpen: boolean }>;
+    [key: string]: any;
+  };
   images?: string[]; // Array of image URLs
   employeeCount?: number; // Added by backend service
   businessType?: string; // 'hair_salon' | 'beauty_spa' | 'nail_salon' | 'barbershop' | 'full_service' | 'mobile' | 'other'
@@ -84,8 +90,8 @@ class ExploreService {
       
       const queryString = params.toString();
       const endpoint = queryString ? `/services?${queryString}` : "/services";
-      const response = await api.get<Service[]>(endpoint);
-      return response;
+      const response = await api.get<Service[]>(endpoint, { requireAuth: false });
+      return Array.isArray(response) ? response : [];
     } catch (error: any) {
       console.error("Error fetching services:", error);
       throw new Error(error.message || "Failed to fetch services");

@@ -20,8 +20,32 @@ import * as ImagePicker from 'expo-image-picker';
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
 import { uploadService } from '../../services/upload';
+import { config } from '../../config';
 
 const defaultAvatar = require("../../../assets/Logo.png");
+
+// Helper to format image URL (handles relative URLs and localhost from backend)
+const getImageUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  
+  // Get the server base URL (without /api)
+  const baseUrl = config.apiUrl.replace(/\/api\/?$/, '');
+  
+  // If URL starts with http/https, check if it uses localhost and fix it
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Replace localhost or 127.0.0.1 with actual server IP
+    const fixedUrl = url
+      .replace(/^https?:\/\/localhost(:\d+)?/, baseUrl)
+      .replace(/^https?:\/\/127\.0\.0\.1(:\d+)?/, baseUrl);
+    return fixedUrl;
+  }
+  
+  // Handle file:// URLs as-is
+  if (url.startsWith('file:')) return url;
+  
+  // Prepend server base URL for relative paths
+  return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
+};
 
 interface PersonalInformationScreenProps {
   navigation?: {
@@ -374,7 +398,7 @@ export default function PersonalInformationScreen({
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
             <Image 
-              source={user?.avatarUrl ? { uri: user.avatarUrl } : defaultAvatar} 
+              source={user?.avatarUrl ? { uri: getImageUrl(user.avatarUrl) || '' } : defaultAvatar} 
               style={styles.avatar} 
             />
             <TouchableOpacity style={styles.avatarEditBtn} onPress={handlePickImage} disabled={loading}>
@@ -491,16 +515,16 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   
   // Avatar
-  avatarSection: { alignItems: 'center', paddingVertical: 16 },
-  avatarContainer: { position: 'relative', marginBottom: 8 },
-  avatar: { width: 80, height: 80, borderRadius: 40 },
+  avatarSection: { alignItems: 'center', paddingVertical: 12 },
+  avatarContainer: { position: 'relative', marginBottom: 6 },
+  avatar: { width: 64, height: 64, borderRadius: 32 },
   avatarEditBtn: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -510,50 +534,52 @@ const styles = StyleSheet.create({
   changePhotoText: { fontSize: 13, fontWeight: '600' },
   
   // Tabs
-  tabsScroll: { maxHeight: 50 },
-  tabsContent: { paddingHorizontal: 16, gap: 8 },
+  tabsScroll: { maxHeight: 40 },
+  tabsContent: { paddingHorizontal: 12, gap: 6 },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
     backgroundColor: 'rgba(150,150,150,0.1)',
   },
   tabText: { fontSize: 12, fontWeight: '600' },
   
   // Form
   formCard: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 16,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
+    elevation: 0,
   },
-  inputRow: { marginBottom: 14 },
-  inputLabel: { fontSize: 11, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputField: { height: 44, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
+  inputRow: { marginBottom: 10 },
+  inputLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputField: { height: 40, borderRadius: 8, paddingHorizontal: 10, fontSize: 14 },
   
   // Date Button
   dateButton: {
-    height: 44,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 8,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
   dateButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     flex: 1,
   },
   
   // Chips
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(150,150,150,0.3)',
   },
@@ -565,11 +591,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginHorizontal: 16,
-    marginVertical: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
+    marginHorizontal: 12,
+    marginVertical: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
     backgroundColor: theme.colors.primary,
+    elevation: 0,
   },
   saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '600' },
   

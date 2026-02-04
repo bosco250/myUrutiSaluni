@@ -14,7 +14,10 @@ import { SalonEmployee } from './entities/salon-employee.entity';
 import { MembershipsService } from '../memberships/memberships.service';
 import { MembershipStatus } from '../memberships/entities/membership.entity';
 import { NotificationOrchestratorService } from '../notifications/services/notification-orchestrator.service';
-import { NotificationType, NotificationChannel } from '../notifications/entities/notification.entity';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SalonsService {
@@ -289,7 +292,9 @@ export class SalonsService {
   }
 
   async search(query: string): Promise<Salon[]> {
-    const isPostgres = this.salonsRepository.manager.connection.driver.options.type === 'postgres';
+    const isPostgres =
+      this.salonsRepository.manager.connection.driver.options.type ===
+      'postgres';
     const operator = isPostgres ? 'ILIKE' : 'LIKE';
 
     return this.salonsRepository
@@ -389,9 +394,7 @@ export class SalonsService {
       if (docs.length === 0) {
         throw new BadRequestException('Salon has no documents to verify');
       }
-      const allApproved = docs.every(
-        (d) => d.status === 'approved',
-      );
+      const allApproved = docs.every((d) => d.status === 'approved');
       if (!allApproved) {
         throw new BadRequestException(
           'All documents must be approved before the salon can be verified',
@@ -402,8 +405,7 @@ export class SalonsService {
       const savedSalon = await this.salonsRepository.save(salon);
 
       // Activate the membership — failure here rolls back salon activation
-      const membership =
-        await this.membershipsService.findBySalonId(salonId);
+      const membership = await this.membershipsService.findBySalonId(salonId);
       if (membership && membership.status !== 'active') {
         await this.membershipsService.activateMembership(membership.id);
       }
@@ -489,26 +491,39 @@ export class SalonsService {
         inactive: 'Inactive',
       };
 
-      const statusExplanations: Record<string, { meaning: string; action: string }> = {
+      const statusExplanations: Record<
+        string,
+        { meaning: string; action: string }
+      > = {
         active: {
-          meaning: 'Your salon is now live and visible to customers on the platform. Customers can discover your salon and book appointments.',
-          action: 'No action is needed. Your salon is ready to accept bookings.',
+          meaning:
+            'Your salon is now live and visible to customers on the platform. Customers can discover your salon and book appointments.',
+          action:
+            'No action is needed. Your salon is ready to accept bookings.',
         },
         pending: {
-          meaning: 'Your salon is in the initial registration stage and is not yet visible to customers.',
-          action: 'Submit all required documents — business license, owner ID, and proof of address — to begin the verification process.',
+          meaning:
+            'Your salon is in the initial registration stage and is not yet visible to customers.',
+          action:
+            'Submit all required documents — business license, owner ID, and proof of address — to begin the verification process.',
         },
         verification_pending: {
-          meaning: 'Your documents have been submitted and are currently under review by our team.',
-          action: 'No action is needed at this time. You will be notified once the review is complete.',
+          meaning:
+            'Your documents have been submitted and are currently under review by our team.',
+          action:
+            'No action is needed at this time. You will be notified once the review is complete.',
         },
         rejected: {
-          meaning: 'Your salon verification has been rejected. Your salon is not visible to customers until this is resolved.',
-          action: 'Review the reason provided, correct any issues with your documents, and resubmit them through your salon dashboard.',
+          meaning:
+            'Your salon verification has been rejected. Your salon is not visible to customers until this is resolved.',
+          action:
+            'Review the reason provided, correct any issues with your documents, and resubmit them through your salon dashboard.',
         },
         inactive: {
-          meaning: 'Your salon has been deactivated and is not visible to customers at this time.',
-          action: 'Contact your association administrator to discuss reactivation and the steps needed to restore your salon.',
+          meaning:
+            'Your salon has been deactivated and is not visible to customers at this time.',
+          action:
+            'Contact your association administrator to discuss reactivation and the steps needed to restore your salon.',
         },
       };
 

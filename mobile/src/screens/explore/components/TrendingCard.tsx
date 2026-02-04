@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../../theme";
+import { getImageUrl } from "../../../utils";
 
 interface TrendingCardProps {
   image?: string | null;
@@ -11,14 +12,16 @@ interface TrendingCardProps {
   onPress?: () => void;
 }
 
+// Refined, elegant gradient palettes for premium salon aesthetic
 const CATEGORY_GRADIENTS: Record<string, { icon: keyof typeof MaterialIcons.glyphMap, colors: [string, string] }> = {
-  Hair: { icon: "content-cut", colors: ["#D4AF37", "#8B5E3C"] }, // Gold to Bronze
-  Nails: { icon: "spa", colors: ["#FF9A9E", "#FECFEF"] }, // Soft Pink gradient
-  Face: { icon: "face", colors: ["#FFECD2", "#FCB69F"] }, // Peach gradient
-  Massage: { icon: "self-improvement", colors: ["#A18CD1", "#FBC2EB"] }, // Purple gradient
-  Barber: { icon: "content-cut", colors: ["#2C3E50", "#4CA1AF"] }, // Dark Slate to Teal
-  Makeup: { icon: "brush", colors: ["#ff9a9e", "#fecfef"] }, // Rose gradient
-  Other: { icon: "star", colors: ["#84fab0", "#8fd3f4"] }, // Aqua gradient
+  Hair: { icon: "content-cut", colors: ["#1A1A2E", "#4A4A68"] }, // Deep Navy gradient
+  Nails: { icon: "spa", colors: ["#2D3436", "#636E72"] }, // Charcoal to Storm
+  Face: { icon: "face", colors: ["#3D3D3D", "#6B6B6B"] }, // Elegant Dark Gray
+  Massage: { icon: "self-improvement", colors: ["#1E3A5F", "#3D6B8F"] }, // Deep Blue gradient
+  Barber: { icon: "content-cut", colors: ["#585757ff", "#3D3D3D"] }, // Classic Black
+  Makeup: { icon: "brush", colors: ["#4A3C31", "#6B5545"] }, // Warm Mocha
+  Spa: { icon: "spa", colors: ["#2C5364", "#203A43"] }, // Ocean Deep
+  Other: { icon: "star", colors: ["#434343", "#1A1A1A"] }, // Premium Dark
 };
 
 export default function TrendingCard({
@@ -39,7 +42,7 @@ export default function TrendingCard({
       activeOpacity={0.9} 
     >
       {image ? (
-        <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: getImageUrl(image) || '' }} style={styles.image} resizeMode="cover" />
       ) : (
         <LinearGradient
             colors={config.colors}

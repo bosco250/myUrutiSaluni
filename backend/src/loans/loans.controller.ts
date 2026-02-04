@@ -29,7 +29,13 @@ export class LoansController {
   }
 
   @Get(':id/audit')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER, UserRole.SALON_OWNER, UserRole.SALON_EMPLOYEE)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+    UserRole.SALON_OWNER,
+    UserRole.SALON_EMPLOYEE,
+  )
   @ApiOperation({ summary: 'Get detailed audit data for a loan application' })
   getAuditData(@Param('id') id: string, @CurrentUser() user: any) {
     return this.loansService.getLoanAuditData(id, user);
@@ -49,7 +55,11 @@ export class LoansController {
   }
 
   @Post('credit-score/:userId')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Calculate credit score for a user' })
   calculateCreditScore(@Param('userId') userId: string) {
     return this.loansService.calculateCreditScore(userId);
@@ -62,7 +72,11 @@ export class LoansController {
   }
 
   @Post(':id/approve')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Approve a loan application' })
   approveLoan(@Param('id') id: string, @Body() body: { approvedById: string }) {
     return this.loansService.approveLoan(id, body.approvedById);
@@ -71,14 +85,24 @@ export class LoansController {
   @Post(':id/disburse')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN)
   @ApiOperation({ summary: 'Disburse an approved loan' })
-  disburseLoan(@Param('id') id: string, @Body() body: { method?: string; reference?: string }) {
+  disburseLoan(
+    @Param('id') id: string,
+    @Body() body: { method?: string; reference?: string },
+  ) {
     return this.loansService.disburseLoan(id, body);
   }
 
   @Post(':id/reject')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ASSOCIATION_ADMIN,
+    UserRole.DISTRICT_LEADER,
+  )
   @ApiOperation({ summary: 'Reject a loan application' })
-  rejectLoan(@Param('id') id: string, @Body() body: { rejectedById: string; reason: string }) {
+  rejectLoan(
+    @Param('id') id: string,
+    @Body() body: { rejectedById: string; reason: string },
+  ) {
     return this.loansService.rejectLoan(id, body.rejectedById, body.reason);
   }
 }

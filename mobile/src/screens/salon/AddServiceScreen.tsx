@@ -246,7 +246,7 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
   };
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Compact Header */}
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, elevation: 2,
   },
   
-  bottomBar: { padding: 14, paddingBottom: Platform.OS === 'ios' ? 10 : 14, borderTopWidth: 1 },
+  bottomBar: { padding: 14, borderTopWidth: 1 },
   submitBtn: { 
     borderRadius: 12, 
     overflow: 'hidden',

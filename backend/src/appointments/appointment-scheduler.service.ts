@@ -179,7 +179,8 @@ export class AppointmentSchedulerService {
 
           // Calculate how long ago the appointment ended
           const hoursAgo = Math.floor(
-            (now.getTime() - new Date(appointment.scheduledEnd).getTime()) / (60 * 60 * 1000)
+            (now.getTime() - new Date(appointment.scheduledEnd).getTime()) /
+              (60 * 60 * 1000),
           );
 
           this.logger.log(
