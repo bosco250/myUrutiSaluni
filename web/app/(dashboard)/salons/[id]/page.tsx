@@ -159,7 +159,7 @@ function SalonDetailContent() {
   const router = useRouter();
   const salonId = params.id as string;
   const { user } = useAuthStore();
-  const { canManageSalons, hasAnyRole, isSalonOwner } = usePermissions();
+  const { canManageSalons, hasAnyRole, isSalonOwner, isSalonEmployee } = usePermissions();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Fetch salon details
@@ -176,13 +176,30 @@ function SalonDetailContent() {
     enabled: !!salonId,
   });
 
+  // Check if current user is an employee of this salon
+  const { data: isEmployeeOfSalon } = useQuery({
+    queryKey: ['is-salon-employee', salonId, user?.id],
+    queryFn: async () => {
+      if (!user || (!isSalonEmployee() && !isSalonOwner())) return false;
+      try {
+        const response = await api.get(`/salons/${salonId}/employees`);
+        const employees = response.data?.data || response.data || [];
+        return Array.isArray(employees) && employees.some((emp: any) => emp.userId === user.id);
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!salonId && !!user && (isSalonEmployee() || isSalonOwner()),
+  });
+
   // Check if user can access this salon
   const canAccess =
     salon &&
     user &&
     (hasAnyRole([UserRole.SUPER_ADMIN, UserRole.ASSOCIATION_ADMIN, UserRole.DISTRICT_LEADER]) ||
       salon.ownerId === user.id ||
-      (isSalonOwner() && salon.ownerId === user.id));
+      (isSalonOwner() && salon.ownerId === user.id) || 
+      isEmployeeOfSalon);
 
   const canEdit =
     canManageSalons() &&

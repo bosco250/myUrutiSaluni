@@ -587,7 +587,7 @@ function EmployeeFormModal({
     selectedSkills: employee?.skills || [],
     hireDate: employee?.hireDate ? new Date(employee.hireDate).toISOString().split('T')[0] : '',
     isActive: employee?.isActive ?? true,
-    commissionRate: employee?.commissionRate || 0,
+    commissionRate: employee?.commissionRate ?? '',
     baseSalary: employee?.baseSalary || '',
     salaryType: employee?.salaryType || 'COMMISSION_ONLY',
     payFrequency: employee?.payFrequency || 'MONTHLY',
@@ -1006,7 +1006,7 @@ function EmployeeFormModal({
                           max="100"
                           step="0.01"
                           value={formData.commissionRate}
-                          onChange={(e) => setFormData({ ...formData, commissionRate: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) => setFormData({ ...formData, commissionRate: e.target.value === '' ? '' : parseFloat(e.target.value) })}
                           className="w-full px-3 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition"
                           placeholder="0.00"
                           required={formData.salaryType === 'COMMISSION_ONLY'}

@@ -632,6 +632,7 @@ function ServicesContent() {
         <ServiceModal
           service={editingService}
           salons={salons}
+          defaultSalonId={selectedSalonId}
           getImageUrl={getImageUrl}
           onClose={() => {
             setShowModal(false);
@@ -677,12 +678,14 @@ function ServiceModal({
   onClose,
   onSuccess,
   getImageUrl,
+  defaultSalonId,
 }: {
   service?: Service | null;
   salons: Salon[];
   onSuccess: () => void;
   onClose: () => void;
   getImageUrl: (url?: string) => string;
+  defaultSalonId?: string;
 }) {
   // Initialize images array from service data correctly
   const initialImages = useMemo(() => {
@@ -708,7 +711,7 @@ function ServiceModal({
   }, [service]);
   
   const [formData, setFormData] = useState({
-    salonId: service?.salonId || salons[0]?.id || '',
+    salonId: service?.salonId || defaultSalonId || salons[0]?.id || '',
     code: service?.code || '',
     name: service?.name || '',
     description: service?.description || '',
@@ -907,7 +910,7 @@ function ServiceModal({
                   
                   <div className="space-y-4">
                     {/* Salon Selection */}
-                    {salons.length > 1 && (
+                    {salons.length > 0 && (
                       <div>
                         <label className="block text-[10px] font-black uppercase text-text-light/40 tracking-widest mb-1.5 ml-1">
                           Salon Location
@@ -1046,7 +1049,7 @@ function ServiceModal({
                           type="number"
                           required
                           value={formData.basePrice}
-                          onChange={(e) => setFormData({ ...formData, basePrice: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+                          onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
                           className="w-full bg-transparent text-2xl font-black text-text-light dark:text-text-dark outline-none tabular-nums"
                           placeholder="0"
                         />

@@ -10,7 +10,7 @@ import {
   Edit,
   Trash2,
   MapPin,
-  Search,
+  Search, 
   Filter,
   MoreVertical,
   Building2,
@@ -33,8 +33,7 @@ import {
   X,
   RefreshCw,
 } from 'lucide-react';
-import { format, isWithinInterval, parse } from 'date-fns';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useMembershipStatus } from '@/hooks/useMembershipStatus';
@@ -53,7 +52,7 @@ export default function SalonsPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
-  const { isSalonOwner, canManageSalons, canViewAllSalons, hasAnyRole, user } = usePermissions();
+  const { isSalonOwner, isSalonEmployee, canManageSalons, canViewAllSalons, hasAnyRole, user } = usePermissions();
   const router = useRouter();
 
   const statusColors: Record<string, string> = {
@@ -131,6 +130,45 @@ export default function SalonsPage() {
     enabled: !!token || (typeof window !== 'undefined' && !!localStorage.getItem('token')),
   });
 
+  // Fetch employee records for the current user (if they are a salon employee)
+  // This allows employees to see the salon(s) they work at
+  const { data: employeeSalonIds = [] } = useQuery<string[]>({
+    queryKey: ['my-employee-salons', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      try {
+        // Get all salons and check which ones the user is an employee of
+        const salonsResponse = await api.get('/salons');
+        const allSalons = salonsResponse.data?.data || salonsResponse.data || [];
+        
+        const employeeSalonIdList: string[] = [];
+        
+        // Check each salon's employee list to find where the user is employed
+        await Promise.all(
+          allSalons.map(async (salon: { id: string }) => {
+            try {
+              const empResponse = await api.get(`/salons/${salon.id}/employees`);
+              const employees = empResponse.data?.data || empResponse.data || [];
+              const isEmployee = employees.some((emp: { userId: string }) => emp.userId === user?.id);
+              if (isEmployee) {
+                employeeSalonIdList.push(salon.id);
+              }
+            } catch {
+              // User might not have access to this salon's employees - that's fine
+            }
+          })
+        );
+        
+        return employeeSalonIdList;
+      } catch (error) {
+        console.error('Error fetching employee salons:', error);
+        return [];
+      }
+    },
+    enabled: !!user && isSalonEmployee(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await api.delete(`/salons/${id}`);
@@ -140,16 +178,18 @@ export default function SalonsPage() {
     },
   });
 
-  // Filter salons
-  const filteredSalons =
-    salons?.filter((salon) => {
-      // Role-based filtering: Non-admin users (like salon owners) should only see their own salons
+  // Filter salons based on user role
+  const filteredSalons = useMemo(() => {
+    if (!salons) return [];
+    
+    return salons.filter((salon) => {
+      // Role-based filtering
       const canViewAll = canViewAllSalons();
-      const isOwner =
-        salon.ownerId === user?.id ||
-        salon.owner?.id === user?.id;
+      const isOwner = salon.ownerId === user?.id || salon.owner?.id === user?.id;
+      const isEmployeeOfSalon = employeeSalonIds.includes(salon.id);
 
-      if (!canViewAll && !isOwner) {
+      // Allow viewing if: user can view all, is owner, or is an employee of this salon
+      if (!canViewAll && !isOwner && !isEmployeeOfSalon) {
         return false;
       }
 
@@ -162,7 +202,8 @@ export default function SalonsPage() {
       const matchesStatus = statusFilter === 'all' || salon.status === statusFilter;
 
       return matchesSearch && matchesStatus;
-    }) || [];
+    });
+  }, [salons, canViewAllSalons, user?.id, employeeSalonIds, searchQuery, statusFilter]);
 
   if (isLoading) {
     return (
@@ -433,6 +474,7 @@ export default function SalonsPage() {
               canEdit={canEditSalon(salon)}
               canDelete={canDeleteSalon()}
               canManageSalons={canManageSalons}
+              isEmployee={isSalonEmployee() && employeeSalonIds.includes(salon.id)}
               onEdit={() => {
                 setEditingSalon(salon);
                 setShowModal(true);
@@ -541,6 +583,7 @@ function SalonCard({
   canManageSalons,
   canEdit,
   canDelete,
+  isEmployee = false,
   onEdit,
   onDelete,
 }: {
@@ -549,6 +592,7 @@ function SalonCard({
   canManageSalons: () => boolean;
   canEdit: boolean;
   canDelete: boolean;
+  isEmployee?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -652,7 +696,7 @@ function SalonCard({
         </div>
 
         {/* Status & Open Indicator */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span
             className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
               statusColors[salon.status as keyof typeof statusColors] || statusColors.inactive
@@ -660,6 +704,12 @@ function SalonCard({
           >
             {salon.status}
           </span>
+          {isEmployee && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-primary/10 text-primary border-primary/20">
+              <User className="w-3 h-3" />
+              Employee
+            </span>
+          )}
           {isSalonOpen(salon.settings?.operatingHours) && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-success/10 text-success border-success/20">
               <Clock className="w-3 h-3" />
