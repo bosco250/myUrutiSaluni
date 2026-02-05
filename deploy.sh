@@ -29,7 +29,7 @@ cd web
 echo "  - Installing web dependencies..."
 npm install
 echo "  - Building web..."
-npm run build
+npm run build:clean
 cd ..
 
 # 4. Restart Server
