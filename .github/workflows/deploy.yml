@@ -14,6 +14,9 @@ jobs:
           # Go to project folder
           cd /root/uruti-saluni/urutiSaluni
           
+          # Pull latest code (to get deploy.sh)
+          git pull origin master
+          
           # Ensure script is executable
           chmod +x deploy.sh
           
