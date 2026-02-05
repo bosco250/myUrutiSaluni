@@ -1,0 +1,27 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy using SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: '38.242.224.199'
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 22
+          script: |
+            # Navigate to your project folder
+            cd /root/uruti-saluni/urutiSaluni
+            
+            # Ensure script is executable
+            chmod +x deploy.sh
+            
+            # Run the deployment script
+            ./deploy.sh

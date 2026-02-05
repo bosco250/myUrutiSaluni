@@ -216,6 +216,11 @@ function ServicesContent() {
   // Filter services
   const filteredServices = useMemo(() => {
     return services.filter((service) => {
+      // Enforce salon filter client-side as well
+      if (selectedSalonId && service.salonId !== selectedSalonId) {
+        return false;
+      }
+
       const matchesSearch =
         searchQuery === '' ||
         service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -229,7 +234,7 @@ function ServicesContent() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [services, searchQuery, statusFilter]);
+  }, [services, searchQuery, statusFilter, selectedSalonId]);
 
   // Reset pagination when filters change
   useEffect(() => {
