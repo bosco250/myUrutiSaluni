@@ -100,7 +100,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [loading, colors]);
+  }, []); // ✅ Empty dependencies - only run once on mount
 
   useEffect(() => { loadStats(); }, [loadStats]);
 

@@ -81,7 +81,7 @@ export class CreateMembershipApplicationDto {
   )
   longitude?: number;
 
-  @ApiProperty({ required: false, type: 'object', additionalProperties: true })
+  @ApiProperty({ required: false, type: Object, additionalProperties: true })
   @IsOptional()
   metadata?: Record<string, any>;
 }

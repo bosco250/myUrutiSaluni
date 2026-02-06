@@ -64,12 +64,19 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const dynamicStyles = {
-    container: { backgroundColor: isDark ? '#0D0D0F' : '#F5F5F5' },
-    text: { color: isDark ? '#FFFFFF' : '#1A1A2E' },
-    textSecondary: { color: isDark ? '#8E8E93' : '#6B7280' },
-    card: { 
-      backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-      borderColor: isDark ? '#2C2C2E' : '#E8E8E8',
+    container: { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background },
+    text: { color: isDark ? theme.colors.white : theme.colors.text },
+    textSecondary: { color: isDark ? theme.colors.gray500 : theme.colors.gray600 },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    backBtn: {
+      backgroundColor: isDark ? theme.colors.white + '1A' : theme.colors.black + '0D',
+    },
+    periodButton: {
+      backgroundColor: isDark ? theme.colors.white + '1A' : theme.colors.black + '0D',
+      borderColor: isDark ? theme.colors.white + '1A' : theme.colors.black + '0D',
     },
   };
 
@@ -238,7 +245,7 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
     { id: 'expenses', title: 'Expenses', subtitle: 'Track spending', icon: 'receipt-long', color: theme.colors.error, screen: 'Expenses' },
     { id: 'sales', title: 'Sales', subtitle: 'Transactions', icon: 'point-of-sale', color: theme.colors.success, screen: 'SalesHistory' },
     { id: 'commissions', title: 'Commissions', subtitle: 'Staff earnings', icon: 'payments', color: theme.colors.primary, screen: 'Commissions' },
-    { id: 'reports', title: 'Reports', subtitle: 'Analytics', icon: 'assessment', color: '#6366F1', screen: 'FinancialReports' },
+    { id: 'reports', title: 'Reports', subtitle: 'Analytics', icon: 'assessment', color: theme.colors.info, screen: 'FinancialReports' },
   ];
 
   if (loading) {
@@ -258,24 +265,22 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerContent}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()} 
-            style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backBtn, dynamicStyles.backBtn]}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
           </TouchableOpacity>
-          
+
           <Text style={[styles.headerTitle, dynamicStyles.text]}>Accounting</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
              onPress={() => setShowFilterModal(true)}
-             style={[
-               styles.dateSelectBtn, 
-               { 
-                 backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                 borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-               }
-             ]}
+             style={[styles.dateSelectBtn, dynamicStyles.periodButton]}
+             accessibilityLabel={`Filter by ${getPeriodLabel(period)}`}
+             accessibilityRole="button"
           >
              <Text style={[styles.dateSelectText, dynamicStyles.text]}>{getPeriodLabel(period)}</Text>
              <MaterialIcons name="keyboard-arrow-down" size={20} color={dynamicStyles.textSecondary.color} />
@@ -288,17 +293,17 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.netIncomeCard, dynamicStyles.card, { 
-          backgroundColor: isDark 
-            ? (isProfit ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)')
-            : (isProfit ? '#F0FDF4' : '#FEF2F2')
+        <View style={[styles.netIncomeCard, dynamicStyles.card, {
+          backgroundColor: isDark
+            ? (isProfit ? theme.colors.success + '1A' : theme.colors.error + '1A')
+            : (isProfit ? theme.colors.success + '0D' : theme.colors.error + '0D')
         }]}>
           <View style={styles.netIncomeHeader}>
-            <View style={[styles.netIncomeIcon, { backgroundColor: isProfit ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 59, 48, 0.15)' }]}>
-              <MaterialIcons 
-                name={isProfit ? 'trending-up' : 'trending-down'} 
-                size={24} 
-                color={isProfit ? theme.colors.success : theme.colors.error} 
+            <View style={[styles.netIncomeIcon, { backgroundColor: (isProfit ? theme.colors.success : theme.colors.error) + '26' }]}>
+              <MaterialIcons
+                name={isProfit ? 'trending-up' : 'trending-down'}
+                size={24}
+                color={isProfit ? theme.colors.success : theme.colors.error}
               />
             </View>
             <View>
@@ -311,7 +316,7 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
           <Text style={[styles.netIncomeValue, { color: isProfit ? theme.colors.success : theme.colors.error }]}>
             {isProfit ? '+' : '-'}{formatCurrency(summary.netIncome)}
           </Text>
-          <View style={[styles.marginBadge, { backgroundColor: isProfit ? 'rgba(52, 199, 89, 0.12)' : 'rgba(255, 59, 48, 0.12)' }]}>
+          <View style={[styles.marginBadge, { backgroundColor: (isProfit ? theme.colors.success : theme.colors.error) + '1F' }]}>
             <Text style={[styles.marginText, { color: isProfit ? theme.colors.success : theme.colors.error }]}>
               {profitMargin}% profit margin
             </Text>
@@ -321,7 +326,7 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
         {/* Revenue & Expenses Row */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, dynamicStyles.card]}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(52, 199, 89, 0.12)' }]}>
+            <View style={[styles.statIcon, { backgroundColor: theme.colors.success + '1F' }]}>
               <MaterialIcons name="arrow-upward" size={20} color={theme.colors.success} />
             </View>
             <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>Revenue</Text>
@@ -334,7 +339,7 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
           </View>
 
           <View style={[styles.statCard, dynamicStyles.card]}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(255, 59, 48, 0.12)' }]}>
+            <View style={[styles.statIcon, { backgroundColor: theme.colors.error + '1F' }]}>
               <MaterialIcons name="arrow-downward" size={20} color={theme.colors.error} />
             </View>
             <Text style={[styles.statLabel, dynamicStyles.textSecondary]}>Expenses</Text>
@@ -351,8 +356,8 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
         {commissionStats.count > 0 && (
           <View style={[styles.commissionCard, dynamicStyles.card]}>
             <View style={styles.commissionHeader}>
-              <View style={[styles.commissionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
-                <MaterialIcons name="payments" size={20} color="#6366F1" />
+              <View style={[styles.commissionIcon, { backgroundColor: theme.colors.info + '1F' }]}>
+                <MaterialIcons name="payments" size={20} color={theme.colors.info} />
               </View>
               <View>
                 <Text style={[styles.commissionTitle, dynamicStyles.text]}>Commission Breakdown</Text>
@@ -372,15 +377,15 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
               </View>
               
               <View style={styles.commissionItem}>
-                <View style={[styles.commissionDot, { backgroundColor: '#F59E0B' }]} />
+                <View style={[styles.commissionDot, { backgroundColor: theme.colors.warning }]} />
                 <Text style={[styles.commissionLabel, dynamicStyles.textSecondary]}>Unpaid</Text>
-                <Text style={[styles.commissionValue, { color: '#F59E0B' }]}>
+                <Text style={[styles.commissionValue, { color: theme.colors.warning }]}>
                   {formatCurrency(commissionStats.unpaid)}
                 </Text>
               </View>
-              
+
               <View style={styles.commissionItem}>
-                <View style={[styles.commissionDot, { backgroundColor: '#6366F1' }]} />
+                <View style={[styles.commissionDot, { backgroundColor: theme.colors.info }]} />
                 <Text style={[styles.commissionLabel, dynamicStyles.textSecondary]}>Total</Text>
                 <Text style={[styles.commissionValue, dynamicStyles.text]}>
                   {formatCurrency(commissionStats.total)}
@@ -428,12 +433,14 @@ export default function AccountingScreen({ navigation, route }: AccountingScreen
                     key={p}
                     style={[
                       styles.modalOption,
-                      period === p && { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
+                      period === p && dynamicStyles.periodButton
                     ]}
                     onPress={() => {
                       setPeriod(p);
                       setShowFilterModal(false);
                     }}
+                    accessibilityLabel={`Select ${p} period`}
+                    accessibilityRole="button"
                   >
                     <View style={[
                       styles.radioCircle,
@@ -523,8 +530,8 @@ const styles = StyleSheet.create({
   commissionValue: { fontSize: 14, fontWeight: '700' },
   
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 320, borderRadius: 24, padding: 24, borderWidth: 1, elevation: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  modalOverlay: { flex: 1, backgroundColor: theme.colors.black + '99', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 320, borderRadius: 24, padding: 24, borderWidth: 1, elevation: 12, shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 20, textAlign: 'center' },
   modalOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 16, marginBottom: 8 },
   modalOptionText: { fontSize: 16, flex: 1, marginLeft: 12, fontWeight: '500' },

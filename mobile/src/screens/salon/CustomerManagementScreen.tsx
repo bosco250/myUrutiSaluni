@@ -354,8 +354,8 @@ export default function CustomerManagementScreen({
     });
   };
 
-  // Render table row
-  const renderTableRow = (customer: SalonCustomer) => {
+  // Render customer card
+  const renderCustomerCard = (customer: SalonCustomer) => {
     const statusColor = getStatusColor(customer);
     const daysSince = customer.daysSinceLastVisit || 0;
     const statusLabel =
@@ -369,7 +369,7 @@ export default function CustomerManagementScreen({
 
     return (
       <TouchableOpacity
-        style={[styles.tableRow, dynamicStyles.tableRow]}
+        style={[styles.customerCard, dynamicStyles.card]}
         onPress={() =>
           navigation.navigate("CustomerDetail", {
             customerId: customer.customerId,
@@ -379,18 +379,18 @@ export default function CustomerManagementScreen({
         }
         activeOpacity={0.7}
       >
-        {/* Customer Name */}
-        <View style={styles.tableCell}>
+        {/* Header Row */}
+        <View style={styles.cardHeader}>
           <View style={styles.customerNameRow}>
             <View
               style={[
-                styles.avatarSmall,
+                styles.avatarLarge,
                 { backgroundColor: theme.colors.primary + "20" },
               ]}
             >
               <Text
                 style={[
-                  styles.avatarTextSmall,
+                  styles.avatarTextLarge,
                   { color: theme.colors.primary },
                 ]}
               >
@@ -399,13 +399,13 @@ export default function CustomerManagementScreen({
             </View>
             <View style={styles.customerNameContainer}>
               <Text
-                style={[styles.tableCellText, dynamicStyles.text]}
+                style={[styles.customerName, dynamicStyles.text]}
                 numberOfLines={1}
               >
                 {customer.customer?.fullName || "Unknown Customer"}
               </Text>
               <Text
-                style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
+                style={[styles.customerContact, dynamicStyles.textSecondary]}
                 numberOfLines={1}
               >
                 {customer.customer?.phone ||
@@ -414,66 +414,6 @@ export default function CustomerManagementScreen({
               </Text>
             </View>
           </View>
-        </View>
-
-        {/* Visits */}
-        <View style={styles.tableCell}>
-          <Text
-            style={[styles.tableCellText, dynamicStyles.text]}
-            numberOfLines={1}
-          >
-            {customer.visitCount}
-          </Text>
-          <Text
-            style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
-            numberOfLines={1}
-          >
-            {customer.visitCount === 1 ? "visit" : "visits"}
-          </Text>
-        </View>
-
-        {/* Total Spent */}
-        <View style={styles.tableCell}>
-          <Text
-            style={[styles.tableCellText, dynamicStyles.text]}
-            numberOfLines={1}
-          >
-            RWF {Number(customer.totalSpent || 0).toLocaleString()}
-          </Text>
-          {customer.averageOrderValue && (
-            <Text
-              style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
-              numberOfLines={1}
-            >
-              Avg: RWF {Number(customer.averageOrderValue).toLocaleString()}
-            </Text>
-          )}
-        </View>
-
-        {/* Last Visit */}
-        <View style={styles.tableCell}>
-          <Text
-            style={[styles.tableCellText, dynamicStyles.text]}
-            numberOfLines={1}
-          >
-            {formatDate(customer.lastVisitDate)}
-          </Text>
-          {customer.lastVisitDate && (
-            <Text
-              style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
-              numberOfLines={1}
-            >
-              {daysSince === 0
-                ? "Today"
-                : daysSince === 1
-                  ? "Yesterday"
-                  : `${daysSince} days ago`}
-            </Text>
-          )}
-        </View>
-
-        {/* Status */}
-        <View style={styles.tableCellStatus}>
           <View
             style={[
               styles.statusBadge,
@@ -481,13 +421,80 @@ export default function CustomerManagementScreen({
             ]}
           >
             <View
-              style={[styles.statusDotSmall, { backgroundColor: statusColor }]}
+              style={[styles.statusDot, { backgroundColor: statusColor }]}
             />
             <Text style={[styles.statusText, { color: statusColor }]}>
               {statusLabel}
             </Text>
           </View>
         </View>
+
+        {/* Stats Grid */}
+        <View style={styles.cardStatsGrid}>
+          <View style={styles.cardStat}>
+            <MaterialIcons
+              name="shopping-bag"
+              size={16}
+              color={dynamicStyles.textSecondary.color}
+            />
+            <Text style={[styles.cardStatValue, dynamicStyles.text]}>
+              {customer.visitCount}
+            </Text>
+            <Text style={[styles.cardStatLabel, dynamicStyles.textSecondary]}>
+              {customer.visitCount === 1 ? "Visit" : "Visits"}
+            </Text>
+          </View>
+
+          <View style={styles.cardStat}>
+            <MaterialIcons
+              name="payments"
+              size={16}
+              color={dynamicStyles.textSecondary.color}
+            />
+            <Text style={[styles.cardStatValue, dynamicStyles.text]}>
+              RWF {Number(customer.totalSpent || 0).toLocaleString()}
+            </Text>
+            <Text style={[styles.cardStatLabel, dynamicStyles.textSecondary]}>
+              Total Spent
+            </Text>
+          </View>
+
+          {customer.averageOrderValue && (
+            <View style={styles.cardStat}>
+              <MaterialIcons
+                name="trending-up"
+                size={16}
+                color={dynamicStyles.textSecondary.color}
+              />
+              <Text style={[styles.cardStatValue, dynamicStyles.text]}>
+                RWF {Number(customer.averageOrderValue).toLocaleString()}
+              </Text>
+              <Text style={[styles.cardStatLabel, dynamicStyles.textSecondary]}>
+                Avg Order
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Last Visit */}
+        {customer.lastVisitDate && (
+          <View style={styles.cardFooter}>
+            <MaterialIcons
+              name="schedule"
+              size={14}
+              color={dynamicStyles.textSecondary.color}
+            />
+            <Text style={[styles.cardFooterText, dynamicStyles.textSecondary]}>
+              Last visit:{" "}
+              {daysSince === 0
+                ? "Today"
+                : daysSince === 1
+                  ? "Yesterday"
+                  : `${daysSince} days ago`}{" "}
+              ({formatDate(customer.lastVisitDate)})
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -617,7 +624,7 @@ export default function CustomerManagementScreen({
               {renderFilterChip("inactive", "Inactive")}
             </ScrollView>
 
-            {/* Customer Table */}
+            {/* Customer List */}
             {filteredCustomers.length === 0 ? (
               <View style={styles.emptyState}>
                 <MaterialIcons
@@ -635,77 +642,13 @@ export default function CustomerManagementScreen({
                 </Text>
               </View>
             ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={true}
-                style={styles.tableScrollContainer}
-                contentContainerStyle={styles.tableContainer}
-              >
-                <View style={styles.tableContent}>
-                  {/* Table Header */}
-                  <View
-                    style={[styles.tableHeaderRow, dynamicStyles.tableHeader]}
-                  >
-                    <View style={styles.tableCell}>
-                      <Text
-                        style={[
-                          styles.tableHeaderText,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Customer
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text
-                        style={[
-                          styles.tableHeaderText,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Visits
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text
-                        style={[
-                          styles.tableHeaderText,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Total Spent
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text
-                        style={[
-                          styles.tableHeaderText,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Last Visit
-                      </Text>
-                    </View>
-                    <View style={styles.tableCellStatus}>
-                      <Text
-                        style={[
-                          styles.tableHeaderText,
-                          dynamicStyles.textSecondary,
-                        ]}
-                      >
-                        Status
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Table Rows */}
-                  {filteredCustomers.map((customer) => (
-                    <React.Fragment key={customer.id}>
-                      {renderTableRow(customer)}
-                    </React.Fragment>
-                  ))}
-                </View>
-              </ScrollView>
+              <View style={styles.customerList}>
+                {filteredCustomers.map((customer) => (
+                  <React.Fragment key={customer.id}>
+                    {renderCustomerCard(customer)}
+                  </React.Fragment>
+                ))}
+              </View>
             )}
 
             <View style={{ height: 40 }} />
@@ -846,95 +789,108 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
 
-  // Table Styles
-  tableScrollContainer: {
-    marginHorizontal: theme.spacing.md,
+  // Customer List
+  customerList: {
+    paddingHorizontal: theme.spacing.md,
+    gap: 10,
   },
-  tableContainer: {
-    paddingVertical: theme.spacing.xs,
+  customerCard: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
   },
-  tableContent: {
-    minWidth: 900, // Minimum width to enable horizontal scrolling
-  },
-  tableHeaderRow: {
+  cardHeader: {
     flexDirection: "row",
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: theme.colors.borderLight,
-    gap: theme.spacing.xs,
-    minWidth: 900,
-  },
-  tableHeaderText: {
-    fontSize: 11,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
-    borderBottomWidth: 1,
-    gap: theme.spacing.xs,
-    minWidth: 900,
-  },
-  tableCell: {
-    flex: 1,
-    minWidth: 150,
-  },
-  tableCellStatus: {
-    width: 120,
-    alignItems: "center",
-  },
-  tableCellText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.medium,
-  },
-  tableCellSubtext: {
-    fontSize: 10,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   customerNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs,
+    gap: 10,
+    flex: 1,
   },
-  avatarSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  avatarLarge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarTextSmall: {
-    fontSize: 12,
+  avatarTextLarge: {
+    fontSize: 16,
     fontWeight: "bold",
     fontFamily: theme.fonts.bold,
   },
   customerNameContainer: {
     flex: 1,
   },
+  customerName: {
+    fontSize: 15,
+    fontWeight: "600",
+    fontFamily: theme.fonts.medium,
+    marginBottom: 2,
+  },
+  customerContact: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+  },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    borderRadius: 10,
+    gap: 3,
   },
-  statusDotSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
     fontSize: 10,
     fontWeight: "600",
     fontFamily: theme.fonts.medium,
+  },
+  cardStatsGrid: {
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+  },
+  cardStat: {
+    flex: 1,
+    alignItems: "center",
+    gap: 3,
+  },
+  cardStatValue: {
+    fontSize: 13,
+    fontWeight: "bold",
+    fontFamily: theme.fonts.bold,
+    marginTop: 2,
+  },
+  cardStatLabel: {
+    fontSize: 9,
+    fontFamily: theme.fonts.regular,
+    textAlign: "center",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+  },
+  cardFooterText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.regular,
+    flex: 1,
   },
 
   // Empty State

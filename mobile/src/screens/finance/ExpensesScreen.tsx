@@ -47,16 +47,16 @@ const PAYMENT_METHODS = [
   { value: 'other', label: 'Other', icon: 'more-horiz' },
 ];
 
-// Default fallback categories with icons (used when no backend categories exist)
-const DEFAULT_CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
-  rent: { icon: 'home', color: '#8B5CF6' },
-  utilities: { icon: 'bolt', color: '#F59E0B' },
-  supplies: { icon: 'inventory-2', color: '#10B981' },
-  products: { icon: 'shopping-bag', color: '#EC4899' },
-  equipment: { icon: 'construction', color: '#6366F1' },
-  marketing: { icon: 'campaign', color: '#14B8A6' },
-  wages: { icon: 'people', color: '#F97316' },
-  other: { icon: 'more-horiz', color: '#6B7280' },
+// Default fallback categories with icons (using theme colors)
+const DEFAULT_CATEGORY_ICONS: Record<string, { icon: string; colorKey: keyof typeof theme.colors }> = {
+  rent: { icon: 'home', colorKey: 'secondary' },
+  utilities: { icon: 'bolt', colorKey: 'warning' },
+  supplies: { icon: 'inventory-2', colorKey: 'success' },
+  products: { icon: 'shopping-bag', colorKey: 'error' },
+  equipment: { icon: 'construction', colorKey: 'primary' },
+  marketing: { icon: 'campaign', colorKey: 'info' },
+  wages: { icon: 'people', colorKey: 'infoDark' },
+  other: { icon: 'more-horiz', colorKey: 'textSecondary' },
 };
 
 export default function ExpensesScreen({ navigation, route }: ExpensesScreenProps) {
@@ -101,17 +101,38 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
   ];
 
   const dynamicStyles = {
-    container: { backgroundColor: isDark ? '#0D0D0F' : '#F8F9FA' },
-    text: { color: isDark ? '#FFFFFF' : '#1A1A2E' },
-    textSecondary: { color: isDark ? '#8E8E93' : '#6B7280' },
-    card: { 
-      backgroundColor: isDark ? 'rgba(44, 44, 46, 0.8)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: isDark ? 'rgba(58, 58, 60, 0.5)' : 'rgba(0, 0, 0, 0.06)',
+    container: { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background },
+    text: { color: isDark ? theme.colors.white : theme.colors.text },
+    textSecondary: { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     input: {
-      backgroundColor: isDark ? 'rgba(58, 58, 60, 0.8)' : '#F5F5F5',
-      borderColor: isDark ? 'rgba(70, 70, 74, 0.8)' : '#E0E0E0',
-      color: isDark ? '#FFFFFF' : '#1A1A2E',
+      backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100,
+      borderColor: isDark ? theme.colors.gray600 : theme.colors.gray300,
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    searchContainer: {
+      backgroundColor: isDark ? theme.colors.white + '14' : theme.colors.black + '0A',
+    },
+    filterChipInactive: {
+      backgroundColor: isDark ? theme.colors.white + '14' : theme.colors.black + '0A',
+    },
+    modalBg: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+    },
+    amountRow: {
+      backgroundColor: theme.colors.error + (isDark ? '1A' : '14'),
+    },
+    chipInactive: {
+      backgroundColor: isDark ? theme.colors.white + '14' : theme.colors.black + '0D',
+    },
+    categoryBadge: {
+      backgroundColor: isDark ? theme.colors.white + '14' : theme.colors.black + '0A',
+    },
+    emptyIconBg: {
+      backgroundColor: isDark ? theme.colors.white + '14' : theme.colors.black + '0A',
     },
   };
 
@@ -332,17 +353,17 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <View style={[styles.backBtnBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+          <View style={[styles.backBtnBg, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100 }]}>
             <MaterialIcons name="arrow-back" size={20} color={dynamicStyles.text.color} />
           </View>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Expenses</Text>
-        <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
+        <TouchableOpacity onPress={openAddModal} style={styles.addBtn} accessibilityLabel="Add expense" accessibilityRole="button">
           <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primaryDark || '#A67C52']}
+            colors={[theme.colors.primary, theme.colors.primaryDark || theme.colors.primary]}
             style={styles.addBtnGradient}
           >
-            <MaterialIcons name="add" size={22} color="#FFF" />
+            <MaterialIcons name="add" size={22} color={theme.colors.white} />
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -355,10 +376,10 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
         {/* Summary Cards */}
         <Animated.View style={[styles.summaryRow, { opacity: fadeAnim }]}>
           <LinearGradient
-            colors={isDark ? ['#3D1C1C', '#2D1616'] : ['#FFF0F0', '#FFE0E0']}
+            colors={isDark ? [theme.colors.error + '30', theme.colors.error + '20'] : [theme.colors.error + '15', theme.colors.error + '10']}
             style={styles.summaryCard}
           >
-            <View style={styles.summaryIconBg}>
+            <View style={[styles.summaryIconBg, { backgroundColor: theme.colors.error + '26' }]}>
               <MaterialIcons name="trending-down" size={20} color={theme.colors.error} />
             </View>
             <Text style={[styles.summaryValue, { color: theme.colors.error }]}>
@@ -366,10 +387,10 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
             </Text>
             <Text style={[styles.summaryLabel, dynamicStyles.textSecondary]}>Total Spent</Text>
           </LinearGradient>
-          
+
           <View style={[styles.summaryCardSmall, dynamicStyles.card]}>
-            <View style={[styles.summaryIconBgSmall, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
-              <MaterialIcons name="receipt-long" size={18} color="#6366F1" />
+            <View style={[styles.summaryIconBgSmall, { backgroundColor: theme.colors.primary + '15' }]}>
+              <MaterialIcons name="receipt-long" size={18} color={theme.colors.primary} />
             </View>
             <Text style={[styles.summaryValueSmall, dynamicStyles.text]}>{summary.expenseCount}</Text>
             <Text style={[styles.summaryLabelSmall, dynamicStyles.textSecondary]}>Records</Text>
@@ -377,11 +398,11 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
         </Animated.View>
 
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
+        <View style={[styles.searchContainer, dynamicStyles.searchContainer]}>
           <MaterialIcons name="search" size={20} color={dynamicStyles.textSecondary.color} />
           <TextInput
             placeholder="Search expenses..."
-            placeholderTextColor={isDark ? '#666' : '#999'}
+            placeholderTextColor={dynamicStyles.textSecondary.color}
             style={[styles.searchInput, dynamicStyles.text]}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -401,14 +422,16 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
               onPress={() => setActiveFilter(tab.id)}
               style={[
                 styles.filterChip,
-                activeFilter === tab.id 
+                activeFilter === tab.id
                   ? styles.filterChipActive
-                  : { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
+                  : dynamicStyles.filterChipInactive
               ]}
+              accessibilityLabel={`Filter by ${tab.label}`}
+              accessibilityRole="button"
             >
               <Text style={[
-                styles.filterChipText, 
-                activeFilter === tab.id ? { color: '#FFF' } : dynamicStyles.textSecondary
+                styles.filterChipText,
+                activeFilter === tab.id ? { color: theme.colors.white } : dynamicStyles.textSecondary
               ]}>
                 {tab.label}
               </Text>
@@ -429,19 +452,19 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
         {/* Expense List */}
         {filteredExpenses.length === 0 ? (
           <View style={[styles.emptyState, dynamicStyles.card]}>
-            <View style={[styles.emptyIconBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
+            <View style={[styles.emptyIconBg, dynamicStyles.emptyIconBg]}>
               <MaterialIcons name="receipt-long" size={48} color={theme.colors.primary} />
             </View>
             <Text style={[styles.emptyTitle, dynamicStyles.text]}>No Expenses Yet</Text>
             <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
               Track your salon spending by adding your first expense.
             </Text>
-            <TouchableOpacity onPress={openAddModal}>
+            <TouchableOpacity onPress={openAddModal} accessibilityLabel="Add first expense" accessibilityRole="button">
               <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryDark || '#A67C52']}
+                colors={[theme.colors.primary, theme.colors.primaryDark || theme.colors.primary]}
                 style={styles.emptyBtn}
               >
-                <MaterialIcons name="add" size={20} color="#FFF" />
+                <MaterialIcons name="add" size={20} color={theme.colors.white} />
                 <Text style={styles.emptyBtnText}>Add Expense</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -485,7 +508,7 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
                             </Text>
                           </View>
                           <View style={styles.expenseMetaRow}>
-                            <View style={[styles.categoryBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
+                            <View style={[styles.categoryBadge, dynamicStyles.categoryBadge]}>
                               <Text style={[styles.categoryBadgeText, dynamicStyles.textSecondary]}>
                                 {expense.category?.name || 'Uncategorized'}
                               </Text>
@@ -508,7 +531,7 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
       {/* Add/Edit Modal - Compact Design */}
       <Modal visible={showModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}>
+          <View style={[styles.modalContent, dynamicStyles.modalBg]}>
             <View style={styles.modalHandle} />
             
             {/* Header */}
@@ -523,7 +546,7 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
 
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               {/* Amount */}
-              <View style={[styles.amountRow, { backgroundColor: isDark ? 'rgba(255,59,48,0.1)' : 'rgba(255,59,48,0.08)' }]}>
+              <View style={[styles.amountRow, dynamicStyles.amountRow]}>
                 <Text style={[styles.amountCurrency, { color: theme.colors.error }]}>RWF</Text>
                 <TextInput
                   style={[styles.amountField, { color: theme.colors.error }]}
@@ -531,7 +554,7 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
                   onChangeText={setAmount}
                   placeholder="0"
                   keyboardType="numeric"
-                  placeholderTextColor={isDark ? 'rgba(255,59,48,0.4)' : 'rgba(255,59,48,0.3)'}
+                  placeholderTextColor={theme.colors.error + (isDark ? '66' : '4D')}
                 />
               </View>
 
@@ -574,26 +597,29 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
               <View style={styles.chipGrid}>
                 {categories.map((cat) => {
                   const iconInfo = DEFAULT_CATEGORY_ICONS[cat.name.toLowerCase()] || DEFAULT_CATEGORY_ICONS['other'];
+                  const categoryColor = theme.colors[iconInfo.colorKey];
                   const isSelected = selectedCategoryId === cat.id;
                   return (
                     <TouchableOpacity
                       key={cat.id}
                       style={[
                         styles.chip,
-                        isSelected 
-                          ? { backgroundColor: iconInfo.color, borderColor: iconInfo.color }
-                          : { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderColor: 'transparent' }
+                        isSelected
+                          ? { backgroundColor: categoryColor, borderColor: categoryColor }
+                          : { ...dynamicStyles.chipInactive, borderColor: 'transparent' }
                       ]}
                       onPress={() => setSelectedCategoryId(cat.id)}
+                      accessibilityLabel={`Select ${cat.name} category`}
+                      accessibilityRole="button"
                     >
-                      <MaterialIcons 
-                        name={iconInfo.icon as any} 
-                        size={14} 
-                        color={isSelected ? '#FFF' : iconInfo.color} 
+                      <MaterialIcons
+                        name={iconInfo.icon as any}
+                        size={14}
+                        color={isSelected ? theme.colors.white : categoryColor}
                       />
                       <Text style={[
                         styles.chipText,
-                        isSelected ? { color: '#FFF' } : dynamicStyles.text
+                        isSelected ? { color: theme.colors.white } : dynamicStyles.text
                       ]}>
                         {cat.name}
                       </Text>
@@ -612,20 +638,22 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
                       key={pm.value}
                       style={[
                         styles.chip,
-                        isActive 
+                        isActive
                           ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                          : { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderColor: 'transparent' }
+                          : { ...dynamicStyles.chipInactive, borderColor: 'transparent' }
                       ]}
                       onPress={() => setPaymentMethod(pm.value)}
+                      accessibilityLabel={`Select ${pm.label} payment method`}
+                      accessibilityRole="button"
                     >
-                      <MaterialIcons 
-                        name={pm.icon as any} 
-                        size={14} 
-                        color={isActive ? '#FFF' : dynamicStyles.textSecondary.color} 
+                      <MaterialIcons
+                        name={pm.icon as any}
+                        size={14}
+                        color={isActive ? theme.colors.white : dynamicStyles.textSecondary.color}
                       />
                       <Text style={[
                         styles.chipText,
-                        isActive ? { color: '#FFF' } : dynamicStyles.text
+                        isActive ? { color: theme.colors.white } : dynamicStyles.text
                       ]}>
                         {pm.label}
                       </Text>
@@ -640,15 +668,17 @@ export default function ExpensesScreen({ navigation, route }: ExpensesScreenProp
               style={[styles.saveBtn, saving && { opacity: 0.6 }]}
               onPress={handleSave}
               disabled={saving}
+              accessibilityLabel={modalMode === 'add' ? 'Add expense' : 'Save changes'}
+              accessibilityRole="button"
             >
               <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryDark || '#A67C52']}
+                colors={[theme.colors.primary, theme.colors.primaryDark || theme.colors.primary]}
                 style={styles.saveBtnGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
                 {saving ? (
-                  <ActivityIndicator color="#FFF" size="small" />
+                  <ActivityIndicator color={theme.colors.white} size="small" />
                 ) : (
                   <Text style={styles.saveBtnText}>
                     {modalMode === 'add' ? 'Add Expense' : 'Save Changes'}
@@ -713,7 +743,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -913,16 +942,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  emptyBtnText: { 
-    color: '#FFF', 
-    fontWeight: '600', 
+  emptyBtnText: {
+    color: theme.colors.white,
+    fontWeight: '600',
     fontSize: 15,
   }, 
   
   // Modal - Compact Design
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: theme.colors.black + '80',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -934,7 +963,7 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: 36,
     height: 4,
-    backgroundColor: 'rgba(150,150,150,0.3)',
+    backgroundColor: theme.colors.gray500 + '4D',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 8,
@@ -946,7 +975,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(150,150,150,0.15)',
+    borderBottomColor: theme.colors.gray500 + '26',
   },
   modalTitle: { 
     fontSize: 17, 
@@ -1038,9 +1067,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  saveBtnText: { 
-    color: '#FFF', 
-    fontSize: 15, 
+  saveBtnText: {
+    color: theme.colors.white,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

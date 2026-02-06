@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 12,
   },
-  coordText: { fontSize: 12, marginLeft: 8, fontFamily: 'monospace' },
+  coordText: { fontSize: 12, marginLeft: 8, fontFamily: theme.fonts.regular },
   
   helpText: {
     fontSize: 12,

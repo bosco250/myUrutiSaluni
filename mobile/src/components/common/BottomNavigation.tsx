@@ -102,7 +102,7 @@ const BottomNavigation = React.memo(function BottomNavigation({
             <Text
               style={[
                 styles.tabLabel,
-                { color: isActive ? activeColor : inactiveColor, fontWeight: isActive ? '700' : '500' }
+                { color: isActive ? activeColor : inactiveColor, fontWeight: '700' }
               ]}
               numberOfLines={1}
             >

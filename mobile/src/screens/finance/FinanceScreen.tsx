@@ -109,7 +109,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       shadowColor: isDark ? "transparent" : theme.colors.black,
     },
     cardDark: {
-      backgroundColor: isDark ? "#1C1C1E" : "#1C1C1E",
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.gray900,
     },
     border: {
       borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
@@ -205,9 +205,12 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         pendingBalance,
         status: response?.status || 'active',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching wallet:", error);
       setWallet(null);
+      if (error?.response?.status !== 404) {
+        Alert.alert("Error", "Failed to load wallet information. Please try again.");
+      }
     }
   }, []);
 
@@ -281,25 +284,25 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
              let color = theme.colors.text;
 
              switch(method.toLowerCase()) {
-                case 'cash': 
-                  label = 'Cash'; 
-                  icon = 'payments'; 
-                  color = '#4CAF50'; 
+                case 'cash':
+                  label = 'Cash';
+                  icon = 'payments';
+                  color = theme.colors.success;
                   break;
-                case 'card': 
-                  label = 'Card'; 
-                  icon = 'credit-card'; 
-                  color = '#2196F3'; 
+                case 'card':
+                  label = 'Card';
+                  icon = 'credit-card';
+                  color = theme.colors.info;
                   break;
-                case 'mobile_money': 
-                  label = 'Mobile Money'; 
-                  icon = 'phone-android'; 
-                  color = '#FFD700'; 
+                case 'mobile_money':
+                  label = 'Mobile Money';
+                  icon = 'phone-android';
+                  color = theme.colors.warning;
                   break;
-                case 'bank_transfer': 
-                  label = 'Bank Transfer'; 
-                  icon = 'account-balance'; 
-                  color = '#9C27B0'; 
+                case 'bank_transfer':
+                  label = 'Bank Transfer';
+                  icon = 'account-balance';
+                  color = theme.colors.secondary;
                   break;
                 default:
                   label = method.replace('_', ' ').toUpperCase();
@@ -321,7 +324,11 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
 
       } catch (error: any) {
         console.error("Error fetching finance data:", error);
-         // No mock fallback needed - UI handles empty states or show 0
+        // No mock fallback needed - UI handles empty states or show 0
+        Alert.alert(
+          "Error",
+          "Failed to load financial data. Please check your connection and try again."
+        );
       }
     },
     [timePeriod, getDateRange]
@@ -348,9 +355,14 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       ]).catch((error) => {
         console.error("Error loading secondary finance data:", error);
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading finance data:", error);
       setLoading(false);
+      Alert.alert(
+        "Error",
+        "Failed to load financial information. Please try again later.",
+        [{ text: "OK" }]
+      );
     }
   }, [
     fetchSalonId,
@@ -392,42 +404,42 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       label: "Sales History",
       icon: "receipt-long",
       screen: "SalesHistory",
-      color: "#4CAF50",
+      color: theme.colors.success,
     },
     {
       id: "commissions",
       label: "Commissions",
       icon: "people",
       screen: "Commissions",
-      color: "#9C27B0",
+      color: theme.colors.secondary,
     },
     {
       id: "analytics",
       label: "Analytics",
       icon: "analytics",
       screen: "BusinessAnalytics",
-      color: "#2196F3",
+      color: theme.colors.info,
     },
     {
       id: "reports",
       label: "Reports",
       icon: "assessment",
       screen: "FinancialReports",
-      color: "#00BFA5",
+      color: theme.colors.info,
     },
     {
       id: "inventory",
       label: "Inventory",
       icon: "inventory-2",
       screen: "StockManagement",
-      color: "#FF9800",
+      color: theme.colors.warning,
     },
     {
       id: "payments",
       label: "Payments",
       icon: "history",
       screen: "PaymentHistory",
-      color: "#607D8B",
+      color: theme.colors.gray600,
     },
   ];
 
@@ -538,13 +550,13 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         
         {wallet?.status && wallet.status !== 'active' && (
           <View style={[
-            styles.statusBadge, 
+            styles.statusBadge,
             { backgroundColor: wallet.status === 'blocked' ? theme.colors.error : theme.colors.warning }
           ]}>
-            <MaterialIcons 
-              name={wallet.status === 'blocked' ? "block" : "info-outline"} 
-              size={12} 
-              color="#FFF" 
+            <MaterialIcons
+              name={wallet.status === 'blocked' ? "block" : "info-outline"}
+              size={12}
+              color={theme.colors.white}
             />
             <Text style={styles.statusBadgeText}>
               {wallet.status.toUpperCase()}
@@ -610,9 +622,11 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
       <TouchableOpacity
         style={styles.applyButton}
         onPress={() => Alert.alert("Coming Soon", "Loan applications will be available soon!")}
+        accessibilityLabel="Apply for loan"
+        accessibilityRole="button"
       >
         <Text style={styles.applyButtonText}>Apply Now</Text>
-        <MaterialIcons name="arrow-forward" size={18} color="#FFF" />
+        <MaterialIcons name="arrow-forward" size={18} color={theme.colors.white} />
       </TouchableOpacity>
     </View>
   );
@@ -695,7 +709,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
           {
             key: "revenue",
             icon: "trending-up",
-            iconColor: "#4CAF50",
+            iconColor: theme.colors.success,
             label: "Total Revenue",
             value: summary?.totalRevenue || 0,
             change: summary?.revenueChange,
@@ -703,14 +717,14 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
           {
             key: "payouts",
             icon: "schedule",
-            iconColor: "#FF9800",
+            iconColor: theme.colors.warning,
             label: "Pending Payouts",
             value: summary?.pendingPayouts || 0,
           },
           {
             key: "outstanding",
             icon: "warning",
-            iconColor: "#F44336",
+            iconColor: theme.colors.error,
             label: "Outstanding",
             value: summary?.outstandingPayments || 0,
           },
@@ -737,12 +751,12 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
                 <MaterialIcons
                   name={card.change >= 0 ? "arrow-upward" : "arrow-downward"}
                   size={12}
-                  color={card.change >= 0 ? "#4CAF50" : "#F44336"}
+                  color={card.change >= 0 ? theme.colors.success : theme.colors.error}
                 />
                 <Text
                   style={[
                     styles.changeText,
-                    { color: card.change >= 0 ? "#4CAF50" : "#F44336" },
+                    { color: card.change >= 0 ? theme.colors.success : theme.colors.error },
                   ]}
                 >
                   {Math.abs(card.change).toFixed(1)}%
@@ -905,7 +919,7 @@ export default function FinanceScreen({ navigation }: FinanceScreenProps) {
         style={[styles.metricsCard, dynamicStyles.card, styles.topItemsCard]}
       >
         <View style={styles.topItemsHeader}>
-          <MaterialIcons name="emoji-events" size={20} color="#FFD700" />
+          <MaterialIcons name="emoji-events" size={20} color={theme.colors.warning} />
           <Text style={[styles.topItemsTitle, dynamicStyles.text]}>
             Top Employees
           </Text>
@@ -1048,7 +1062,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(200, 155, 104, 0.2)",
+    backgroundColor: theme.colors.primary + '33',
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1065,7 +1079,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   withdrawButton: {
-    backgroundColor: "rgba(244, 67, 54, 0.15)",
+    backgroundColor: theme.colors.error + '26',
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
@@ -1076,7 +1090,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   topUpButton: {
-    backgroundColor: "#3A3A3C",
+    backgroundColor: theme.colors.gray700,
   },
   topUpButtonText: {
     color: theme.colors.white,
@@ -1085,7 +1099,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   walletLabel: {
-    color: "#8E8E93",
+    color: theme.colors.gray500,
     fontSize: 14,
     marginBottom: theme.spacing.xs,
     fontFamily: theme.fonts.regular,
@@ -1118,7 +1132,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusBadgeText: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontSize: 10,
     fontWeight: '800',
     fontFamily: theme.fonts.bold,
@@ -1126,13 +1140,13 @@ const styles = StyleSheet.create({
   blockedNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: theme.colors.error + '1A',
     padding: 10,
     borderRadius: 10,
     marginTop: 12,
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: theme.colors.error + '33',
   },
   blockedNoticeText: {
     color: theme.colors.error,
@@ -1161,7 +1175,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "rgba(200, 155, 104, 0.15)",
+    backgroundColor: theme.colors.primary + '26',
     justifyContent: "center",
     alignItems: "center",
     marginRight: theme.spacing.sm,
@@ -1194,7 +1208,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.medium,
   },
   loanDueSoon: {
-    color: "#FF3B30",
+    color: theme.colors.error,
     fontWeight: "600",
   },
   progressContainer: {
@@ -1203,7 +1217,7 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: theme.colors.gray300,
     overflow: "hidden",
   },
   progressFill: {
@@ -1212,7 +1226,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   repayButton: {
-    backgroundColor: "#1C1C1E",
+    backgroundColor: theme.colors.gray900,
     borderRadius: 25,
     paddingVertical: theme.spacing.sm + 2,
     alignItems: "center",
@@ -1377,7 +1391,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: theme.colors.gray300,
     marginTop: 4,
     overflow: "hidden",
   },
@@ -1410,13 +1424,13 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: theme.colors.gray300,
     justifyContent: "center",
     alignItems: "center",
     marginRight: theme.spacing.sm,
   },
   topItemRankGold: {
-    backgroundColor: "#FFD700",
+    backgroundColor: theme.colors.warning,
   },
   rankText: {
     fontSize: 12,
@@ -1425,7 +1439,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.bold,
   },
   rankTextGold: {
-    color: "#7B6C00",
+    color: theme.colors.gray800,
   },
   topItemInfo: {
     flex: 1,
@@ -1476,7 +1490,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   applyButtonText: {
-    color: '#FFF',
+    color: theme.colors.white,
     fontSize: 14,
     fontWeight: 'bold',
   },

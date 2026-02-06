@@ -45,20 +45,7 @@ interface MenuItem {
 // Menu sections with items
 // Using theme colors for consistency
 const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
-  {
-    title: 'Account',
-    items: [
-      {
-        id: 'notifications',
-        icon: 'notifications',
-        label: 'Alerts',
-        description: 'Updates & reminders',
-        screen: 'Notifications',
-        badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
-        iconColor: theme.colors.warning,
-      },
-    ] as MenuItem[],
-  },
+
   {
     title: 'Workspace',
     items: [
@@ -127,6 +114,32 @@ const getMenuSections = (unreadNotificationCount: number, isDark: boolean) => [
             screen: 'Commissions',
             iconColor: theme.colors.success,
             requiredPermissions: [EmployeePermission.VIEW_SALES_REPORTS, EmployeePermission.VIEW_EMPLOYEE_COMMISSIONS],
+          },
+        ],
+      },
+      {
+        id: 'inventory-group',
+        icon: 'inventory',
+        label: 'Inventory',
+        description: 'Stock & Products',
+        iconColor: theme.colors.warning,
+        requiredPermissions: [EmployeePermission.MANAGE_PRODUCTS, EmployeePermission.MANAGE_INVENTORY],
+        subItems: [
+          {
+            id: 'stock-management',
+            icon: 'format-list-bulleted',
+            label: 'Stock Management',
+            screen: 'StockManagement',
+            iconColor: theme.colors.primary,
+            requiredPermissions: [EmployeePermission.MANAGE_INVENTORY],
+          },
+          {
+            id: 'add-product',
+            icon: 'add-circle-outline',
+            label: 'Add New Product',
+            screen: 'AddProduct',
+            iconColor: theme.colors.success,
+            requiredPermissions: [EmployeePermission.MANAGE_PRODUCTS],
           },
         ],
       },

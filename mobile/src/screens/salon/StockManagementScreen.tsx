@@ -201,53 +201,38 @@ export default function StockManagementScreen({ navigation, route }: StockManage
     }
   };
 
-  // Render table row
-  const renderTableRow = (product: SalonProduct) => {
+  // Render product card
+  const renderProductCard = (product: SalonProduct) => {
     const isLowStock = product.isInventoryItem && product.stockLevel <= 5;
     const isOutOfStock = product.isInventoryItem && product.stockLevel === 0;
-    const stockColor = isOutOfStock 
-      ? theme.colors.error 
-      : isLowStock 
-        ? theme.colors.warning 
+    const stockColor = isOutOfStock
+      ? theme.colors.error
+      : isLowStock
+        ? theme.colors.warning
         : theme.colors.success;
 
     return (
       <TouchableOpacity
-        style={[
-          styles.tableRow,
-          dynamicStyles.tableRow,
-        ]}
+        style={[styles.productCard, dynamicStyles.card]}
         onPress={() => navigation.navigate('ProductDetail', { productId: product.id, salonId })}
         activeOpacity={0.7}
       >
-        {/* Product Name & SKU */}
-        <View style={styles.tableCell}>
-          <Text
-            style={[styles.tableCellText, dynamicStyles.text]}
-            numberOfLines={1}
-          >
-            {product.name}
-          </Text>
-          <Text
-            style={[styles.tableCellSubtext, dynamicStyles.textSecondary]}
-            numberOfLines={1}
-          >
-            {product.sku || 'No SKU'}
-          </Text>
-        </View>
-
-        {/* Price */}
-        <View style={styles.tableCell}>
-          <Text
-            style={[styles.tableCellText, dynamicStyles.text]}
-            numberOfLines={1}
-          >
-            {product.unitPrice ? `RWF ${Number(product.unitPrice).toLocaleString()}` : 'N/A'}
-          </Text>
-        </View>
-
-        {/* Stock Level */}
-        <View style={styles.tableCellStock}>
+        {/* Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.productInfo}>
+            <Text
+              style={[styles.productName, dynamicStyles.text]}
+              numberOfLines={1}
+            >
+              {product.name}
+            </Text>
+            <Text
+              style={[styles.productSKU, dynamicStyles.textSecondary]}
+              numberOfLines={1}
+            >
+              SKU: {product.sku || 'N/A'}
+            </Text>
+          </View>
           <View
             style={[
               styles.stockBadge,
@@ -264,9 +249,11 @@ export default function StockManagementScreen({ navigation, route }: StockManage
                   ? 'error-outline'
                   : isLowStock
                     ? 'warning'
-                    : 'check-circle'
+                    : product.isInventoryItem
+                      ? 'check-circle'
+                      : 'all-inclusive'
               }
-              size={14}
+              size={16}
               color={product.isInventoryItem ? stockColor : theme.colors.primary}
             />
             <Text
@@ -280,37 +267,60 @@ export default function StockManagementScreen({ navigation, route }: StockManage
               {product.isInventoryItem ? product.stockLevel : '∞'}
             </Text>
           </View>
-          {isLowStock && product.isInventoryItem && (
-            <Text
-              style={[styles.lowStockText, { color: stockColor }]}
-              numberOfLines={1}
-            >
-              Low stock
+        </View>
+
+        {/* Details Row */}
+        <View style={styles.cardDetails}>
+          <View style={styles.detailItem}>
+            <MaterialIcons
+              name="payments"
+              size={16}
+              color={dynamicStyles.textSecondary.color}
+            />
+            <Text style={[styles.detailText, dynamicStyles.text]}>
+              {product.unitPrice ? `RWF ${Number(product.unitPrice).toLocaleString()}` : 'N/A'}
             </Text>
+          </View>
+
+          {isLowStock && product.isInventoryItem && (
+            <View style={[styles.warningBadge, { backgroundColor: stockColor + '15' }]}>
+              <MaterialIcons name="warning" size={14} color={stockColor} />
+              <Text style={[styles.warningText, { color: stockColor }]}>
+                Low stock
+              </Text>
+            </View>
           )}
         </View>
 
         {/* Actions */}
-        <View style={styles.tableCellAction}>
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              { backgroundColor: theme.colors.error + '20' },
-            ]}
-            onPress={() => openAdjustmentModal(product, 'consumption')}
-          >
-            <MaterialIcons name="remove" size={16} color={theme.colors.error} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              { backgroundColor: theme.colors.success + '20' },
-            ]}
-            onPress={() => openAdjustmentModal(product, 'purchase')}
-          >
-            <MaterialIcons name="add" size={16} color={theme.colors.success} />
-          </TouchableOpacity>
-        </View>
+        {product.isInventoryItem && (
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={[
+                styles.actionButtonLarge,
+                { backgroundColor: theme.colors.error + '15', borderColor: theme.colors.error + '30' },
+              ]}
+              onPress={() => openAdjustmentModal(product, 'consumption')}
+            >
+              <MaterialIcons name="remove" size={20} color={theme.colors.error} />
+              <Text style={[styles.actionButtonText, { color: theme.colors.error }]}>
+                Remove
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.actionButtonLarge,
+                { backgroundColor: theme.colors.success + '15', borderColor: theme.colors.success + '30' },
+              ]}
+              onPress={() => openAdjustmentModal(product, 'purchase')}
+            >
+              <MaterialIcons name="add" size={20} color={theme.colors.success} />
+              <Text style={[styles.actionButtonText, { color: theme.colors.success }]}>
+                Add Stock
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -343,53 +353,13 @@ export default function StockManagementScreen({ navigation, route }: StockManage
     }
 
     return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={true}
-        style={styles.tableScrollContainer}
-        contentContainerStyle={styles.tableContainer}
-      >
-        <View style={styles.tableContent}>
-          {/* Table Header */}
-          <View style={[styles.tableHeaderRow, dynamicStyles.tableHeader]}>
-            <View style={styles.tableCell}>
-              <Text
-                style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
-              >
-                Product
-              </Text>
-            </View>
-            <View style={styles.tableCell}>
-              <Text
-                style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
-              >
-                Price
-              </Text>
-            </View>
-            <View style={styles.tableCellStock}>
-              <Text
-                style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
-              >
-                Stock
-              </Text>
-            </View>
-            <View style={styles.tableCellAction}>
-              <Text
-                style={[styles.tableHeaderText, dynamicStyles.textSecondary]}
-              >
-                Actions
-              </Text>
-            </View>
-          </View>
-
-          {/* Table Rows */}
-          {products.map((product) => (
-            <React.Fragment key={product.id}>
-              {renderTableRow(product)}
-            </React.Fragment>
-          ))}
-        </View>
-      </ScrollView>
+      <View style={styles.productList}>
+        {products.map((product) => (
+          <React.Fragment key={product.id}>
+            {renderProductCard(product)}
+          </React.Fragment>
+        ))}
+      </View>
     );
   };
 
@@ -725,63 +695,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 12,
   },
-  tableScrollContainer: {
-    marginHorizontal: 14,
-    marginTop: 12,
+  productList: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    gap: 10,
   },
-  tableContainer: {
-    paddingVertical: 4,
+  productCard: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  tableContent: {
-    minWidth: 600,
-  },
-  tableHeaderRow: {
+  cardHeader: {
     flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
-    gap: 4,
-    minWidth: 600,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  tableHeaderText: {
-    fontSize: 11,
+  productInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  productName: {
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: theme.fonts.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 3,
   },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    gap: 4,
-    minWidth: 600,
-  },
-  tableCell: {
-    flex: 1,
-    minWidth: 130,
-  },
-  tableCellStock: {
-    width: 100,
-    alignItems: 'center',
-  },
-  tableCellAction: {
-    width: 90,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 6,
-  },
-  tableCellText: {
-    fontSize: 13,
-    fontFamily: theme.fonts.medium,
-  },
-  tableCellSubtext: {
-    fontSize: 10,
+  productSKU: {
+    fontSize: 11,
     fontFamily: theme.fonts.regular,
-    marginTop: 2,
   },
   stockBadge: {
     flexDirection: 'row',
@@ -789,24 +731,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
-    gap: 4,
+    gap: 3,
   },
   stockBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     fontFamily: theme.fonts.bold,
   },
-  lowStockText: {
-    fontSize: 9,
-    fontFamily: theme.fonts.medium,
-    marginTop: 2,
+  cardDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  actionButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  detailText: {
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: theme.fonts.medium,
+  },
+  warningBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 7,
+    gap: 3,
+  },
+  warningText: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButtonLarge: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 5,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
   // History Styles
   emptyState: {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   StatusBar,
   Switch,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme } from "../../context";
+import { api } from "../../services/api";
 
 interface NotificationPreferencesScreenProps {
   navigation?: {
@@ -19,164 +22,181 @@ interface NotificationPreferencesScreenProps {
   };
 }
 
-interface NotificationSetting {
-  id: string;
+interface NotificationPreference {
+  type: string;
+  channel: string;
+  enabled: boolean;
+}
+
+interface NotificationItemConf {
+  type: string;
+  channel: string;
   label: string;
-  description: string;
-  icon: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
+  desc: string;
 }
 
 export default function NotificationPreferencesScreen({
   navigation,
 }: NotificationPreferencesScreenProps) {
   const { isDark } = useTheme();
-  const [newAppointmentBookings, setNewAppointmentBookings] = useState(true);
-  const [appointmentReminders, setAppointmentReminders] = useState(true);
-  const [cancellations, setCancellations] = useState(true);
-  const [paymentNotifications, setPaymentNotifications] = useState(true);
-  const [promotions, setPromotions] = useState(false);
-  const [tips, setTips] = useState(true);
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+
+  const fetchPreferences = async () => {
+    try {
+      // api.get unwraps the response standardly, so we might receive the array directly or a wrapper
+      const response = await api.get<any>('/notifications/preferences');
+      // If api.ts unwraps it, response could be the array or an object containing specific data
+      const data = Array.isArray(response) ? response : (response?.data || []);
+      
+      if (Array.isArray(data)) {
+        setPreferences(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notification preferences:", error);
+      Alert.alert("Error", "Failed to load preferences");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPreferences();
+  }, []);
+
+  const isEnabled = (type: string, channel: string) => {
+    const pref = preferences.find((p) => p.type === type && p.channel === channel);
+    // Default to true if no preference exists yet (opt-in by default)
+    return pref ? pref.enabled : true;
+  };
+
+  const handleToggle = async (type: string, channel: string) => {
+    if (updating) return;
+    
+    // Optimistic update
+    const currentlyEnabled = isEnabled(type, channel);
+    const newEnabled = !currentlyEnabled;
+    
+    // Update local state temporarily
+    setPreferences(prev => {
+        const existing = prev.find(p => p.type === type && p.channel === channel);
+        if (existing) {
+            return prev.map(p => p.type === type && p.channel === channel ? { ...p, enabled: newEnabled } : p);
+        } else {
+            return [...prev, { type, channel, enabled: newEnabled }];
+        }
+    });
+
+    setUpdating(true);
+    try {
+      await api.patch('/notifications/preferences', { type, channel, enabled: newEnabled });
+    } catch (error) {
+      console.error("Failed to update preference:", error);
+      Alert.alert("Error", "Failed to update preference");
+      // Revert optimistic update
+       setPreferences(prev => {
+        return prev.map(p => p.type === type && p.channel === channel ? { ...p, enabled: currentlyEnabled } : p);
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? "#1C1C1E" : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
-      color: isDark ? "#FFFFFF" : theme.colors.text,
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? "#8E8E93" : theme.colors.textSecondary,
-    },
-    card: {
-      backgroundColor: isDark ? "#2C2C2E" : theme.colors.background,
-      borderColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-    },
-    headerBorder: {
-      borderBottomColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     divider: {
       backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
     },
-    iconBg: {
-      backgroundColor: isDark ? "#3A3A3C" : theme.colors.gray200,
-    },
   };
 
-  const bookingSettings: NotificationSetting[] = [
+  const sections = [
     {
-      id: "appointments",
-      label: "New Appointments",
-      description: "Get notified when you have a new booking",
-      icon: "event",
-      value: newAppointmentBookings,
-      onChange: setNewAppointmentBookings,
+      title: 'Global Preferences',
+      items: [
+        { type: 'system_alert', channel: 'in_app', label: 'In-App Notifications', desc: 'Receive real-time updates' },
+        { type: 'system_alert', channel: 'push', label: 'Push Notifications', desc: 'Get alerts on your device' },
+        { type: 'system_alert', channel: 'email', label: 'System Alerts (Email)', desc: 'Critical system announcements' }
+      ]
     },
     {
-      id: "reminders",
-      label: "Appointment Reminders",
-      description: "Receive reminders before appointments",
-      icon: "alarm",
-      value: appointmentReminders,
-      onChange: setAppointmentReminders,
+      title: 'Activity & Scheduling',
+      items: [
+        { type: 'appointment_reminder', channel: 'email', label: 'Appointment Reminders (Email)', desc: 'Via email for upcoming bookings' },
+        { type: 'appointment_reminder', channel: 'sms', label: 'Appointment Reminders (SMS)', desc: 'Instant text messages' },
+        { type: 'appointment_booked', channel: 'in_app', label: 'New Bookings', desc: 'When a new appointment is scheduled' }
+      ]
     },
     {
-      id: "cancellations",
-      label: "Cancellations",
-      description: "Notify when appointments are cancelled",
-      icon: "cancel",
-      value: cancellations,
-      onChange: setCancellations,
+      title: 'Financial Alerts',
+      items: [
+        { type: 'payment_received', channel: 'email', label: 'Payment Confirmations', desc: 'Receipts and updates via email' },
+        { type: 'commission_earned', channel: 'in_app', label: 'Commissions', desc: 'When you earn a new commission' }
+      ]
     },
+    {
+      title: 'App Updates',
+      items: [
+        { type: 'salon_update', channel: 'email', label: 'Product News', desc: 'New features and improvements' }
+      ]
+    }
   ];
 
-  const paymentSettings: NotificationSetting[] = [
-    {
-      id: "payments",
-      label: "Payment Alerts",
-      description: "Get notified about payment updates",
-      icon: "payment",
-      value: paymentNotifications,
-      onChange: setPaymentNotifications,
-    },
-    {
-      id: "tips",
-      label: "Tips Received",
-      description: "Notify when you receive a tip",
-      icon: "favorite",
-      value: tips,
-      onChange: setTips,
-    },
-  ];
-
-  const marketingSettings: NotificationSetting[] = [
-    {
-      id: "promotions",
-      label: "Promotions & Offers",
-      description: "Special deals and promotional offers",
-      icon: "local-offer",
-      value: promotions,
-      onChange: setPromotions,
-    },
-  ];
-
-  const renderNotificationItem = (setting: NotificationSetting, isLast: boolean) => (
-    <View key={setting.id}>
+  const renderNotificationItem = (item: NotificationItemConf, isLast: boolean) => (
+    <View key={`${item.type}-${item.channel}`}>
       <View style={styles.settingRow}>
-        <View style={[styles.settingIconContainer, dynamicStyles.iconBg]}>
-          <MaterialIcons
-            name={setting.icon as any}
-            size={20}
-            color={theme.colors.primary}
-          />
-        </View>
-        <View style={styles.settingContent}>
-          <Text style={[styles.settingLabel, dynamicStyles.text]}>
-            {setting.label}
-          </Text>
-          <Text style={[styles.settingDescription, dynamicStyles.textSecondary]}>
-            {setting.description}
-          </Text>
+        <View style={styles.textContainer}>
+            <Text style={[styles.settingLabel, dynamicStyles.text]}>
+                {item.label}
+            </Text>
+            <Text style={[styles.settingDescription, dynamicStyles.textSecondary]}>
+                {item.desc}
+            </Text>
         </View>
         <Switch
-          value={setting.value}
-          onValueChange={setting.onChange}
+          value={isEnabled(item.type, item.channel)}
+          onValueChange={() => handleToggle(item.type, item.channel)}
           trackColor={{
-            false: isDark ? "#3A3A3C" : theme.colors.border,
+            false: theme.colors.border,
             true: theme.colors.primary,
           }}
-          thumbColor="#FFFFFF"
-          ios_backgroundColor={isDark ? "#3A3A3C" : theme.colors.border}
+          thumbColor={theme.colors.white}
         />
       </View>
       {!isLast && <View style={[styles.divider, dynamicStyles.divider]} />}
     </View>
   );
 
-  const renderSection = (title: string, settings: NotificationSetting[]) => (
-    <View style={styles.section}>
-      <Text style={[styles.sectionTitle, dynamicStyles.textSecondary]}>
+  const renderSection = (title: string, items: NotificationItemConf[]) => (
+    <View style={styles.section} key={title}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
         {title}
       </Text>
-      <View style={[styles.sectionCard, dynamicStyles.card]}>
-        {settings.map((setting, index) =>
-          renderNotificationItem(setting, index === settings.length - 1)
+      <View style={styles.sectionContent}>
+        {items.map((item, index) =>
+          renderNotificationItem(item, index === items.length - 1)
         )}
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={[styles.header, dynamicStyles.headerBorder]}>
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack?.()}
-          activeOpacity={0.7}
         >
           <MaterialIcons
             name="arrow-back"
@@ -187,30 +207,27 @@ export default function NotificationPreferencesScreen({
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
           Notifications
         </Text>
-        <View style={styles.placeholder} />
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Info Banner */}
-        <View style={[styles.infoBanner, { backgroundColor: theme.colors.primary + '15' }]}>
-          <MaterialIcons
-            name="notifications-active"
-            size={24}
-            color={theme.colors.primary}
-          />
-          <Text style={[styles.infoBannerText, { color: theme.colors.primary }]}>
-            Manage how you receive notifications
-          </Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
-
-        {renderSection("BOOKINGS", bookingSettings)}
-        {renderSection("PAYMENTS", paymentSettings)}
-        {renderSection("MARKETING", marketingSettings)}
-      </ScrollView>
+      ) : (
+        <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+        >
+            {sections.map(section => (
+                <View key={section.title}>
+                    {renderSection(section.title, section.items)}
+                    <View style={styles.sectionSpacer} />
+                </View>
+            ))}
+            <View style={{height: 40}} />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -222,101 +239,66 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   backButton: {
-    padding: theme.spacing.xs,
-    marginRight: theme.spacing.sm,
+    padding: 4,
+    marginRight: 16,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
-  },
-  placeholder: {
-    width: 32,
+    fontSize: 20,
+    fontWeight: "700",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: 40,
   },
-  infoBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: theme.spacing.md,
-    borderRadius: 16,
-    marginBottom: theme.spacing.xl,
-    gap: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.primary + '30',
-  },
-  infoBannerText: {
+  loadingContainer: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   section: {
-    marginBottom: theme.spacing.xl,
+    paddingHorizontal: 20,
+  },
+  sectionSpacer: {
+    height: 32,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    fontFamily: theme.fonts.bold,
-    letterSpacing: 1.5,
-    marginBottom: theme.spacing.sm,
-    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 16,
     textTransform: 'uppercase',
-    opacity: 0.6,
+    letterSpacing: 0.5,
   },
-  sectionCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: theme.spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+  sectionContent: {
+    // No background or border, just a container
   },
   settingRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: theme.spacing.sm,
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    minHeight: 60,
   },
-  settingIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: theme.spacing.md,
-  },
-  settingContent: {
+  textContainer: {
     flex: 1,
-    marginRight: theme.spacing.md,
+    paddingRight: 16,
   },
   settingLabel: {
     fontSize: 16,
-    fontWeight: "700",
-    fontFamily: theme.fonts.bold,
+    fontWeight: "600",
+    marginBottom: 4,
   },
   settingDescription: {
     fontSize: 13,
-    fontFamily: theme.fonts.regular,
-    marginTop: 2,
-    opacity: 0.7,
+    lineHeight: 18,
   },
   divider: {
     height: 1,
-    marginVertical: theme.spacing.xs,
-    marginLeft: 60,
-    opacity: 0.5,
+    width: '100%',
   },
 });

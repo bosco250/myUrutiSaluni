@@ -188,8 +188,11 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
   }, [user?.id, navigation, user?.role]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [user, loadDashboardData]);
+    if (user?.id) {
+      loadDashboardData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // ✅ Only depend on user ID, not the whole user object
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -570,16 +573,7 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('Profile')}
-              activeOpacity={0.7}
-            >
-              <Image 
-                source={user?.avatarUrl ? { uri: user.avatarUrl } : profileImage} 
-                style={styles.profileImage}
-                onError={(e) => console.log('Owner dashboard avatar load error:', e.nativeEvent.error)}
-              />
-            </TouchableOpacity>
+
           </View>
         </View>
 
@@ -821,83 +815,228 @@ export default function OwnerDashboardScreen({ navigation }: OwnerDashboardScree
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingVertical: 12, // Slightly tighter
+    marginBottom: 8,
+  },
   headerLeft: { flex: 1 },
-  logo: { width: 100, height: 36 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  notificationButton: { padding: 4, position: 'relative' },
-  notificationBadge: { position: 'absolute', top: 0, right: 0, backgroundColor: theme.colors.error, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: theme.colors.background },
+  logo: { width: 90, height: 32 }, // Adjusted scale
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  notificationButton: { 
+    width: 40, height: 40, 
+    justifyContent: 'center', alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.03)', // Subtle background
+  },
+  notificationBadge: { 
+    position: 'absolute', top: 4, right: 4, 
+    backgroundColor: theme.colors.error, 
+    borderRadius: 6, minWidth: 14, height: 14, 
+    justifyContent: 'center', alignItems: 'center', 
+    borderWidth: 1.5, borderColor: theme.colors.background 
+  },
   notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: 'bold' },
-  profileImage: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.borderLight },
-  revenueCardContainer: { paddingHorizontal: 20, marginTop: 8 },
-  revenueCard: { borderRadius: 20, padding: 24 },
-  revenueContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  revenueLabel: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginBottom: 8, fontWeight: '500' },
-  revenueValue: { fontSize: 34, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5 },
-  revenueChangeContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 8 },
-  revenueChangeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, gap: 4 },
-  revenueChangeText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
-  revenueChangeLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
-  revenueIconContainer: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-  section: { paddingHorizontal: 20, marginTop: 24 },
+  profileImage: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.borderLight }, // Modern rounded square
+  
+  // Premium Revenue Card
+  revenueCardContainer: { paddingHorizontal: 20 },
+  revenueCard: { 
+    borderRadius: 24, 
+    padding: 24, 
+    minHeight: 160,
+    justifyContent: 'space-between',
+    // Shadow for depth
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  revenueContent: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start' 
+  },
+  revenueLabel: { 
+    fontSize: 14, 
+    color: 'rgba(255,255,255,0.8)', 
+    marginBottom: 8, 
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  revenueValue: { 
+    fontSize: 38, // Larger
+    fontWeight: '800', 
+    color: '#FFFFFF', 
+    letterSpacing: -1,
+    lineHeight: 46,
+  },
+  revenueChangeContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+    marginTop: 'auto', // Push to bottom
+  },
+  revenueChangeBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.2)', 
+    paddingHorizontal: 10, 
+    paddingVertical: 6, 
+    borderRadius: 12, 
+    gap: 6 
+  },
+  revenueChangeText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  revenueChangeLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
+  revenueIconContainer: { 
+    width: 56, height: 56, 
+    borderRadius: 18, 
+    backgroundColor: 'rgba(255,255,255,0.15)', 
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  
+  // Sections
+  section: { paddingHorizontal: 20, marginTop: 32 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
-  viewAllText: { fontSize: 14, color: theme.colors.primary, fontWeight: '600' },
+  sectionTitle: { fontSize: 19, fontWeight: '800', letterSpacing: -0.5 },
+  viewAllText: { fontSize: 14, color: theme.colors.primary, fontWeight: '700' },
+  
+  // Quick Actions - Pop Style
   quickActionsRow: { flexDirection: 'row', gap: 12 },
-  quickActionCard: { flex: 1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 12, alignItems: 'center', borderWidth: 1 },
-  quickActionIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  quickActionLabel: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  quickActionCard: { 
+    flex: 1, 
+    borderRadius: 20, 
+    paddingVertical: 16, 
+    paddingHorizontal: 8, 
+    alignItems: 'center', 
+    borderWidth: 0, // Removed border for cleaner look
+    // Subtle shadow
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  quickActionIcon: { 
+    width: 52, height: 52, 
+    borderRadius: 18, 
+    justifyContent: 'center', alignItems: 'center', 
+    marginBottom: 10,
+  },
+  quickActionLabel: { fontSize: 12, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
+  
+  // Overview Grid - Clean Stats
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  overviewCard: { width: '48%', borderRadius: 16, padding: 16, borderWidth: 1 },
-  overviewCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  overviewIconContainer: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  overviewValue: { fontSize: 24, fontWeight: '700', marginBottom: 4, letterSpacing: -0.5 },
-  overviewLabel: { fontSize: 13, fontWeight: '500' },
-  changeBadgePositive: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  statusBadgeActive: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  listCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  overviewCard: { 
+    width: '48%', // Flexible width
+    borderRadius: 20, 
+    padding: 16, 
+    borderWidth: 1,
+    borderColor: 'transparent', // Default transparent
+  },
+  overviewCardHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 16 
+  },
+  overviewIconContainer: { 
+    width: 40, height: 40, 
+    borderRadius: 12, 
+    justifyContent: 'center', alignItems: 'center' 
+  },
+  overviewValue: { 
+    fontSize: 26, 
+    fontWeight: '800', 
+    marginBottom: 4, 
+    letterSpacing: -0.5 
+  },
+  overviewLabel: { fontSize: 13, fontWeight: '600', opacity: 0.7 },
+  changeBadgePositive: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusBadgeActive: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  
+  // List Styles - Polished
+  listCard: { 
+    borderRadius: 24, 
+    borderWidth: 1, 
+    overflow: 'hidden' 
+  },
   serviceRow: { flexDirection: 'row', alignItems: 'center' },
-  serviceRowPadding: { padding: 16 },
+  serviceRowPadding: { padding: 18 }, // More breathing room
   serviceRowBorder: { borderBottomWidth: 1 },
-  serviceRank: { width: 24, height: 24, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  rankNumber: { fontSize: 12, fontWeight: 'bold', color: '#FFFFFF' },
+  serviceRank: { 
+    width: 28, height: 28, 
+    borderRadius: 8, 
+    justifyContent: 'center', alignItems: 'center', 
+    marginRight: 14 
+  },
+  rankNumber: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
   serviceInfo: { flex: 1 },
-  serviceName: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  serviceStats: { fontSize: 13 },
-  serviceRevenue: { fontSize: 15, fontWeight: '600', color: theme.colors.primary },
+  serviceName: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  serviceStats: { fontSize: 13, fontWeight: '500', opacity: 0.6 },
+  serviceRevenue: { fontSize: 15, fontWeight: '700', color: theme.colors.primary },
+  
   staffRow: { flexDirection: 'row', alignItems: 'center' },
-  staffAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  staffAvatar: { 
+    width: 44, height: 44, 
+    borderRadius: 16, 
+    justifyContent: 'center', alignItems: 'center', 
+    marginRight: 14 
+  },
   staffInfo: { flex: 1 },
-  staffName: { fontSize: 15, fontWeight: '600' },
-  staffStats: { fontSize: 13 },
-  staffRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingText: { fontSize: 14, fontWeight: '600' },
+  staffName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  staffStats: { fontSize: 13, opacity: 0.7 },
+  staffRating: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4,
+    backgroundColor: '#FFF8E1',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  ratingText: { fontSize: 13, fontWeight: '700', color: '#F59E0B' },
+
+  // Onboarding Styles (kept mostly same but refined spacing)
   onboardingContent: { padding: 24 },
-  onboardingHeader: { alignItems: 'center', marginBottom: 32, marginTop: 20 },
-  onboardingLogo: { width: 120, height: 40 },
-  welcomeCard: { borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 24 },
-  welcomeIconContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  welcomeTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', marginBottom: 8 },
-  welcomeSubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.9)', textAlign: 'center', lineHeight: 22 },
-  stepsCard: { borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1 },
-  stepsTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  stepItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
-  stepNumber: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  stepNumberText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  onboardingHeader: { alignItems: 'center', marginBottom: 32, marginTop: 24 },
+  onboardingLogo: { width: 140, height: 48 },
+  welcomeCard: { borderRadius: 24, padding: 32, alignItems: 'center', marginBottom: 24 },
+  welcomeIconContainer: { 
+    width: 80, height: 80, 
+    borderRadius: 40, 
+    backgroundColor: 'rgba(255,255,255,0.2)', 
+    justifyContent: 'center', alignItems: 'center', 
+    marginBottom: 20 
+  },
+  welcomeTitle: { fontSize: 26, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', marginBottom: 12 },
+  welcomeSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.9)', textAlign: 'center', lineHeight: 24 },
+  stepsCard: { borderRadius: 20, padding: 24, marginBottom: 24, borderWidth: 1 },
+  stepsTitle: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  stepItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 24 },
+  stepNumber: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  stepNumberText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
   stepContent: { flex: 1, paddingTop: 4 },
-  stepLabel: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  stepDesc: { fontSize: 13 },
-  createSalonButton: { borderRadius: 14, overflow: 'hidden', marginBottom: 24 },
-  createSalonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 8 },
-  createSalonText: { fontSize: 17, fontWeight: '600', color: '#FFFFFF' },
-  helpCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 16, borderWidth: 1 },
-  helpContent: { flex: 1, marginLeft: 12 },
-  helpTitle: { fontSize: 15, fontWeight: '600' },
-  helpDesc: { fontSize: 13 },
+  stepLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  stepDesc: { fontSize: 14, lineHeight: 20 },
+  createSalonButton: { borderRadius: 16, overflow: 'hidden', marginBottom: 24, elevation: 4 },
+  createSalonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 10 },
+  createSalonText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
+  helpCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 20, borderWidth: 1 },
+  helpContent: { flex: 1, marginLeft: 16 },
+  helpTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  helpDesc: { fontSize: 14, lineHeight: 20 },
   statusCard: { borderRadius: 24, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1 },
-  statusIconBox: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  statusTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 12, letterSpacing: -0.5 },
-  statusSubtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
-  actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 50, paddingVertical: 16, paddingHorizontal: 32, gap: 10, marginBottom: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8 },
+  statusIconBox: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
+  statusTitle: { fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 12, letterSpacing: -0.5 },
+  statusSubtitle: { fontSize: 16, textAlign: 'center', lineHeight: 24, paddingHorizontal: 16 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 50, paddingVertical: 16, paddingHorizontal: 32, gap: 10, marginBottom: 24, elevation: 6, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
   actionButtonText: { fontSize: 16, fontWeight: '700', color: theme.colors.white },
 });

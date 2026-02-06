@@ -24,9 +24,11 @@ export interface User {
   // Address
   address?: string;
   city?: string;
+  province?: string;
   district?: string;
   sector?: string;
   cell?: string;
+  village?: string;
   // Emergency Contact
   emergencyContactName?: string;
   emergencyContactPhone?: string;

@@ -24,26 +24,17 @@ import { config } from '../../config';
 
 const defaultAvatar = require("../../../assets/Logo.png");
 
-// Helper to format image URL (handles relative URLs and localhost from backend)
+// Helper to format image URL
 const getImageUrl = (url?: string | null): string | null => {
   if (!url) return null;
-  
-  // Get the server base URL (without /api)
   const baseUrl = config.apiUrl.replace(/\/api\/?$/, '');
-  
-  // If URL starts with http/https, check if it uses localhost and fix it
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    // Replace localhost or 127.0.0.1 with actual server IP
     const fixedUrl = url
       .replace(/^https?:\/\/localhost(:\d+)?/, baseUrl)
       .replace(/^https?:\/\/127\.0\.0\.1(:\d+)?/, baseUrl);
     return fixedUrl;
   }
-  
-  // Handle file:// URLs as-is
   if (url.startsWith('file:')) return url;
-  
-  // Prepend server base URL for relative paths
   return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
 };
 
@@ -52,8 +43,6 @@ interface PersonalInformationScreenProps {
     goBack?: () => void;
   };
 }
-
-type SectionKey = 'basic' | 'address' | 'emergency' | 'professional' | 'banking';
 
 export default function PersonalInformationScreen({
   navigation,
@@ -73,9 +62,11 @@ export default function PersonalInformationScreen({
   
   // Address
   const [address, setAddress] = useState(user?.address || "");
+  const [province, setProvince] = useState(user?.province || "");
   const [district, setDistrict] = useState(user?.district || "");
   const [sector, setSector] = useState(user?.sector || "");
   const [cell, setCell] = useState(user?.cell || "");
+  const [village, setVillage] = useState(user?.village || "");
   
   // Emergency Contact
   const [emergencyName, setEmergencyName] = useState(user?.emergencyContactName || "");
@@ -92,7 +83,6 @@ export default function PersonalInformationScreen({
   const [momoNumber, setMomoNumber] = useState(user?.momoNumber || "");
 
   const [loading, setLoading] = useState(false);
-  const [activeSection, setActiveSection] = useState<SectionKey>('basic');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Parse date string to Date object
@@ -129,10 +119,14 @@ export default function PersonalInformationScreen({
       setNationalId(user.nationalId || "");
       setNationality(user.nationality || "Rwandan");
       setMaritalStatus(user.maritalStatus || "");
+      
       setAddress(user.address || "");
+      setProvince(user.province || "");
       setDistrict(user.district || "");
       setSector(user.sector || "");
       setCell(user.cell || "");
+      setVillage(user.village || "");
+
       setEmergencyName(user.emergencyContactName || "");
       setEmergencyPhone(user.emergencyContactPhone || "");
       setEmergencyRelation(user.emergencyContactRelationship || "");
@@ -145,11 +139,11 @@ export default function PersonalInformationScreen({
   }, [user]);
 
   const dynamicStyles = {
-    container: { backgroundColor: isDark ? "#0D0D0F" : "#F5F5F5" },
+    container: { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background },
     text: { color: isDark ? "#FFFFFF" : "#1A1A2E" },
     textSecondary: { color: isDark ? "#8E8E93" : "#6B7280" },
-    card: { backgroundColor: isDark ? "#1C1C1E" : "#FFFFFF", borderColor: isDark ? "#2C2C2E" : "#E8E8E8" },
-    input: { backgroundColor: isDark ? "#2C2C2E" : "#F5F5F5", color: isDark ? "#FFFFFF" : "#1A1A2E" },
+    card: { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white },
+    input: { backgroundColor: isDark ? theme.colors.gray900 : "#F9FAFB", color: isDark ? "#FFFFFF" : "#1F2937", borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight },
   };
 
   const getProfileData = () => {
@@ -163,9 +157,11 @@ export default function PersonalInformationScreen({
       nationality: nationality || undefined,
       maritalStatus: maritalStatus.toLowerCase() || undefined,
       address: address || undefined,
+      province: province || undefined,
       district: district || undefined,
       sector: sector || undefined,
       cell: cell || undefined,
+      village: village || undefined,
       emergencyContactName: emergencyName || undefined,
       emergencyContactPhone: emergencyPhone || undefined,
       emergencyContactRelationship: emergencyRelation.toLowerCase() || undefined,
@@ -193,29 +189,21 @@ export default function PersonalInformationScreen({
   const handlePickImage = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (permissionResult.status === 'denied') {
          Alert.alert('Permission Required', 'You need to grant permission to access your photos.');
          return;
       }
-
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
-      if (pickerResult.canceled) {
-        return;
-      }
-
+      if (pickerResult.canceled) return;
       if (pickerResult.assets && pickerResult.assets.length > 0) {
-        const selectedImage = pickerResult.assets[0];
-        await handleUploadAvatar(selectedImage.uri);
+        await handleUploadAvatar(pickerResult.assets[0].uri);
       }
     } catch (error) {
-      console.error("Error picking image:", error);
       Alert.alert("Error", "Failed to pick image");
     }
   };
@@ -224,19 +212,12 @@ export default function PersonalInformationScreen({
     setLoading(true);
     try {
         const response = await uploadService.uploadAvatar(uri);
-        
         if (response.url) {
-            // Save avatar AND form data
-            const profileData = {
-              ...getProfileData(),
-              avatarUrl: response.url 
-            };
-            
+            const profileData = { ...getProfileData(), avatarUrl: response.url };
             await updateUser(profileData);
             Alert.alert("Success", "Profile photo updated!");
         }
     } catch (error: any) {
-        console.error("Upload error:", error);
         Alert.alert("Error", "Failed to upload photo");
     } finally {
         setLoading(false);
@@ -244,39 +225,17 @@ export default function PersonalInformationScreen({
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    if (selectedDate) {
-      setDateOfBirth(formatDate(selectedDate));
-    }
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (selectedDate) setDateOfBirth(formatDate(selectedDate));
   };
 
-  // Check if user is a customer
   const isCustomer = user?.role === "customer" || user?.role === "CUSTOMER";
 
-  const allSections: { key: SectionKey; label: string; icon: string }[] = [
-    { key: 'basic', label: 'Basic', icon: 'person' },
-    { key: 'address', label: 'Address', icon: 'location-on' },
-    { key: 'emergency', label: 'Emergency', icon: 'emergency' },
-    { key: 'professional', label: 'Work', icon: 'work' },
-    { key: 'banking', label: 'Banking', icon: 'account-balance' },
-  ];
-
-  // Filter sections for customers
-  const sections = isCustomer 
-    ? allSections.filter(s => ['basic', 'address'].includes(s.key))
-    : allSections;
-
-  const renderInput = (label: string, value: string, onChange: (t: string) => void, opts?: {
-    placeholder?: string;
-    keyboard?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
-    multiline?: boolean;
-  }) => (
+  const renderInput = (label: string, value: string, onChange: (t: string) => void, opts?: { placeholder?: string; keyboard?: 'default' | 'email-address' | 'phone-pad' | 'numeric'; multiline?: boolean; }) => (
     <View style={styles.inputRow}>
       <Text style={[styles.inputLabel, dynamicStyles.textSecondary]}>{label}</Text>
       <TextInput
-        style={[styles.inputField, dynamicStyles.input, opts?.multiline && { height: 60, textAlignVertical: 'top' }]}
+        style={[styles.inputField, dynamicStyles.input, opts?.multiline && { height: 80, textAlignVertical: 'top' }]}
         value={value}
         onChangeText={onChange}
         placeholder={opts?.placeholder || label}
@@ -290,10 +249,7 @@ export default function PersonalInformationScreen({
   const renderDatePicker = () => (
     <View style={styles.inputRow}>
       <Text style={[styles.inputLabel, dynamicStyles.textSecondary]}>Date of Birth</Text>
-      <TouchableOpacity 
-        style={[styles.dateButton, dynamicStyles.input]}
-        onPress={() => setShowDatePicker(true)}
-      >
+      <TouchableOpacity style={[styles.dateButton, dynamicStyles.input]} onPress={() => setShowDatePicker(true)}>
         <MaterialIcons name="calendar-today" size={18} color={theme.colors.primary} />
         <Text style={[styles.dateButtonText, dateOfBirth ? dynamicStyles.text : dynamicStyles.textSecondary]}>
           {formatDisplayDate(dateOfBirth)}
@@ -314,71 +270,13 @@ export default function PersonalInformationScreen({
               style={[styles.chip, isSelected && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
               onPress={() => onChange(opt)}
             >
-              <Text style={[styles.chipText, isSelected && { color: '#FFF' }, !isSelected && dynamicStyles.text]}>
-                {opt}
-              </Text>
+              <Text style={[styles.chipText, isSelected && { color: '#FFF' }, !isSelected && dynamicStyles.text]}>{opt}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
     </View>
   );
-
-  const renderSection = () => {
-    switch (activeSection) {
-      case 'basic':
-        return (
-          <>
-            {renderInput('Full Name', fullName, setFullName)}
-            {renderInput('Email', email, setEmail, { keyboard: 'email-address' })}
-            {renderInput('Phone', phone, setPhone, { keyboard: 'phone-pad', placeholder: '+250 7XX XXX XXX' })}
-            {renderDatePicker()}
-            {renderChips('Gender', ['Male', 'Female', 'Other'], gender, setGender)}
-            
-            {/* Extended info only for employees */}
-            {!isCustomer && (
-              <>
-                {renderInput('National ID', nationalId, setNationalId)}
-                {renderInput('Nationality', nationality, setNationality)}
-                {renderChips('Marital Status', ['Single', 'Married', 'Divorced'], maritalStatus, setMaritalStatus)}
-              </>
-            )}
-          </>
-        );
-      case 'address':
-        return (
-          <>
-            {renderInput('Street Address', address, setAddress, { placeholder: 'House number, street' })}
-            {renderInput('District', district, setDistrict)}
-            {renderInput('Sector', sector, setSector)}
-            {renderInput('Cell', cell, setCell)}
-          </>
-        );
-      case 'emergency':
-        return (
-          <>
-            {renderInput('Contact Name', emergencyName, setEmergencyName)}
-            {renderInput('Contact Phone', emergencyPhone, setEmergencyPhone, { keyboard: 'phone-pad' })}
-            {renderChips('Relationship', ['Parent', 'Spouse', 'Sibling', 'Friend'], emergencyRelation, setEmergencyRelation)}
-          </>
-        );
-      case 'professional':
-        return (
-          <>
-            {renderInput('Bio / About', bio, setBio, { multiline: true, placeholder: 'Tell us about yourself...' })}
-            {renderInput('Years of Experience', yearsExperience, setYearsExperience, { keyboard: 'numeric' })}
-          </>
-        );
-      case 'banking':
-        return (
-          <>
-            {renderInput('Bank Name', bankName, setBankName, { placeholder: 'e.g., Bank of Kigali' })}
-            {renderInput('Account Number', bankAccount, setBankAccount, { keyboard: 'numeric' })}
-            {renderInput('MoMo Number', momoNumber, setMomoNumber, { keyboard: 'phone-pad', placeholder: '+250 7XX XXX XXX' })}
-          </>
-        );
-    }
-  };
 
   return (
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
@@ -390,11 +288,13 @@ export default function PersonalInformationScreen({
           <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Personal Info</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity disabled={loading} onPress={handleSave}>
+            {loading ? <ActivityIndicator color={theme.colors.primary} size="small" /> : <Text style={styles.headerSaveText}>Save</Text>}
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
+        {/* Avatar Section */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
             <Image 
@@ -405,70 +305,88 @@ export default function PersonalInformationScreen({
               <MaterialIcons name="camera-alt" size={14} color="#FFF" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={handlePickImage} disabled={loading}>
-            <Text style={[styles.changePhotoText, { color: theme.colors.primary }]}>Change Photo</Text>
-          </TouchableOpacity>
+          <Text style={[styles.avatarName, dynamicStyles.text]}>{fullName || 'Your Name'}</Text>
+          <Text style={[styles.avatarRole, dynamicStyles.textSecondary]}>{user?.role?.replace('_', ' ') || 'User'}</Text>
         </View>
-
-        {/* Section Tabs */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.tabsScroll}
-          contentContainerStyle={styles.tabsContent}
-        >
-          {sections.map((sec) => (
-            <TouchableOpacity
-              key={sec.key}
-              style={[styles.tab, activeSection === sec.key && { backgroundColor: theme.colors.primary }]}
-              onPress={() => setActiveSection(sec.key)}
-            >
-              <MaterialIcons 
-                name={sec.icon as any} 
-                size={16} 
-                color={activeSection === sec.key ? '#FFF' : dynamicStyles.textSecondary.color} 
-              />
-              <Text style={[styles.tabText, activeSection === sec.key && { color: '#FFF' }, activeSection !== sec.key && dynamicStyles.textSecondary]}>
-                {sec.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* Form Content */}
-        <View style={[styles.formCard, dynamicStyles.card]}>
-          {renderSection()}
-        </View>
+        <View style={styles.formContent}>
+          {/* Basic Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, dynamicStyles.text]}>Basic Information</Text>
+            {renderInput('Full Name', fullName, setFullName)}
+            {renderInput('Email', email, setEmail, { keyboard: 'email-address' })}
+            {renderInput('Phone', phone, setPhone, { keyboard: 'phone-pad', placeholder: '+250 7XX XXX XXX' })}
+            {renderDatePicker()}
+            {renderChips('Gender', ['Male', 'Female', 'Other'], gender, setGender)}
+            
+            {!isCustomer && (
+              <>
+                {renderInput('National ID', nationalId, setNationalId)}
+                {renderInput('Nationality', nationality, setNationality)}
+                {renderChips('Marital Status', ['Single', 'Married', 'Divorced'], maritalStatus, setMaritalStatus)}
+              </>
+            )}
+          </View>
+          <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
 
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveBtn, loading && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" size="small" />
-          ) : (
+          {/* Address Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, dynamicStyles.text]}>Address</Text>
+            {renderInput('Province', province, setProvince)}
+            {renderInput('District', district, setDistrict)}
+            {renderInput('Sector', sector, setSector)}
+            {renderInput('Cell', cell, setCell)}
+            {renderInput('Village', village, setVillage)}
+            {renderInput('Street Address', address, setAddress, { placeholder: 'House number, street' })}
+          </View>
+          <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+
+          {/* Emergency Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionHeader, dynamicStyles.text]}>Emergency Contact</Text>
+            {renderInput('Contact Name', emergencyName, setEmergencyName)}
+            {renderInput('Contact Phone', emergencyPhone, setEmergencyPhone, { keyboard: 'phone-pad' })}
+            {renderChips('Relationship', ['Parent', 'Spouse', 'Sibling', 'Friend'], emergencyRelation, setEmergencyRelation)}
+          </View>
+
+          {!isCustomer && (
             <>
-              <MaterialIcons name="check" size={20} color="#FFF" />
-              <Text style={styles.saveBtnText}>Save Changes</Text>
+              <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+              {/* Professional Section */}
+              <View style={styles.sectionContainer}>
+                <Text style={[styles.sectionHeader, dynamicStyles.text]}>Professional Details</Text>
+                {renderInput('Bio / About', bio, setBio, { multiline: true, placeholder: 'Tell us about yourself...' })}
+                {renderInput('Years of Experience', yearsExperience, setYearsExperience, { keyboard: 'numeric' })}
+              </View>
+              <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+
+              {/* Banking Section */}
+              <View style={styles.sectionContainer}>
+                  <Text style={[styles.sectionHeader, dynamicStyles.text]}>Banking Information</Text>
+                {renderInput('Bank Name', bankName, setBankName, { placeholder: 'e.g., Bank of Kigali' })}
+                {renderInput('Account Number', bankAccount, setBankAccount, { keyboard: 'numeric' })}
+                {renderInput('MoMo Number', momoNumber, setMomoNumber, { keyboard: 'phone-pad', placeholder: '+250 7XX XXX XXX' })}
+              </View>
             </>
           )}
-        </TouchableOpacity>
+        </View>
+        
+        <View style={{height: 40}} />
       </ScrollView>
 
-      {/* Date Picker Modal for iOS */}
+      {/* Date Pickers */}
       {Platform.OS === 'ios' && showDatePicker && (
-        <Modal transparent animationType="slide" visible={showDatePicker}>
+        <Modal transparent animationType="fade" visible={showDatePicker}>
           <View style={styles.datePickerModal}>
             <View style={[styles.datePickerContainer, dynamicStyles.card]}>
               <View style={styles.datePickerHeader}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={[styles.datePickerCancel, dynamicStyles.textSecondary]}>Cancel</Text>
+                  <Text style={styles.datePickerCancel}>Cancel</Text>
                 </TouchableOpacity>
                 <Text style={[styles.datePickerTitle, dynamicStyles.text]}>Date of Birth</Text>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={[styles.datePickerDone, { color: theme.colors.primary }]}>Done</Text>
+                  <Text style={styles.datePickerDone}>Done</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -483,8 +401,6 @@ export default function PersonalInformationScreen({
           </View>
         </Modal>
       )}
-
-      {/* Date Picker for Android */}
       {Platform.OS === 'android' && showDatePicker && (
         <DateTimePicker
           value={parseDateString(dateOfBirth)}
@@ -501,125 +417,86 @@ export default function PersonalInformationScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600' },
+  backBtn: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerSaveText: { fontSize: 16, fontWeight: '700', color: theme.colors.primary },
   
   scrollView: { flex: 1 },
   
-  // Avatar
-  avatarSection: { alignItems: 'center', paddingVertical: 12 },
-  avatarContainer: { position: 'relative', marginBottom: 6 },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
+  avatarSection: { alignItems: 'center', paddingVertical: 24 },
+  avatarContainer: { position: 'relative', marginBottom: 16 },
+  avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: '#F0F0F0' },
   avatarEditBtn: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#FFF',
   },
-  changePhotoText: { fontSize: 13, fontWeight: '600' },
+  avatarName: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
+  avatarRole: { fontSize: 13, textTransform: 'capitalize' },
   
-  // Tabs
-  tabsScroll: { maxHeight: 40 },
-  tabsContent: { paddingHorizontal: 12, gap: 6 },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: 'rgba(150,150,150,0.1)',
+  formContent: { paddingHorizontal: 0 },
+  sectionContainer: { paddingHorizontal: 20, paddingVertical: 16 },
+  sectionHeader: { fontSize: 16, fontWeight: '700', marginBottom: 16, color: theme.colors.primary },
+  divider: { height: 1, width: '100%', marginVertical: 0 },
+
+  inputRow: { marginBottom: 16 },
+  inputLabel: { fontSize: 12, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputField: { 
+    height: 48, 
+    borderRadius: 8, 
+    paddingHorizontal: 16, 
+    fontSize: 15, 
+    borderWidth: 1, 
+    // borderColor applied dynamically
   },
-  tabText: { fontSize: 12, fontWeight: '600' },
   
-  // Form
-  formCard: {
-    marginHorizontal: 12,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    elevation: 0,
-  },
-  inputRow: { marginBottom: 10 },
-  inputLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  inputField: { height: 40, borderRadius: 8, paddingHorizontal: 10, fontSize: 14 },
-  
-  // Date Button
   dateButton: {
-    height: 40,
+    height: 48,
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    borderWidth: 1,
   },
-  dateButtonText: {
-    fontSize: 14,
-    flex: 1,
-  },
+  dateButtonText: { fontSize: 15, flex: 1 },
   
-  // Chips
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(150,150,150,0.3)',
   },
-  chipText: { fontSize: 13, fontWeight: '500' },
+  chipText: { fontSize: 14, fontWeight: '500' },
   
-  // Save Button
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginHorizontal: 12,
-    marginVertical: 12,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary,
-    elevation: 0,
-  },
-  saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '600' },
-  
-  // Date Picker Modal (iOS)
-  datePickerModal: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  datePickerContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 30,
-  },
+  datePickerModal: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  datePickerContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32 },
   datePickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(150,150,150,0.2)',
+    borderBottomColor: 'rgba(150,150,150,0.1)',
   },
   datePickerTitle: { fontSize: 16, fontWeight: '600' },
-  datePickerCancel: { fontSize: 15 },
-  datePickerDone: { fontSize: 15, fontWeight: '600' },
+  datePickerCancel: { fontSize: 15, color: theme.colors.textSecondary },
+  datePickerDone: { fontSize: 15, fontWeight: '600', color: theme.colors.primary },
 });

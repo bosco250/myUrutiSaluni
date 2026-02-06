@@ -36,8 +36,8 @@ export default function ActivityLogsScreen({ navigation }: any) {
 
   const dynamic = {
     bg: isDark ? theme.colors.gray900 : theme.colors.background,
-    text: isDark ? '#FFFFFF' : theme.colors.text,
-    cardBg: isDark ? theme.colors.gray800 : '#FFFFFF',
+    text: isDark ? theme.colors.white : theme.colors.text,
+    cardBg: isDark ? theme.colors.gray800 : theme.colors.white,
     border: isDark ? theme.colors.gray700 : theme.colors.borderLight,
   };
 
@@ -239,10 +239,12 @@ export default function ActivityLogsScreen({ navigation }: any) {
                   severityFilter === filter && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
                 ]}
                 onPress={() => setSeverityFilter(filter)}
+                accessibilityLabel={`Filter by ${filter} severity`}
+                accessibilityRole="button"
               >
                 <Text style={[
                   styles.filterTabText,
-                  { color: severityFilter === filter ? '#FFFFFF' : dynamic.text }
+                  { color: severityFilter === filter ? theme.colors.white : dynamic.text }
                 ]}>
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </Text>
@@ -263,10 +265,12 @@ export default function ActivityLogsScreen({ navigation }: any) {
                   typeFilter === filter && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
                 ]}
                 onPress={() => setTypeFilter(filter)}
+                accessibilityLabel={`Filter by ${filter} type`}
+                accessibilityRole="button"
               >
                 <Text style={[
                   styles.filterTabText,
-                  { color: typeFilter === filter ? '#FFFFFF' : dynamic.text }
+                  { color: typeFilter === filter ? theme.colors.white : dynamic.text }
                 ]}>
                   {filter.charAt(0).toUpperCase() + filter.slice(1)}
                 </Text>

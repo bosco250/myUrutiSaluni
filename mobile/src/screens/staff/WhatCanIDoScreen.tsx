@@ -9,8 +9,10 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { usePermissions } from '../../context/PermissionContext';
+import { useTheme } from '../../context';
+import { theme } from '../../theme';
 import {
   EmployeePermission,
   PERMISSION_DESCRIPTIONS,
@@ -19,45 +21,45 @@ import {
 } from '../../constants/employeePermissions';
 import { getScreensForPermissions } from '../../utils/permissionNavigation';
 
-// Category configuration with icons and colors
+// Category configuration with icons (colors will be from theme)
 const CATEGORY_CONFIG: Record<
   PermissionCategory,
-  { icon: string; color: string; label: string }
+  { icon: string; colorKey: keyof typeof theme.colors; label: string }
 > = {
   APPOINTMENTS: {
-    icon: 'calendar-outline',
-    color: '#3B82F6',
+    icon: 'event',
+    colorKey: 'info',
     label: 'Appointments',
   },
-  SERVICES: { icon: 'cut-outline', color: '#8B5CF6', label: 'Services' },
-  CUSTOMERS: { icon: 'people-outline', color: '#10B981', label: 'Customers' },
-  SALES: { icon: 'cash-outline', color: '#F59E0B', label: 'Sales & Finance' },
-  STAFF: { icon: 'person-outline', color: '#EC4899', label: 'Staff' },
-  INVENTORY: { icon: 'cube-outline', color: '#6366F1', label: 'Inventory' },
-  SALON: { icon: 'business-outline', color: '#14B8A6', label: 'Salon Settings' },
+  SERVICES: { icon: 'content-cut', colorKey: 'secondary', label: 'Services' },
+  CUSTOMERS: { icon: 'people', colorKey: 'success', label: 'Customers' },
+  SALES: { icon: 'payments', colorKey: 'warning', label: 'Sales & Finance' },
+  STAFF: { icon: 'person', colorKey: 'error', label: 'Staff' },
+  INVENTORY: { icon: 'inventory-2', colorKey: 'primary', label: 'Inventory' },
+  SALON: { icon: 'business', colorKey: 'infoDark', label: 'Salon Settings' },
 };
 
-// Map screens to friendly names
+// Map screens to friendly names (using MaterialIcons)
 const SCREEN_NAMES: Record<string, { name: string; icon: string }> = {
-  SalonAppointments: { name: 'All Appointments', icon: 'calendar' },
+  SalonAppointments: { name: 'All Appointments', icon: 'event' },
   CreateAppointment: { name: 'Create Appointment', icon: 'add-circle' },
-  AppointmentDetail: { name: 'Appointment Details', icon: 'document-text' },
-  Appointments: { name: 'My Appointments', icon: 'calendar-outline' },
-  AllServices: { name: 'Manage Services', icon: 'cut' },
+  AppointmentDetail: { name: 'Appointment Details', icon: 'description' },
+  Appointments: { name: 'My Appointments', icon: 'event-note' },
+  AllServices: { name: 'Manage Services', icon: 'content-cut' },
   AddService: { name: 'Add Service', icon: 'add' },
-  ServiceDetail: { name: 'Service Details', icon: 'document' },
-  StockManagement: { name: 'Inventory', icon: 'cube' },
+  ServiceDetail: { name: 'Service Details', icon: 'description' },
+  StockManagement: { name: 'Inventory', icon: 'inventory-2' },
   InventoryManagement: { name: 'Stock Management', icon: 'layers' },
-  AddProduct: { name: 'Add Product', icon: 'add' },
+  AddProduct: { name: 'Add Product', icon: 'add-box' },
   CustomerManagement: { name: 'Customers', icon: 'people' },
   CustomerDetail: { name: 'Customer Details', icon: 'person' },
-  Sales: { name: 'Sales', icon: 'cash' },
+  Sales: { name: 'Sales', icon: 'point-of-sale' },
   SaleDetail: { name: 'Sale Details', icon: 'receipt' },
-  SalesHistory: { name: 'Sales History', icon: 'time' },
+  SalesHistory: { name: 'Sales History', icon: 'history' },
   BusinessAnalytics: { name: 'Analytics', icon: 'bar-chart' },
   StaffManagement: { name: 'Staff', icon: 'people' },
-  Commissions: { name: 'Commissions', icon: 'wallet' },
-  MySchedule: { name: 'My Schedule', icon: 'time' },
+  Commissions: { name: 'Commissions', icon: 'account-balance-wallet' },
+  MySchedule: { name: 'My Schedule', icon: 'schedule' },
   SalonSettings: { name: 'Salon Settings', icon: 'settings' },
   SalonDetail: { name: 'Salon Profile', icon: 'business' },
 };
@@ -70,6 +72,7 @@ interface WhatCanIDoScreenProps {
 }
 
 export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
+  const { isDark } = useTheme();
   const {
     permissions,
     activeSalon,
@@ -81,6 +84,26 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
     refreshPermissions,
     setActiveSalon,
   } = usePermissions();
+
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
+    },
+    text: {
+      color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    textSecondary: {
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
+    },
+    card: {
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+    header: {
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+      borderBottomColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+    },
+  };
 
   // Group permissions by category
   const permissionsByCategory = useMemo(() => {
@@ -122,32 +145,36 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      
+    <SafeAreaView style={[styles.safeArea, dynamicStyles.container]} edges={['top']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
       {/* Top Header with Back Button */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, dynamicStyles.header]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack?.()}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Access Control</Text>
+        <Text style={[styles.headerTitle, dynamicStyles.text]}>My Access Control</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView
-        style={styles.container}
+        style={[styles.container, dynamicStyles.container]}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refreshPermissions} />
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refreshPermissions}
+            tintColor={theme.colors.primary}
+          />
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>What Can I Do?</Text>
-          <Text style={styles.subtitle}>
+        <View style={[styles.header, dynamicStyles.header]}>
+          <Text style={[styles.title, dynamicStyles.text]}>What Can I Do?</Text>
+          <Text style={[styles.subtitle, dynamicStyles.textSecondary]}>
             {activeSalon?.salonName || 'Your capabilities'} •{' '}
             {permissions.length} active permissions
           </Text>
@@ -155,8 +182,8 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
 
       {/* Owner/Admin Badge */}
       {(isOwner || isAdmin) && (
-        <View style={styles.ownerBadge}>
-          <Ionicons name="shield-checkmark" size={24} color="#fff" />
+        <View style={[styles.ownerBadge, { backgroundColor: theme.colors.success }]}>
+          <MaterialIcons name="verified-user" size={24} color={theme.colors.white} />
           <View style={styles.ownerBadgeContent}>
             <Text style={styles.ownerBadgeTitle}>
               {isOwner ? 'Salon Owner' : 'Administrator'}
@@ -171,23 +198,27 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
       {/* Multi-Salon Selector */}
       {isEmployee && availableSalons.length > 1 && (
         <View style={styles.salonSelector}>
-          <Text style={styles.sectionLabel}>YOUR SALONS</Text>
+          <Text style={[styles.sectionLabel, dynamicStyles.textSecondary]}>YOUR SALONS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {availableSalons.map((salon) => (
               <TouchableOpacity
                 key={salon.salonId}
                 style={[
                   styles.salonChip,
-                  salon.salonId === activeSalon?.salonId &&
-                    styles.salonChipActive,
+                  dynamicStyles.card,
+                  salon.salonId === activeSalon?.salonId && {
+                    backgroundColor: theme.colors.primary,
+                    borderColor: theme.colors.primary,
+                  },
                 ]}
                 onPress={() => handleSwitchSalon(salon.salonId)}
               >
                 <Text
                   style={[
                     styles.salonChipText,
-                    salon.salonId === activeSalon?.salonId &&
-                      styles.salonChipTextActive,
+                    salon.salonId === activeSalon?.salonId
+                      ? { color: theme.colors.white }
+                      : dynamicStyles.text,
                   ]}
                 >
                   {salon.salonName}
@@ -195,15 +226,17 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
                 <View
                   style={[
                     styles.salonChipBadge,
-                    salon.salonId === activeSalon?.salonId &&
-                      styles.salonChipBadgeActive,
+                    salon.salonId === activeSalon?.salonId
+                      ? { backgroundColor: theme.colors.primary + '40' }
+                      : { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100 },
                   ]}
                 >
                   <Text
                     style={[
                       styles.salonChipBadgeText,
-                      salon.salonId === activeSalon?.salonId &&
-                        styles.salonChipBadgeTextActive,
+                      salon.salonId === activeSalon?.salonId
+                        ? { color: theme.colors.white }
+                        : dynamicStyles.textSecondary,
                     ]}
                   >
                     {salon.permissionCount}
@@ -218,50 +251,51 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
       {/* Permission Categories */}
       {isEmployee && permissions.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>YOUR PERMISSIONS</Text>
+          <Text style={[styles.sectionLabel, dynamicStyles.textSecondary]}>YOUR PERMISSIONS</Text>
 
           {Object.entries(permissionsByCategory).map(([category, perms]) => {
             const config = CATEGORY_CONFIG[category as PermissionCategory];
             if (!perms || perms.length === 0) return null;
+            const categoryColor = theme.colors[config.colorKey];
 
             return (
-              <View key={category} style={styles.categoryCard}>
+              <View key={category} style={[styles.categoryCard, dynamicStyles.card]}>
                 <View
                   style={[
                     styles.categoryHeader,
-                    { backgroundColor: config.color + '15' },
+                    { backgroundColor: categoryColor + '15' },
                   ]}
                 >
-                  <Ionicons
+                  <MaterialIcons
                     name={config.icon as any}
                     size={24}
-                    color={config.color}
+                    color={categoryColor}
                   />
-                  <Text style={[styles.categoryLabel, { color: config.color }]}>
+                  <Text style={[styles.categoryLabel, { color: categoryColor }]}>
                     {config.label}
                   </Text>
                   <View
-                    style={[styles.countBadge, { backgroundColor: config.color }]}
+                    style={[styles.countBadge, { backgroundColor: categoryColor }]}
                   >
                     <Text style={styles.countText}>{perms.length}</Text>
                   </View>
                 </View>
 
                 {perms.map((perm) => (
-                  <View key={perm} style={styles.permissionItem}>
-                    <Ionicons
-                      name="checkmark-circle"
+                  <View key={perm} style={[styles.permissionItem, { borderTopColor: isDark ? theme.colors.gray700 : theme.colors.gray100 }]}>
+                    <MaterialIcons
+                      name="check-circle"
                       size={20}
-                      color="#10B981"
+                      color={theme.colors.success}
                     />
                     <View style={styles.permissionContent}>
-                      <Text style={styles.permissionName}>
+                      <Text style={[styles.permissionName, dynamicStyles.text]}>
                         {perm
                           .replace(/_/g, ' ')
                           .toLowerCase()
                           .replace(/\b\w/g, (l) => l.toUpperCase())}
                       </Text>
-                      <Text style={styles.permissionDesc}>
+                      <Text style={[styles.permissionDesc, dynamicStyles.textSecondary]}>
                         {PERMISSION_DESCRIPTIONS[perm]}
                       </Text>
                     </View>
@@ -275,10 +309,10 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
 
       {/* No Permissions */}
       {isEmployee && permissions.length === 0 && (
-        <View style={styles.emptyState}>
-          <Ionicons name="lock-open-outline" size={48} color="#9CA3AF" />
-          <Text style={styles.emptyTitle}>No Permissions Yet</Text>
-          <Text style={styles.emptyText}>
+        <View style={[styles.emptyState, dynamicStyles.card]}>
+          <MaterialIcons name="lock-open" size={48} color={dynamicStyles.textSecondary.color} />
+          <Text style={[styles.emptyTitle, dynamicStyles.text]}>No Permissions Yet</Text>
+          <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
             Your salon owner hasn't granted you any specific permissions yet.
             Contact them to get access to more features.
           </Text>
@@ -288,24 +322,24 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
       {/* Accessible Screens */}
       {accessibleScreens.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>FEATURES YOU CAN ACCESS</Text>
+          <Text style={[styles.sectionLabel, dynamicStyles.textSecondary]}>FEATURES YOU CAN ACCESS</Text>
           <View style={styles.screenGrid}>
             {accessibleScreens.slice(0, 12).map((screen) => {
               const info = SCREEN_NAMES[screen];
               return (
                 <TouchableOpacity
                   key={screen}
-                  style={styles.screenItem}
+                  style={[styles.screenItem, dynamicStyles.card]}
                   onPress={() => handleNavigateToScreen(screen)}
                 >
-                  <View style={styles.screenIcon}>
-                    <Ionicons
+                  <View style={[styles.screenIcon, { backgroundColor: theme.colors.primary + '15' }]}>
+                    <MaterialIcons
                       name={info.icon as any}
                       size={24}
-                      color="#6B46C1"
+                      color={theme.colors.primary}
                     />
                   </View>
-                  <Text style={styles.screenName} numberOfLines={2}>
+                  <Text style={[styles.screenName, dynamicStyles.text]} numberOfLines={2}>
                     {info.name}
                   </Text>
                 </TouchableOpacity>
@@ -317,38 +351,38 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
+        <Text style={[styles.sectionLabel, dynamicStyles.textSecondary]}>QUICK ACTIONS</Text>
 
         <TouchableOpacity
-          style={styles.actionCard}
+          style={[styles.actionCard, dynamicStyles.card]}
           onPress={() => navigation?.navigate('MyPermissions')}
         >
-          <View style={styles.actionIconContainer}>
-            <Ionicons name="key-outline" size={24} color="#6B46C1" />
+          <View style={[styles.actionIconContainer, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100 }]}>
+            <MaterialIcons name="vpn-key" size={24} color={theme.colors.primary} />
           </View>
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>View Permission Details</Text>
-            <Text style={styles.actionDesc}>
+            <Text style={[styles.actionTitle, dynamicStyles.text]}>View Permission Details</Text>
+            <Text style={[styles.actionDesc, dynamicStyles.textSecondary]}>
               See when permissions were granted and by whom
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+          <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionCard}
+          style={[styles.actionCard, dynamicStyles.card]}
           onPress={() => refreshPermissions()}
         >
-          <View style={styles.actionIconContainer}>
-            <Ionicons name="refresh-outline" size={24} color="#10B981" />
+          <View style={[styles.actionIconContainer, { backgroundColor: isDark ? theme.colors.gray700 : theme.colors.gray100 }]}>
+            <MaterialIcons name="refresh" size={24} color={theme.colors.success} />
           </View>
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Refresh Permissions</Text>
-            <Text style={styles.actionDesc}>
+            <Text style={[styles.actionTitle, dynamicStyles.text]}>Refresh Permissions</Text>
+            <Text style={[styles.actionDesc, dynamicStyles.textSecondary]}>
               Check for newly granted permissions
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+          <MaterialIcons name="chevron-right" size={24} color={dynamicStyles.textSecondary.color} />
         </TouchableOpacity>
       </View>
 
@@ -361,147 +395,126 @@ export function WhatCanIDoScreen({ navigation }: WhatCanIDoScreenProps = {}) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   backButton: {
-    padding: 8,
-    marginRight: 8,
+    padding: theme.spacing.xs,
+    marginRight: theme.spacing.xs,
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    fontFamily: theme.fonts.medium,
   },
   placeholder: {
     width: 40,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: theme.spacing.lg,
   },
   header: {
-    padding: 20,
-    backgroundColor: '#fff',
+    padding: theme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    fontFamily: theme.fonts.bold,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: theme.fonts.regular,
     marginTop: 4,
   },
   ownerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
-    margin: 16,
-    padding: 16,
+    margin: theme.spacing.md,
+    padding: theme.spacing.md,
     borderRadius: 12,
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   ownerBadgeContent: {
     flex: 1,
   },
   ownerBadgeTitle: {
-    color: '#fff',
+    color: theme.colors.white,
     fontWeight: '700',
     fontSize: 18,
+    fontFamily: theme.fonts.bold,
   },
   ownerBadgeText: {
-    color: 'rgba(255,255,255,0.9)',
+    color: theme.colors.white,
+    opacity: 0.9,
     fontSize: 14,
+    fontFamily: theme.fonts.regular,
     marginTop: 2,
   },
   salonSelector: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    fontFamily: theme.fonts.medium,
     letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
   },
   salonChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
     paddingVertical: 10,
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 8,
-  },
-  salonChipActive: {
-    backgroundColor: '#6B46C1',
-    borderColor: '#6B46C1',
+    gap: theme.spacing.xs,
   },
   salonChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
-  },
-  salonChipTextActive: {
-    color: '#fff',
+    fontFamily: theme.fonts.medium,
   },
   salonChipBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
+    paddingHorizontal: theme.spacing.xs,
     paddingVertical: 2,
     borderRadius: 10,
-  },
-  salonChipBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   salonChipBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
-  },
-  salonChipBadgeTextActive: {
-    color: '#fff',
+    fontFamily: theme.fonts.medium,
   },
   section: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   categoryCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   categoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 12,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   categoryLabel: {
     flex: 1,
     fontWeight: '600',
     fontSize: 16,
+    fontFamily: theme.fonts.medium,
   },
   countBadge: {
     width: 28,
@@ -511,17 +524,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   countText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontWeight: '600',
     fontSize: 14,
+    fontFamily: theme.fonts.medium,
   },
   permissionItem: {
     flexDirection: 'row',
-    padding: 12,
-    paddingLeft: 16,
+    padding: theme.spacing.sm,
+    paddingLeft: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   permissionContent: {
     flex: 1,
@@ -529,80 +542,74 @@ const styles = StyleSheet.create({
   permissionName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    fontFamily: theme.fonts.medium,
   },
   permissionDesc: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: theme.fonts.regular,
     marginTop: 2,
   },
   emptyState: {
     alignItems: 'center',
     padding: 40,
-    margin: 16,
-    backgroundColor: '#fff',
+    margin: theme.spacing.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
-    marginTop: 16,
+    fontFamily: theme.fonts.medium,
+    marginTop: theme.spacing.md,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: theme.fonts.regular,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: theme.spacing.xs,
     lineHeight: 20,
   },
   screenGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   screenItem: {
-    width: '30%',
-    backgroundColor: '#fff',
-    padding: 16,
+    flex: 1,
+    minWidth: '28%',
+    maxWidth: '32%',
+    padding: theme.spacing.md,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   screenIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3E8FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.xs,
   },
   screenName: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#374151',
+    fontFamily: theme.fonts.medium,
     textAlign: 'center',
   },
   actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
+    padding: theme.spacing.md,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   actionIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -612,11 +619,11 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#111827',
+    fontFamily: theme.fonts.medium,
   },
   actionDesc: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: theme.fonts.regular,
     marginTop: 2,
   },
   footer: {

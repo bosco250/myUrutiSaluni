@@ -319,7 +319,8 @@ export default function EmployeeSalonDashboard({ navigation, route }: EmployeeSa
     if (!permissionsLoading && salonId) {
       loadData();
     }
-  }, [loadData, permissionsLoading, salonId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionsLoading, salonId]); // ✅ Removed loadData from dependencies
 
   const onRefresh = () => {
     setRefreshing(true);

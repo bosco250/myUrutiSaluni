@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Switch,
   Modal,
   Alert,
+  Platform,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,11 +26,12 @@ import PersonalInformationScreen from "./PersonalInformationScreen";
 import NotificationPreferencesScreen from "./NotificationPreferencesScreen";
 import SecurityLoginScreen from "./SecurityLoginScreen";
 import EmployeeContractScreen from "./EmployeeContractScreen";
+import { LinearGradient } from "expo-linear-gradient";
 
-// Placeholder profile image - in production, use actual user image
+// Placeholder profile image
 const profileImage = require("../../../assets/Logo.png");
 
-// Helper to format image URL (handles relative URLs and localhost from backend)
+// Helper to format image URL
 const getImageUrl = (url?: string | null): string | null => {
   if (!url) return null;
   
@@ -70,6 +72,34 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const [hasExistingApplication, setHasExistingApplication] = useState(false);
   const [checkingMembership, setCheckingMembership] = useState(true);
   const [uploading, setUploading] = useState(false);
+
+  // Profile Completion Logic
+  const profileCompletion = useMemo(() => {
+    if (!user) return null;
+    const fields = [
+      { key: 'fullName', label: 'Full Name' },
+      { key: 'phone', label: 'Phone' },
+      { key: 'nationalId', label: 'National ID' },
+      { key: 'dateOfBirth', label: 'Date of Birth' },
+      { key: 'gender', label: 'Gender' },
+      { key: 'district', label: 'District' },
+      { key: 'avatarUrl', label: 'Profile Photo' }
+    ];
+    
+    // Check fields
+    const filledCount = fields.filter(f => {
+       const val = (user as any)[f.key];
+       return val && val !== '';
+    }).length;
+    
+    const percentage = Math.round((filledCount / fields.length) * 100);
+    const missing = fields.filter(f => {
+       const val = (user as any)[f.key];
+       return !val || val === '';
+    });
+
+    return { percentage, missing };
+  }, [user]);
 
   const handlePickImage = async () => {
     try {
@@ -204,42 +234,22 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
   // Dynamic styles based on theme
   const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-    },
-    sectionCard: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
-    },
-    text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    textSecondary: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
-    },
+    container: { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background },
+    text: { color: isDark ? theme.colors.white : theme.colors.text },
+    textSecondary: { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary },
+    menuItem: { backgroundColor: 'transparent' },
+    modalBackground: { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white },
   };
 
   // Render sub-screens
-  if (currentSubScreen === "personal") {
-    return (
-      <PersonalInformationScreen navigation={{ goBack: handleGoBackToMain }} />
-    );
-  }
-
-  if (currentSubScreen === "notifications") {
-    return (
-      <NotificationPreferencesScreen
-        navigation={{ goBack: handleGoBackToMain }}
-      />
-    );
-  }
-
-  if (currentSubScreen === "security") {
-    return <SecurityLoginScreen navigation={{ goBack: handleGoBackToMain }} />;
-  }
-
-  if (currentSubScreen === "contract") {
-    return <EmployeeContractScreen navigation={{ goBack: handleGoBackToMain }} />;
+  if (currentSubScreen !== "main") {
+    const screens = {
+      personal: <PersonalInformationScreen navigation={{ goBack: handleGoBackToMain }} />,
+      notifications: <NotificationPreferencesScreen navigation={{ goBack: handleGoBackToMain }} />,
+      security: <SecurityLoginScreen navigation={{ goBack: handleGoBackToMain }} />,
+      contract: <EmployeeContractScreen navigation={{ goBack: handleGoBackToMain }} />
+    };
+    return screens[currentSubScreen] || null;
   }
 
   if (checkingMembership && isEmployee) {
@@ -261,338 +271,157 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         refreshControl={refreshControl}
       >
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.profileHeaderContent}>
-            <View style={styles.profileImageContainer}>
-              <View style={styles.profileImageGlow} />
-              <TouchableOpacity onPress={handlePickImage} disabled={uploading}>
-                  <Image 
-                    source={user?.avatarUrl ? { uri: getImageUrl(user.avatarUrl) || '' } : profileImage} 
-                    style={[styles.profileImage, uploading && { opacity: 0.7 }]}
-                    onError={(e) => console.log('Profile avatar load error:', e.nativeEvent.error)}
-                  />
-                  <View style={[styles.editBadge, { backgroundColor: theme.colors.primary }]}>
-                     <MaterialIcons name="camera-alt" size={14} color="#FFF" />
-                  </View>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.profileInfoContainer}>
-              <Text style={[styles.profileName, dynamicStyles.text]}>
-                {userName}
-              </Text>
-              {displayRole ? (
-                <View style={[styles.roleBadge, { backgroundColor: theme.colors.primary + "15" }]}>
-                  <Text style={[styles.roleBadgeText, { color: theme.colors.primary }]}>
-                    {displayRole}
-                  </Text>
+        <View style={styles.header}>
+            <View style={styles.profileSection}>
+                <View style={styles.imageContainer}>
+                    <TouchableOpacity onPress={handlePickImage} disabled={uploading}>
+                        <Image 
+                            source={user?.avatarUrl ? { uri: getImageUrl(user.avatarUrl) || '' } : profileImage} 
+                            style={styles.profileImage}
+                            onError={(e) => console.log('Profile avatar load error:', e.nativeEvent.error)}
+                        />
+                        <View style={[styles.editBadge, { backgroundColor: theme.colors.primary }]}>
+                            <MaterialIcons name="camera-alt" size={12} color="#FFF" />
+                        </View>
+                    </TouchableOpacity>
                 </View>
-              ) : null}
-              {userEmail ? (
-                <Text style={[styles.profileEmail, dynamicStyles.textSecondary]}>
-                  {userEmail}
-                </Text>
-              ) : null}
+                <View style={styles.infoSection}>
+                    <Text style={[styles.name, dynamicStyles.text]}>{userName}</Text>
+                    <Text style={[styles.email, dynamicStyles.textSecondary]}>{userEmail}</Text>
+                    {displayRole ? (
+                        <Text style={[styles.roleText, { color: theme.colors.primary }]}>{displayRole}</Text>
+                    ) : null}
+                </View>
             </View>
-          </View>
         </View>
 
-        {/* Preferences Section Card */}
-        <View style={[styles.sectionCard, dynamicStyles.sectionCard]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <View style={styles.sectionIcon} />
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: dynamicStyles.text.color },
-                ]}
-              >
-                Preferences
-              </Text>
-            </View>
-          </View>
-
-          {/* Theme Toggle */}
-          <View style={styles.settingRow}>
-            <Text
-              style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
+        {/* Menu Items */}
+        <View style={styles.section}>
+            {/* Personal Info */}
+            <TouchableOpacity 
+                style={[styles.menuItem, dynamicStyles.menuItem]} 
+                onPress={() => handleNavigateToSubScreen("personal")}
             >
-              {isDark ? "Light Theme" : "Dark Theme"}
-            </Text>
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{
-                false: theme.colors.border,
-                true: theme.colors.primary,
-              }}
-              thumbColor={theme.colors.white}
-              ios_backgroundColor={theme.colors.border}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.divider,
-              {
-                backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-              },
-            ]}
-          />
-
-          {/* Language Option */}
-          <TouchableOpacity style={styles.settingRow} activeOpacity={0.7}>
-            <Text
-              style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
-            >
-              Language
-            </Text>
-            <View style={styles.settingValueContainer}>
-              <Text
-                style={[
-                  styles.settingValue,
-                  { color: dynamicStyles.textSecondary.color },
-                ]}
-              >
-                English
-              </Text>
-              <MaterialIcons
-                name="chevron-right"
-                size={20}
-                color={dynamicStyles.textSecondary.color}
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Settings Section Card */}
-        <View style={[styles.sectionCard, dynamicStyles.sectionCard]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <View style={styles.sectionIcon} />
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: dynamicStyles.text.color },
-                ]}
-              >
-                Settings
-              </Text>
-            </View>
-          </View>
-
-          {/* Favorites - Only show for customers */}
-          {isCustomer && (
-            <>
-              <TouchableOpacity
-                style={styles.settingRow}
-                activeOpacity={0.7}
-                onPress={() => navigation?.navigate("Favorites")}
-              >
-                <Text
-                  style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
-                >
-                  Favorites
-                </Text>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={24}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </TouchableOpacity>
-
-              <View
-                style={[
-                  styles.divider,
-                  {
-                    backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-                  },
-                ]}
-              />
-            </>
-          )}
-
-          {/* Personal Information */}
-          <TouchableOpacity
-            style={styles.settingRow}
-            activeOpacity={0.7}
-            onPress={() => handleNavigateToSubScreen("personal")}
-          >
-            <Text
-              style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
-            >
-              Personal Information
-            </Text>
-            <MaterialIcons
-              name="chevron-right"
-              size={24}
-              color={dynamicStyles.textSecondary.color}
-            />
-          </TouchableOpacity>
-
-          <View
-            style={[
-              styles.divider,
-              {
-                backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-              },
-            ]}
-          />
-
-          {/* Employment Contract - Only show for employees */}
-          {isEmployee && (
-            <>
-              <TouchableOpacity
-                style={styles.settingRow}
-                activeOpacity={0.7}
-                onPress={() => handleNavigateToSubScreen("contract")}
-              >
-                <Text
-                  style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
-                >
-                  Employment Contract
-                </Text>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={24}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </TouchableOpacity>
-
-              <View
-                style={[
-                  styles.divider,
-                  {
-                    backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-                  },
-                ]}
-              />
-            </>
-          )}
-
-          {/* Notification Preferences */}
-          <TouchableOpacity
-            style={styles.settingRow}
-            activeOpacity={0.7}
-            onPress={() => handleNavigateToSubScreen("notifications")}
-          >
-            <Text
-              style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
-            >
-              Notification Preferences
-            </Text>
-            <MaterialIcons
-              name="chevron-right"
-              size={24}
-              color={dynamicStyles.textSecondary.color}
-            />
-          </TouchableOpacity>
-
-          <View
-            style={[
-              styles.divider,
-              {
-                backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-              },
-            ]}
-          />
-
-          {/* Security & Login */}
-          <TouchableOpacity
-            style={styles.settingRow}
-            activeOpacity={0.7}
-            onPress={() => handleNavigateToSubScreen("security")}
-          >
-            <Text
-              style={[styles.settingLabel, { color: dynamicStyles.text.color }]}
-            >
-              Security & Login
-            </Text>
-            <MaterialIcons
-              name="chevron-right"
-              size={24}
-              color={dynamicStyles.textSecondary.color}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Become an Owner Section - Only for Employees without existing application */}
-        {showBecomeOwnerSection && (
-          <View style={[styles.sectionCard, styles.ownerCard]}>
-            <View style={styles.ownerCardHeader}>
-              <View style={styles.ownerIconContainer}>
-                <MaterialIcons name="business" size={28} color={theme.colors.primary} />
-              </View>
-              <View style={styles.ownerTextContainer}>
-                <Text style={[styles.ownerTitle, dynamicStyles.text]}>
-                  Become a Salon Owner
-                </Text>
-                <Text style={[styles.ownerDescription, dynamicStyles.textSecondary]}>
-                  Ready to start your own salon business? Apply for membership and unlock owner benefits.
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.ownerApplyButton}
-              activeOpacity={0.8}
-              onPress={() => navigation?.navigate("MembershipApplication")}
-            >
-              <Text style={styles.ownerApplyButtonText}>Apply Now</Text>
-              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                <View style={styles.menuIconContainer}>
+                    <MaterialIcons name="person-outline" size={22} color={dynamicStyles.text.color} />
+                    <Text style={[styles.menuTitle, dynamicStyles.text]}>Personal Information</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={dynamicStyles.textSecondary.color} />
             </TouchableOpacity>
-          </View>
+            <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+
+            {/* Notifications */}
+            <TouchableOpacity 
+                style={[styles.menuItem, dynamicStyles.menuItem]} 
+                onPress={() => handleNavigateToSubScreen("notifications")}
+            >
+                <View style={styles.menuIconContainer}>
+                    <MaterialIcons name="notifications-none" size={22} color={dynamicStyles.text.color} />
+                    <Text style={[styles.menuTitle, dynamicStyles.text]}>Notification Preferences</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={dynamicStyles.textSecondary.color} />
+            </TouchableOpacity>
+            <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+
+            {/* Security */}
+            <TouchableOpacity 
+                style={[styles.menuItem, dynamicStyles.menuItem]} 
+                onPress={() => handleNavigateToSubScreen("security")}
+            >
+                <View style={styles.menuIconContainer}>
+                    <MaterialIcons name="lock-outline" size={22} color={dynamicStyles.text.color} />
+                    <Text style={[styles.menuTitle, dynamicStyles.text]}>Security & Login</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={22} color={dynamicStyles.textSecondary.color} />
+            </TouchableOpacity>
+
+            {/* Employee Contract */}
+            {isEmployee && (
+                <>
+                <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+                <TouchableOpacity 
+                    style={[styles.menuItem, dynamicStyles.menuItem]} 
+                    onPress={() => handleNavigateToSubScreen("contract")}
+                >
+                    <View style={styles.menuIconContainer}>
+                        <MaterialIcons name="description" size={22} color={dynamicStyles.text.color} />
+                        <Text style={[styles.menuTitle, dynamicStyles.text]}>Employment Contract</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={22} color={dynamicStyles.textSecondary.color} />
+                </TouchableOpacity>
+                </>
+            )}
+             
+            {/* Customer Favorites */}
+            {isCustomer && (
+                <>
+                <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+                <TouchableOpacity 
+                    style={[styles.menuItem, dynamicStyles.menuItem]} 
+                    onPress={() => navigation?.navigate("Favorites")}
+                >
+                    <View style={styles.menuIconContainer}>
+                        <MaterialIcons name="favorite-border" size={22} color={dynamicStyles.text.color} />
+                        <Text style={[styles.menuTitle, dynamicStyles.text]}>Favorites</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={22} color={dynamicStyles.textSecondary.color} />
+                </TouchableOpacity>
+                </>
+            )}
+        </View>
+
+        <View style={styles.sectionSpacer} />
+
+        <View style={styles.section}>
+            {/* Theme Toggle */}
+             <View style={[styles.menuItem, dynamicStyles.menuItem]}>
+                <View style={styles.menuIconContainer}>
+                    <MaterialIcons name={isDark ? "dark-mode" : "light-mode"} size={22} color={dynamicStyles.text.color} />
+                    <Text style={[styles.menuTitle, dynamicStyles.text]}>Dark Mode</Text>
+                </View>
+                <Switch
+                    value={isDark}
+                    onValueChange={toggleTheme}
+                    trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                    thumbColor="#FFF"
+                />
+            </View>
+        </View>
+
+        {/* Become Owner CTA - Simple Button */}
+        {showBecomeOwnerSection && (
+             <TouchableOpacity 
+                style={styles.simpleCta}
+                onPress={() => navigation?.navigate("MembershipApplication")}
+             >
+                 <Text style={styles.simpleCtaText}>Become a Salon Owner</Text>
+                 <MaterialIcons name="arrow-forward" size={18} color={theme.colors.primary} />
+             </TouchableOpacity>
         )}
 
-        {/* Log Out Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.7}
-        >
-          <View style={styles.logoutButtonContent}>
-            <MaterialIcons
-              name="exit-to-app"
-              size={22}
-              color={theme.colors.error}
-            />
-            <Text style={styles.logoutButtonText}>Log Out</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.sectionSpacer} />
 
-        {/* Bottom spacing for bottom navigation */}
-        <View style={{ height: 20 }} />
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
+             <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
 
-      {/* Logout Confirmation Modal */}
-      <Modal
-        visible={showLogoutModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelLogout}
-      >
+      {/* Logout Modal */}
+      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={cancelLogout}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, dynamicStyles.sectionCard]}>
-            <View style={styles.modalIconContainer}>
-              <MaterialIcons name="exit-to-app" size={36} color={theme.colors.error} />
-            </View>
+          <View style={[styles.modalContent, dynamicStyles.modalBackground]}>
             <Text style={[styles.modalTitle, dynamicStyles.text]}>Log Out</Text>
             <Text style={[styles.modalMessage, dynamicStyles.textSecondary]}>
-              Are you sure you want to log out of your account?
+              Are you sure you want to log out?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={cancelLogout}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={cancelLogout}>
+                <Text style={[styles.cancelButtonText, dynamicStyles.text]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={confirmLogout}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={confirmLogout}>
                 <Text style={styles.confirmButtonText}>Log Out</Text>
               </TouchableOpacity>
             </View>
@@ -604,285 +433,52 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  header: { padding: 20 },
+  profileSection: { flexDirection: 'row', alignItems: 'center' },
+  imageContainer: { position: 'relative' },
+  profileImage: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#F0F0F0' },
+  editBadge: { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+  infoSection: { marginLeft: 16, flex: 1, justifyContent: 'center' },
+  name: { fontSize: 20, fontWeight: '700', marginBottom: 2 },
+  email: { fontSize: 13, marginBottom: 4 },
+  roleText: { fontSize: 13, fontWeight: '600' },
+  
+  section: { paddingHorizontal: 20 },
+  sectionSpacer: { height: 24 },
+  
+  menuItem: { 
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingVertical: 16,
   },
-  scrollView: {
-    flex: 1,
+  menuIconContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuTitle: { fontSize: 16, fontWeight: '500' },
+  divider: { height: 1, width: '100%' },
+  
+  simpleCta: { 
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      marginHorizontal: 20, marginTop: 20,
+      paddingVertical: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
   },
-  scrollContent: {
-    paddingBottom: 80,
-    paddingTop: theme.spacing.xs,
-  },
-  profileHeader: {
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    marginBottom: 0,
-  },
-  profileHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  profileImageContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileImageGlow: {
-    position: "absolute",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: theme.colors.primary,
-    opacity: 0.1,
-  },
-  profileImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  profileInfoContainer: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: "800",
-    fontFamily: theme.fonts.bold,
-    marginBottom: 4,
-  },
-  roleBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 6,
-  },
-  roleBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
-  },
-  profileEmail: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-    opacity: 0.8,
-  },
-  sectionCard: {
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    // Removed shadows for flat design
-    elevation: 0,
-  },
-  sectionHeader: {
-    marginBottom: theme.spacing.xs,
-  },
-  sectionTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  sectionIcon: {
-    width: 3,
-    height: 16,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 1.5,
-    marginRight: theme.spacing.xs / 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: theme.colors.text,
-    fontFamily: theme.fonts.bold,
-  },
-  settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: theme.spacing.xs,
-    minHeight: 36,
-  },
-  settingLabel: {
-    fontSize: 14,
-    color: theme.colors.text,
-    fontFamily: theme.fonts.regular,
-    flex: 1,
-  },
-  settingValueContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  settingValue: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginRight: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.regular,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.borderLight,
-    marginVertical: 4,
-  },
-  logoutButton: {
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.lg,
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.colors.error + "20",
-    backgroundColor: theme.colors.error + "05",
-  },
-  logoutButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.error,
-    fontFamily: theme.fonts.bold,
-  },
-  ownerCard: {
-    borderWidth: 2,
-    borderColor: theme.colors.primary + "30",
-    backgroundColor: theme.colors.primary + "05",
-  },
-  ownerCardHeader: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  ownerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary + "15",
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ownerTextContainer: {
-    flex: 1,
-  },
-  ownerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
-    marginBottom: 4,
-  },
-  ownerDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: theme.fonts.regular,
-  },
-  ownerApplyButton: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 8,
-    elevation: 0,
-  },
-  ownerApplyButtonText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.lg,
-  },
-  modalContent: {
-    width: "100%",
-    maxWidth: 300,
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    alignItems: "center",
-    elevation: 0,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  modalIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255, 59, 48, 0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: theme.spacing.sm,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.xs,
-  },
-  modalMessage: {
-    fontSize: 14,
-    textAlign: "center",
-    fontFamily: theme.fonts.regular,
-    marginBottom: theme.spacing.lg,
-    lineHeight: 20,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    width: "100%",
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm + 2,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.text,
-    fontFamily: theme.fonts.medium,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.error,
-  },
-  confirmButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    fontFamily: theme.fonts.medium,
-  },
+  simpleCtaText: { color: theme.colors.primary, fontWeight: '600', fontSize: 15 },
+
+  logoutRow: { alignItems: 'center', paddingVertical: 16 },
+  logoutText: { color: theme.colors.error, fontWeight: '600', fontSize: 16 },
+  versionText: { textAlign: 'center', marginTop: 8, opacity: 0.3, fontSize: 12 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  modalContent: { borderRadius: 12, padding: 24, alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  modalMessage: { textAlign: 'center', marginBottom: 24 },
+  modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
+  cancelButton: { borderWidth: 1, borderColor: '#ddd' },
+  confirmButton: { backgroundColor: theme.colors.error },
+  cancelButtonText: { fontWeight: '600' },
+  confirmButtonText: { color: '#FFF', fontWeight: '600' },
 });
