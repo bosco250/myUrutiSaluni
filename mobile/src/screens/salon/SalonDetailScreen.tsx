@@ -237,10 +237,12 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
 
   if (loading) {
       return (
-          <View style={[styles.container, dynamicStyles.container]}>
+          <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-               <Loader fullscreen message="Loading salon..." />
-          </View>
+               <View style={styles.loaderContainer}>
+                 <Loader />
+               </View>
+          </SafeAreaView>
       );
   }
 
@@ -301,8 +303,8 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                         onPress={() => setActiveTab(tab.id as TabType)}
                       >
                           <Text style={[
-                              styles.tabTextCompact, 
-                              isActive ? { color: theme.colors.primary, fontWeight: '700' } : dynamicStyles.textSecondary
+                              styles.tabTextCompact,
+                              isActive ? styles.tabTextActive : dynamicStyles.textSecondary
                           ]}>
                               {tab.label}
                           </Text>
@@ -373,7 +375,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                           <Text style={[styles.emptyHoursText, dynamicStyles.textSecondary]}>
                               Business hours not set yet.
                           </Text>
-                          <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: '600' }}>
+                          <Text style={styles.setHoursText}>
                               Set Hours
                           </Text>
                       </TouchableOpacity>
@@ -391,23 +393,23 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                               return (
                                   <View key={day} style={[styles.hourRowCompact, isToday && styles.hourRowTodayCompact]}>
                                       <Text style={[
-                                          styles.dayTextCompact, 
-                                          dynamicStyles.text, 
-                                          isToday && { color: theme.colors.primary, fontWeight: '700' }
+                                          styles.dayTextCompact,
+                                          dynamicStyles.text,
+                                          isToday && styles.todayText
                                       ]}>
                                           {day.charAt(0).toUpperCase() + day.slice(1, 3)}
                                       </Text>
                                       <View style={styles.timeContainerCompact}>
                                           {isOpen ? (
                                               <Text style={[
-                                                  styles.timeTextCompact, 
+                                                  styles.timeTextCompact,
                                                   dynamicStyles.text,
-                                                  isToday && { color: theme.colors.primary, fontWeight: '700' }
+                                                  isToday && styles.todayText
                                               ]}>
                                                   {open} - {close}
                                               </Text>
                                           ) : (
-                                              <Text style={[styles.timeTextCompact, { color: theme.colors.error, opacity: 0.6, fontStyle: 'italic' }]}>
+                                              <Text style={styles.closedText}>
                                                   Closed
                                               </Text>
                                           )}
@@ -434,7 +436,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                       <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 0 }]}>Gallery</Text>
                       {images.length > 3 && (
                           <TouchableOpacity>
-                              <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>View All</Text>
+                              <Text style={styles.viewAllLink}>View All</Text>
                           </TouchableOpacity>
                       )}
                   </View>
@@ -516,7 +518,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                           </Text>
                           {salon.description.length > 100 && (
                               <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
-                                  <Text style={{ color: theme.colors.primary, marginTop: 4, fontWeight: '500' }}>
+                                  <Text style={styles.readMoreText}>
                                       {showFullDescription ? "Show Less" : "Read More"}
                                   </Text>
                               </TouchableOpacity>
@@ -556,7 +558,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                            <MaterialIcons name="phone" size={20} color={theme.colors.primary} />
                            <TouchableOpacity onPress={() => Linking.openURL(`tel:${salon.phone}`)} style={styles.detailContent}>
                                 <Text style={[styles.detailLabel, dynamicStyles.textSecondary]}>Phone</Text>
-                                <Text style={[styles.detailText, { color: theme.colors.primary, fontWeight: '500' }]}>{salon.phone}</Text>
+                                <Text style={[styles.detailText, styles.linkText]}>{salon.phone}</Text>
                            </TouchableOpacity>
                        </View>
                    )}
@@ -576,7 +578,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                            <MaterialIcons name="language" size={20} color={theme.colors.primary} />
                            <TouchableOpacity onPress={() => Linking.openURL(salon.website!.startsWith('http') ? salon.website! : `https://${salon.website}`)} style={styles.detailContent}>
                                <Text style={[styles.detailLabel, dynamicStyles.textSecondary]}>Website</Text>
-                               <Text style={[styles.detailText, { color: theme.colors.primary, fontWeight: '500' }]}>{salon.website}</Text>
+                               <Text style={[styles.detailText, styles.linkText]}>{salon.website}</Text>
                            </TouchableOpacity>
                        </View>
                    )}
@@ -593,7 +595,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                             style={[styles.actionButton, { backgroundColor: theme.colors.primary, flex: 1 }]}
                             onPress={() => navigation.navigate("AddEmployee", { salonId })}
                         >
-                            <MaterialIcons name="person-add" size={18} color="#FFF" />
+                            <MaterialIcons name="person-add" size={18} color={theme.colors.white} />
                             <Text style={[styles.actionButtonText, { fontSize: 13 }]}>Staff</Text>
                         </TouchableOpacity>
 
@@ -601,7 +603,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                              style={[styles.actionButton, { backgroundColor: theme.colors.secondary, flex: 1 }]}
                              onPress={() => navigation.navigate("AddService", { salonId })}
                         >
-                            <MaterialIcons name="add" size={18} color="#FFF" />
+                            <MaterialIcons name="add" size={18} color={theme.colors.white} />
                             <Text style={[styles.actionButtonText, { fontSize: 13 }]}>Service</Text>
                         </TouchableOpacity>
 
@@ -609,7 +611,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                              style={[styles.actionButton, { backgroundColor: '#FF9500', flex: 1 }]}
                              onPress={() => navigation.navigate("AddProduct", { salonId })}
                         >
-                            <MaterialIcons name="inventory-2" size={18} color="#FFF" />
+                            <MaterialIcons name="inventory-2" size={18} color={theme.colors.white} />
                             <Text style={[styles.actionButtonText, { fontSize: 13 }]}>Product</Text>
                         </TouchableOpacity>
                     </View>
@@ -632,7 +634,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
           <View style={styles.sectionHeaderRow}>
                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Team Members</Text>
                <TouchableOpacity onPress={() => navigation.navigate("AddEmployee", { salonId })}>
-                   <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>+ Add</Text>
+                   <Text style={styles.addLinkText}>+ Add</Text>
                </TouchableOpacity>
           </View>
           
@@ -669,7 +671,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
           <View style={styles.sectionHeaderRow}>
                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Services Menu</Text>
                <TouchableOpacity onPress={() => navigation.navigate("AddService", { salonId })}>
-                   <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>+ Add</Text>
+                   <Text style={styles.addLinkText}>+ Add</Text>
                </TouchableOpacity>
           </View>
 
@@ -713,12 +715,12 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                 >
                     <MaterialIcons name="inventory" size={16} color={theme.colors.primary} />
-                    <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>Manage</Text>
+                    <Text style={styles.manageLinkText}>Manage</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                    onPress={() => navigation.navigate("AddProduct", { salonId })}
                 >
-                    <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>+ Add</Text>
+                    <Text style={styles.addBoldLinkText}>+ Add</Text>
                 </TouchableOpacity>
              </View>
         </View>
@@ -733,7 +735,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                   onPress={() => navigation.navigate("AddProduct", { salonId })}
                   style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 20, backgroundColor: theme.colors.primary, borderRadius: 10 }}
                 >
-                    <Text style={{ color: '#FFF', fontWeight: '600' }}>Add Product</Text>
+                    <Text style={styles.addProductButtonText}>Add Product</Text>
                 </TouchableOpacity>
             </View>
         ) : (
@@ -744,7 +746,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                   onPress={() => navigation.navigate("StockManagement", { salonId, productId: prod.id })}
                 >
                     <View style={[styles.avatarCircle, { backgroundColor: theme.colors.secondary }]}>
-                        <MaterialIcons name="inventory-2" size={18} color="#FFF" />
+                        <MaterialIcons name="inventory-2" size={18} color={theme.colors.white} />
                     </View>
                     <View style={styles.listItemContent}>
                         <Text style={[styles.listItemTitle, dynamicStyles.text]}>{prod.name}</Text>
@@ -754,7 +756,7 @@ const SalonDetailScreen = React.memo(function SalonDetailScreen({
                     </View>
                     {prod.stockLevel <= 5 && (
                          <View style={[styles.badge, { backgroundColor: theme.colors.error + '15' }]}>
-                             <Text style={{ color: theme.colors.error, fontSize: 10, fontWeight: '700' }}>LOW</Text>
+                             <Text style={styles.lowStockText}>LOW</Text>
                          </View>
                     )}
                     <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
@@ -857,6 +859,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     paddingHorizontal: 16,
     paddingTop: 8,
@@ -881,8 +888,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 17,
+    fontFamily: theme.fonts.bold,
     letterSpacing: -0.5,
     maxWidth: '70%',
   },
@@ -901,7 +908,7 @@ const styles = StyleSheet.create({
   },
   statusTextCompact: {
       fontSize: 9,
-      fontWeight: '700',
+      fontFamily: theme.fonts.bold,
       textTransform: 'uppercase',
   },
   statusBadge: {
@@ -911,7 +918,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: theme.fonts.bold,
       textTransform: 'uppercase',
   },
   editLink: {
@@ -936,7 +943,11 @@ const styles = StyleSheet.create({
   },
   tabTextCompact: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: theme.fonts.semibold,
+  },
+  tabTextActive: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bold,
   },
   activeTabIndicator: {
       position: 'absolute',
@@ -949,32 +960,33 @@ const styles = StyleSheet.create({
       borderTopRightRadius: 3,
   },
   scrollContent: {
-      padding: 14, // Reduced from 16
+      padding: 14,
   },
   contentContainer: {
-      gap: 14, // Reduced from 16
+      gap: 14,
   },
   statsGrid: {
       flexDirection: 'row',
-      gap: 10, // Reduced from 12
+      gap: 10,
   },
   statBox: {
       flex: 1,
-      padding: 14, // Reduced from 16
+      padding: 14,
       borderRadius: 14,
       borderWidth: 1,
       alignItems: 'center',
   },
   statValue: {
-      fontSize: 18, // Reduced from 20
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: theme.fonts.bold,
       marginBottom: 2,
   },
   statLabel: {
-      fontSize: 11, // Reduced from 12
+      fontSize: 11,
+      fontFamily: theme.fonts.regular,
   },
   sectionContainer: {
-      padding: 14, // Reduced from 16
+      padding: 14,
       borderRadius: 14,
       borderWidth: 1,
   },
@@ -1031,29 +1043,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sectionTitle: {
-      fontSize: 16, // Reduced from 18
-      fontWeight: '700',
-      marginBottom: 12, // Reduced from 16
+      fontSize: 16,
+      fontFamily: theme.fonts.bold,
+      marginBottom: 12,
   },
   description: {
-      fontSize: 13, // Reduced from 14
-      lineHeight: 18, // Reduced from 20
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+      lineHeight: 18,
   },
   detailRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 8, // Reduced from 16
+      marginBottom: 8,
   },
   detailContent: {
       flex: 1,
-      marginLeft: 10, // Reduced from 12
+      marginLeft: 10,
   },
   detailLabel: {
-      fontSize: 11, // Reduced from 12
+      fontSize: 11,
+      fontFamily: theme.fonts.regular,
       marginBottom: 0,
   },
   detailText: {
-      fontSize: 13, // Reduced from 15
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
   },
   // Hours refined
   hoursGrid: {
@@ -1075,7 +1090,7 @@ const styles = StyleSheet.create({
   },
   dayTextCompact: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: theme.fonts.semibold,
       width: 45,
   },
   timeContainerCompact: {
@@ -1084,6 +1099,7 @@ const styles = StyleSheet.create({
   },
   timeTextCompact: {
       fontSize: 13,
+      fontFamily: theme.fonts.regular,
   },
   emptyHoursContainer: {
       flexDirection: 'row',
@@ -1094,33 +1110,34 @@ const styles = StyleSheet.create({
   },
   emptyHoursText: {
       fontSize: 13,
+      fontFamily: theme.fonts.regular,
       fontStyle: 'italic',
   },
   actionButtonsRow: {
       flexDirection: 'row',
-      gap: 10, // Reduced from 12
+      gap: 10,
   },
   actionButton: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 10, // Reduced from 12
-      borderRadius: 10, // Reduced from 12
+      paddingVertical: 10,
+      borderRadius: 10,
       gap: 6,
   },
   actionButtonText: {
-      color: '#FFF',
-      fontWeight: '600',
-      fontSize: 13, // Reduced from 14
+      color: theme.colors.white,
+      fontFamily: theme.fonts.semibold,
+      fontSize: 13,
   },
   // Lists
   listItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 12, // Reduced from 16
+      padding: 12,
       borderRadius: 12,
-      marginBottom: 8, // Reduced from 12
+      marginBottom: 8,
       borderWidth: 1,
   },
   listItemContent: {
@@ -1128,23 +1145,24 @@ const styles = StyleSheet.create({
       marginHorizontal: 10,
   },
   listItemTitle: {
-      fontSize: 15, // Reduced from 16
-      fontWeight: '600',
+      fontSize: 15,
+      fontFamily: theme.fonts.semibold,
       marginBottom: 2,
   },
   listItemSubtitle: {
-      fontSize: 12, // Reduced from 13
+      fontSize: 12,
+      fontFamily: theme.fonts.regular,
   },
   avatarCircle: {
-      width: 36, // Reduced from 40
+      width: 36,
       height: 36,
       borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
   },
   avatarInitials: {
-      color: '#FFF',
-      fontWeight: '700',
+      color: theme.colors.white,
+      fontFamily: theme.fonts.bold,
   },
   statusDot: {
       width: 10,
@@ -1154,7 +1172,7 @@ const styles = StyleSheet.create({
   },
   priceTag: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: theme.fonts.bold,
   },
   badge: {
       paddingHorizontal: 8,
@@ -1165,66 +1183,122 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 8, // Reduced from 12
+      marginBottom: 8,
   },
   dateBox: {
-      width: 44, // Reduced from 50
+      width: 44,
       height: 44,
-      borderRadius: 10, // Reduced from 12
+      borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
   },
   dateDay: {
-      fontSize: 16, // Reduced from 18
-      fontWeight: '700',
+      fontSize: 16,
+      fontFamily: theme.fonts.bold,
   },
   dateMonth: {
-      fontSize: 9, // Reduced from 10
+      fontSize: 9,
+      fontFamily: theme.fonts.regular,
       textTransform: 'uppercase',
   },
   // Reviews
   reviewCard: {
-      padding: 12, // Reduced from 16
-      borderRadius: 12, // Reduced from 16
-      marginBottom: 8, // Reduced from 12
+      padding: 12,
+      borderRadius: 12,
+      marginBottom: 8,
       borderWidth: 1,
   },
   reviewHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 6, // Reduced from 8
+      marginBottom: 6,
   },
   reviewAuthor: {
-      fontSize: 14, // Reduced from 15
-      fontWeight: '600',
-      marginBottom: 2, // Reduced from 4
+      fontSize: 14,
+      fontFamily: theme.fonts.semibold,
+      marginBottom: 2,
   },
   reviewDate: {
-      fontSize: 11, // Reduced from 12
+      fontSize: 11,
+      fontFamily: theme.fonts.regular,
   },
   ratingRow: {
       flexDirection: 'row',
   },
   reviewText: {
-      fontSize: 13, // Reduced from 14
-      lineHeight: 18, // Reduced from 20
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+      lineHeight: 18,
   },
   // Empty
   emptyContainer: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 30, // Reduced from 40
+      paddingVertical: 30,
   },
   emptyIconCircle: {
-      width: 48, // Reduced from 60
+      width: 48,
       height: 48,
       borderRadius: 24,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 12, // Reduced from 16
+      marginBottom: 12,
   },
   emptyText: {
-      fontSize: 14, // Reduced from 15
+      fontSize: 14,
+      fontFamily: theme.fonts.regular,
+  },
+  addProductButtonText: {
+      color: theme.colors.white,
+      fontFamily: theme.fonts.semibold,
+  },
+  setHoursText: {
+      color: theme.colors.primary,
+      fontSize: 13,
+      fontFamily: theme.fonts.semibold,
+  },
+  todayText: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bold,
+  },
+  closedText: {
+      color: theme.colors.error,
+      opacity: 0.6,
+      fontStyle: 'italic',
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+  },
+  viewAllLink: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.semibold,
+      fontSize: 13,
+  },
+  readMoreText: {
+      color: theme.colors.primary,
+      marginTop: 4,
+      fontFamily: theme.fonts.medium,
+  },
+  linkText: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.medium,
+  },
+  addLinkText: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.semibold,
+  },
+  manageLinkText: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.semibold,
+      fontSize: 13,
+  },
+  addBoldLinkText: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bold,
+  },
+  lowStockText: {
+      color: theme.colors.error,
+      fontSize: 10,
+      fontFamily: theme.fonts.bold,
   }
 });
 

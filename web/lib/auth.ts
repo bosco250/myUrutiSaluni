@@ -22,7 +22,7 @@ export interface AuthResponse {
     phone: string;
     fullName: string;
     role: string;
-    avatar?: string;
+    avatarUrl?: string; // Changed from 'avatar' to 'avatarUrl' for consistency with mobile
   };
 }
 

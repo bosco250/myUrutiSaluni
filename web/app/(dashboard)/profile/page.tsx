@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
-import { User, Save, Loader2, CheckCircle, X, ArrowLeft } from 'lucide-react';
+import { User, Save, Loader2, CheckCircle, X, ArrowLeft, Camera, Upload } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { UserRole } from '@/lib/permissions';
+import { uploadService } from '@/lib/upload';
 
 export default function ProfilePage() {
   return (
@@ -20,8 +21,11 @@ export default function ProfilePage() {
 
 function ProfileContent() {
   const router = useRouter();
-  const { user: authUser } = useAuthStore();
+  const { user: authUser, refreshUser } = useAuthStore();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -48,6 +52,77 @@ function ProfileContent() {
       });
     }
   }, [customer]);
+
+  // Set avatar preview from authUser
+  useEffect(() => {
+    if (authUser?.avatarUrl) {
+      setAvatarPreview(uploadService.getAvatarUrl(authUser.avatarUrl));
+    }
+  }, [authUser?.avatarUrl]);
+
+  // Avatar upload mutation
+  const avatarUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      console.log('Starting avatar upload...');
+      const uploadResponse = await uploadService.uploadAvatar(file);
+      console.log('Avatar uploaded, updating user profile...');
+
+      // Update user profile with new avatarUrl
+      await api.patch(`/users/${authUser?.id}`, {
+        avatarUrl: uploadResponse.url,
+      });
+
+      return uploadResponse;
+    },
+    onSuccess: async (data) => {
+      console.log('Avatar updated successfully, refreshing user data...');
+      // Refresh user data from server
+      await refreshUser();
+      // Update preview
+      setAvatarPreview(uploadService.getAvatarUrl(data.url));
+      alert('Profile photo updated successfully!');
+    },
+    onError: (error: any) => {
+      console.error('Avatar upload error:', error);
+      alert(error.message || 'Failed to upload avatar');
+    },
+  });
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to server
+    setUploadingAvatar(true);
+    try {
+      await avatarUploadMutation.mutateAsync(file);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   // Update mutation
   const updateMutation = useMutation({
@@ -120,6 +195,49 @@ function ProfileContent() {
       </div>
 
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-8">
+        {/* Avatar Section */}
+        <div className="flex flex-col items-center mb-8 pb-8 border-b border-border-light dark:border-border-dark">
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-full overflow-hidden bg-background-light dark:bg-background-dark border-4 border-primary/20">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                  <User className="w-16 h-16 text-primary/60" />
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAvatarClick}
+              disabled={uploadingAvatar}
+              className="absolute bottom-0 right-0 bg-primary hover:bg-primary-dark text-white rounded-full p-3 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group-hover:scale-110"
+            >
+              {uploadingAvatar ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Camera className="w-5 h-5" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          </div>
+          <p className="mt-4 text-sm text-text-light/60 dark:text-text-dark/60 text-center">
+            Click the camera icon to upload a new photo
+            <br />
+            <span className="text-xs">Max size: 5MB • Formats: JPG, PNG, GIF</span>
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="profile-fullName" className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">

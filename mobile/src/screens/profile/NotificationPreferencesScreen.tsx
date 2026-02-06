@@ -104,18 +104,11 @@ export default function NotificationPreferencesScreen({
   };
 
   const dynamicStyles = {
-    container: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
-    },
-    text: {
-      color: isDark ? theme.colors.white : theme.colors.text,
-    },
-    textSecondary: {
-      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
-    },
-    divider: {
-      backgroundColor: isDark ? "#3A3A3C" : theme.colors.borderLight,
-    },
+    container: { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background },
+    text: { color: isDark ? theme.colors.white : theme.colors.text },
+    textSecondary: { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary },
+    headerBorder: { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight },
+    divider: { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.borderLight },
   };
 
   const sections = [
@@ -165,10 +158,11 @@ export default function NotificationPreferencesScreen({
           value={isEnabled(item.type, item.channel)}
           onValueChange={() => handleToggle(item.type, item.channel)}
           trackColor={{
-            false: theme.colors.border,
-            true: theme.colors.primary,
+            false: theme.colors.gray300,
+            true: theme.colors.primaryLight,
           }}
-          thumbColor={theme.colors.white}
+          thumbColor={isEnabled(item.type, item.channel) ? theme.colors.primary : '#f4f3f4'}
+          style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
         />
       </View>
       {!isLast && <View style={[styles.divider, dynamicStyles.divider]} />}
@@ -177,7 +171,7 @@ export default function NotificationPreferencesScreen({
 
   const renderSection = (title: string, items: NotificationItemConf[]) => (
     <View style={styles.section} key={title}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
+      <Text style={[styles.sectionTitle, dynamicStyles.text]}>
         {title}
       </Text>
       <View style={styles.sectionContent}>
@@ -193,10 +187,11 @@ export default function NotificationPreferencesScreen({
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.headerContainer, dynamicStyles.headerBorder]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack?.()}
+          activeOpacity={0.7}
         >
           <MaterialIcons
             name="arrow-back"
@@ -207,11 +202,12 @@ export default function NotificationPreferencesScreen({
         <Text style={[styles.headerTitle, dynamicStyles.text]}>
           Notifications
         </Text>
+        <View style={{ width: 32 }} />
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="small" color={theme.colors.primary} />
         </View>
       ) : (
         <ScrollView
@@ -233,72 +229,43 @@ export default function NotificationPreferencesScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
+  container: { flex: 1 },
+  headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  backButton: {
-    padding: 4,
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  section: {
-    paddingHorizontal: 20,
-  },
-  sectionSpacer: {
-    height: 32,
-  },
+  backButton: { padding: 4, marginLeft: -4 },
+  headerTitle: { fontSize: 16, fontFamily: theme.fonts.semibold },
+  
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 40, paddingTop: 16 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  
+  section: { paddingHorizontal: 16 },
+  sectionSpacer: { height: 24 },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 12,
   },
   sectionContent: {
-    // No background or border, just a container
+    // No background, clean look
   },
+  
   settingRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
-    minHeight: 60,
+    minHeight: 56,
   },
-  textContainer: {
-    flex: 1,
-    paddingRight: 16,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  divider: {
-    height: 1,
-    width: '100%',
-  },
+  textContainer: { flex: 1, paddingRight: 16 },
+  settingLabel: { fontSize: 14, fontFamily: theme.fonts.medium, marginBottom: 2 },
+  settingDescription: { fontSize: 11, fontFamily: theme.fonts.regular, opacity: 0.8 },
+  
+  divider: { height: 1, width: '100%' },
 });

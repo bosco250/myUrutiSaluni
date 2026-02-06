@@ -140,10 +140,11 @@ export default function PersonalInformationScreen({
 
   const dynamicStyles = {
     container: { backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background },
-    text: { color: isDark ? "#FFFFFF" : "#1A1A2E" },
-    textSecondary: { color: isDark ? "#8E8E93" : "#6B7280" },
+    text: { color: isDark ? "#FFFFFF" : theme.colors.text },
+    textSecondary: { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary },
     card: { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white },
-    input: { backgroundColor: isDark ? theme.colors.gray900 : "#F9FAFB", color: isDark ? "#FFFFFF" : "#1F2937", borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight },
+    input: { backgroundColor: 'transparent', color: isDark ? '#FFFFFF' : theme.colors.text, borderColor: isDark ? theme.colors.gray700 : theme.colors.border },
+    headerBorder: { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight },
   };
 
   const getProfileData = () => {
@@ -211,14 +212,28 @@ export default function PersonalInformationScreen({
   const handleUploadAvatar = async (uri: string) => {
     setLoading(true);
     try {
+        console.log('Starting avatar upload from PersonalInfo...');
         const response = await uploadService.uploadAvatar(uri);
+        console.log('Avatar uploaded, URL:', response.url);
+
         if (response.url) {
-            const profileData = { ...getProfileData(), avatarUrl: response.url };
-            await updateUser(profileData);
-            Alert.alert("Success", "Profile photo updated!");
+            // Update ONLY the avatar first to ensure it's saved
+            const updatedUser = await updateUser({ avatarUrl: response.url });
+            console.log('User updated with avatar:', updatedUser.avatarUrl);
+
+            // Verify avatar was saved
+            if (updatedUser.avatarUrl === response.url) {
+                Alert.alert("Success", "Profile photo updated successfully!");
+            } else {
+                console.warn('Avatar URL mismatch after update');
+                Alert.alert("Warning", "Photo uploaded but may not be saved. Please try again.");
+            }
+        } else {
+            throw new Error('No URL returned from upload');
         }
     } catch (error: any) {
-        Alert.alert("Error", "Failed to upload photo");
+        console.error('Avatar upload error:', error);
+        Alert.alert("Error", error.message || "Failed to upload photo. Please try again.");
     } finally {
         setLoading(false);
     }
@@ -235,11 +250,11 @@ export default function PersonalInformationScreen({
     <View style={styles.inputRow}>
       <Text style={[styles.inputLabel, dynamicStyles.textSecondary]}>{label}</Text>
       <TextInput
-        style={[styles.inputField, dynamicStyles.input, opts?.multiline && { height: 80, textAlignVertical: 'top' }]}
+        style={[styles.inputField, dynamicStyles.input, opts?.multiline && { height: 80, textAlignVertical: 'top', paddingTop: 12 }]}
         value={value}
         onChangeText={onChange}
         placeholder={opts?.placeholder || label}
-        placeholderTextColor={dynamicStyles.textSecondary.color}
+        placeholderTextColor={dynamicStyles.textSecondary.color + '80'}
         keyboardType={opts?.keyboard || 'default'}
         multiline={opts?.multiline}
       />
@@ -249,11 +264,11 @@ export default function PersonalInformationScreen({
   const renderDatePicker = () => (
     <View style={styles.inputRow}>
       <Text style={[styles.inputLabel, dynamicStyles.textSecondary]}>Date of Birth</Text>
-      <TouchableOpacity style={[styles.dateButton, dynamicStyles.input]} onPress={() => setShowDatePicker(true)}>
-        <MaterialIcons name="calendar-today" size={18} color={theme.colors.primary} />
-        <Text style={[styles.dateButtonText, dateOfBirth ? dynamicStyles.text : dynamicStyles.textSecondary]}>
+      <TouchableOpacity style={[styles.dateButton, dynamicStyles.input]} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+        <Text style={[styles.dateButtonText, dateOfBirth ? dynamicStyles.text : { color: dynamicStyles.textSecondary.color + '80' }]}>
           {formatDisplayDate(dateOfBirth)}
         </Text>
+        <MaterialIcons name="calendar-today" size={16} color={theme.colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -261,20 +276,24 @@ export default function PersonalInformationScreen({
   const renderChips = (label: string, options: string[], value: string, onChange: (v: string) => void) => (
     <View style={styles.inputRow}>
       <Text style={[styles.inputLabel, dynamicStyles.textSecondary]}>{label}</Text>
-      <View style={styles.chipsRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
         {options.map((opt) => {
           const isSelected = value.toLowerCase() === opt.toLowerCase();
           return (
             <TouchableOpacity
               key={opt}
-              style={[styles.chip, isSelected && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
+              style={[
+                styles.chip, 
+                isSelected ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary } : { borderColor: dynamicStyles.textSecondary.color + '40' }
+              ]}
               onPress={() => onChange(opt)}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.chipText, isSelected && { color: '#FFF' }, !isSelected && dynamicStyles.text]}>{opt}</Text>
+              <Text style={[styles.chipText, isSelected ? { color: '#FFF' } : dynamicStyles.text]}>{opt}</Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 
@@ -283,28 +302,32 @@ export default function PersonalInformationScreen({
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backBtn}>
+      <View style={[styles.headerContainer, dynamicStyles.headerBorder]}>
+        <TouchableOpacity 
+          onPress={() => navigation?.goBack?.()} 
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
           <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Personal Info</Text>
-        <TouchableOpacity disabled={loading} onPress={handleSave}>
+        <TouchableOpacity disabled={loading} onPress={handleSave} activeOpacity={0.7}>
             {loading ? <ActivityIndicator color={theme.colors.primary} size="small" /> : <Text style={styles.headerSaveText}>Save</Text>}
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage} disabled={loading} activeOpacity={0.9}>
             <Image 
               source={user?.avatarUrl ? { uri: getImageUrl(user.avatarUrl) || '' } : defaultAvatar} 
               style={styles.avatar} 
             />
-            <TouchableOpacity style={styles.avatarEditBtn} onPress={handlePickImage} disabled={loading}>
+            <View style={styles.avatarEditBtn}>
               <MaterialIcons name="camera-alt" size={14} color="#FFF" />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
           <Text style={[styles.avatarName, dynamicStyles.text]}>{fullName || 'Your Name'}</Text>
           <Text style={[styles.avatarRole, dynamicStyles.textSecondary]}>{user?.role?.replace('_', ' ') || 'User'}</Text>
         </View>
@@ -328,7 +351,8 @@ export default function PersonalInformationScreen({
               </>
             )}
           </View>
-          <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+          
+          <View style={styles.sectionSpacer} />
 
           {/* Address Section */}
           <View style={styles.sectionContainer}>
@@ -340,7 +364,8 @@ export default function PersonalInformationScreen({
             {renderInput('Village', village, setVillage)}
             {renderInput('Street Address', address, setAddress, { placeholder: 'House number, street' })}
           </View>
-          <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+
+          <View style={styles.sectionSpacer} />
 
           {/* Emergency Section */}
           <View style={styles.sectionContainer}>
@@ -352,14 +377,15 @@ export default function PersonalInformationScreen({
 
           {!isCustomer && (
             <>
-              <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+              <View style={styles.sectionSpacer} />
               {/* Professional Section */}
               <View style={styles.sectionContainer}>
                 <Text style={[styles.sectionHeader, dynamicStyles.text]}>Professional Details</Text>
-                {renderInput('Bio / About', bio, setBio, { multiline: true, placeholder: 'Tell us about yourself...' })}
+                {renderInput('Bio', bio, setBio, { multiline: true, placeholder: 'Tell us about yourself...' })}
                 {renderInput('Years of Experience', yearsExperience, setYearsExperience, { keyboard: 'numeric' })}
               </View>
-              <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+
+              <View style={styles.sectionSpacer} />
 
               {/* Banking Section */}
               <View style={styles.sectionContainer}>
@@ -371,8 +397,6 @@ export default function PersonalInformationScreen({
             </>
           )}
         </View>
-        
-        <View style={{height: 40}} />
       </ScrollView>
 
       {/* Date Pickers */}
@@ -417,86 +441,88 @@ export default function PersonalInformationScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  headerSaveText: { fontSize: 16, fontWeight: '700', color: theme.colors.primary },
+  backBtn: { padding: 4, marginLeft: -4 },
+  headerTitle: { fontSize: 16, fontFamily: theme.fonts.semibold },
+  headerSaveText: { fontSize: 14, fontFamily: theme.fonts.bold, color: theme.colors.primary },
   
   scrollView: { flex: 1 },
   
   avatarSection: { alignItems: 'center', paddingVertical: 24 },
-  avatarContainer: { position: 'relative', marginBottom: 16 },
-  avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: '#F0F0F0' },
+  avatarContainer: { position: 'relative', marginBottom: 12 },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F0F0F0' },
   avatarEditBtn: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#FFF',
   },
-  avatarName: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
-  avatarRole: { fontSize: 13, textTransform: 'capitalize' },
+  avatarName: { fontSize: 18, fontFamily: theme.fonts.bold, marginBottom: 2 },
+  avatarRole: { fontSize: 12, fontFamily: theme.fonts.regular, textTransform: 'capitalize' },
   
   formContent: { paddingHorizontal: 0 },
-  sectionContainer: { paddingHorizontal: 20, paddingVertical: 16 },
-  sectionHeader: { fontSize: 16, fontWeight: '700', marginBottom: 16, color: theme.colors.primary },
-  divider: { height: 1, width: '100%', marginVertical: 0 },
-
+  sectionContainer: { paddingHorizontal: 16 },
+  sectionHeader: { fontSize: 14, fontFamily: theme.fonts.semibold, marginBottom: 12, color: theme.colors.primary },
+  sectionSpacer: { height: 24 },
+  
   inputRow: { marginBottom: 16 },
-  inputLabel: { fontSize: 12, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputLabel: { fontSize: 12, fontFamily: theme.fonts.medium, marginBottom: 6, opacity: 0.8 },
   inputField: { 
-    height: 48, 
-    borderRadius: 8, 
-    paddingHorizontal: 16, 
-    fontSize: 15, 
+    height: 44, 
+    borderRadius: 10, 
+    paddingHorizontal: 12, 
+    fontSize: 14, 
+    fontFamily: theme.fonts.regular,
     borderWidth: 1, 
-    // borderColor applied dynamically
   },
   
   dateButton: {
-    height: 48,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    height: 44,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
     borderWidth: 1,
   },
-  dateButtonText: { fontSize: 15, flex: 1 },
+  dateButtonText: { fontSize: 14, fontFamily: theme.fonts.regular },
   
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipsRow: { flexDirection: 'row', gap: 8 },
   chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(150,150,150,0.3)',
+    marginRight: 8,
   },
-  chipText: { fontSize: 14, fontWeight: '500' },
+  chipText: { fontSize: 12, fontFamily: theme.fonts.medium },
   
+  // Date Picker Modal (kept as is, functional)
   datePickerModal: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  datePickerContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32 },
+  datePickerContainer: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32 },
   datePickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(150,150,150,0.1)',
   },
-  datePickerTitle: { fontSize: 16, fontWeight: '600' },
-  datePickerCancel: { fontSize: 15, color: theme.colors.textSecondary },
-  datePickerDone: { fontSize: 15, fontWeight: '600', color: theme.colors.primary },
+  datePickerTitle: { fontSize: 16, fontFamily: theme.fonts.semibold },
+  datePickerCancel: { fontSize: 14, color: theme.colors.textSecondary, fontFamily: theme.fonts.medium },
+  datePickerDone: { fontSize: 14, fontFamily: theme.fonts.bold, color: theme.colors.primary },
 });

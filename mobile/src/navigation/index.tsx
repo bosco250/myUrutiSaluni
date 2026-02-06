@@ -119,7 +119,8 @@ type MainScreen =
   | "EmployeePermissions"
   | "GrantPermissions"
   | "CustomerDetail"
-  | "Favorites";
+  | "Favorites"
+  | "ServiceList";
 
 // Main tabs that are root level screens
 const MAIN_TABS: MainScreen[] = [

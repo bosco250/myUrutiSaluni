@@ -111,12 +111,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async (): Promise<void> => {
     try {
-      const updatedUser = await authService.getUser();
-      if (updatedUser) {
-        setUser(updatedUser);
+      // First try to get from storage
+      const cachedUser = await authService.getUser();
+
+      // If we have a user with an ID, fetch fresh data from server
+      if (cachedUser?.id) {
+        console.log('Refreshing user data from server...');
+        const freshUser = await authService.refreshUserFromServer(cachedUser.id);
+        if (freshUser) {
+          console.log('User refreshed from server:', {
+            avatarUrl: freshUser.avatarUrl,
+            fullName: freshUser.fullName
+          });
+          setUser(freshUser);
+        } else if (cachedUser) {
+          // Fallback to cached user if server fetch fails
+          setUser(cachedUser);
+        }
+      } else if (cachedUser) {
+        setUser(cachedUser);
       }
     } catch (error) {
       console.error("Error refreshing user:", error);
+      // Try to use cached user as fallback
+      const cachedUser = await authService.getUser();
+      if (cachedUser) {
+        setUser(cachedUser);
+      }
     }
   };
 

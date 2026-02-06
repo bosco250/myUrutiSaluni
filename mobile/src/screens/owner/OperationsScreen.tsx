@@ -67,7 +67,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
       color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.background,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     iconBg: {
@@ -207,20 +207,22 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
       <View style={[styles.container, dynamicStyles.container]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header (Flat) */}
-        <View style={[styles.header, dynamicStyles.border]}>
+        {/* Header (Unified Design) */}
+        <View style={[styles.headerContainer, dynamicStyles.card]}>
+          <View style={styles.headerRow}>
             <TouchableOpacity 
                 style={styles.backButton} 
                 onPress={() => navigation.goBack()}
                 activeOpacity={0.7}
             >
-                <MaterialIcons name="chevron-left" size={28} color={dynamicStyles.text.color} />
+                <MaterialIcons name="arrow-back" size={22} color={dynamicStyles.text.color} />
             </TouchableOpacity>
-            <View>
+            <View style={styles.headerTextContainer}>
                 <Text style={[styles.headerTitle, dynamicStyles.text]}>Operations</Text>
                 <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>Salon Management</Text>
             </View>
-            <View style={{ width: 40 }} /> 
+            <MaterialIcons name="tune" size={22} color={theme.colors.primary} />
+          </View>
         </View>
 
         <ScrollView
@@ -237,55 +239,81 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
           {/* Service Menu Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <MaterialIcons name="content-cut" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Menu</Text>
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Menu</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {services.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('ServiceList', { salonId })}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.viewAllText}>View All</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => navigation.navigate('AddService', { salonId })}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons name="add" size={16} color="#FFF" />
+                  <Text style={styles.addButtonText}>Add</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => navigation.navigate('AddService', { salonId })}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.addButtonText}>+ Add</Text>
-              </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, dynamicStyles.card]}>
-              {services.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
-                    No services added yet
-                  </Text>
-                </View>
-              ) : (
-                services.map((service, index) => (
+            {services.length === 0 ? (
+               <View style={[styles.emptyContainer, dynamicStyles.card]}>
+                 <MaterialIcons
+                   name="content-cut"
+                   size={48}
+                   color={dynamicStyles.textSecondary.color}
+                   style={{ opacity: 0.5 }}
+                 />
+                 <Text style={[styles.emptyText, dynamicStyles.text]}>
+                   No Services
+                 </Text>
+                 <Text style={[styles.emptySubtext, dynamicStyles.textSecondary]}>
+                   Add services to your menu
+                 </Text>
+               </View>
+             ) : (
+              <View style={styles.servicesList}>
+                {services.slice(0, 3).map((service) => (
                   <TouchableOpacity
                     key={service.id}
-                    style={[
-                      styles.serviceRow,
-                      index < services.length - 1 && [styles.serviceRowBorder, dynamicStyles.border],
-                    ]}
+                    style={[styles.serviceCard, dynamicStyles.card]}
                     onPress={() => navigation.navigate('EditService', { salonId, service, mode: 'edit' })}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.serviceInfo}>
-                      <Text style={[styles.serviceName, dynamicStyles.text]}>{service.name}</Text>
-                      <Text style={[styles.serviceDetails, dynamicStyles.textSecondary]}>
-                        {service.duration} min • {service.commission}% comm
-                      </Text>
+                    <View style={styles.serviceLeftContent}>
+                        <View style={[styles.serviceIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+                            <MaterialIcons name="content-cut" size={20} color={theme.colors.primary} />
+                        </View>
+                        <View style={styles.serviceTextContent}>
+                            <Text style={[styles.serviceName, dynamicStyles.text]}>{service.name}</Text>
+                            <View style={styles.serviceMetaRow}>
+                                <MaterialIcons name="schedule" size={12} color={dynamicStyles.textSecondary.color} />
+                                <Text style={[styles.serviceMetaText, dynamicStyles.textSecondary]}>{service.duration} min</Text>
+                                <View style={[styles.dotSeparator, { backgroundColor: dynamicStyles.textSecondary.color }]} />
+                                <Text style={[styles.serviceMetaText, dynamicStyles.textSecondary]}>{service.commission}% comm</Text>
+                            </View>
+                        </View>
                     </View>
-                    <Text style={[styles.servicePrice, dynamicStyles.primaryText]}>
-                        RWF {service.price.toLocaleString()}
-                    </Text>
+                    
+                    <View style={styles.serviceRightContent}>
+                        <Text style={[styles.servicePrice, { color: theme.colors.primary }]}>
+                            RWF {service.price.toLocaleString()}
+                        </Text>
+                        <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
+                    </View>
                   </TouchableOpacity>
-                ))
-              )}
-            </View>
+                ))}
+              </View>
+             )}
           </View>
 
-          {/* Quick Actions Grid (Flat) */}
+          {/* Quick Actions Grid */}
            <View style={styles.section}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 12 }]}>Quick Actions</Text>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Quick Actions</Text>
             <View style={styles.quickActionsGrid}>
                 {[
                     { label: 'My Salons', icon: 'store', screen: 'SalonList', color: theme.colors.primary },
@@ -301,10 +329,10 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                         onPress={() => navigation.navigate(action.screen, { salonId })}
                         activeOpacity={0.7}
                     >
-                        <View style={[styles.quickActionIcon, { backgroundColor: isDark ? `${action.color}20` : `${action.color}15` }]}>
-                            <MaterialIcons name={action.icon as any} size={24} color={action.color} />
+                        <View style={[styles.quickActionIcon, { backgroundColor: isDark ? `${action.color}20` : `${action.color}10` }]}>
+                            <MaterialIcons name={action.icon as any} size={22} color={action.color} />
                         </View>
-                        <Text style={[styles.quickActionLabel, dynamicStyles.text]}>{action.label}</Text>
+                        <Text style={[styles.quickActionLabel, dynamicStyles.text]} numberOfLines={1}>{action.label}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -313,41 +341,41 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
           {/* Inventory Levels Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <MaterialIcons name="inventory-2" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory</Text>
-              </View>
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('StockManagement', { salonId })}
                   activeOpacity={0.7}
                 >
-                    <Text style={styles.viewAllText}>Manage</Text>
+                    <Text style={styles.viewAllText}>View All</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.addButton}
+                  style={styles.actionIconBtn}
                   onPress={() => navigation.navigate('AddProduct', { salonId })}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.addButtonText}>+ Add</Text>
+                  <MaterialIcons name="add" size={20} color={theme.colors.primary} />
                 </TouchableOpacity>
               </View>
             </View>
 
             {products.length === 0 ? (
-              <View style={[styles.card, dynamicStyles.card, styles.emptyState]}>
-                <View style={[styles.emptyIconContainer, dynamicStyles.iconBg]}>
-                  <MaterialIcons name="inventory-2" size={32} color={dynamicStyles.textSecondary.color} />
-                </View>
-                <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
-                  No inventory items
-                </Text>
-                <TouchableOpacity
-                  style={styles.addProductButton}
-                  onPress={() => navigation.navigate('AddProduct', { salonId })}
-                >
-                  <Text style={styles.addProductButtonText}>+ Add Product</Text>
-                </TouchableOpacity>
+              <View style={[styles.emptyContainer, dynamicStyles.card]}>
+                  <MaterialIcons
+                    name="inventory-2"
+                    size={40}
+                    color={dynamicStyles.textSecondary.color}
+                    style={{ opacity: 0.5 }}
+                  />
+                  <Text style={[styles.emptyText, dynamicStyles.text]}>
+                    No Inventory
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptyActionBtn}
+                    onPress={() => navigation.navigate('AddProduct', { salonId })}
+                  >
+                    <Text style={styles.emptyActionText}>Add Product</Text>
+                  </TouchableOpacity>
               </View>
             ) : (
               products.slice(0, 3).map((product) => (
@@ -356,15 +384,14 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                   style={[
                     styles.inventoryCard,
                     dynamicStyles.card,
-                    isLowStock(product.stockLevel) && [styles.lowStockCard, { borderColor: theme.colors.error + '60' }],
+                    isLowStock(product.stockLevel) && { borderColor: theme.colors.error + '40', backgroundColor: theme.colors.error + '05' },
                   ]}
                   onPress={() => navigation.navigate('AddProduct', { salonId, product })}
                   activeOpacity={0.7}
                 >
                   <View style={[
                     styles.inventoryIcon,
-                    dynamicStyles.iconBg,
-                    isLowStock(product.stockLevel) && { backgroundColor: theme.colors.error + '15' }
+                    { backgroundColor: isLowStock(product.stockLevel) ? theme.colors.error + '15' : theme.colors.primary + '10' }
                   ]}>
                     <MaterialIcons
                       name="inventory-2"
@@ -377,20 +404,13 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
                     <Text style={[
                       styles.inventoryStock,
                       isLowStock(product.stockLevel)
-                        ? { color: theme.colors.error }
+                        ? { color: theme.colors.error, fontWeight: '600' }
                         : dynamicStyles.textSecondary
                     ]}>
-                      {isLowStock(product.stockLevel)
-                        ? `Low Stock: ${product.stockLevel} left`
-                        : `${product.stockLevel} in stock`
-                      }
+                      {isLowStock(product.stockLevel) ? 'Low Stock' : 'In Stock'} • {product.stockLevel} units
                     </Text>
                   </View>
-                  {isLowStock(product.stockLevel) && (
-                    <View style={[styles.orderButton, { borderColor: theme.colors.error }]}>
-                      <Text style={styles.orderButtonText}>Restock</Text>
-                    </View>
-                  )}
+                  <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
                 </TouchableOpacity>
               ))
             )}
@@ -399,10 +419,7 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
           {/* Today's Check-ins Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <MaterialIcons name="event-available" size={20} color={theme.colors.primary} style={styles.sectionIcon} />
-                <Text style={[styles.sectionTitle, dynamicStyles.text]}>Check-ins</Text>
-              </View>
+              <Text style={[styles.sectionTitle, dynamicStyles.text]}>Review Check-ins</Text>
               <TouchableOpacity
                 onPress={() => navigation.navigate('SalonAppointments', { salonId })}
                 activeOpacity={0.7}
@@ -411,39 +428,36 @@ export default function OperationsScreen({ navigation }: OperationsScreenProps) 
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, dynamicStyles.card]}>
+            <View style={[styles.card, dynamicStyles.card, { paddingVertical: 4 }]}>
               {checkIns.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <View style={[styles.emptyIconContainer, dynamicStyles.iconBg]}>
-                    <MaterialIcons name="event-available" size={32} color={dynamicStyles.textSecondary.color} />
-                  </View>
-                  <Text style={[styles.emptyText, dynamicStyles.textSecondary, { marginTop: 12 }]}>
-                    No check-ins today
-                  </Text>
-                </View>
+                 <View style={{ padding: 20, alignItems: 'center' }}>
+                   <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>No check-ins today</Text>
+                 </View>
               ) : (
                 checkIns.map((checkIn, index) => (
                   <View
                     key={checkIn.id}
                     style={[
                       styles.checkInRow,
-                      index < checkIns.length - 1 && [styles.serviceRowBorder, dynamicStyles.border],
+                      index < checkIns.length - 1 && [styles.separator, dynamicStyles.border],
                     ]}
                   >
-                    <View style={[styles.checkInTime, dynamicStyles.iconBg]}>
-                      <Text style={[styles.timeText, dynamicStyles.text]}>
-                        {checkIn.time.split(' ')[0]}
-                      </Text>
-                      <Text style={[styles.timePeriod, dynamicStyles.textSecondary]}>
-                        {checkIn.time.split(' ')[1]}
-                      </Text>
+                    <View style={styles.timeColumn}>
+                        <Text style={[styles.timeText, dynamicStyles.text]}>
+                            {checkIn.time.split(' ')[0]}
+                        </Text>
+                        <Text style={[styles.timePeriod, dynamicStyles.textSecondary]}>
+                            {checkIn.time.split(' ')[1]}
+                        </Text>
                     </View>
+                    
                     <View style={styles.checkInInfo}>
                       <Text style={[styles.customerName, dynamicStyles.text]}>{checkIn.customerName}</Text>
-                      <Text style={[styles.checkInService, dynamicStyles.textSecondary]}>
+                      <Text style={[styles.checkInService, dynamicStyles.textSecondary]} numberOfLines={1}>
                         {checkIn.service}
                       </Text>
                     </View>
+                    
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(checkIn.status) + '15' }]}>
                       <Text style={[styles.checkInStatus, { color: getStatusColor(checkIn.status) }]}>
                         {getStatusLabel(checkIn.status)}
@@ -467,31 +481,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerContainer: {
+    borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    zIndex: 10,
+    backgroundColor: 'transparent',
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12, // Reduced height
-    borderBottomWidth: 1,
+    padding: 12,
+    gap: 10,
   },
   backButton: {
     padding: 4,
-    marginLeft: -8,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontFamily: theme.fonts.semibold,
     marginBottom: 2,
-    textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: 13,
-    textAlign: 'center',
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16, // Matching list screens
     paddingTop: 16,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: 24,
@@ -501,83 +525,147 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionIcon: {
-    marginRight: 8,
+    paddingHorizontal: 4,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontSize: 16,
+    fontFamily: theme.fonts.semibold,
+    letterSpacing: -0.3,
+  },
+  actionIconBtn: {
+      padding: 4,
+      backgroundColor: theme.colors.primary + '10',
+      borderRadius: 8,
   },
   addButton: {
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: theme.colors.primary,
+    gap: 4,
   },
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
   viewAllText: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
+  
+  // Cards
   card: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
   },
-  // Service Rows
-  serviceRow: {
+  
+  // Service List
+  servicesList: {
+    gap: 8,
+  },
+  serviceCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  serviceRowBorder: {
-    borderBottomWidth: 1,
+  serviceLeftContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
   },
-  serviceInfo: {
-    flex: 1,
-    marginRight: 12,
+  serviceIconContainer: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  serviceTextContent: {
+      flex: 1,
   },
   serviceName: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
     marginBottom: 2,
   },
-  serviceDetails: {
-    fontSize: 13,
+  serviceMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+  },
+  serviceMetaText: {
+    fontSize: 11,
+    fontFamily: theme.fonts.regular,
+  },
+  dotSeparator: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      opacity: 0.5,
+  },
+  serviceRightContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
   },
   servicePrice: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: theme.fonts.semibold,
   },
+  
+  // Empty States
+  emptyContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
+    marginTop: 8,
+  },
+  emptySubtext: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  emptyActionBtn: {
+      marginTop: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.primary + '15',
+      borderRadius: 8,
+  },
+  emptyActionText: {
+      fontSize: 12,
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.semibold,
+  },
+
   // Inventory
   inventoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 12,
-  },
-  lowStockCard: {
-    backgroundColor: theme.colors.error + '0C',
-    borderColor: theme.colors.error + '40',
+    marginBottom: 8,
   },
   inventoryIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -586,121 +674,87 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inventoryName: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
     marginBottom: 2,
   },
   inventoryStock: {
-    fontSize: 13,
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
-  orderButton: {
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  orderButtonText: {
-    color: theme.colors.error,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  addProductButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  addProductButtonText: {
-    color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
+
   // Check-ins
   checkInRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 8,
   },
-  checkInTime: {
+  timeColumn: {
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-    width: 56,
-    height: 48,
-    borderRadius: 12,
+    width: 48,
   },
   timeText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontFamily: theme.fonts.semibold,
   },
   timePeriod: {
     fontSize: 10,
-    marginTop: 1,
+    marginTop: 2,
   },
   checkInInfo: {
     flex: 1,
     marginRight: 8,
   },
   customerName: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: theme.fonts.medium,
     marginBottom: 2,
   },
   checkInService: {
-    fontSize: 13,
+    fontSize: 12,
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   checkInStatus: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontFamily: theme.fonts.bold,
+    textTransform: 'uppercase',
   },
+  separator: {
+    borderBottomWidth: 1,
+  },
+
   // Quick Actions Grid
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
   },
   quickActionCard: {
-    width: '31%', // 3 columns approx
+    width: '31%', 
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
-    marginBottom: 4, // subtle gap adjustment
+    marginBottom: 2,
   },
   quickActionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   quickActionLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
     textAlign: 'center',
-  },
-  // Empty State
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    justifyContent: 'center',
-  },
-  emptyIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
   },
 });

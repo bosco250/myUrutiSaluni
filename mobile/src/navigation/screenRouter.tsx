@@ -70,6 +70,8 @@ import OperationsScreen from "../screens/owner/OperationsScreen";
 import EmployeePermissionsScreen from "../screens/owner/EmployeePermissionsScreen";
 import GrantPermissionsScreen from "../screens/owner/GrantPermissionsScreen";
 
+import ServiceListScreen from "../screens/owner/ServiceListScreen";
+
 // Admin screens
 import SalonManagementScreen from "../screens/admin/SalonManagementScreen";
 import MembershipApplicationsScreen from "../screens/admin/MembershipApplicationsScreen";
@@ -459,6 +461,14 @@ export const renderScreen = (
     // Operations screen (for salon owners)
     case "Operations":
       return <OperationsScreen navigation={navigation} />;
+    
+    case "ServiceList":
+      return (
+        <ServiceListScreen
+           navigation={navigation}
+           route={{ params: screenParams }}
+        />
+      );
 
     case "MySchedule":
       return <MyScheduleScreen navigation={navigation} />;

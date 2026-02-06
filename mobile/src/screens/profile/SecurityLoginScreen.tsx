@@ -49,11 +49,13 @@ export default function SecurityLoginScreen({
     text: { color: isDark ? theme.colors.white : theme.colors.text },
     textSecondary: { color: isDark ? theme.colors.gray400 : theme.colors.textSecondary },
     input: { 
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.white,
+      backgroundColor: 'transparent',
       color: isDark ? theme.colors.white : theme.colors.text,
       borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight 
     },
     modalBackground: { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white },
+    headerBorder: { borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight },
+    divider: { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.borderLight },
   };
 
   const handleUpdatePassword = async () => {
@@ -97,14 +99,11 @@ export default function SecurityLoginScreen({
   };
 
   const handleConfirmDelete = async () => {
-    // In a real app, this would likely require another confirmation step or password
-    // For now, we'll simulate the request
     try {
         setLoading(true);
-        // await api.delete('/auth/delete-account'); // Endpoint might differ
+        // await api.delete('/auth/delete-account'); 
         setShowDeleteModal(false);
         Alert.alert("Account Deleted", "Your account has been deleted.");
-        // Logout via context
         await logout(); 
     } catch (error) {
         Alert.alert("Error", "Failed to delete account");
@@ -122,12 +121,12 @@ export default function SecurityLoginScreen({
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
-          placeholderTextColor={dynamicStyles.textSecondary.color}
+          placeholderTextColor={dynamicStyles.textSecondary.color + '80'}
           secureTextEntry={secure && !showPass}
           autoCapitalize="none"
         />
         {secure && (
-          <TouchableOpacity onPress={togglePass} style={styles.eyeIcon}>
+          <TouchableOpacity onPress={togglePass} style={styles.eyeIcon} activeOpacity={0.7}>
             <MaterialIcons
               name={showPass ? "visibility" : "visibility-off"}
               size={20}
@@ -144,14 +143,16 @@ export default function SecurityLoginScreen({
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.headerContainer, dynamicStyles.headerBorder]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation?.goBack?.()}
+          activeOpacity={0.7}
         >
           <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, dynamicStyles.text]}>Security & Login</Text>
+        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView 
@@ -160,9 +161,11 @@ export default function SecurityLoginScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* Helper Text */}
-        <Text style={[styles.helperText, dynamicStyles.textSecondary]}>
-          Update your password and manage account security.
-        </Text>
+        <View style={styles.helperContainer}>
+            <Text style={[styles.helperText, dynamicStyles.textSecondary]}>
+            Update your password and manage account security settings.
+            </Text>
+        </View>
 
         {/* Change Password Section */}
         <View style={styles.section}>
@@ -202,6 +205,7 @@ export default function SecurityLoginScreen({
                 style={[styles.saveButton, loading && { opacity: 0.7 }]} 
                 onPress={handleUpdatePassword}
                 disabled={loading}
+                activeOpacity={0.8}
             >
                 {loading ? (
                     <ActivityIndicator size="small" color="#FFF" />
@@ -211,22 +215,22 @@ export default function SecurityLoginScreen({
             </TouchableOpacity>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+        <View style={styles.sectionSpacer} />
 
         {/* 2FA Placeholder (Future) */}
         <View style={styles.section}>
             <View style={styles.rowBetween}>
-                <View>
-                    <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 4 }]}>Two-Factor Auth</Text>
-                    <Text style={[styles.subText, dynamicStyles.textSecondary]}>Add an extra layer of security.</Text>
+                <View style={{ flex: 1, paddingRight: 16 }}>
+                    <Text style={[styles.featureTitle, dynamicStyles.text]}>Two-Factor Authentication</Text>
+                    <Text style={[styles.subText, dynamicStyles.textSecondary]}>Add an extra layer of security to your account.</Text>
                 </View>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>COMING SOON</Text>
+                <View style={[styles.badge, { backgroundColor: isDark ? theme.colors.gray800 : theme.colors.gray100 }]}>
+                    <Text style={[styles.badgeText, { color: theme.colors.gray500 }]}>SOON</Text>
                 </View>
             </View>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: isDark ? '#333' : '#eee' }]} />
+        <View style={styles.sectionSpacer} />
 
         {/* Danger Zone */}
         <View style={styles.section}>
@@ -237,6 +241,7 @@ export default function SecurityLoginScreen({
              <TouchableOpacity 
                 style={styles.deleteButton} 
                 onPress={handleDeleteAccount}
+                activeOpacity={0.7}
              >
                 <Text style={styles.deleteButtonText}>Delete My Account</Text>
              </TouchableOpacity>
@@ -257,7 +262,7 @@ export default function SecurityLoginScreen({
                     Are you sure you want to delete your account? This action cannot be undone.
                 </Text>
                 <View style={styles.modalButtons}>
-                    <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setShowDeleteModal(false)}>
+                    <TouchableOpacity style={[styles.modalButton, styles.cancelButton, { borderColor: dynamicStyles.textSecondary.color + '40' }]} onPress={() => setShowDeleteModal(false)}>
                         <Text style={[styles.cancelButtonText, dynamicStyles.text]}>Cancel</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={handleConfirmDelete}>
@@ -274,85 +279,90 @@ export default function SecurityLoginScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  backButton: { padding: 4, marginRight: 16 },
-  headerTitle: { fontSize: 20, fontWeight: '700' },
+  backButton: { padding: 4, marginLeft: -4 },
+  headerTitle: { fontSize: 16, fontFamily: theme.fonts.semibold },
   
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 40, paddingTop: 16 },
   
-  helperText: { paddingHorizontal: 20, marginBottom: 24, fontSize: 13 },
+  helperContainer: { paddingHorizontal: 16, marginBottom: 20 },
+  helperText: { fontSize: 13, fontFamily: theme.fonts.regular, opacity: 0.8, lineHeight: 18 },
   
-  section: { paddingHorizontal: 20, paddingVertical: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '700', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
-  subText: { fontSize: 13, lineHeight: 18 },
+  section: { paddingHorizontal: 16 },
+  sectionTitle: { fontSize: 14, fontFamily: theme.fonts.semibold, marginBottom: 12, marginLeft: 2 },
+  sectionSpacer: { height: 32 },
   
-  divider: { height: 1, width: '100%', marginVertical: 0 },
+  featureTitle: { fontSize: 14, fontFamily: theme.fonts.medium, marginBottom: 4 },
+  subText: { fontSize: 12, fontFamily: theme.fonts.regular, lineHeight: 18 },
   
   inputContainer: { marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' },
+  label: { fontSize: 12, fontFamily: theme.fonts.medium, marginBottom: 6, opacity: 0.8 },
   inputWrapper: { position: 'relative' },
   input: {
-    height: 48,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingRight: 48,
-    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingRight: 44,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
   },
   eyeIcon: {
     position: 'absolute',
     right: 0,
     top: 0,
-    height: 48,
-    width: 48,
+    height: 44,
+    width: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   
   saveButton: {
     backgroundColor: theme.colors.primary,
-    height: 48,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
   },
-  saveButtonText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  saveButtonText: { color: '#FFF', fontFamily: theme.fonts.semibold, fontSize: 14 },
   
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  badge: { backgroundColor: theme.colors.gray200, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  badgeText: { fontSize: 10, fontWeight: '700', color: theme.colors.gray600 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  badgeText: { fontSize: 10, fontFamily: theme.fonts.bold },
   
   deleteButton: {
     borderWidth: 1,
     borderColor: theme.colors.error,
     height: 44,
-    borderRadius: 8,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButtonText: { color: theme.colors.error, fontWeight: '700', fontSize: 14 },
+  deleteButtonText: { color: theme.colors.error, fontFamily: theme.fonts.semibold, fontSize: 14 },
   
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modalContent: { borderRadius: 12, padding: 24, alignItems: 'center' },
+  modalContent: { borderRadius: 16, padding: 24, alignItems: 'center' },
   modalIconContainer: { 
       width: 56, height: 56, borderRadius: 28, 
-      backgroundColor: theme.colors.error + '15', 
+      backgroundColor: theme.colors.error + '10', 
       justifyContent: 'center', alignItems: 'center',
       marginBottom: 16
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  modalMessage: { textAlign: 'center', marginBottom: 24 },
+  modalTitle: { fontSize: 18, fontFamily: theme.fonts.bold, marginBottom: 8 },
+  modalMessage: { textAlign: 'center', marginBottom: 24, paddingHorizontal: 8, lineHeight: 20, fontSize: 14 },
   modalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
-  modalButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
-  cancelButton: { borderWidth: 1, borderColor: '#ddd' },
+  modalButton: { flex: 1, padding: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center', height: 44 },
+  cancelButton: { borderWidth: 1 },
   confirmButton: { backgroundColor: theme.colors.error },
-  cancelButtonText: { fontWeight: '600' },
-  confirmButtonText: { color: '#FFF', fontWeight: '600' },
+  cancelButtonText: { fontFamily: theme.fonts.medium, fontSize: 14 },
+  confirmButtonText: { color: '#FFF', fontFamily: theme.fonts.medium, fontSize: 14 },
 });

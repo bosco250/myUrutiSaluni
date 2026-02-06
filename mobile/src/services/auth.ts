@@ -271,14 +271,32 @@ class AuthService {
    */
   async updateProfile(userId: string, profileData: Partial<User>): Promise<User> {
     try {
+      console.log('Updating profile with data:', profileData);
       const response = await api.patch<User>(`/users/${userId}`, profileData);
-      
-      // Update local storage with merged data
+      console.log('Profile update response:', response);
+
+      // Get current user to preserve any fields not returned by API
       const currentUser = await this.getUser();
-      const updatedUser = { ...currentUser, ...response };
+
+      // Merge response with current user, but PRESERVE fields from profileData
+      // This ensures avatarUrl (and other sent fields) don't get lost if backend doesn't return them
+      const updatedUser = {
+        ...currentUser,  // Start with current data
+        ...response,     // Override with backend response
+        ...Object.fromEntries(
+          Object.entries(profileData)
+            .filter(([_, value]) => value !== undefined && value !== null)
+        ) // Preserve any explicitly set values from profileData
+      };
+
+      console.log('Saving updated user to storage:', {
+        avatarUrl: updatedUser.avatarUrl,
+        fullName: updatedUser.fullName
+      });
+
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       this.user = updatedUser;
-      
+
       return updatedUser;
     } catch (error: any) {
       console.error('Error updating profile:', error);

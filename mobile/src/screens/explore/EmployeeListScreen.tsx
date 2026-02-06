@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { useTheme, useAuth } from "../../context";
@@ -55,15 +55,6 @@ export default function EmployeeListScreen({
     (user?.role === 'salon_owner' && !route?.params?.salonId);
 
   const canManageStaff = isOwnerView || checkPermission(EmployeePermission.MANAGE_EMPLOYEE_SCHEDULES);
-
-  // Calculate card width safely
-  const cardWidth = useMemo(() => {
-    try {
-      return (Dimensions.get("window").width - theme.spacing.lg * 2 - theme.spacing.md) / 2;
-    } catch {
-      return 160; // Fallback width
-    }
-  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -133,45 +124,55 @@ export default function EmployeeListScreen({
       color: isDark ? theme.colors.gray600 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
   };
 
   return (
-    <View style={[styles.container, dynamicStyles.container]}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      {/* Header */}
-      <View style={[styles.header, dynamicStyles.container]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation?.goBack()}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
-          />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]} numberOfLines={1}>
-          {canManageStaff ? "Staff Management" : (salonName || "Employees")}
-        </Text>
-        {canManageStaff ? (
+      {/* Redesigned Header */}
+      <View style={[styles.headerContainer, dynamicStyles.card]}>
+        <View style={styles.headerRow}>
           <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddEmployee}
+            style={styles.backButton}
+            onPress={() => navigation?.goBack()}
             activeOpacity={0.7}
           >
-            <MaterialIcons name="person-add" size={24} color={theme.colors.primary} />
+            <MaterialIcons
+              name="arrow-back"
+              size={22}
+              color={dynamicStyles.text.color}
+            />
           </TouchableOpacity>
-        ) : (
-          <View style={styles.headerRight} />
-        )}
+          <View style={styles.headerTextContainer}>
+            <Text style={[styles.headerTitle, dynamicStyles.text]}>
+              {canManageStaff ? "Staff Management" : "Team"}
+            </Text>
+            {salonName && (
+              <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>
+                {salonName}
+              </Text>
+            )}
+          </View>
+          {canManageStaff ? (
+            <TouchableOpacity
+              style={styles.addIconButton}
+              onPress={handleAddEmployee}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="person-add" size={22} color={theme.colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <MaterialIcons name="people" size={22} color={theme.colors.primary} />
+          )}
+        </View>
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : (
@@ -180,91 +181,129 @@ export default function EmployeeListScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>
-              {canManageStaff ? "Your Team" : "Our Team"}
-            </Text>
-            <Text style={[styles.sectionSubtitle, dynamicStyles.textSecondary]}>
-              {employees.length} {employees.length === 1 ? "employee" : "employees"}
-            </Text>
-          </View>
+          {/* Stats Card */}
+          {employees.length > 0 && (
+            <View style={[styles.statsCard, dynamicStyles.card]}>
+              <MaterialIcons name="people" size={16} color={theme.colors.primary} />
+              <Text style={[styles.statsText, dynamicStyles.text]}>
+                {employees.length} {employees.length === 1 ? 'employee' : 'employees'} on your team
+              </Text>
+            </View>
+          )}
 
           {/* Quick Actions for Owners */}
-          {canManageStaff && (
-            <>
-              <TouchableOpacity
-                style={styles.addEmployeeCard}
-                onPress={handleAddEmployee}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="add" size={20} color={theme.colors.primary} />
-                <Text style={styles.addEmployeeText}>Add New Employee</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.addEmployeeCard, { backgroundColor: theme.colors.secondary + '15', borderColor: theme.colors.secondary + '30' }]}
-                onPress={() => navigation?.navigate('EmployeePermissions', { salonId })}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="admin-panel-settings" size={20} color={theme.colors.secondary} />
-                <Text style={[styles.addEmployeeText, { color: theme.colors.secondary }]}>Manage All Permissions</Text>
-              </TouchableOpacity>
-            </>
+          {canManageStaff && employees.length > 0 && (
+            <TouchableOpacity
+              style={[styles.permissionsButton, dynamicStyles.card]}
+              onPress={() => navigation?.navigate('EmployeePermissions', { salonId })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.permissionsButtonContent}>
+                <View style={[styles.permissionsIcon, { backgroundColor: theme.colors.secondary + '15' }]}>
+                  <MaterialIcons name="admin-panel-settings" size={18} color={theme.colors.secondary} />
+                </View>
+                <View style={styles.permissionsTextContainer}>
+                  <Text style={[styles.permissionsTitle, dynamicStyles.text]}>Manage Permissions</Text>
+                  <Text style={[styles.permissionsSubtitle, dynamicStyles.textSecondary]}>
+                    Control access and roles
+                  </Text>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
+            </TouchableOpacity>
           )}
 
           {employees.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialIcons
-                name="people"
-                size={48}
-                color={dynamicStyles.textSecondary.color}
-              />
-              <Text style={[styles.emptyText, dynamicStyles.text]}>
-                No employees available
+              <View style={[styles.emptyIconCircle, dynamicStyles.card]}>
+                <MaterialIcons
+                  name="people-outline"
+                  size={40}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={[styles.emptyTitle, dynamicStyles.text]}>
+                No Employees Yet
               </Text>
+              <Text style={[styles.emptyText, dynamicStyles.textSecondary]}>
+                {canManageStaff
+                  ? "Start building your team by adding employees"
+                  : "This salon hasn't added any team members yet"}
+              </Text>
+              {canManageStaff && (
+                <TouchableOpacity
+                  style={styles.emptyAddButton}
+                  onPress={handleAddEmployee}
+                  activeOpacity={0.8}
+                >
+                  <MaterialIcons name="person-add" size={20} color={theme.colors.white} />
+                  <Text style={styles.emptyAddButtonText}>Add First Employee</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
-            <View style={styles.employeesGrid}>
+            <View style={styles.employeesList}>
               {employees.map((employee) => (
                 <TouchableOpacity
                   key={employee.id}
-                  style={[styles.employeeCard, dynamicStyles.card, { width: cardWidth }]}
+                  style={[styles.employeeCard, dynamicStyles.card]}
                   onPress={() => handleEmployeePress(employee)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.employeeImage, { backgroundColor: theme.colors.primaryLight }]}>
-                    <Text style={styles.employeeInitials}>
-                      {employee.user?.fullName
-                        ? getInitials(employee.user.fullName)
-                        : "EM"}
-                    </Text>
-                  </View>
-                  <Text style={[styles.employeeName, dynamicStyles.text]} numberOfLines={1}>
-                    {employee.user?.fullName || "Employee"}
-                  </Text>
-                  {employee.roleTitle && (
-                    <Text style={[styles.employeeRole, dynamicStyles.textSecondary]} numberOfLines={1}>
-                      {employee.roleTitle}
-                    </Text>
-                  )}
-                  {employee.skills && employee.skills.length > 0 && (
-                    <View style={styles.skillsContainer}>
-                      {employee.skills.slice(0, 2).map((skill, index) => (
-                        <View key={index} style={[styles.skillTag, { backgroundColor: theme.colors.primaryLight }]}>
-                          <Text style={[styles.skillText, { color: theme.colors.primary }]}>
-                            {skill}
-                          </Text>
-                        </View>
-                      ))}
+                  <View style={styles.cardMainContent}>
+                    <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
+                      <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
+                        {employee.user?.fullName
+                          ? getInitials(employee.user.fullName)
+                          : "EM"}
+                      </Text>
                     </View>
-                  )}
+                    <View style={styles.employeeInfo}>
+                      <Text style={[styles.employeeName, dynamicStyles.text]} numberOfLines={1}>
+                        {employee.user?.fullName || "Employee"}
+                      </Text>
+                      {employee.roleTitle && (
+                        <Text style={[styles.employeeRole, dynamicStyles.textSecondary]} numberOfLines={1}>
+                          {employee.roleTitle}
+                        </Text>
+                      )}
+                      {employee.skills && employee.skills.length > 0 && (
+                        <View style={styles.skillsContainer}>
+                          {employee.skills.slice(0, 2).map((skill, index) => (
+                            <View key={index} style={[styles.skillTag, { backgroundColor: theme.colors.primary + '15' }]}>
+                              <Text style={[styles.skillText, { color: theme.colors.primary }]}>
+                                {skill}
+                              </Text>
+                            </View>
+                          ))}
+                          {employee.skills.length > 2 && (
+                            <Text style={[styles.moreSkillsText, dynamicStyles.textSecondary]}>
+                              +{employee.skills.length - 2} more
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color={dynamicStyles.textSecondary.color} />
                 </TouchableOpacity>
               ))}
             </View>
           )}
+
+          {/* FAB-style Add Button */}
+          {canManageStaff && employees.length > 0 && (
+            <TouchableOpacity
+              style={styles.fabButton}
+              onPress={handleAddEmployee}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="add" size={24} color={theme.colors.white} />
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -273,34 +312,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: StatusBar.currentHeight || 0,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
   },
   backButton: {
-    padding: theme.spacing.xs,
+    padding: 8,
+    marginRight: 8,
   },
-  addButton: {
-    padding: theme.spacing.xs,
-    width: 40,
-    alignItems: "center",
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginHorizontal: theme.spacing.md,
+    fontSize: 17,
     fontFamily: theme.fonts.bold,
+    letterSpacing: -0.3,
   },
-  headerRight: {
-    width: 40,
+  headerSubtitle: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    marginTop: 2,
   },
-  loadingContainer: {
+  addIconButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  loaderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -309,105 +357,174 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    padding: 16,
     paddingBottom: 100,
   },
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: theme.spacing.xs,
-    fontFamily: theme.fonts.bold,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
-  },
-  employeesGrid: {
+  statsCard: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.md,
-    justifyContent: "space-between",
-  },
-  employeeCard: {
-    borderRadius: 16,
-    padding: theme.spacing.md,
     alignItems: "center",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    gap: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    marginBottom: theme.spacing.md,
   },
-  employeeImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  statsText: {
+    fontSize: 13,
+    fontFamily: theme.fonts.medium,
+  },
+  permissionsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  permissionsButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  permissionsIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: theme.spacing.sm,
+    marginRight: 12,
   },
-  employeeInitials: {
-    color: theme.colors.primary,
-    fontSize: 28,
-    fontWeight: "bold",
-    fontFamily: theme.fonts.bold,
+  permissionsTextContainer: {
+    flex: 1,
   },
-  employeeName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: theme.spacing.xs / 2,
-    fontFamily: theme.fonts.bold,
+  permissionsTitle: {
+    fontSize: 14,
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
   },
-  employeeRole: {
-    fontSize: 12,
-    textAlign: "center",
-    marginBottom: theme.spacing.sm,
+  permissionsSubtitle: {
+    fontSize: 11,
     fontFamily: theme.fonts.regular,
-  },
-  skillsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.xs,
-    justifyContent: "center",
-  },
-  skillTag: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs / 2,
-    borderRadius: 12,
-  },
-  skillText: {
-    fontSize: 10,
-    fontWeight: "600",
-    fontFamily: theme.fonts.medium,
   },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: 60,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.bold,
+    marginBottom: 8,
   },
   emptyText: {
-    fontSize: 16,
-    marginTop: theme.spacing.md,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
+    textAlign: "center",
+    marginBottom: 24,
+    paddingHorizontal: 32,
+    lineHeight: 18,
   },
-  addEmployeeCard: {
+  emptyAddButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    marginBottom: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderStyle: "dashed",
-    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
   },
-  addEmployeeText: {
-    fontSize: 16,
-    fontWeight: "600",
+  emptyAddButtonText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontFamily: theme.fonts.semibold,
+  },
+  employeesList: {
+    gap: 10,
+  },
+  employeeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  cardMainContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 15,
+    fontFamily: theme.fonts.bold,
+  },
+  employeeInfo: {
+    flex: 1,
+  },
+  employeeName: {
+    fontSize: 14,
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
+  },
+  employeeRole: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    marginBottom: 4,
+  },
+  skillsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 4,
+  },
+  skillTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  skillText: {
+    fontSize: 10,
     fontFamily: theme.fonts.medium,
-    color: theme.colors.primary,
+  },
+  moreSkillsText: {
+    fontSize: 10,
+    fontFamily: theme.fonts.regular,
+    marginLeft: 4,
+  },
+  fabButton: {
+    position: "absolute",
+    bottom: 16,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 });
 

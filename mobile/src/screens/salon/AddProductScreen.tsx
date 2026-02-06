@@ -138,10 +138,7 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
     options: { placeholder?: string; multiline?: boolean; keyboardType?: 'default' | 'numeric'; icon?: string } = {}
   ) => (
     <View style={styles.inputGroup}>
-      <View style={styles.fieldRow}>
-        {options.icon && <MaterialIcons name={options.icon as any} size={16} color={theme.colors.primary} />}
-        <Text style={[styles.fieldLabel, dynamicStyles.text]}>{label}</Text>
-      </View>
+      <Text style={[styles.fieldLabel, dynamicStyles.text]}>{label}</Text>
       <TextInput
         style={[
           styles.input, 
@@ -164,14 +161,20 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
-      <View style={[styles.header, dynamicStyles.headerBorder]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <MaterialIcons name="arrow-back" size={22} color={dynamicStyles.text.color} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          {isEditing ? 'Edit Product' : 'Add Product'}
-        </Text>
-        <View style={{ width: 36 }} />
+      <View style={[styles.headerContainer, dynamicStyles.headerBorder]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, dynamicStyles.text]}>
+            {isEditing ? 'Edit Product' : 'New Product'}
+          </Text>
+          <View style={{ width: 32 }} /> 
+        </View>
       </View>
 
       <KeyboardAvoidingView 
@@ -179,96 +182,112 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView 
-          contentContainerStyle={styles.content}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           
           {/* Product Details */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Product Details</Text>
           <View style={[styles.card, dynamicStyles.card]}>
             {renderInput('Product Name *', name, setName, { 
               placeholder: 'e.g. Shampoo, Conditioner', 
-              icon: 'inventory-2' 
             })}
-            {renderInput('SKU Code', sku, setSku, { 
-              placeholder: 'e.g. PRD-001', 
-              icon: 'qr-code' 
-            })}
+            
+            <View style={styles.inputGroup}>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>SKU Code</Text>
+                <View style={[styles.inputContainer, dynamicStyles.input]}>
+                    <MaterialIcons name="qr-code" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                    <TextInput
+                      style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                      value={sku}
+                      onChangeText={setSku}
+                      placeholder="e.g. PRD-001"
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                    />
+                </View>
+            </View>
+
             {renderInput('Description', description, setDescription, { 
               placeholder: 'Product description...', 
               multiline: true, 
-              icon: 'notes' 
             })}
           </View>
 
           {/* Pricing */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Pricing</Text>
           <View style={[styles.card, dynamicStyles.card]}>
-            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Pricing</Text>
-            <View style={styles.row}>
-              <View style={styles.halfField}>
-                <View style={styles.fieldRow}>
-                  <MaterialIcons name="attach-money" size={16} color={theme.colors.primary} />
-                  <Text style={[styles.fieldLabel, dynamicStyles.text]}>Unit Price (RWF)</Text>
+            <View style={styles.priceRow}>
+              <View style={styles.priceField}>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Unit Price (RWF)</Text>
+                <View style={[styles.inputContainer, dynamicStyles.input]}>
+                    <Text style={styles.inputPrefix}>RWF</Text>
+                    <TextInput
+                      style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                      value={unitPrice}
+                      onChangeText={setUnitPrice}
+                      placeholder="0"
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                      keyboardType="numeric"
+                    />
                 </View>
-                <TextInput
-                  style={[styles.input, dynamicStyles.input]}
-                  value={unitPrice}
-                  onChangeText={setUnitPrice}
-                  placeholder="0"
-                  placeholderTextColor={dynamicStyles.textSecondary.color}
-                  keyboardType="numeric"
-                />
               </View>
-              <View style={styles.halfField}>
-                <View style={styles.fieldRow}>
-                  <MaterialIcons name="percent" size={16} color={theme.colors.primary} />
-                  <Text style={[styles.fieldLabel, dynamicStyles.text]}>Tax Rate (%)</Text>
+              <View style={styles.priceField}>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Tax Rate (%)</Text>
+                <View style={[styles.inputContainer, dynamicStyles.input]}>
+                    <TextInput
+                      style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                      value={taxRate}
+                      onChangeText={setTaxRate}
+                      placeholder="0"
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.inputSuffix}>%</Text>
                 </View>
-                <TextInput
-                  style={[styles.input, dynamicStyles.input]}
-                  value={taxRate}
-                  onChangeText={setTaxRate}
-                  placeholder="0"
-                  placeholderTextColor={dynamicStyles.textSecondary.color}
-                  keyboardType="numeric"
-                />
               </View>
             </View>
           </View>
 
           {/* Inventory Toggle */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Inventory</Text>
           <View style={[styles.card, dynamicStyles.card]}>
             <View style={styles.toggleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.sectionTitle, dynamicStyles.text, { marginBottom: 2 }]}>
+              <View>
+                <Text style={[styles.fieldLabel, dynamicStyles.text, { marginBottom: 2 }]}>
                   Track Inventory
                 </Text>
-                <Text style={[styles.helperText, dynamicStyles.textSecondary]}>
+                <Text style={[styles.subText, dynamicStyles.textSecondary]}>
                   Enable stock level tracking
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => setIsInventoryItem(!isInventoryItem)}
-                style={[styles.toggle, { backgroundColor: isInventoryItem ? theme.colors.success : '#CCC' }]}
+                style={[styles.toggle, { backgroundColor: isInventoryItem ? theme.colors.success : '#E5E7EB' }]}
+                activeOpacity={0.9}
               >
                 <View style={[styles.toggleKnob, isInventoryItem ? { right: 2 } : { left: 2 }]} />
               </TouchableOpacity>
             </View>
 
             {isEditing && isInventoryItem && (
-              <View style={[styles.stockRow, dynamicStyles.headerBorder]}>
-                <View>
-                  <Text style={[styles.stockLabel, dynamicStyles.textSecondary]}>Current Stock</Text>
-                  <Text style={[styles.stockValue, dynamicStyles.text]}>{currentStock}</Text>
-                </View>
-                <TouchableOpacity 
-                  onPress={handleAddStock}
-                  style={styles.addStockBtn}
-                >
-                  <MaterialIcons name="add" size={18} color={theme.colors.primary} />
-                  <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 13 }}>Add Stock</Text>
-                </TouchableOpacity>
-              </View>
+               <>
+                 <View style={styles.divider} />
+                 <View style={styles.stockRow}>
+                    <View>
+                      <Text style={[styles.stockLabel, dynamicStyles.textSecondary]}>In Stock</Text>
+                      <Text style={[styles.stockValue, dynamicStyles.text]}>{currentStock}</Text>
+                    </View>
+                    <TouchableOpacity 
+                      onPress={handleAddStock}
+                      style={styles.addStockBtn}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons name="add" size={16} color={theme.colors.primary} />
+                      <Text style={styles.addStockText}>Add Stock</Text>
+                    </TouchableOpacity>
+                 </View>
+               </>
             )}
           </View>
 
@@ -280,14 +299,12 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
             onPress={handleSubmit} 
             disabled={loading}
             style={[styles.submitBtn, { backgroundColor: loading ? '#9CA3AF' : theme.colors.primary }]}
+            activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" size="small" />
             ) : (
-              <View style={styles.submitContent}>
-                <MaterialIcons name={isEditing ? 'save' : 'add-circle'} size={20} color="#FFF" />
-                <Text style={styles.submitText}>{isEditing ? 'Save Changes' : 'Add Product'}</Text>
-              </View>
+              <Text style={styles.submitText}>{isEditing ? 'Save Changes' : 'Add Product'}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -298,67 +315,124 @@ export default function AddProductScreen({ navigation, route }: AddProductScreen
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  headerContainer: {
+    paddingBottom: 12,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+    borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    justifyContent: 'space-between',
+    padding: 12,
+    gap: 10,
   },
-  backBtn: { padding: 4 },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', marginLeft: 12 },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.semibold,
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 0, 
+  },
+  backButton: {
+    padding: 4,
+    marginLeft: -4,
+  },
   
-  content: { padding: 14, paddingBottom: 100, gap: 12 },
+  scrollContent: { padding: 12, paddingBottom: 100, gap: 16 },
   
-  card: { borderRadius: 14, padding: 14, borderWidth: 1 },
+  card: { borderRadius: 12, padding: 12, borderWidth: 1 },
   
-  sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
+  sectionTitle: { 
+      fontSize: 14, 
+      fontFamily: theme.fonts.semibold, 
+      marginBottom: -8, 
+      opacity: 0.9,
+      marginLeft: 4, 
+  },
   
   inputGroup: { marginBottom: 12 },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 },
-  fieldLabel: { fontSize: 13, fontWeight: '600' },
+  fieldLabel: { fontSize: 12, fontFamily: theme.fonts.medium, marginBottom: 6, opacity: 0.8 },
   
-  input: { height: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
-  textArea: { height: 70, textAlignVertical: 'top', paddingTop: 10 },
+  input: { 
+    height: 44, 
+    borderWidth: 1, 
+    borderRadius: 10, 
+    paddingHorizontal: 12, 
+    fontSize: 14,
+    fontFamily: theme.fonts.regular 
+  },
+  textArea: { 
+    height: 80, 
+    textAlignVertical: 'top', 
+    paddingTop: 10 
+  },
   
-  row: { flexDirection: 'row', gap: 12 },
-  halfField: { flex: 1 },
+  inputContainer: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     borderWidth: 1,
+     borderRadius: 10,
+     paddingHorizontal: 12,
+     height: 44,
+  },
+  inputPrefix: { marginRight: 8, fontSize: 14, color: '#9CA3AF', fontFamily: theme.fonts.medium },
+  inputSuffix: { marginLeft: 8, fontSize: 14, color: '#9CA3AF', fontFamily: theme.fonts.medium },
+  inputFlex: { flex: 1, fontSize: 14, fontFamily: theme.fonts.medium, height: '100%' },
+
+  priceRow: { flexDirection: 'row', gap: 12 },
+  priceField: { flex: 1 },
   
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  toggle: { width: 48, height: 28, borderRadius: 14, justifyContent: 'center' },
+  subText: { fontSize: 11, marginTop: 2 },
+
+  toggle: { width: 44, height: 26, borderRadius: 13, justifyContent: 'center' },
   toggleKnob: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF', position: 'absolute',
+    width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF', position: 'absolute',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, elevation: 2,
   },
-  helperText: { fontSize: 12 },
   
+  divider: { height: 1, backgroundColor: 'rgba(150, 150, 150, 0.1)', marginVertical: 16 },
+
   stockRow: { 
-    marginTop: 14, 
-    paddingTop: 14, 
-    borderTopWidth: 1, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center' 
   },
   stockLabel: { fontSize: 11, marginBottom: 2, textTransform: 'uppercase' },
-  stockValue: { fontSize: 22, fontWeight: '700' },
+  stockValue: { fontSize: 18, fontWeight: '700' },
   addStockBtn: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 4, 
     paddingVertical: 8, 
     paddingHorizontal: 12, 
-    borderRadius: 10, 
+    borderRadius: 8, 
     borderWidth: 1, 
     borderColor: theme.colors.primary 
   },
+  addStockText: { color: theme.colors.primary, fontWeight: '600', fontSize: 12, fontFamily: theme.fonts.medium },
   
-  bottomBar: { padding: 14, borderTopWidth: 1 },
-  submitBtn: { 
-    borderRadius: 12, 
-    paddingVertical: 14, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  bottomBar: { 
+      padding: 12, 
+      borderTopWidth: 1,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
   },
-  submitContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  submitText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  submitBtn: { 
+    borderRadius: 10, 
+    paddingVertical: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  submitText: { color: '#FFF', fontSize: 14, fontFamily: theme.fonts.semibold },
 });

@@ -120,6 +120,9 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
       color: isDark ? '#FFFFFF' : '#1A1A2E',
       borderColor: isDark ? '#404040' : '#E0E0E0',
     },
+    headerBorder: {
+      borderBottomColor: isDark ? '#2D2D2D' : '#F0F0F0',
+    },
   };
 
 
@@ -249,19 +252,25 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
     <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
-      {/* Compact Header */}
-      <View style={[styles.header, dynamicStyles.card]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={22} color={dynamicStyles.text.color} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          {isEditMode ? 'Edit Service' : 'Add Service'}
-        </Text>
-        {isEditMode && (
-          <TouchableOpacity onPress={handleDelete} disabled={deleteLoading} style={styles.deleteBtn}>
-            <MaterialIcons name="delete-outline" size={22} color={theme.colors.error} />
+      {/* Standard Header */}
+      <View style={[styles.headerContainer, dynamicStyles.headerBorder]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
           </TouchableOpacity>
-        )}
+          <Text style={[styles.headerTitle, dynamicStyles.text]}>
+            {isEditMode ? 'Edit Service' : 'New Service'}
+          </Text>
+          {isEditMode && (
+            <TouchableOpacity onPress={handleDelete} disabled={deleteLoading} style={styles.deleteBtn}>
+              <MaterialIcons name="delete-outline" size={24} color={theme.colors.error} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -272,17 +281,20 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
           keyboardShouldPersistTaps="handled"
         >
           
-          {/* Image Picker */}
-          {/* Images Picker - Horizontal Scroller */}
-          <View style={[styles.card, dynamicStyles.card, { padding: 10 }]}>
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, alignItems: 'center' }}>
+          {/* Media Section */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Media</Text>
+          <View style={[styles.card, dynamicStyles.card, { padding: 16 }]}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, alignItems: 'center' }}>
                  {/* Add Button */}
                  <TouchableOpacity 
-                    style={[styles.addImageBtn, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '10' }]} 
+                    style={[styles.addImageBtn, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '08' }]} 
                     onPress={pickImage}
+                    activeOpacity={0.7}
                  >
-                    <MaterialIcons name="add-a-photo" size={24} color={theme.colors.primary} />
-                    <Text style={{ fontSize: 10, color: theme.colors.primary, marginTop: 4, fontWeight: '600' }}>Add Photo</Text>
+                    <View style={[styles.addIconCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+                        <MaterialIcons name="add-a-photo" size={20} color={theme.colors.primary} />
+                    </View>
+                    <Text style={{ fontSize: 12, color: theme.colors.primary, marginTop: 6, fontWeight: '600' }}>Add Photo</Text>
                  </TouchableOpacity>
 
                  {/* Images List */}
@@ -292,56 +304,53 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
                         <TouchableOpacity 
                            style={styles.removeImageBtn}
                            onPress={() => removeImage(index)}
+                           activeOpacity={0.8}
                         >
-                            <MaterialIcons name="close" size={14} color="#FFF" />
+                            <MaterialIcons name="close" size={12} color="#FFF" />
                         </TouchableOpacity>
                     </View>
                  ))}
              </ScrollView>
              {imageUris.length === 0 && (
-                 <Text style={[styles.subText, dynamicStyles.textSecondary, { textAlign: 'center', marginTop: 8 }]}>
-                     Add photos specifically for this service (Max 5)
+                 <Text style={[styles.subText, dynamicStyles.textSecondary, { textAlign: 'center', marginTop: 12 }]}>
+                     Showcase your work with up to 5 photos
                  </Text>
              )}
           </View>
 
-          {/* Name & Description - Compact Card */}
+          {/* Basic Info Section */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Service Details</Text>
           <View style={[styles.card, dynamicStyles.card]}>
-            <View style={styles.fieldRow}>
-              <MaterialIcons name="edit" size={18} color={theme.colors.primary} />
-              <Text style={[styles.fieldLabel, dynamicStyles.text]}>Service Name *</Text>
+            <View style={styles.inputGroup}>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Service Name *</Text>
+                <TextInput
+                  style={[styles.input, dynamicStyles.input, errors.name && styles.inputError]}
+                  value={formData.name}
+                  onChangeText={(t) => updateField('name', t)}
+                  placeholder="e.g. Premium Haircut"
+                  placeholderTextColor={dynamicStyles.textSecondary.color}
+                />
             </View>
-            <TextInput
-              style={[styles.input, dynamicStyles.input, errors.name && styles.inputError]}
-              value={formData.name}
-              onChangeText={(t) => updateField('name', t)}
-              placeholder="e.g. Premium Haircut"
-              placeholderTextColor={dynamicStyles.textSecondary.color}
-            />
             
-            <View style={[styles.fieldRow, { marginTop: 12 }]}>
-              <MaterialIcons name="notes" size={18} color={theme.colors.primary} />
-              <Text style={[styles.fieldLabel, dynamicStyles.text]}>Description</Text>
+            <View style={styles.inputGroup}>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, dynamicStyles.input]}
+                  value={formData.description}
+                  onChangeText={(t) => updateField('description', t)}
+                  placeholder="Describe what's included in this service..."
+                  placeholderTextColor={dynamicStyles.textSecondary.color}
+                  multiline
+                  numberOfLines={3}
+                />
             </View>
-            <TextInput
-              style={[styles.input, styles.textArea, dynamicStyles.input]}
-              value={formData.description}
-              onChangeText={(t) => updateField('description', t)}
-              placeholder="What's included..."
-              placeholderTextColor={dynamicStyles.textSecondary.color}
-              multiline
-              numberOfLines={2}
-            />
           </View>
 
-          {/* Category - Compact Horizontal */}
-          <View style={[styles.card, dynamicStyles.card]}>
-            <View style={styles.fieldRow}>
-              <MaterialIcons name="category" size={18} color={theme.colors.primary} />
-              <Text style={[styles.fieldLabel, dynamicStyles.text]}>Category *</Text>
-              {errors.category && <Text style={styles.errorInline}>{errors.category}</Text>}
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+          {/* Category Section */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Category *</Text>
+          <View style={[styles.card, dynamicStyles.card, { paddingVertical: 16 }]}>
+            {errors.category && <Text style={styles.errorInline}>{errors.category}</Text>}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScrollContent}>
               {SERVICE_CATEGORIES.map((cat) => {
                 const isSelected = formData.category === cat.value;
                 return (
@@ -349,9 +358,13 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
                     key={cat.value}
                     style={[
                       styles.chip,
-                      { backgroundColor: isSelected ? cat.color : (isDark ? '#2D2D2D' : '#F0F0F0') },
+                      { 
+                        backgroundColor: isSelected ? theme.colors.primary : (isDark ? '#2D2D2D' : '#F3F4F6'),
+                        borderColor: isSelected ? theme.colors.primary : 'transparent',
+                      },
                     ]}
                     onPress={() => updateField('category', cat.value)}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name={cat.icon as any} size={16} color={isSelected ? '#FFF' : cat.color} />
                     <Text style={[styles.chipText, { color: isSelected ? '#FFF' : dynamicStyles.text.color }]}>
@@ -363,86 +376,92 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
             </ScrollView>
           </View>
 
-          {/* Target Gender - Compact Row */}
+          {/* Settings Section */}
+          <Text style={[styles.sectionTitle, dynamicStyles.text]}>Settings</Text>
           <View style={[styles.card, dynamicStyles.card]}>
-            <View style={styles.fieldRow}>
-              <MaterialIcons name="people" size={18} color={theme.colors.primary} />
-              <Text style={[styles.fieldLabel, dynamicStyles.text]}>For *</Text>
-              {errors.targetGender && <Text style={styles.errorInline}>{errors.targetGender}</Text>}
+            {/* Target Gender */}
+            <View style={styles.inputGroup}>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Target Audience *</Text>
+                <View style={styles.genderRow}>
+                  {TARGET_GENDER.map((opt) => {
+                    const isSelected = formData.targetGender === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[
+                          styles.genderBtn,
+                          { 
+                            backgroundColor: isSelected ? theme.colors.primary + '15' : (isDark ? '#2D2D2D' : '#F9FAFB'),
+                            borderColor: isSelected ? theme.colors.primary : (isDark ? '#404040' : '#E5E7EB'),
+                          },
+                        ]}
+                        onPress={() => updateField('targetGender', opt.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.genderText, { color: isSelected ? theme.colors.primary : dynamicStyles.text.color }]}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {errors.targetGender && <Text style={[styles.errorInline, { marginTop: 4 }]}>{errors.targetGender}</Text>}
             </View>
-            <View style={styles.genderRow}>
-              {TARGET_GENDER.map((opt) => {
-                const isSelected = formData.targetGender === opt.value;
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.genderBtn,
-                      { 
-                        backgroundColor: isSelected ? theme.colors.primary : (isDark ? '#2D2D2D' : '#F0F0F0'),
-                        borderColor: isSelected ? theme.colors.primary : (isDark ? '#404040' : '#E0E0E0'),
-                      },
-                    ]}
-                    onPress={() => updateField('targetGender', opt.value)}
-                  >
-                    <Text style={[styles.genderText, { color: isSelected ? '#FFF' : dynamicStyles.text.color }]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
 
-          {/* Price & Duration - Compact Row */}
-          <View style={[styles.card, dynamicStyles.card]}>
+            <View style={styles.divider} />
+
+            {/* Price & Duration */}
             <View style={styles.priceRow}>
               <View style={styles.priceField}>
-                <View style={styles.fieldRow}>
-                  <MaterialIcons name="attach-money" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.fieldLabel, dynamicStyles.text]}>Price (RWF) *</Text>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Price (RWF) *</Text>
+                <View style={[styles.inputContainer, dynamicStyles.input, errors.price && styles.inputError]}>
+                    <Text style={styles.inputPrefix}>RWF</Text>
+                    <TextInput
+                      style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                      value={formData.price}
+                      onChangeText={(t) => updateField('price', t)}
+                      placeholder="0"
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                      keyboardType="numeric"
+                    />
                 </View>
-                <TextInput
-                  style={[styles.input, dynamicStyles.input, { color: dynamicStyles.text.color }, errors.price && styles.inputError]}
-                  value={formData.price}
-                  onChangeText={(t) => updateField('price', t)}
-                  placeholder="5000"
-                  placeholderTextColor={dynamicStyles.textSecondary.color}
-                  keyboardType="numeric"
-                />
               </View>
               <View style={styles.priceField}>
-                <View style={styles.fieldRow}>
-                  <MaterialIcons name="schedule" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.fieldLabel, dynamicStyles.text]}>Duration (min) *</Text>
+                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Duration (min) *</Text>
+                <View style={[styles.inputContainer, dynamicStyles.input, errors.duration && styles.inputError]}>
+                    <TextInput
+                      style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                      value={formData.duration}
+                      onChangeText={(t) => updateField('duration', t)}
+                      placeholder="30"
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                      keyboardType="numeric"
+                    />
+                    <Text style={styles.inputSuffix}>min</Text>
                 </View>
-                <TextInput
-                  style={[styles.input, dynamicStyles.input, { color: dynamicStyles.text.color }, errors.duration && styles.inputError]}
-                  value={formData.duration}
-                  onChangeText={(t) => updateField('duration', t)}
-                  placeholder="30"
-                  placeholderTextColor={dynamicStyles.textSecondary.color}
-                  keyboardType="numeric"
-                />
               </View>
             </View>
-          </View>
 
-          {/* Active Toggle (Edit Mode Only) */}
-          {isEditMode && (
-            <View style={[styles.card, dynamicStyles.card, styles.toggleCard]}>
-              <View>
-                <Text style={[styles.fieldLabel, dynamicStyles.text]}>Service Active</Text>
-                <Text style={[styles.subText, dynamicStyles.textSecondary]}>Visible for bookings</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => updateField('isActive', !formData.isActive)}
-                style={[styles.toggle, { backgroundColor: formData.isActive ? theme.colors.success : '#CCC' }]}
-              >
-                <View style={[styles.toggleKnob, formData.isActive ? { right: 2 } : { left: 2 }]} />
-              </TouchableOpacity>
-            </View>
-          )}
+            {/* Active Toggle */}
+            {isEditMode && (
+                <>
+                    <View style={styles.divider} />
+                    <View style={styles.toggleRow}>
+                      <View>
+                        <Text style={[styles.fieldLabel, dynamicStyles.text]}>Available for Booking</Text>
+                        <Text style={[styles.subText, dynamicStyles.textSecondary]}>Clients can see and book this service</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => updateField('isActive', !formData.isActive)}
+                        style={[styles.toggle, { backgroundColor: formData.isActive ? theme.colors.success : '#E5E7EB' }]}
+                        activeOpacity={0.9}
+                      >
+                        <View style={[styles.toggleKnob, formData.isActive ? { right: 2 } : { left: 2 }]} />
+                      </TouchableOpacity>
+                    </View>
+                </>
+            )}
+          </View>
 
         </ScrollView>
 
@@ -452,16 +471,14 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
             onPress={handleSubmit} 
             disabled={loading} 
             style={[styles.submitBtn, { backgroundColor: loading ? '#9CA3AF' : theme.colors.primary }]}
+            activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" size="small" />
             ) : (
-              <View style={styles.submitContent}>
-                <MaterialIcons name={isEditMode ? 'save' : 'add-circle'} size={20} color="#FFF" />
-                <Text style={styles.submitText}>
-                  {uploading ? 'Uploading Image...' : (isEditMode ? 'Save Changes' : 'Add Service')}
-                </Text>
-              </View>
+              <Text style={styles.submitText}>
+                {uploading ? 'Uploading Images...' : (isEditMode ? 'Save Changes' : 'Create Service')}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -472,42 +489,90 @@ export default function AddServiceScreen({ navigation, route }: ServiceFormScree
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  headerContainer: {
+    borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    padding: 12,
+    gap: 10,
   },
-  backBtn: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', marginLeft: 12 },
-  deleteBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.semibold,
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 0, 
+  },
+  backButton: {
+    padding: 4,
+  },
+  deleteBtn: {
+    padding: 4,
+  },
   
   scrollView: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 100, gap: 12 },
+  scrollContent: { padding: 12, paddingBottom: 100, gap: 16 },
   
-  card: { borderRadius: 14, padding: 14, borderWidth: 1 },
+  sectionTitle: {
+      fontSize: 14,
+      fontFamily: theme.fonts.semibold,
+      marginBottom: -8, 
+      opacity: 0.9,
+      marginLeft: 4,
+  },
+
+  card: { borderRadius: 12, padding: 12, borderWidth: 1 },
   
-  fieldRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 },
-  fieldLabel: { fontSize: 13, fontWeight: '600' },
+  inputGroup: { marginBottom: 12 },
+  fieldLabel: { fontSize: 12, fontFamily: theme.fonts.medium, marginBottom: 6, opacity: 0.8 },
   
-  input: { height: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
-  textArea: { height: 60, textAlignVertical: 'top', paddingTop: 10 },
+  input: { 
+    height: 44, 
+    borderWidth: 1, 
+    borderRadius: 10, 
+    paddingHorizontal: 12, 
+    fontSize: 14,
+    fontFamily: theme.fonts.regular 
+  },
+  textArea: { 
+    height: 80, 
+    textAlignVertical: 'top', 
+    paddingTop: 10 
+  },
   inputError: { borderColor: theme.colors.error },
   
-  errorInline: { color: theme.colors.error, fontSize: 11, marginLeft: 'auto' },
+  inputContainer: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     borderWidth: 1,
+     borderRadius: 10,
+     paddingHorizontal: 12,
+     height: 44,
+  },
+  inputPrefix: { marginRight: 8, fontSize: 14, color: '#9CA3AF', fontFamily: theme.fonts.medium },
+  inputSuffix: { marginLeft: 8, fontSize: 14, color: '#9CA3AF', fontFamily: theme.fonts.medium },
+  inputFlex: { flex: 1, fontSize: 14, fontFamily: theme.fonts.medium, height: '100%' },
+
+  errorInline: { color: theme.colors.error, fontSize: 11, marginTop: 4 },
   
-  chipScroll: { marginTop: 4 },
+  chipScrollContent: { paddingHorizontal: 4, gap: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    marginRight: 8,
-    gap: 5,
+    borderWidth: 1,
+    gap: 6,
   },
-  chipText: { fontSize: 13, fontWeight: '500' },
+  chipText: { fontSize: 13, fontFamily: theme.fonts.medium },
   
   genderRow: { flexDirection: 'row', gap: 10 },
   genderBtn: {
@@ -516,30 +581,40 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  genderText: { fontSize: 14, fontWeight: '600' },
+  genderText: { fontSize: 13, fontFamily: theme.fonts.medium },
   
   priceRow: { flexDirection: 'row', gap: 12 },
   priceField: { flex: 1 },
   
-  toggleCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  subText: { fontSize: 12, marginTop: 2 },
-  toggle: { width: 48, height: 28, borderRadius: 14, justifyContent: 'center' },
+  divider: { height: 1, backgroundColor: 'rgba(150, 150, 150, 0.1)', marginVertical: 16 },
+  
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  subText: { fontSize: 11, marginTop: 2 },
+  toggle: { width: 44, height: 26, borderRadius: 13, justifyContent: 'center' },
   toggleKnob: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF', position: 'absolute',
+    width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF', position: 'absolute',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, elevation: 2,
   },
   
-  bottomBar: { padding: 14, borderTopWidth: 1 },
+  bottomBar: { 
+      padding: 12, 
+      borderTopWidth: 1,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+  },
   submitBtn: { 
-    borderRadius: 12, 
-    overflow: 'hidden',
-    paddingVertical: 14,
+    borderRadius: 10, 
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
   },
-  submitContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  submitText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  submitText: { color: '#FFF', fontSize: 14, fontFamily: theme.fonts.semibold },
+  
   addImageBtn: {
       width: 80,
       height: 80,
@@ -549,12 +624,18 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       alignItems: 'center',
   },
+  addIconCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
   imageThumbnailContainer: {
       width: 80,
       height: 80,
       borderRadius: 12,
       overflow: 'hidden',
-      position: 'relative',
   },
   imageThumbnail: {
       width: '100%',

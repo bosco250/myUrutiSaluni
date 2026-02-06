@@ -81,16 +81,19 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
       color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? 'transparent' : theme.colors.white,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.gray200,
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     input: {
-      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.gray100,
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.backgroundSecondary,
       color: isDark ? theme.colors.white : theme.colors.text,
-      borderColor: isDark ? theme.colors.gray700 : theme.colors.gray300,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.border,
     },
     sectionTitle: {
       color: isDark ? theme.colors.white : theme.colors.text,
+    },
+    headerBorder: {
+      borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight,
     }
   };
 
@@ -198,31 +201,24 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
         style={[
           styles.salaryTypeCard, 
           dynamicStyles.card,
-          isSelected && { borderColor: theme.colors.primary, borderWidth: 2, backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : theme.colors.primaryLight + '20' }
+          isSelected && { borderColor: theme.colors.primary, borderWidth: 1.5, backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : theme.colors.primaryLight + '15' }
         ]}
+        activeOpacity={0.7}
       >
-        {isSelected && (
-          <View 
-            style={[
-              StyleSheet.absoluteFill, 
-              { backgroundColor: theme.colors.primary + '10' }
-            ]} 
-          />
-        )}
         <View style={styles.salaryIconContainer}>
           <MaterialCommunityIcons 
             name={icon} 
-            size={24} 
-            color={isSelected ? theme.colors.primary : isDark ? theme.colors.gray400 : theme.colors.gray600} 
+            size={22} 
+            color={isSelected ? theme.colors.primary : dynamicStyles.textSecondary.color} 
           />
         </View>
-        <Text style={[styles.salaryTypeLabel, dynamicStyles.text, isSelected && { color: theme.colors.primary, fontWeight: 'bold' }]}>
+        <Text style={[styles.salaryTypeLabel, dynamicStyles.text, isSelected && { color: theme.colors.primary }]}>
           {label}
         </Text>
         <Text style={[styles.salaryTypeDesc, dynamicStyles.textSecondary]}>{desc}</Text>
         {isSelected && (
           <View style={styles.checkIcon}>
-            <MaterialIcons name="check-circle" size={20} color={theme.colors.primary} />
+            <MaterialIcons name="check-circle" size={16} color={theme.colors.primary} />
           </View>
         )}
       </TouchableOpacity>
@@ -230,220 +226,247 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
   };
 
   return (
-    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
+    <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
+      {/* Header */}
+      <View style={[styles.headerContainer, dynamicStyles.headerBorder]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={dynamicStyles.text.color} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, dynamicStyles.text]}>Add Employee</Text>
+          <View style={{ width: 32 }} /> 
+        </View>
+      </View>
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <MaterialIcons name="arrow-back" size={24} color={isDark ? theme.colors.white : theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, dynamicStyles.text]}>Add New Employee</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        
-        {/* SECTION 1: USER SELECTION */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Select Employee</Text>
           
-          <View style={[styles.card, dynamicStyles.card]}>
-            {selectedUser ? (
-              <View style={styles.selectedUserRow}>
-                <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={styles.avatarText}>{selectedUser.fullName.charAt(0)}</Text>
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[styles.userName, dynamicStyles.text]}>{selectedUser.fullName}</Text>
-                  <Text style={styles.userEmail}>{selectedUser.email}</Text>
-                </View>
-                <TouchableOpacity onPress={() => setSelectedUser(null)}>
-                  <MaterialIcons name="close" size={24} color={theme.colors.error} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                <View style={[styles.searchBox, dynamicStyles.input]}>
-                  <MaterialIcons name="search" size={20} color={isDark ? theme.colors.gray400 : theme.colors.gray500} />
-                  <TextInput
-                    style={[styles.searchInput, { color: isDark ? '#fff' : '#000' }]}
-                    placeholder="Search name, email, phone..."
-                    placeholderTextColor={isDark ? theme.colors.gray500 : theme.colors.gray400}
-                    value={searchQuery}
-                    onChangeText={handleSearch}
-                  />
-                  {fetchingUsers && <ActivityIndicator size="small" color={theme.colors.primary} />}
-                </View>
-                
-                {users.length > 0 && (
-                  <View style={styles.resultsList}>
-                    {users.map(user => (
-                      <TouchableOpacity 
-                        key={user.id} 
-                        style={styles.resultItem}
-                        onPress={() => {
-                          setSelectedUser(user);
-                          setUsers([]);
-                          setSearchQuery('');
-                        }}
-                      >
-                        <View style={[styles.miniAvatar, { backgroundColor: theme.colors.gray300 }]}>
-                          <Text style={styles.miniAvatarText}>{user.fullName.charAt(0)}</Text>
-                        </View>
-                        <View style={{ marginLeft: 10 }}>
-                          <Text style={[dynamicStyles.text, { fontWeight: '500' }]}>{user.fullName}</Text>
-                          <Text style={[dynamicStyles.textSecondary, { fontSize: 12 }]}>{user.email}</Text>
-                        </View>
-                        <MaterialIcons name="add" size={20} color={theme.colors.primary} style={{ marginLeft: 'auto' }} />
-                      </TouchableOpacity>
-                    ))}
+          {/* SECTION 1: USER SELECTION */}
+          <View>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Select Employee</Text>
+            
+            <View style={[styles.card, dynamicStyles.card]}>
+              {selectedUser ? (
+                <View style={styles.selectedUserRow}>
+                  <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
+                    <Text style={styles.avatarText}>{selectedUser.fullName.charAt(0)}</Text>
                   </View>
-                )}
-                {errors.user && <Text style={styles.errorText}>{errors.user}</Text>}
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* SECTION 2: PROFESSIONAL INFO */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Professional Info</Text>
-          
-          <View style={[styles.card, dynamicStyles.card]}>
-            <Text style={[styles.label, dynamicStyles.textSecondary]}>Professional Title *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
-              {SALON_PROFESSIONAL_TITLES.map(title => (
-                <TouchableOpacity
-                  key={title}
-                  onPress={() => setRoleTitle(title)}
-                  style={[
-                    styles.chip,
-                    roleTitle === title ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary } : { borderColor: isDark ? theme.colors.gray600 : theme.colors.gray300 }
-                  ]}
-                >
-                  <Text style={[styles.chipText, roleTitle === title && { color: '#fff' }, roleTitle !== title && dynamicStyles.text]}>{title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {errors.roleTitle && <Text style={styles.errorText}>{errors.roleTitle}</Text>}
-
-            <Text style={[styles.label, dynamicStyles.textSecondary, { marginTop: 15 }]}>Skills (comma separated)</Text>
-            <TextInput
-              style={[styles.input, dynamicStyles.input]}
-              value={skills}
-              onChangeText={setSkills} // Simple text input for parity MVP
-              placeholder="e.g. Hair Cutting, Coloring, Manicure"
-              placeholderTextColor={isDark ? theme.colors.gray500 : theme.colors.gray400}
-            />
-          </View>
-        </View>
-
-        {/* SECTION 3: EMPLOYMENT & COMPENSATION */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Compensation</Text>
-          
-          <View style={[styles.card, dynamicStyles.card]}>
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, dynamicStyles.textSecondary]}>Hire Date</Text>
-                <TouchableOpacity 
-                  onPress={() => setShowDatePicker(true)}
-                  style={[styles.dateButton, dynamicStyles.input]}
-                >
-                  <Text style={dynamicStyles.text}>{hireDate.toLocaleDateString()}</Text>
-                  <MaterialIcons name="calendar-today" size={18} color={theme.colors.primary} />
-                </TouchableOpacity>
-              </View>
-              <View style={{ width: 15 }} />
-              <View style={{ flex: 1, justifyContent: 'center' }}>
-                 <Text style={[styles.label, dynamicStyles.textSecondary, { marginBottom: 5 }]}>Active Status</Text>
-                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                   <Switch
-                     value={isActive}
-                     onValueChange={setIsActive}
-                     trackColor={{ false: theme.colors.gray300, true: theme.colors.primaryLight }}
-                     thumbColor={isActive ? theme.colors.primary : theme.colors.gray100}
-                   />
-                   <Text style={[dynamicStyles.text, { marginLeft: 10 }]}>{isActive ? 'Active' : 'Inactive'}</Text>
-                 </View>
-              </View>
-            </View>
-            {showDatePicker && (
-              <DateTimePicker
-                value={hireDate}
-                mode="date"
-                display="default"
-                onChange={(e, date) => {
-                  setShowDatePicker(false);
-                  if (date) setHireDate(date);
-                }}
-              />
-            )}
-
-            <Text style={[styles.label, dynamicStyles.textSecondary, { marginTop: 20, marginBottom: 10 }]}>Payment Structure *</Text>
-            <View style={styles.salaryTypesContainer}>
-              {renderSalaryTypeCard('COMMISSION_ONLY', 'Commission', 'percent', 'Earns from services')}
-              {renderSalaryTypeCard('SALARY_ONLY', 'Salary', 'cash', 'Fixed monthly pay')}
-              {renderSalaryTypeCard('SALARY_PLUS_COMMISSION', 'Both', 'calculator', 'Base + Commission')}
-            </View>
-
-            {/* Dynamic Fields */}
-            {(salaryType === 'COMMISSION_ONLY' || salaryType === 'SALARY_PLUS_COMMISSION') && (
-              <View style={{ marginTop: 15 }}>
-                <Text style={[styles.label, dynamicStyles.textSecondary]}>Commission Rate (%) *</Text>
-                <TextInput
-                  style={[styles.input, dynamicStyles.input]}
-                  value={commissionRate}
-                  onChangeText={setCommissionRate}
-                  keyboardType="numeric"
-                  placeholder="e.g. 40"
-                  placeholderTextColor={isDark ? theme.colors.gray500 : theme.colors.gray400}
-                />
-                {errors.commissionRate && <Text style={styles.errorText}>{errors.commissionRate}</Text>}
-              </View>
-            )}
-
-            {salaryType !== 'COMMISSION_ONLY' && (
-              <View style={{ marginTop: 15 }}>
-                <View style={styles.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.label, dynamicStyles.textSecondary]}>Base Salary *</Text>
-                     <TextInput
-                      style={[styles.input, dynamicStyles.input]}
-                      value={baseSalary}
-                      onChangeText={setBaseSalary}
-                      keyboardType="numeric"
-                      placeholder="Amount"
-                      placeholderTextColor={isDark ? theme.colors.gray500 : theme.colors.gray400}
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.userName, dynamicStyles.text]}>{selectedUser.fullName}</Text>
+                    <Text style={styles.userEmail}>{selectedUser.email}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => setSelectedUser(null)}
+                    style={styles.removeUserBtn}
+                  >
+                    <MaterialIcons name="close" size={18} color={theme.colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <View style={[styles.searchBox, dynamicStyles.input]}>
+                    <MaterialIcons name="search" size={20} color={dynamicStyles.textSecondary.color} />
+                    <TextInput
+                      style={[styles.searchInput, { color: dynamicStyles.text.color }]}
+                      placeholder="Search name, email, phone..."
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                      value={searchQuery}
+                      onChangeText={handleSearch}
                     />
-                     {errors.baseSalary && <Text style={styles.errorText}>{errors.baseSalary}</Text>}
+                    {fetchingUsers && <ActivityIndicator size="small" color={theme.colors.primary} />}
                   </View>
-                  <View style={{ width: 15 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.label, dynamicStyles.textSecondary]}>Frequency</Text>
-                    {/* Simplified frequency toggle for now */}
-                    <TouchableOpacity 
-                      onPress={() => setPayFrequency(payFrequency === 'MONTHLY' ? 'WEEKLY' : 'MONTHLY')}
-                      style={[styles.input, dynamicStyles.input, { justifyContent: 'center' }]}
-                    >
-                      <Text style={dynamicStyles.text}>{payFrequency}</Text>
-                    </TouchableOpacity>
-                  </View>
+                  
+                  {users.length > 0 && (
+                    <View style={styles.resultsList}>
+                      {users.map(user => (
+                        <TouchableOpacity 
+                          key={user.id} 
+                          style={styles.resultItem}
+                          onPress={() => {
+                            setSelectedUser(user);
+                            setUsers([]);
+                            setSearchQuery('');
+                          }}
+                        >
+                          <View style={[styles.miniAvatar, { backgroundColor: theme.colors.gray300 }]}>
+                            <Text style={styles.miniAvatarText}>{user.fullName.charAt(0)}</Text>
+                          </View>
+                          <View style={{ marginLeft: 10, flex: 1 }}>
+                            <Text style={[styles.resultName, dynamicStyles.text]}>{user.fullName}</Text>
+                            <Text style={[styles.resultEmail, dynamicStyles.textSecondary]}>{user.email}</Text>
+                          </View>
+                          <MaterialIcons name="add-circle-outline" size={20} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                  {errors.user && <Text style={styles.errorText}>{errors.user}</Text>}
+                </>
+              )}
+            </View>
+          </View>
+
+          {/* SECTION 2: PROFESSIONAL INFO */}
+          <View>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Professional Info</Text>
+            
+            <View style={[styles.card, dynamicStyles.card]}>
+              <Text style={[styles.fieldLabel, dynamicStyles.text]}>Professional Title *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+                {SALON_PROFESSIONAL_TITLES.map(title => (
+                  <TouchableOpacity
+                    key={title}
+                    onPress={() => setRoleTitle(title)}
+                    style={[
+                      styles.chip,
+                      roleTitle === title 
+                        ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary } 
+                        : { borderColor: dynamicStyles.textSecondary.color + '40', borderWidth: 1 }
+                    ]}
+                  >
+                    <Text style={[styles.chipText, roleTitle === title ? { color: '#fff' } : dynamicStyles.text]}>
+                      {title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              {errors.roleTitle && <Text style={styles.errorText}>{errors.roleTitle}</Text>}
+
+              <Text style={[styles.fieldLabel, dynamicStyles.text, { marginTop: 12 }]}>Skills (comma separated)</Text>
+              <TextInput
+                style={[styles.input, dynamicStyles.input]}
+                value={skills}
+                onChangeText={setSkills} 
+                placeholder="e.g. Hair Cutting, Coloring, Manicure"
+                placeholderTextColor={dynamicStyles.textSecondary.color}
+              />
+            </View>
+          </View>
+
+          {/* SECTION 3: EMPLOYMENT & COMPENSATION */}
+          <View>
+            <Text style={[styles.sectionTitle, dynamicStyles.text]}>Compensation</Text>
+            
+            <View style={[styles.card, dynamicStyles.card]}>
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fieldLabel, dynamicStyles.text]}>Hire Date</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowDatePicker(true)}
+                    style={[styles.dateButton, dynamicStyles.input]}
+                  >
+                    <Text style={[styles.dateText, dynamicStyles.text]}>{hireDate.toLocaleDateString()}</Text>
+                    <MaterialIcons name="calendar-today" size={16} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                </View>
+                <View style={{ width: 16 }} />
+                <View style={{ flex: 1 }}>
+                   <Text style={[styles.fieldLabel, dynamicStyles.text, { marginBottom: 6 }]}>Status</Text>
+                   <View style={styles.statusRow}>
+                     <Switch
+                       value={isActive}
+                       onValueChange={setIsActive}
+                       trackColor={{ false: theme.colors.gray300, true: theme.colors.primaryLight }}
+                       thumbColor={isActive ? theme.colors.primary : '#f4f3f4'}
+                       style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                     />
+                     <Text style={[styles.statusText, dynamicStyles.text]}>{isActive ? 'Active' : 'Inactive'}</Text>
+                   </View>
                 </View>
               </View>
-            )}
+              
+              {showDatePicker && (
+                <DateTimePicker
+                  value={hireDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, date) => {
+                    setShowDatePicker(false);
+                    if (date) setHireDate(date);
+                  }}
+                />
+              )}
 
+              <View style={styles.divider} />
+
+              <Text style={[styles.fieldLabel, dynamicStyles.text, { marginBottom: 10 }]}>Payment Structure *</Text>
+              <View style={styles.salaryTypesContainer}>
+                {renderSalaryTypeCard('COMMISSION_ONLY', 'Commission', 'percent', 'Services Only')}
+                {renderSalaryTypeCard('SALARY_ONLY', 'Salary', 'cash', 'Fixed Pay')}
+                {renderSalaryTypeCard('SALARY_PLUS_COMMISSION', 'Hybrid', 'calculator', 'Base + Comm.')}
+              </View>
+
+              {/* Dynamic Fields */}
+              {(salaryType === 'COMMISSION_ONLY' || salaryType === 'SALARY_PLUS_COMMISSION') && (
+                <View style={{ marginTop: 16 }}>
+                  <Text style={[styles.fieldLabel, dynamicStyles.text]}>Commission Rate (%) *</Text>
+                  <View style={[styles.inputContainer, dynamicStyles.input]}>
+                    <TextInput
+                      style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                      value={commissionRate}
+                      onChangeText={setCommissionRate}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor={dynamicStyles.textSecondary.color}
+                    />
+                    <Text style={styles.inputSuffix}>%</Text>
+                  </View>
+                  {errors.commissionRate && <Text style={styles.errorText}>{errors.commissionRate}</Text>}
+                </View>
+              )}
+
+              {salaryType !== 'COMMISSION_ONLY' && (
+                <View style={{ marginTop: 16 }}>
+                  <View style={styles.row}>
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={[styles.fieldLabel, dynamicStyles.text]}>Base Salary *</Text>
+                       <View style={[styles.inputContainer, dynamicStyles.input]}>
+                          <Text style={styles.inputPrefix}>RWF</Text>
+                          <TextInput
+                            style={[styles.inputFlex, { color: dynamicStyles.text.color }]}
+                            value={baseSalary}
+                            onChangeText={setBaseSalary}
+                            keyboardType="numeric"
+                            placeholder="0"
+                            placeholderTextColor={dynamicStyles.textSecondary.color}
+                          />
+                       </View>
+                       {errors.baseSalary && <Text style={styles.errorText}>{errors.baseSalary}</Text>}
+                    </View>
+                    <View style={{ width: 12 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.fieldLabel, dynamicStyles.text]}>Frequency</Text>
+                      <TouchableOpacity 
+                        onPress={() => setPayFrequency(payFrequency === 'MONTHLY' ? 'WEEKLY' : 'MONTHLY')}
+                        style={[styles.input, dynamicStyles.input, { justifyContent: 'center', alignItems: 'center' }]}
+                      >
+                        <Text style={[styles.freqText, dynamicStyles.text]}>{payFrequency}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+            </View>
           </View>
-        </View>
 
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <View style={[styles.bottomBar, dynamicStyles.card]}>
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={loading}
@@ -451,60 +474,65 @@ export default function AddEmployeeScreen({ navigation, route }: AddEmployeeScre
             styles.submitButton, 
             { backgroundColor: loading ? theme.colors.gray400 : theme.colors.primary }
           ]}
+          activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={styles.submitText}>Add Employee</Text>
           )}
         </TouchableOpacity>
-
-      </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
+  container: { flex: 1 },
+  
+  // Header
+  headerContainer: {
+    paddingBottom: 12,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+    borderBottomWidth: 1,
   },
-  header: { 
-    paddingHorizontal: 16, 
-    paddingTop: 0, 
-    paddingBottom: 10, 
-    flexDirection: 'row', 
-    alignItems: 'center' 
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    gap: 10,
   },
-  backButton: { 
+  backButton: {
     padding: 4,
-    marginRight: 12 
+    marginLeft: -4,
   },
-  title: { 
-    fontSize: 18, 
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: theme.fonts.semibold,
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 0, 
   },
-  content: { 
-    padding: 14,
-    paddingBottom: 80 
+
+  scrollContent: { 
+    padding: 12,
+    paddingBottom: 100,
+    gap: 16,
   },
   
-  // Section Styles
-  section: { 
-    marginBottom: 14 
-  },
   sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '700',
-    fontFamily: theme.fonts.medium,
-    marginBottom: 12,
+    fontSize: 14, 
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 8,
+    marginLeft: 4,
+    opacity: 0.9,
   },
   
-  // Card Styles
   card: { 
-    borderRadius: 14, 
-    padding: 14, 
+    borderRadius: 12, 
+    padding: 12, 
     borderWidth: 1,
   },
   
@@ -514,182 +542,223 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     height: 44, 
     borderWidth: 1, 
-    borderRadius: 12, 
-    paddingHorizontal: 12 
+    borderRadius: 10, 
+    paddingHorizontal: 12,
+    gap: 8,
   },
   searchInput: { 
     flex: 1, 
-    marginLeft: 10, 
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
   },
   resultsList: { 
     marginTop: 12, 
-    maxHeight: 220 
+    maxHeight: 200,
   },
   resultItem: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    paddingVertical: 12, 
+    paddingVertical: 10, 
     borderBottomWidth: 1, 
-    borderBottomColor: 'rgba(128, 128, 128, 0.15)' 
+    borderBottomColor: 'rgba(150, 150, 150, 0.1)' 
   },
   miniAvatar: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 18, 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   miniAvatarText: { 
-    fontWeight: 'bold', 
     color: '#555',
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: theme.fonts.bold,
+  },
+  resultName: {
+      fontSize: 13,
+      fontFamily: theme.fonts.medium,
+  },
+  resultEmail: {
+      fontSize: 11,
+      fontFamily: theme.fonts.regular,
   },
   
   // Selected User
   selectedUserRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    padding: 4 
+    padding: 2
   },
   avatar: { 
-    width: 46, 
-    height: 46, 
-    borderRadius: 23, 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   avatarText: { 
     color: '#fff', 
-    fontSize: 20, 
-    fontWeight: 'bold',
+    fontSize: 18, 
     fontFamily: theme.fonts.bold,
   },
   userName: { 
-    fontSize: 16, 
-    fontWeight: '600',
-    fontFamily: theme.fonts.medium,
+    fontSize: 14, 
+    fontFamily: theme.fonts.semibold,
   },
   userEmail: { 
-    fontSize: 14, 
+    fontSize: 12, 
     color: '#888',
     fontFamily: theme.fonts.regular,
-    marginTop: 2,
+  },
+  removeUserBtn: {
+      padding: 6,
+      borderRadius: 12,
+      backgroundColor: theme.colors.error + '10',
   },
 
   // Chips
   chipsScroll: { 
-    marginTop: 8,
-    marginBottom: 4,
+    flexDirection: 'row',
   },
   chip: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
     borderRadius: 20, 
-    borderWidth: 1, 
     marginRight: 8, 
-    marginVertical: 3 
   },
   chipText: { 
-    fontSize: 14, 
-    fontWeight: '600',
+    fontSize: 12, 
     fontFamily: theme.fonts.medium,
   },
 
   // Inputs
-  label: { 
+  fieldLabel: { 
     fontSize: 12, 
-    fontWeight: '600', 
-    marginBottom: 8, 
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     fontFamily: theme.fonts.medium,
+    marginBottom: 6, 
+    opacity: 0.8,
   },
   input: { 
     height: 44, 
     borderWidth: 1, 
-    borderRadius: 12, 
-    paddingHorizontal: 14, 
-    fontSize: 15,
+    borderRadius: 10, 
+    paddingHorizontal: 12, 
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
   },
+  inputContainer: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     borderWidth: 1,
+     borderRadius: 10,
+     paddingHorizontal: 12,
+     height: 44,
+  },
+  inputPrefix: { marginRight: 8, fontSize: 13, color: '#9CA3AF', fontFamily: theme.fonts.medium },
+  inputSuffix: { marginLeft: 8, fontSize: 13, color: '#9CA3AF', fontFamily: theme.fonts.medium },
+  inputFlex: { flex: 1, fontSize: 14, fontFamily: theme.fonts.medium, height: '100%' },
+
   dateButton: { 
     height: 44, 
     borderWidth: 1, 
-    borderRadius: 12, 
-    paddingHorizontal: 14, 
+    borderRadius: 10, 
+    paddingHorizontal: 12, 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center' 
+  },
+  dateText: {
+      fontSize: 14,
+      fontFamily: theme.fonts.regular,
+  },
+  statusRow: {
+      height: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+  },
+  statusText: {
+      fontSize: 13,
+      fontFamily: theme.fonts.medium,
+      marginLeft: 8,
   },
   
   // Salary Cards
   salaryTypesContainer: { 
     flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    gap: 10 
+    gap: 8,
   },
   salaryTypeCard: { 
     flex: 1, 
-    padding: 12, 
-    borderWidth: 1.5, 
-    borderRadius: 14, 
+    padding: 10, 
+    borderWidth: 1, 
+    borderRadius: 12, 
     alignItems: 'center', 
     position: 'relative', 
-    overflow: 'hidden' 
+    minHeight: 80,
+    justifyContent: 'center',
   },
   salaryIconContainer: { 
     marginBottom: 6 
   },
   salaryTypeLabel: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    marginBottom: 3, 
+    fontSize: 12, 
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 2, 
     textAlign: 'center',
-    fontFamily: theme.fonts.bold,
   },
   salaryTypeDesc: { 
-    fontSize: 11, 
+    fontSize: 10, 
     textAlign: 'center', 
-    paddingHorizontal: 2,
     fontFamily: theme.fonts.regular,
+    opacity: 0.8,
   },
   checkIcon: { 
     position: 'absolute', 
-    top: 6, 
-    right: 6 
+    top: 4, 
+    right: 4 
   },
 
-  // Helpers
+  freqText: {
+      fontSize: 13, 
+      fontFamily: theme.fonts.medium,
+  },
+  
+  divider: {
+      height: 1,
+      backgroundColor: 'rgba(150,150,150,0.1)',
+      marginVertical: 16,
+  },
+
   row: { 
-    flexDirection: 'row' 
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   errorText: { 
     color: theme.colors.error, 
-    fontSize: 12, 
-    marginTop: 6,
+    fontSize: 11, 
+    marginTop: 4,
     fontFamily: theme.fonts.regular,
   },
 
-  // Submit Button
+  // Bottom Bar
+  bottomBar: { 
+      padding: 12, 
+      borderTopWidth: 1,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+  },
   submitButton: { 
-    borderRadius: 12, 
-    paddingVertical: 14, 
+    borderRadius: 10, 
+    paddingVertical: 12, 
     alignItems: 'center', 
     justifyContent: 'center',
-    marginTop: 10,
+    minHeight: 44,
   },
   submitText: { 
     color: '#fff', 
-    fontSize: 15, 
-    fontWeight: '700',
-    fontFamily: theme.fonts.bold,
+    fontSize: 14, 
+    fontFamily: theme.fonts.semibold,
   },
-
-  // Unused but kept for backwards compatibility
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  sectionIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  submitBtnContainer: { marginTop: 20 },
-}); 
+});

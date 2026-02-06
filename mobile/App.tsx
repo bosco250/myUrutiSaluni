@@ -15,9 +15,14 @@ import {
 
 import * as Font from 'expo-font';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = React.useState(false);
   const [isReady, setIsReady] = React.useState(false);
+  // ... existing useEffects ...
 
   React.useEffect(() => {
     async function loadFonts() {
@@ -31,7 +36,6 @@ export default function App() {
         setFontsLoaded(true);
       } catch (e) {
         console.warn('Error loading fonts:', e);
-        // Fallback to system fonts if needed, but continue
         setFontsLoaded(true);
       }
     }
@@ -40,7 +44,6 @@ export default function App() {
 
   React.useEffect(() => {
     if (fontsLoaded) {
-      // Simulate minimal delay for smooth transition
       const timer = setTimeout(() => {
         setIsReady(true);
       }, 100);
@@ -48,7 +51,6 @@ export default function App() {
     }
   }, [fontsLoaded]);
 
-  // Show splash screen while app is initializing or fonts are loading
   if (!isReady || !fontsLoaded) {
     return (
       <View style={styles.splashContainer}>
@@ -60,10 +62,12 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AppProvider>
-        <Navigation />
-        <StatusBar style="dark" />
-      </AppProvider>
+      <QueryClientProvider client={queryClient}>
+        <AppProvider>
+          <Navigation />
+          <StatusBar style="dark" />
+        </AppProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

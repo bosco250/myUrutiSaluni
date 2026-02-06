@@ -251,10 +251,12 @@ const SalonListScreen = React.memo(function SalonListScreen({
 
   if (loading) {
       return (
-        <View style={[styles.container, dynamicStyles.container]}>
+        <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={["top"]}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-            <Loader fullscreen message="Loading your salons..." />
-        </View>
+            <View style={styles.loaderContainer}>
+              <Loader />
+            </View>
+        </SafeAreaView>
       );
   }
 
@@ -304,7 +306,7 @@ const SalonListScreen = React.memo(function SalonListScreen({
              <View style={styles.errorContainer}>
                  <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
                  <TouchableOpacity onPress={loadSalons} style={{ marginTop: 8 }}>
-                     <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Retry</Text>
+                     <Text style={styles.retryText}>Retry</Text>
                  </TouchableOpacity>
              </View>
         )}
@@ -317,21 +319,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 20,
+    fontFamily: theme.fonts.bold,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
+    fontFamily: theme.fonts.regular,
     marginTop: 2,
   },
   addButton: {
@@ -341,18 +349,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
      // subtle touch target
-     backgroundColor: 'transparent' 
+     backgroundColor: 'transparent'
   },
   scrollContent: {
-    padding: 24,
+    padding: 16,
   },
   salonCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   iconContainer: {
     width: 56,
@@ -360,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 12,
     overflow: 'hidden',
   },
   salonImage: {
@@ -378,8 +386,8 @@ const styles = StyleSheet.create({
       marginBottom: 4,
   },
   salonName: {
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15,
+    fontFamily: theme.fonts.bold,
     flex: 1,
     marginRight: 8,
   },
@@ -390,7 +398,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: theme.fonts.bold,
       textTransform: 'uppercase',
   },
   cardDetails: {
@@ -399,14 +407,16 @@ const styles = StyleSheet.create({
       marginBottom: 4,
   },
   detailText: {
-      fontSize: 13,
+      fontSize: 12,
+      fontFamily: theme.fonts.regular,
   },
   statsRow: {
       flexDirection: 'row',
       alignItems: 'center',
   },
   statText: {
-      fontSize: 12,
+      fontSize: 11,
+      fontFamily: theme.fonts.regular,
       marginRight: 8,
   },
   emptyState: {
@@ -423,30 +433,32 @@ const styles = StyleSheet.create({
       marginBottom: 24,
   },
   emptyTitle: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: theme.fonts.bold,
       marginBottom: 8,
   },
   emptySubtitle: {
-      fontSize: 14,
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
       textAlign: 'center',
       marginBottom: 32,
       lineHeight: 20,
   },
   primaryButton: {
       backgroundColor: theme.colors.primary,
-      paddingHorizontal: 24,
-      paddingVertical: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
       borderRadius: 12,
   },
   primaryButtonText: {
-      color: '#FFF',
-      fontSize: 15,
-      fontWeight: '600',
+      color: theme.colors.white,
+      fontSize: 14,
+      fontFamily: theme.fonts.semibold,
   },
   footerText: {
       textAlign: 'center',
-      fontSize: 12,
+      fontSize: 11,
+      fontFamily: theme.fonts.regular,
       marginTop: 24,
       opacity: 0.6,
   },
@@ -456,7 +468,14 @@ const styles = StyleSheet.create({
   },
   errorText: {
       textAlign: 'center',
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
       marginBottom: 8,
+  },
+  retryText: {
+      color: theme.colors.primary,
+      fontSize: 13,
+      fontFamily: theme.fonts.semibold,
   }
 });
 

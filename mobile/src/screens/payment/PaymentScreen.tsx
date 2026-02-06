@@ -123,23 +123,26 @@ export default function PaymentScreen({
 
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? "#0F172A" : "#F8FAFC",
+      backgroundColor: isDark ? theme.colors.gray900 : theme.colors.background,
     },
     text: {
-      color: isDark ? "#F8FAFC" : "#1E293B",
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
     textSecondary: {
-      color: isDark ? "#94A3B8" : "#64748B",
+      color: isDark ? theme.colors.gray400 : theme.colors.textSecondary,
     },
     card: {
-      backgroundColor: isDark ? "#1E293B" : "#FFFFFF",
-      borderColor: isDark ? "#334155" : "#E2E8F0",
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.white,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
     },
     input: {
-      backgroundColor: isDark ? "#0F172A" : "#F1F5F9",
-      borderColor: isDark ? "#334155" : "#E2E8F0",
-      color: isDark ? "#F8FAFC" : "#1E293B",
+      backgroundColor: isDark ? theme.colors.gray800 : theme.colors.backgroundSecondary,
+      borderColor: isDark ? theme.colors.gray700 : theme.colors.borderLight,
+      color: isDark ? theme.colors.white : theme.colors.text,
     },
+    headerBorder: {
+      borderBottomColor: isDark ? theme.colors.gray800 : theme.colors.borderLight,
+    }
   };
 
   const validatePhoneNumber = (phone: string): boolean => {
@@ -220,12 +223,12 @@ export default function PaymentScreen({
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
+    <View style={[styles.header, dynamicStyles.headerBorder]}>
       <TouchableOpacity
         onPress={() => navigation.goBack()}
-        style={[styles.headerCircleButton, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}
+        style={[styles.headerButton]}
       >
-        <Ionicons name="chevron-back" size={24} color={dynamicStyles.text.color} />
+        <Ionicons name="arrow-back" size={24} color={dynamicStyles.text.color} />
       </TouchableOpacity>
       <Text style={[styles.headerTitle, dynamicStyles.text]}>
         {isTopUp ? "Fund Wallet" : "Complete Payment"}
@@ -314,21 +317,25 @@ export default function PaymentScreen({
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, dynamicStyles.container]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <SafeAreaView style={{ flex: 1 }}>
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        {renderHeader()}
+    <SafeAreaView style={[styles.container, dynamicStyles.container]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      {renderHeader()}
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 100 } // Add extra padding for footer + keyboard
+          ]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Main Amount Card */}
-          <View style={[styles.mainAmountCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+          <View style={[styles.mainAmountCard, dynamicStyles.card]}>
              <Text style={[styles.cardLabel, dynamicStyles.textSecondary]}>
                 {isTopUp ? "Enter Top-up Amount" : "Payable Amount"}
              </Text>
@@ -360,15 +367,18 @@ export default function PaymentScreen({
                       key={val}
                       style={[
                         styles.chip,
-                        { backgroundColor: isDark ? '#0F172A' : '#F1F5F9' },
-                        Number(topUpAmount) === val && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                        { 
+                          backgroundColor: isDark ? theme.colors.gray700 : theme.colors.backgroundSecondary,
+                          borderColor: 'transparent'
+                        },
+                        Number(topUpAmount) === val && { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }
                       ]}
                       onPress={() => setTopUpAmount(String(val))}
                     >
                       <Text style={[
                         styles.chipText, 
                         dynamicStyles.textSecondary,
-                        Number(topUpAmount) === val && { color: '#FFF', fontWeight: '700' }
+                        Number(topUpAmount) === val && { color: theme.colors.primary, fontFamily: theme.fonts.bold }
                       ]}>
                         +{val.toLocaleString()}
                       </Text>
@@ -394,11 +404,11 @@ export default function PaymentScreen({
                     style={[
                       styles.methodCard,
                       dynamicStyles.card,
-                      isSelected && { borderColor: pm.color, borderWidth: 2, backgroundColor: pm.color + '08' }
+                      isSelected && { borderColor: pm.color, borderWidth: 1.5, backgroundColor: pm.color + '05' }
                     ]}
                   >
                     <View style={[styles.methodIconBox, { backgroundColor: pm.color + '15' }]}>
-                       <FontAwesome5 name={pm.icon} size={20} color={pm.color} />
+                       <FontAwesome5 name={pm.icon} size={18} color={pm.color} />
                     </View>
                     <View style={styles.methodTextContent}>
                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
@@ -422,9 +432,9 @@ export default function PaymentScreen({
           {/* Additional Details (Phone Number) */}
           {selectedMethod === 'airtel_money' && (
             <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-               <Text style={[styles.sectionHeading, dynamicStyles.text]}>Mobile Money Number</Text>
-               <View style={[styles.phoneInputBox, dynamicStyles.card, validatePhoneNumber(phoneNumber) && { borderColor: '#10B981' }]}>
-                  <View style={styles.countryCode}>
+               <Text style={[styles.sectionHeading, dynamicStyles.text]}>Airtel Money Number</Text>
+               <View style={[styles.phoneInputBox, dynamicStyles.input, validatePhoneNumber(phoneNumber) && { borderColor: '#10B981', borderWidth: 1.5 }]}>
+                  <View style={[styles.countryCode, { borderRightColor: isDark ? theme.colors.gray700 : theme.colors.borderLight }]}>
                      <Text style={[styles.countryCodeText, dynamicStyles.text]}>+250</Text>
                   </View>
                   <TextInput
@@ -440,7 +450,7 @@ export default function PaymentScreen({
                     maxLength={9}
                   />
                   {validatePhoneNumber(phoneNumber) && (
-                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                    <Ionicons name="checkmark-circle" size={20} color="#10B981" />
                   )}
                </View>
                <Text style={[styles.hintText, dynamicStyles.textSecondary]}>
@@ -453,7 +463,7 @@ export default function PaymentScreen({
 
         <View style={styles.footer}>
            <View style={styles.secureBadge}>
-              <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+              <Ionicons name="shield-checkmark" size={14} color="#10B981" />
               <Text style={styles.secureText}>End-to-end encrypted payment</Text>
            </View>
            
@@ -472,13 +482,13 @@ export default function PaymentScreen({
                   <Text style={styles.payButtonTextBig}>
                      {isTopUp ? "Fund Wallet" : "Confirm Payment"}
                   </Text>
-                  <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                  <Ionicons name="arrow-forward" size={18} color="#FFF" />
                 </>
               )}
            </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -492,43 +502,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent', // controlled by dynamicStyles
   },
-  headerCircleButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 20,
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: theme.fonts.bold,
-    fontWeight: '700',
+    fontFamily: theme.fonts.semibold,
   },
   scrollContent: {
     padding: 16,
     paddingBottom: 24,
   },
   mainAmountCard: {
-    padding: 20,
-    borderRadius: 20,
+    padding: 24,
+    borderRadius: 16,
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 20,
+    marginBottom: 24,
+    borderWidth: 1,
   },
   cardLabel: {
     fontSize: 12,
     fontFamily: theme.fonts.medium,
-    marginBottom: 6,
+    marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -538,54 +540,50 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   currencySymbol: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: theme.fonts.bold,
-    fontWeight: '700',
     opacity: 0.8,
   },
   hugeInput: {
-    fontSize: 36,
+    fontSize: 40,
     fontFamily: theme.fonts.bold,
-    fontWeight: '800',
     minWidth: 80,
+    textAlign: 'center',
   },
   hugeAmount: {
     fontSize: 32,
     fontFamily: theme.fonts.bold,
-    fontWeight: '800',
   },
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 16,
+    marginTop: 20,
   },
   chip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
   chipText: {
     fontSize: 12,
     fontFamily: theme.fonts.medium,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionHeading: {
     fontSize: 14,
-    fontFamily: theme.fonts.bold,
-    fontWeight: '700',
+    fontFamily: theme.fonts.semibold,
     marginBottom: 12,
-    marginLeft: 2,
+    marginLeft: 4,
   },
   methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 10,
@@ -596,30 +594,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   methodTextContent: {
     flex: 1,
   },
   methodLabel: {
-    fontSize: 15,
-    fontFamily: theme.fonts.bold,
-    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: theme.fonts.semibold,
   },
   methodDesc: {
     fontSize: 11,
     fontFamily: theme.fonts.regular,
-    marginTop: 1,
+    marginTop: 2,
+    opacity: 0.8,
   },
   miniBadge: {
     paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   miniBadgeText: {
     color: '#FFF',
-    fontSize: 8,
-    fontWeight: '800',
+    fontSize: 9,
+    fontFamily: theme.fonts.bold,
     textTransform: 'uppercase',
   },
   selectorCircle: {
@@ -627,7 +625,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: theme.colors.gray300,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -639,35 +637,30 @@ const styles = StyleSheet.create({
   phoneInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    height: 54,
+    paddingHorizontal: 16,
+    height: 56,
     borderRadius: 14,
     borderWidth: 1,
   },
   countryCode: {
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
-    paddingRight: 10,
-    marginRight: 10,
+    paddingRight: 12,
+    marginRight: 12,
   },
   countryCodeText: {
     fontSize: 15,
     fontFamily: theme.fonts.bold,
-    fontWeight: '700',
   },
   phoneInput: {
     flex: 1,
     fontSize: 16,
     fontFamily: theme.fonts.medium,
-    fontWeight: '600',
-    letterSpacing: 0.5,
   },
   hintText: {
     fontSize: 11,
     fontFamily: theme.fonts.regular,
     marginTop: 8,
-    marginLeft: 2,
-    lineHeight: 16,
+    marginLeft: 4,
   },
   footer: {
     padding: 16,
@@ -677,17 +670,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 16,
   },
   secureText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#10B981',
-    fontWeight: '600',
+    fontFamily: theme.fonts.medium,
   },
   payButtonBig: {
     backgroundColor: theme.colors.primary,
-    height: 54,
+    height: 56,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -697,10 +690,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: 0.5,
     elevation: 0,
     shadowOpacity: 0,
   },
@@ -708,7 +701,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontFamily: theme.fonts.bold,
-    fontWeight: '700',
   },
   resultContainer: {
     flex: 1,
@@ -719,65 +711,67 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loaderWrapper: {
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 32,
   },
   pulseContainer: {
     position: 'absolute',
-    width: 160,
-    height: 160,
+    width: 140,
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pulseCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     borderWidth: 2,
     opacity: 0.2,
   },
   iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   resultTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: theme.fonts.bold,
-    fontWeight: '800',
     marginBottom: 12,
     textAlign: 'center',
   },
   resultMessage: {
-    fontSize: 15,
-    fontFamily: theme.fonts.medium,
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
+    maxWidth: '90%',
   },
   instructionCard: {
     flexDirection: 'row',
-    backgroundColor: '#EBF5FF',
-    padding: 14,
-    borderRadius: 14,
+    backgroundColor: theme.colors.primary + '10', // Light primary background
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    maxWidth: '90%',
   },
   instructionText: {
-    color: '#1D4ED8',
+    color: theme.colors.primary,
     fontSize: 12,
     fontFamily: theme.fonts.medium,
     flex: 1,
+    lineHeight: 18,
   },
   detailCard: {
     width: '100%',
-    padding: 16,
+    padding: 20,
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 32,
@@ -785,37 +779,35 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   detailLabel: {
     fontSize: 13,
-    fontFamily: theme.fonts.medium,
+    fontFamily: theme.fonts.regular,
   },
   detailValue: {
     fontSize: 13,
     fontFamily: theme.fonts.bold,
-    fontWeight: '700',
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
     width: '100%',
-    height: 54,
-    borderRadius: 16,
+    height: 52,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   primaryButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: theme.fonts.bold,
-    fontWeight: '700',
   },
   textButton: {
     marginTop: 16,
-    padding: 8,
+    padding: 12,
   },
   textButtonText: {
     fontSize: 14,
-    fontFamily: theme.fonts.bold,
+    fontFamily: theme.fonts.medium,
   },
 });

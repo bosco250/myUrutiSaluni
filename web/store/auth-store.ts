@@ -8,8 +8,7 @@ export interface User {
   phone: string;
   fullName: string;
   role: string;
-  avatar?: string;
-  avatarUrl?: string;
+  avatarUrl?: string; // Consistent with mobile and backend
 }
 
 interface AuthState {

@@ -65,13 +65,21 @@ type ProfileSubScreen = "main" | "personal" | "notifications" | "security" | "co
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { isDark, toggleTheme } = useTheme();
-  const { logout, user, updateUser } = useAuth();
+  const { logout, user, updateUser, refreshUser } = useAuth();
   const [currentSubScreen, setCurrentSubScreen] =
     useState<ProfileSubScreen>("main");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [hasExistingApplication, setHasExistingApplication] = useState(false);
   const [checkingMembership, setCheckingMembership] = useState(true);
   const [uploading, setUploading] = useState(false);
+
+  // Refresh user data when returning to this screen
+  useEffect(() => {
+    if (currentSubScreen === "main") {
+      console.log('ProfileScreen focused, refreshing user data...');
+      refreshUser();
+    }
+  }, [currentSubScreen]);
 
   // Profile Completion Logic
   const profileCompletion = useMemo(() => {
@@ -130,13 +138,28 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const uploadIcon = async (uri: string) => {
     setUploading(true);
     try {
+        console.log('Starting avatar upload...');
         const response = await uploadService.uploadAvatar(uri);
+        console.log('Avatar uploaded, URL:', response.url);
+
         if (response.url) {
-            await updateUser({ avatarUrl: response.url });
-            Alert.alert("Success", "Profile photo updated!");
+            // Update user profile with new avatar URL
+            const updatedUser = await updateUser({ avatarUrl: response.url });
+            console.log('User updated with avatar:', updatedUser.avatarUrl);
+
+            // Verify avatar was saved
+            if (updatedUser.avatarUrl === response.url) {
+                Alert.alert("Success", "Profile photo updated successfully!");
+            } else {
+                console.warn('Avatar URL mismatch after update');
+                Alert.alert("Warning", "Photo uploaded but may not be saved. Please refresh.");
+            }
+        } else {
+            throw new Error('No URL returned from upload');
         }
-    } catch {
-        Alert.alert("Error", "Failed to upload photo");
+    } catch (error: any) {
+        console.error('Avatar upload error:', error);
+        Alert.alert("Error", error.message || "Failed to upload photo. Please try again.");
     } finally {
         setUploading(false);
     }
