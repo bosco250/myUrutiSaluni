@@ -579,6 +579,7 @@ const styles = StyleSheet.create({
   },
   footerSeparator: {
     fontSize: 11,
+    fontFamily: theme.fonts.regular,
   },
   phoneText: {
     fontSize: 11,

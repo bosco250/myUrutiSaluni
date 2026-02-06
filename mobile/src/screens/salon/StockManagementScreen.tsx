@@ -834,21 +834,26 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
   historySubtitle: {
     fontSize: 11,
+    fontFamily: theme.fonts.regular,
   },
   historyNotes: {
     fontSize: 11,
     fontStyle: 'italic',
+    fontFamily: theme.fonts.regular,
     marginTop: 3,
   },
   historyQty: {
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
   },
   historyType: {
     fontSize: 10,
+    fontFamily: theme.fonts.regular,
     textTransform: 'capitalize',
   },
   // Modal Styles
@@ -865,10 +870,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
     marginBottom: 6,
   },
   modalSubtitle: {
     fontSize: 13,
+    fontFamily: theme.fonts.regular,
     marginBottom: 16,
   },
   modalActions: {

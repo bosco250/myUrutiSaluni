@@ -711,9 +711,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: { 
-    fontSize: 20, 
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
     letterSpacing: -0.3,
   },
   addBtn: {},
@@ -747,15 +748,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  summaryValue: { 
-    fontSize: 24, 
+  summaryValue: {
+    fontSize: 24,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
     letterSpacing: -0.5,
   },
-  summaryLabel: { 
-    fontSize: 12, 
+  summaryLabel: {
+    fontSize: 12,
     marginTop: 4,
     fontWeight: '500',
+    fontFamily: theme.fonts.medium,
   },
   summaryCardSmall: {
     flex: 1,
@@ -772,13 +775,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  summaryValueSmall: { 
-    fontSize: 20, 
+  summaryValueSmall: {
+    fontSize: 20,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
-  summaryLabelSmall: { 
-    fontSize: 11, 
+  summaryLabelSmall: {
+    fontSize: 11,
     marginTop: 2,
+    fontFamily: theme.fonts.regular,
   },
   
   // Search
@@ -794,9 +799,10 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
+    fontFamily: theme.fonts.regular,
     padding: 0,
   },
-  
+
   // Filters
   filterScroll: { marginBottom: 16 },
   filterChip: {
@@ -811,6 +817,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
   
   // Results Header
@@ -820,21 +827,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitle: { 
-    fontSize: 16, 
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
     letterSpacing: -0.3,
   },
   resultsTotal: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
-  
+
   // Date Groups
   dateGroup: { marginBottom: 16 },
   dateHeader: {
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -876,15 +886,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  expenseDesc: { 
-    fontSize: 15, 
+  expenseDesc: {
+    fontSize: 15,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
     flex: 1,
     marginRight: 8,
   },
-  expenseAmount: { 
-    fontSize: 15, 
+  expenseAmount: {
+    fontSize: 15,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
   },
   expenseMetaRow: {
     flexDirection: 'row',
@@ -900,9 +912,11 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 11,
     fontWeight: '500',
+    fontFamily: theme.fonts.medium,
   },
-  expenseMeta: { 
+  expenseMeta: {
     fontSize: 12,
+    fontFamily: theme.fonts.regular,
     textTransform: 'capitalize',
   },
   
@@ -925,11 +939,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
     marginBottom: 8,
   },
-  emptyText: { 
-    fontSize: 14, 
-    textAlign: 'center', 
+  emptyText: {
+    fontSize: 14,
+    fontFamily: theme.fonts.regular,
+    textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
     paddingHorizontal: 16,
@@ -945,6 +961,7 @@ const styles = StyleSheet.create({
   emptyBtnText: {
     color: theme.colors.white,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
     fontSize: 15,
   }, 
   
@@ -977,9 +994,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.gray500 + '26',
   },
-  modalTitle: { 
-    fontSize: 17, 
+  modalTitle: {
+    fontSize: 17,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
   modalCloseBtn: {
     width: 32,
@@ -988,12 +1006,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalBody: { 
-    paddingHorizontal: 16, 
+  modalBody: {
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 16,
   },
-  
+
   // Compact Amount Row
   amountRow: {
     flexDirection: 'row',
@@ -1005,20 +1023,23 @@ const styles = StyleSheet.create({
   amountCurrency: {
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
     marginRight: 8,
   },
   amountField: {
     flex: 1,
     fontSize: 28,
     fontWeight: '700',
+    fontFamily: theme.fonts.bold,
     padding: 0,
   },
-  
+
   // Compact Fields
-  fieldLabel: { 
-    fontSize: 11, 
+  fieldLabel: {
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 6, 
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 6,
     marginTop: 10,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1029,6 +1050,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     fontSize: 14,
+    fontFamily: theme.fonts.regular,
   },
   fieldRow: {
     flexDirection: 'row',
@@ -1054,8 +1076,9 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     fontWeight: '500',
+    fontFamily: theme.fonts.medium,
   },
-  
+
   // Save Button
   saveBtn: {
     marginHorizontal: 16,
@@ -1071,5 +1094,6 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: theme.fonts.semibold,
   },
 });

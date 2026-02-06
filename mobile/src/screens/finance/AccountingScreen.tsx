@@ -482,10 +482,10 @@ const styles = StyleSheet.create({
   // Header
   headerContainer: { paddingHorizontal: 16, paddingVertical: 12 },
   headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 18, fontWeight: '700', fontFamily: theme.fonts.bold },
   backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   dateSelectBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  dateSelectText: { fontSize: 13, fontWeight: '600', marginRight: 4 },
+  dateSelectText: { fontSize: 13, fontWeight: '600', fontFamily: theme.fonts.semibold, marginRight: 4 },
   
   content: { paddingHorizontal: 16, paddingBottom: 40 },
   
@@ -493,50 +493,50 @@ const styles = StyleSheet.create({
   netIncomeCard: { padding: 20, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
   netIncomeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   netIncomeIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  netIncomeLabel: { fontSize: 15, fontWeight: '600' },
-  netIncomePeriod: { fontSize: 12, marginTop: 2 },
-  netIncomeValue: { fontSize: 32, fontWeight: '800', letterSpacing: -1, marginBottom: 12 },
+  netIncomeLabel: { fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.semibold },
+  netIncomePeriod: { fontSize: 12, marginTop: 2, fontFamily: theme.fonts.regular },
+  netIncomeValue: { fontSize: 32, fontWeight: '800', fontFamily: theme.fonts.bold, letterSpacing: -1, marginBottom: 12 },
   marginBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  marginText: { fontSize: 13, fontWeight: '600' },
+  marginText: { fontSize: 13, fontWeight: '600', fontFamily: theme.fonts.semibold },
   
   // Stats Row
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   statCard: { flex: 1, padding: 16, borderRadius: 14, borderWidth: 1 },
   statIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  statLabel: { fontSize: 13, fontWeight: '500', marginBottom: 4 },
-  statValue: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
-  statCount: { fontSize: 12 },
-  
+  statLabel: { fontSize: 13, fontWeight: '500', fontFamily: theme.fonts.medium, marginBottom: 4 },
+  statValue: { fontSize: 18, fontWeight: '700', fontFamily: theme.fonts.bold, marginBottom: 6 },
+  statCount: { fontSize: 12, fontFamily: theme.fonts.regular },
+
   // Section Title
-  sectionTitle: { fontSize: 17, fontWeight: '700', marginBottom: 14 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', fontFamily: theme.fonts.bold, marginBottom: 14 },
   
   // Quick Grid
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   quickCard: { width: (width - 44) / 2, padding: 16, borderRadius: 14, borderWidth: 1 },
   quickIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  quickTitle: { fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  quickSubtitle: { fontSize: 12 },
-  
+  quickTitle: { fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.semibold, marginBottom: 2 },
+  quickSubtitle: { fontSize: 12, fontFamily: theme.fonts.regular },
+
   // Commission Breakdown
   commissionCard: { padding: 16, borderRadius: 14, borderWidth: 1, marginBottom: 20 },
   commissionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   commissionIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  commissionTitle: { fontSize: 15, fontWeight: '600' },
-  commissionSubtitle: { fontSize: 12, marginTop: 2 },
+  commissionTitle: { fontSize: 15, fontWeight: '600', fontFamily: theme.fonts.semibold },
+  commissionSubtitle: { fontSize: 12, marginTop: 2, fontFamily: theme.fonts.regular },
   commissionRow: { flexDirection: 'row', justifyContent: 'space-between' },
   commissionItem: { flex: 1, alignItems: 'center' },
   commissionDot: { width: 8, height: 8, borderRadius: 4, marginBottom: 6 },
-  commissionLabel: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
-  commissionValue: { fontSize: 14, fontWeight: '700' },
+  commissionLabel: { fontSize: 11, fontWeight: '500', fontFamily: theme.fonts.medium, marginBottom: 4 },
+  commissionValue: { fontSize: 14, fontWeight: '700', fontFamily: theme.fonts.bold },
   
   // Modal
   modalOverlay: { flex: 1, backgroundColor: theme.colors.black + '99', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxWidth: 320, borderRadius: 24, padding: 24, borderWidth: 1, elevation: 12, shadowColor: theme.colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 20, textAlign: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '700', fontFamily: theme.fonts.bold, marginBottom: 20, textAlign: 'center' },
   modalOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 16, marginBottom: 8 },
-  modalOptionText: { fontSize: 16, flex: 1, marginLeft: 12, fontWeight: '500' },
+  modalOptionText: { fontSize: 16, flex: 1, marginLeft: 12, fontWeight: '500', fontFamily: theme.fonts.medium },
   radioCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   radioDot: { width: 12, height: 12, borderRadius: 6 },
   modalCancelBtn: { marginTop: 16, paddingVertical: 12, alignItems: 'center' },
-  modalCancelText: { fontSize: 16, fontWeight: '600' },
+  modalCancelText: { fontSize: 16, fontWeight: '600', fontFamily: theme.fonts.semibold },
 });

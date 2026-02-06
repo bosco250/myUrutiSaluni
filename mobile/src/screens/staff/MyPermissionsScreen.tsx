@@ -69,7 +69,9 @@ export default function MyPermissionsScreen({
         style={[styles.container, dynamicStyles.container]}
         edges={['top']}
       >
-        <Loader />
+        <View style={styles.loaderContainer}>
+          <Loader />
+        </View>
       </SafeAreaView>
     );
   }
@@ -261,129 +263,137 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing.md,
+    padding: 12,
     paddingTop: 0,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: theme.fonts.bold, // Bolder header
+    fontSize: 18,
+    fontFamily: theme.fonts.semibold,
   },
   scrollView: {
     flex: 1,
   },
   summaryCard: {
-    padding: theme.spacing.lg, // More padding
-    margin: theme.spacing.md,
-    borderRadius: 16, // Rounder corners
+    padding: 12,
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center', // Center content
+    alignItems: 'center',
   },
   summaryTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.medium,
     textAlign: 'center',
     marginBottom: 8,
   },
   categoryCard: {
-    padding: theme.spacing.lg,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    borderRadius: 16,
+    padding: 12,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 12,
     borderWidth: 1,
   },
   categoryTitle: {
-    fontSize: 17, // Slightly larger
-    fontFamily: theme.fonts.bold,
-    marginBottom: theme.spacing.md,
-    color: theme.colors.primary, // Highlight category
+    fontSize: 15,
+    fontFamily: theme.fonts.semibold,
+    marginBottom: 10,
+    color: theme.colors.primary,
   },
   badgesContainer: {
     display: 'none', // Hidden as requested to simply interface
   },
   descriptionsContainer: {
-    marginTop: theme.spacing.xs,
+    marginTop: 4,
   },
   descriptionItem: {
     flexDirection: 'row',
-    alignItems: 'center', // Better alignment
-    marginBottom: 12, // More spacing
+    alignItems: 'center',
+    marginBottom: 8,
   },
   descriptionText: {
     flex: 1,
-    marginLeft: 12,
-    fontSize: 15, // Larger text
+    marginLeft: 10,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
-    lineHeight: 22,
+    lineHeight: 18,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
-    marginTop: 60,
+    padding: 20,
+    marginTop: 40,
   },
   emptyText: {
-    fontSize: 22,
-    fontFamily: theme.fonts.bold,
-    marginTop: theme.spacing.lg,
+    fontSize: 18,
+    fontFamily: theme.fonts.semibold,
+    marginTop: 12,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.md,
+    marginTop: 10,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
     opacity: 0.7,
   },
   errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
+    padding: 12,
+    marginHorizontal: 12,
+    marginVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
   errorText: {
-    marginLeft: theme.spacing.sm,
-    fontSize: 14,
+    marginLeft: 8,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginTop: theme.spacing.sm,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginTop: 8,
     borderRadius: 12,
-    gap: 8,
+    gap: 6,
   },
   actionButtonText: {
     color: theme.colors.white,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: theme.fonts.semibold,
   },
   categoryActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center', // Center button
-    padding: 12,
-    marginTop: theme.spacing.md,
+    justifyContent: 'center',
+    padding: 10,
+    marginTop: 10,
     borderRadius: 12,
     borderWidth: 1,
     gap: 6,
     backgroundColor: 'transparent',
   },
   categoryActionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.semibold,
   },
 });

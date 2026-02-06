@@ -173,7 +173,9 @@ export default function GrantPermissionsScreen({
         style={[styles.container, dynamicStyles.container]}
         edges={['top']}
       >
-        <Loader />
+        <View style={styles.loaderContainer}>
+          <Loader />
+        </View>
       </SafeAreaView>
     );
   }
@@ -185,43 +187,45 @@ export default function GrantPermissionsScreen({
       style={[styles.container, dynamicStyles.container]}
       edges={['top']}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+      <View style={[styles.headerContainer, dynamicStyles.card]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialIcons
+              name="arrow-back"
+              size={22}
+              color={dynamicStyles.text.color}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={[styles.headerTitle, dynamicStyles.text]}>
+              Grant Permissions
+            </Text>
+            {employee && (
+              <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>
+                {employee.user?.fullName || 'Employee'}
+                {employee.roleTitle && ` • ${employee.roleTitle}`}
+              </Text>
+            )}
+          </View>
           <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
+            name="security"
+            size={22}
+            color={theme.colors.primary}
           />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          Grant Permissions
-        </Text>
-        <View style={{ width: 24 }} />
+        </View>
       </View>
 
-      {employee && (
-        <View style={[styles.employeeInfo, dynamicStyles.card]}>
-          <Text style={[styles.employeeName, dynamicStyles.text]}>
-            {employee.user?.fullName || 'Employee'}
-          </Text>
-          {employee.roleTitle && (
-            <Text style={[styles.employeeRole, dynamicStyles.textSecondary]}>
-              {employee.roleTitle}
-            </Text>
-          )}
-        </View>
-      )}
-
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.summaryCard}>
+          <MaterialIcons name="check-circle" size={16} color={theme.colors.primary} />
           <Text style={[styles.summaryText, dynamicStyles.text]}>
-            Selected: {selectedPermissions.length} / {allPermissions.length}
+            {selectedPermissions.length} of {allPermissions.length} permissions selected
           </Text>
         </View>
 
         <View style={styles.notesSection}>
           <Text style={[styles.notesLabel, dynamicStyles.text]}>
-            Notes (Optional)
+            Add Notes (Optional)
           </Text>
           <TextInput
             style={[styles.notesInput, dynamicStyles.input]}
@@ -230,7 +234,7 @@ export default function GrantPermissionsScreen({
             placeholder="Add notes about these permissions..."
             placeholderTextColor={dynamicStyles.textSecondary.color}
             multiline
-            numberOfLines={3}
+            numberOfLines={2}
           />
         </View>
 
@@ -275,79 +279,96 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerContainer: {
+    borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    padding: 12,
+    gap: 10,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
   },
-  employeeInfo: {
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    borderWidth: 1,
-  },
-  employeeName: {
-    fontSize: 18,
-    fontFamily: theme.fonts.semibold,
-    marginBottom: theme.spacing.xs,
-  },
-  employeeRole: {
-    fontSize: 14,
+  headerSubtitle: {
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   scrollView: {
     flex: 1,
   },
   summaryCard: {
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    backgroundColor: theme.colors.primary + '20',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary + '15',
+    gap: 6,
   },
   summaryText: {
-    fontSize: 16,
-    fontFamily: theme.fonts.semibold,
-    textAlign: 'center',
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
   },
   notesSection: {
-    padding: theme.spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   notesLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 6,
   },
   notesInput: {
     borderWidth: 1,
-    borderRadius: theme.spacing.sm,
-    padding: theme.spacing.md,
-    fontSize: 14,
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
-    minHeight: 80,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
   footer: {
-    padding: theme.spacing.md,
+    padding: 12,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
   },
   saveButton: {
-    padding: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
+    padding: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 44,
   },
   saveButtonText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.semibold,
   },
 });

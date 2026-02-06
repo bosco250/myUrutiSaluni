@@ -81,7 +81,7 @@ export const PermissionCategoryGroup: React.FC<PermissionCategoryGroupProps> = (
             </Text>
             <MaterialIcons
               name={isExpanded ? 'expand-less' : 'expand-more'}
-              size={24}
+              size={20}
               color={dynamicStyles.textSecondary.color}
             />
           </View>
@@ -108,13 +108,14 @@ export const PermissionCategoryGroup: React.FC<PermissionCategoryGroupProps> = (
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: theme.spacing.sm,
+    borderRadius: 10,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
+    marginHorizontal: 12,
+    marginBottom: 10,
     overflow: 'hidden',
   },
   header: {
-    padding: theme.spacing.md,
+    padding: 12,
   },
   headerContent: {
     flexDirection: 'row',
@@ -126,16 +127,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.semibold,
   },
   count: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: theme.fonts.medium,
-    marginRight: theme.spacing.sm,
+    marginRight: 6,
   },
   permissionsList: {
-    padding: theme.spacing.sm,
+    padding: 8,
   },
 });
 

@@ -1464,6 +1464,7 @@ const styles = StyleSheet.create({
   },
   applyLoanDescription: {
     fontSize: 14,
+    fontFamily: theme.fonts.regular,
     marginBottom: theme.spacing.md,
     lineHeight: 20,
   },
@@ -1479,6 +1480,7 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 12,
+    fontFamily: theme.fonts.regular,
   },
   applyButton: {
     backgroundColor: theme.colors.primary,
@@ -1493,5 +1495,6 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontSize: 14,
     fontWeight: 'bold',
+    fontFamily: theme.fonts.bold,
   },
 });

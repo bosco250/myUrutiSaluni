@@ -112,7 +112,9 @@ export default function EmployeePermissionsScreen({
         style={[styles.container, dynamicStyles.container]}
         edges={['top']}
       >
-        <Loader />
+        <View style={styles.loaderContainer}>
+          <Loader />
+        </View>
       </SafeAreaView>
     );
   }
@@ -123,18 +125,26 @@ export default function EmployeePermissionsScreen({
         style={[styles.container, dynamicStyles.container]}
         edges={['top']}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+        <View style={[styles.headerContainer, dynamicStyles.card]}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialIcons
+                name="arrow-back"
+                size={22}
+                color={dynamicStyles.text.color}
+              />
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.headerTitle, dynamicStyles.text]}>
+                Manage Permissions
+              </Text>
+            </View>
             <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={dynamicStyles.text.color}
+              name="admin-panel-settings"
+              size={22}
+              color={theme.colors.primary}
             />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, dynamicStyles.text]}>
-            Employee Permissions
-          </Text>
-          <View style={{ width: 24 }} />
+          </View>
         </View>
         <View style={styles.emptyContainer}>
           <MaterialIcons
@@ -158,33 +168,36 @@ export default function EmployeePermissionsScreen({
       style={[styles.container, dynamicStyles.container]}
       edges={['top']}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+      <View style={[styles.headerContainer, dynamicStyles.card]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialIcons
+              name="arrow-back"
+              size={22}
+              color={dynamicStyles.text.color}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={[styles.headerTitle, dynamicStyles.text]}>
+              Manage Permissions
+            </Text>
+            {salon && (
+              <Text style={[styles.headerSubtitle, dynamicStyles.textSecondary]}>
+                {salon.name}
+              </Text>
+            )}
+          </View>
           <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={dynamicStyles.text.color}
+            name="admin-panel-settings"
+            size={22}
+            color={theme.colors.primary}
           />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, dynamicStyles.text]}>
-          Employee Permissions
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {salon && (
-        <View style={[styles.salonInfo, dynamicStyles.card]}>
-          <Text style={[styles.salonName, dynamicStyles.text]}>
-            {salon.name}
-          </Text>
-          <Text style={[styles.salonAddress, dynamicStyles.textSecondary]}>
-            {salon.address}
-          </Text>
         </View>
-      )}
+      </View>
 
       <ScrollView
         style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={onRefresh} />
         }
@@ -193,11 +206,20 @@ export default function EmployeePermissionsScreen({
           <View style={[styles.errorCard, dynamicStyles.card]}>
             <MaterialIcons
               name="error-outline"
-              size={24}
+              size={20}
               color={theme.colors.error}
             />
             <Text style={[styles.errorText, dynamicStyles.text]}>
               {error.message}
+            </Text>
+          </View>
+        )}
+
+        {employees.length > 0 && (
+          <View style={styles.statsCard}>
+            <MaterialIcons name="people" size={16} color={theme.colors.primary} />
+            <Text style={[styles.statsText, dynamicStyles.text]}>
+              {employees.length} {employees.length === 1 ? 'employee' : 'employees'} with access
             </Text>
           </View>
         )}
@@ -217,55 +239,80 @@ export default function EmployeePermissionsScreen({
             </Text>
           </View>
         ) : (
-          employees.map((employee) => (
-            <TouchableOpacity
-              key={employee.id}
-              style={[styles.employeeCard, dynamicStyles.card]}
-              onPress={() => handleEmployeePress(employee)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.employeeHeader}>
-                <View style={styles.employeeInfo}>
-                  <Text style={[styles.employeeName, dynamicStyles.text]}>
-                    {employee.user?.fullName || 'Unknown Employee'}
-                  </Text>
-                  {employee.roleTitle && (
-                    <Text style={[styles.employeeRole, dynamicStyles.textSecondary]}>
-                      {employee.roleTitle}
-                    </Text>
-                  )}
-                </View>
-                <MaterialIcons
-                  name="chevron-right"
-                  size={24}
-                  color={dynamicStyles.textSecondary.color}
-                />
-              </View>
-
-              {employee.permissions && employee.permissions.length > 0 ? (
-                <View style={styles.permissionsContainer}>
-                  <Text style={[styles.permissionsLabel, dynamicStyles.textSecondary]}>
-                    Permissions ({employee.permissions.length}):
-                  </Text>
-                  <View style={styles.badgesContainer}>
-                    {employee.permissions.map((perm: any) => (
-                      <PermissionBadge
-                        key={perm.code}
-                        permission={perm.code}
-                        size="small"
+          <View style={styles.employeesList}>
+            {employees.map((employee) => (
+              <TouchableOpacity
+                key={employee.id}
+                style={[styles.employeeCard, dynamicStyles.card]}
+                onPress={() => handleEmployeePress(employee)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.employeeMainInfo}>
+                    <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
+                      <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
+                        {(employee.user?.fullName || 'U').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.employeeDetails}>
+                      <Text style={[styles.employeeName, dynamicStyles.text]} numberOfLines={1}>
+                        {employee.user?.fullName || 'Unknown Employee'}
+                      </Text>
+                      {employee.roleTitle && (
+                        <Text style={[styles.employeeRole, dynamicStyles.textSecondary]} numberOfLines={1}>
+                          {employee.roleTitle}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.cardRightSection}>
+                    <View style={[
+                      styles.permissionsBadge,
+                      {
+                        backgroundColor: employee.permissions && employee.permissions.length > 0
+                          ? theme.colors.success + '15'
+                          : theme.colors.gray400 + '15'
+                      }
+                    ]}>
+                      <MaterialIcons
+                        name={employee.permissions && employee.permissions.length > 0 ? 'verified-user' : 'lock'}
+                        size={14}
+                        color={employee.permissions && employee.permissions.length > 0
+                          ? theme.colors.success
+                          : theme.colors.gray500}
                       />
-                    ))}
+                      <Text style={[
+                        styles.permissionsBadgeText,
+                        {
+                          color: employee.permissions && employee.permissions.length > 0
+                            ? theme.colors.success
+                            : theme.colors.gray500
+                        }
+                      ]}>
+                        {employee.permissions?.length || 0}
+                      </Text>
+                    </View>
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={20}
+                      color={dynamicStyles.textSecondary.color}
+                    />
                   </View>
                 </View>
-              ) : (
-                <View style={styles.noPermissions}>
-                  <Text style={[styles.noPermissionsText, dynamicStyles.textSecondary]}>
-                    No permissions granted
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))
+
+                {employee.permissions && employee.permissions.length > 0 && (
+                  <View style={styles.permissionsPreview}>
+                    <Text style={[styles.permissionsPreviewText, dynamicStyles.textSecondary]} numberOfLines={2}>
+                      {employee.permissions.slice(0, 3).map((p: any) =>
+                        p.code.replace(/_/g, ' ').toLowerCase()
+                      ).join(', ')}
+                      {employee.permissions.length > 3 && ` +${employee.permissions.length - 3} more`}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -276,110 +323,164 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerContainer: {
+    borderBottomWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
+    padding: 12,
+    gap: 10,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontFamily: theme.fonts.semibold,
+    marginBottom: 2,
   },
-  salonInfo: {
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    borderWidth: 1,
-  },
-  salonName: {
-    fontSize: 18,
-    fontFamily: theme.fonts.semibold,
-    marginBottom: theme.spacing.xs,
-  },
-  salonAddress: {
-    fontSize: 14,
+  headerSubtitle: {
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
   scrollView: {
     flex: 1,
   },
+  statsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary + '15',
+    gap: 6,
+  },
+  statsText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.medium,
+  },
+  employeesList: {
+    paddingHorizontal: 12,
+    gap: 8,
+  },
   employeeCard: {
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  employeeHeader: {
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    justifyContent: 'space-between',
   },
-  employeeInfo: {
+  employeeMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 16,
+    fontFamily: theme.fonts.semibold,
+  },
+  employeeDetails: {
     flex: 1,
   },
   employeeName: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: theme.fonts.semibold,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 2,
   },
   employeeRole: {
-    fontSize: 14,
+    fontSize: 11,
     fontFamily: theme.fonts.regular,
   },
-  permissionsContainer: {
-    marginTop: theme.spacing.sm,
-  },
-  permissionsLabel: {
-    fontSize: 12,
-    fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs,
-  },
-  badgesContainer: {
+  cardRightSection: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
-  noPermissions: {
-    marginTop: theme.spacing.sm,
+  permissionsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 4,
   },
-  noPermissionsText: {
-    fontSize: 14,
+  permissionsBadgeText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.semibold,
+  },
+  permissionsPreview: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+  },
+  permissionsPreviewText: {
+    fontSize: 11,
     fontFamily: theme.fonts.regular,
-    fontStyle: 'italic',
+    lineHeight: 16,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: 20,
+    marginTop: 40,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: theme.fonts.semibold,
-    marginTop: theme.spacing.md,
+    marginTop: 12,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: theme.fonts.regular,
-    marginTop: theme.spacing.sm,
+    marginTop: 8,
     textAlign: 'center',
   },
   errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    margin: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
+    padding: 12,
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.error,
+    backgroundColor: theme.colors.error + '10',
   },
   errorText: {
-    marginLeft: theme.spacing.sm,
-    fontSize: 14,
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 12,
     fontFamily: theme.fonts.regular,
   },
 });

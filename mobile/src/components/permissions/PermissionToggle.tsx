@@ -55,7 +55,7 @@ export const PermissionToggle: React.FC<PermissionToggleProps> = ({
         <View style={styles.leftSection}>
           <MaterialIcons
             name={isGranted ? 'check-circle' : 'radio-button-unchecked'}
-            size={24}
+            size={20}
             color={
               isGranted
                 ? theme.colors.primary
@@ -93,10 +93,10 @@ export const PermissionToggle: React.FC<PermissionToggleProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 6,
   },
   content: {
     flexDirection: 'row',
@@ -107,23 +107,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: theme.spacing.md,
+    marginRight: 10,
   },
   icon: {
-    marginRight: theme.spacing.sm,
+    marginRight: 8,
   },
   textContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: theme.fonts.medium,
-    marginBottom: theme.spacing.xs,
+    marginBottom: 3,
   },
   description: {
-    fontSize: 14,
+    fontSize: 11,
     fontFamily: theme.fonts.regular,
-    lineHeight: 20,
+    lineHeight: 15,
   },
 });
 
